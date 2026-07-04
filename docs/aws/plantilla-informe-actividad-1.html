@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Actividad 1 - AWS y Despliegue Web</title>
+    <style>
+      @page {
+        size: A4;
+        margin: 2.2cm;
+      }
+
+      body {
+        font-family: Calibri, Arial, sans-serif;
+        font-size: 11pt;
+        line-height: 1.5;
+        color: #111;
+      }
+
+      h1, h2, h3 {
+        color: #0d5f9d;
+        margin-bottom: 0.2rem;
+      }
+
+      h1 {
+        font-size: 20pt;
+      }
+
+      h2 {
+        font-size: 14pt;
+        margin-top: 1.4rem;
+      }
+
+      h3 {
+        font-size: 12pt;
+        margin-top: 1rem;
+      }
+
+      p, li {
+        margin-top: 0.35rem;
+        margin-bottom: 0.35rem;
+      }
+
+      .cover {
+        min-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      .box {
+        border: 1px solid #b8c7d1;
+        background: #f7fafc;
+        padding: 0.9rem 1rem;
+        margin: 0.8rem 0;
+      }
+
+      .placeholder {
+        border: 1px dashed #7f8c8d;
+        color: #5b6570;
+        padding: 1rem;
+        margin: 0.8rem 0;
+        text-align: center;
+      }
+
+      .small {
+        font-size: 10pt;
+        color: #5b6570;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="cover">
+      <h1>Actividad 1</h1>
+      <p><strong>Introduccion a AWS. Consola Cloud. Despliegue Web en Maquina Virtual.</strong></p>
+      <p><strong>Proyecto utilizado:</strong> train-gym-web</p>
+      <p><strong>Estudiante:</strong> [Tu nombre]</p>
+      <p><strong>Materia / Maestria:</strong> [Completar]</p>
+      <p><strong>Docente:</strong> [Completar]</p>
+      <p><strong>Fecha:</strong> [Completar]</p>
+    </section>
+
+    <h2>1. Objetivo</h2>
+    <p>
+      El objetivo de esta actividad fue familiarizarse con el uso de AWS Academy y la
+      consola de AWS, asi como desplegar una aplicacion web del proyecto transversal en
+      dos instancias virtuales EC2: una con sistema operativo Linux y otra con Windows.
+    </p>
+
+    <h2>2. Introduccion a AWS Academy y consola de AWS</h2>
+    <p>
+      AWS Academy permite a los estudiantes acceder a un entorno controlado de Amazon Web
+      Services para realizar practicas academicas. Dentro de este entorno se revisaron los
+      servicios principales de la consola, en especial EC2, VPC, grupos de seguridad e
+      identificacion de recursos.
+    </p>
+    <div class="placeholder">Inserta aqui una captura de AWS Academy y otra de la consola principal de AWS.</div>
+
+    <h2>3. Descripcion del proyecto utilizado</h2>
+    <p>
+      Para la practica se utilizo el frontend del proyecto transversal, identificado en el
+      entorno local como <strong>train-gym-web</strong>. La aplicacion fue construida con
+      React y Vite, lo cual permite generar una version estatica optimizada para
+      despliegue web.
+    </p>
+    <div class="box">
+      <p><strong>Tecnologias principales:</strong> React, Vite, Material UI, React Router.</p>
+      <p><strong>Comando de compilacion:</strong> <code>npm run build</code></p>
+      <p><strong>Salida generada:</strong> carpeta <code>dist/</code></p>
+    </div>
+
+    <h2>4. Despliegue en EC2 Linux</h2>
+    <h3>4.1 Creacion de la instancia</h3>
+    <p>
+      Se creo una instancia EC2 basada en Amazon Linux, con IP publica habilitada y reglas
+      de seguridad para permitir acceso por SSH y HTTP.
+    </p>
+    <div class="placeholder">Inserta aqui capturas de la instancia Linux y del Security Group.</div>
+
+    <h3>4.2 Instalacion del servidor web</h3>
+    <p>
+      Se instalo Nginx como servidor web y se habilito su inicio automatico. Posteriormente,
+      se copio el build del frontend a la carpeta publica del servidor y se configuro el
+      archivo de sitio para atender correctamente una SPA.
+    </p>
+    <div class="box">
+      <p><strong>Comandos clave:</strong></p>
+      <p><code>sudo dnf install -y nginx unzip</code></p>
+      <p><code>sudo systemctl enable nginx</code></p>
+      <p><code>sudo systemctl start nginx</code></p>
+    </div>
+
+    <h3>4.3 Resultado</h3>
+    <p>
+      Una vez finalizado el despliegue, la pagina fue accesible desde el navegador mediante
+      la IP publica de la instancia.
+    </p>
+    <div class="placeholder">Inserta aqui la captura del sitio funcionando en Linux.</div>
+
+    <h2>5. Despliegue en EC2 Windows</h2>
+    <h3>5.1 Creacion de la instancia</h3>
+    <p>
+      Se creo una instancia EC2 con Windows Server, habilitando acceso por RDP y HTTP desde
+      el grupo de seguridad.
+    </p>
+    <div class="placeholder">Inserta aqui capturas de la instancia Windows y sus reglas de seguridad.</div>
+
+    <h3>5.2 Acceso e instalacion de IIS</h3>
+    <p>
+      Se recupero la contrasena inicial desde la consola de EC2, se establecio la conexion
+      por Escritorio Remoto y se instalo IIS para servir el frontend.
+    </p>
+    <div class="box">
+      <p><strong>Comando clave:</strong> <code>Install-WindowsFeature -Name Web-Server -IncludeManagementTools</code></p>
+    </div>
+
+    <h3>5.3 Resultado</h3>
+    <p>
+      Finalmente, se copio la aplicacion compilada al directorio de publicacion de IIS y se
+      verifico el acceso web mediante la IP publica de la instancia.
+    </p>
+    <div class="placeholder">Inserta aqui la captura del sitio funcionando en Windows e IIS Manager.</div>
+
+    <h2>6. Conclusiones</h2>
+    <p>
+      La actividad permitio comprender el flujo basico de despliegue en nube publica con
+      AWS, desde la administracion de recursos en consola hasta la publicacion de una
+      aplicacion web en sistemas operativos diferentes. Tambien se identifico la importancia
+      de la seguridad de red, el uso de grupos de seguridad y la configuracion correcta del
+      servidor web para exponer una SPA.
+    </p>
+
+    <p class="small">
+      Sugerencia: abre este archivo en el navegador, reemplaza los textos entre corchetes,
+      inserta tus capturas y luego usa la opcion de imprimir a PDF.
+    </p>
+  </body>
+</html>
