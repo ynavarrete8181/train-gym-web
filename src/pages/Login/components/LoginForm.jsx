@@ -55,17 +55,23 @@ export default function LoginForm() {
         <Box
             sx={{
                 width: "100%",
-                maxWidth: 480, // Aumentado significativamente
+                maxWidth: 480,
                 mx: "auto",
                 borderRadius: "16px",
                 px: { xs: 3, sm: 6 },
                 pt: "min(5vh, 40px)",
                 pb: "min(4vh, 32px)",
-                // Borde amarillo visible como en la referencia
                 border: "2px solid var(--tg-primary)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
+                maxHeight: "90vh",
+                overflowY: "auto",
+                "&::-webkit-scrollbar": {
+                    display: "none"
+                },
+                scrollbarWidth: "none",
+                msOverflowStyle: "none"
             }}
         >
             {/* Shield Logo */}
