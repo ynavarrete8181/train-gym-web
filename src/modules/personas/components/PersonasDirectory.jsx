@@ -22,6 +22,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import Swal from "sweetalert2";
 
 import PremiumButton from "../../../components/ui/PremiumButton";
 import { filterInputSx, semanticIconButtonSx, semanticChipSx, tableSx } from "../../../Styles/muiTheme";
@@ -179,7 +180,30 @@ export default function PersonasDirectory({
                                             <Avatar 
                                                 src={normalizeAssetUrl(persona.foto_url || "")} 
                                                 alt={persona.nombres}
-                                                sx={{ width: 36, height: 36, bgcolor: "var(--tg-primary-main)", color: "#000", fontWeight: 'bold' }}
+                                                onClick={() => {
+                                                    if (persona.foto_url) {
+                                                        Swal.fire({
+                                                            imageUrl: normalizeAssetUrl(persona.foto_url),
+                                                            imageAlt: persona.nombres,
+                                                            showConfirmButton: false,
+                                                            showCloseButton: true,
+                                                            width: 'auto',
+                                                            background: 'transparent',
+                                                            backdrop: 'rgba(0,0,0,0.85)'
+                                                        });
+                                                    }
+                                                }}
+                                                sx={{ 
+                                                    width: 44, 
+                                                    height: 44, 
+                                                    bgcolor: "var(--tg-primary-main)", 
+                                                    color: "#000", 
+                                                    fontWeight: 'bold',
+                                                    cursor: persona.foto_url ? "pointer" : "default",
+                                                    transition: "transform 0.2s",
+                                                    "&:hover": persona.foto_url ? { transform: "scale(1.05)" } : {},
+                                                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                                                }}
                                             >
                                                 {persona.nombres?.charAt(0)?.toUpperCase()}
                                             </Avatar>
