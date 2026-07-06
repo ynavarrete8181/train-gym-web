@@ -86,34 +86,7 @@ export default function PersonasDirectory({
                         }}
                     />
 
-                    <FormControl size="small" sx={{ ...filterInputSx, width: 180 }}>
-                        <Select
-                            value={filtroTipo}
-                            onChange={(e) => onFiltroTipoChange(e.target.value)}
-                            displayEmpty
-                            sx={{ fontSize: "13px" }}
-                        >
-                            <MenuItem value="">Todos los Tipos</MenuItem>
-                            <MenuItem value="CLIENTE">Cliente General</MenuItem>
-                            <MenuItem value="SOCIO">Socio (Membresía)</MenuItem>
-                            <MenuItem value="ENTRENADOR">Entrenador / Coach</MenuItem>
-                            <MenuItem value="FUNCIONARIO">Staff / Funcionario</MenuItem>
-                        </Select>
-                    </FormControl>
 
-                    <FormControl size="small" sx={{ ...filterInputSx, width: 160 }}>
-                        <Select
-                            value={filtroSede}
-                            onChange={(e) => onFiltroSedeChange(e.target.value)}
-                            displayEmpty
-                            sx={{ fontSize: "13px" }}
-                        >
-                            <MenuItem value="">Todas las Sedes</MenuItem>
-                            <MenuItem value="1">Revive Home</MenuItem>
-                            <MenuItem value="2">Revive Xpadel</MenuItem>
-                            <MenuItem value="3">Revive Centro</MenuItem>
-                        </Select>
-                    </FormControl>
 
                     <FormControl size="small" sx={{ ...filterInputSx, width: 170 }}>
                         <Select
