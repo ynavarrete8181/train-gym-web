@@ -42,7 +42,7 @@ export default function LoginForm() {
             if (result.ok) {
                 navigate("/");
             } else {
-                setError("Cédula o contraseña incorrecta");
+                setError(result.message || "Cédula o contraseña incorrecta");
             }
         } catch {
             setError("Error de conexión. Intenta de nuevo.");

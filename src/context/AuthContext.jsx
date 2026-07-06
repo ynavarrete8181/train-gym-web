@@ -60,17 +60,20 @@ export function AuthProvider({ children }) {
             const token = data?.token;
             const u = normalizeUser(data?.user);
 
-            if (!token || !u) return { ok: false };
+            if (!token || !u) return { ok: false, message: "Respuesta inválida del servidor" };
 
             localStorage.setItem("ACCESS_TOKEN", token);
             localStorage.setItem("USER", JSON.stringify(u));
             setUser(u);
 
             return { ok: true };
-        } catch {
+        } catch (error) {
             clearStoredAuth();
             setUser(null);
-            return { ok: false };
+            if (error.response && error.response.status === 401) {
+                return { ok: false, message: "Cédula o contraseña incorrecta" };
+            }
+            return { ok: false, message: "Error de conexión. ¿Reiniciaste el servidor local con npm run dev?" };
         }
     };
 
