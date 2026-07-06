@@ -59,8 +59,8 @@ export default function LoginForm() {
                 mx: "auto",
                 borderRadius: "16px",
                 px: { xs: 3, sm: 6 },
-                pt: 5,
-                pb: 4,
+                pt: "min(5vh, 40px)",
+                pb: "min(4vh, 32px)",
                 // Borde amarillo visible como en la referencia
                 border: "2px solid var(--tg-primary)",
                 display: "flex",
@@ -74,17 +74,17 @@ export default function LoginForm() {
                 src={escudoPng}
                 alt="Revive Icon"
                 sx={{ 
-                    width: 70, 
-                    height: 70, 
+                    width: "min(10vh, 70px)", 
+                    height: "min(10vh, 70px)", 
                     objectFit: "contain",
-                    mb: 2,
+                    mb: "min(2vh, 16px)",
                 }}
             />
 
-            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "2rem", mb: 0.5 }}>
+            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "min(5vh, 2rem)", mb: "min(1vh, 4px)" }}>
                 Bienvenido de nuevo
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", mb: 4 }}>
+            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "min(2.5vh, 1rem)", mb: "min(4vh, 32px)" }}>
                 Accede a tu panel Revive Sports
             </Typography>
 
@@ -107,7 +107,7 @@ export default function LoginForm() {
                     value={cedula}
                     onChange={(e) => setCedula(e.target.value)}
                     sx={{
-                        mb: 2.5,
+                        mb: "min(2.5vh, 20px)",
                         "& .MuiOutlinedInput-root": {
                             color: "#fff",
                             backgroundColor: "#121212", // Fondo oscuro sólido
@@ -148,7 +148,7 @@ export default function LoginForm() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     sx={{
-                        mb: 1,
+                        mb: "min(1.5vh, 8px)",
                         "& .MuiOutlinedInput-root": {
                             color: "#fff",
                             backgroundColor: "#121212", // Fondo oscuro sólido
@@ -183,7 +183,7 @@ export default function LoginForm() {
                     }}
                 />
 
-                <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mb: "min(3vh, 24px)" }}>
                     <Typography
                         sx={{
                             color: "var(--tg-primary)",
@@ -213,14 +213,14 @@ export default function LoginForm() {
                         fontSize: "1.1rem",
                         "&:hover": { bgcolor: "#d6a000" },
                         "&.Mui-disabled": { bgcolor: "rgba(240,180,0,0.5)", color: "rgba(0,0,0,0.5)" },
-                        mb: 3
+                        mb: "min(3vh, 24px)"
                     }}
                 >
                     {loading ? "Ingresando..." : "Iniciar sesión"}
                 </Button>
 
                 {/* Divider */}
-                <Divider sx={{ "&::before, &::after": { borderColor: "rgba(255,255,255,0.1)" }, color: "rgba(255,255,255,0.4)", mb: 3 }}>
+                <Divider sx={{ "&::before, &::after": { borderColor: "rgba(255,255,255,0.1)" }, color: "rgba(255,255,255,0.4)", mb: "min(3vh, 24px)" }}>
                     <Typography sx={{ fontSize: "0.85rem" }}>o continúa con</Typography>
                 </Divider>
 
