@@ -196,6 +196,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                                 required
                                 sx={modalFieldSx}
                             />
+                        </Box>
                     </Box>
 
                     {/* Fila 2 */}
