@@ -196,44 +196,6 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                                 required
                                 sx={modalFieldSx}
                             />
-                        </Box>
-                        <Box>
-                            <InputLabel sx={{ mb: 0.5, fontSize: "12px", fontWeight: 600, color: ui.text }}>
-                                Tipo de Persona *
-                            </InputLabel>
-                            <Select
-                                variant="outlined"
-                                fullWidth
-                                size="small"
-                                value={form.tipo_persona}
-                                onChange={(e) => setForm({ ...form, tipo_persona: e.target.value })}
-                                required
-                                sx={modalFieldSx}
-                            >
-                                <MenuItem value="CLIENTE">Cliente General</MenuItem>
-                                <MenuItem value="SOCIO">Socio (Membresía)</MenuItem>
-                                <MenuItem value="ENTRENADOR">Entrenador / Coach</MenuItem>
-                                <MenuItem value="FUNCIONARIO">Staff / Operativo</MenuItem>
-                            </Select>
-                        </Box>
-                        <Box>
-                            <InputLabel sx={{ mb: 0.5, fontSize: "12px", fontWeight: 600, color: ui.text }}>
-                                Sede Principal *
-                            </InputLabel>
-                            <Select
-                                variant="outlined"
-                                fullWidth
-                                size="small"
-                                value={form.sede_id}
-                                onChange={(e) => setForm({ ...form, sede_id: e.target.value })}
-                                required
-                                sx={modalFieldSx}
-                            >
-                                <MenuItem value="1">Revive Home</MenuItem>
-                                <MenuItem value="2">Revive Xpadel</MenuItem>
-                                <MenuItem value="3">Revive Centro</MenuItem>
-                            </Select>
-                        </Box>
                     </Box>
 
                     {/* Fila 2 */}
