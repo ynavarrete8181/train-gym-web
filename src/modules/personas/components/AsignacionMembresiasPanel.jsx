@@ -209,6 +209,14 @@ export default function AsignacionMembresiasPanel() {
     };
 
     const handleAddSocio = (socio) => {
+        const active = isActiveMembership(socio.membresia_actual);
+        const isSamePlanAndSede = active && socio.membresia_actual.membresia_id === Number(filters.membresia_id) && socio.membresia_actual.sede_id === Number(filters.sede_id);
+
+        if (isSamePlanAndSede) {
+            Swal.fire("Atención", "El usuario ya tiene esta membresía activa en esta sede.", "warning");
+            return;
+        }
+
         setSelectedSocios((prev) => {
             if (prev.some((item) => Number(item.persona_id) === Number(socio.persona_id))) return prev;
             return [...prev, socio];
