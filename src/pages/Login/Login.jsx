@@ -36,6 +36,7 @@ export default function Login() {
                     justifyContent: "center",
                     bgcolor: "#0a0a0a",
                     p: { xs: 2, sm: 3, md: 4 },
+                    overflowY: "auto", // Permite scroll si la pantalla es muy bajita
                 }}
             >
                 <LoginForm />

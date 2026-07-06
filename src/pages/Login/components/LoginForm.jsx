@@ -55,12 +55,12 @@ export default function LoginForm() {
         <Box
             sx={{
                 width: "100%",
-                maxWidth: 380,
+                maxWidth: 480, // Aumentado significativamente
                 mx: "auto",
-                borderRadius: "12px",
-                px: 4,
-                pt: 3.5,
-                pb: 2,
+                borderRadius: "16px",
+                px: { xs: 3, sm: 6 },
+                pt: 5,
+                pb: 4,
                 // Borde amarillo visible como en la referencia
                 border: "2px solid var(--tg-primary)",
                 display: "flex",
@@ -74,17 +74,17 @@ export default function LoginForm() {
                 src={escudoPng}
                 alt="Revive Icon"
                 sx={{ 
-                    width: 50, 
-                    height: 50, 
+                    width: 70, 
+                    height: 70, 
                     objectFit: "contain",
-                    mb: 1.5,
+                    mb: 2,
                 }}
             />
 
-            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "1.25rem", mb: 0.3 }}>
+            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "2rem", mb: 0.5 }}>
                 Bienvenido de nuevo
             </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.8rem", mb: 2.5 }}>
+            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "1rem", mb: 4 }}>
                 Accede a tu panel Revive Sports
             </Typography>
 
@@ -96,7 +96,7 @@ export default function LoginForm() {
 
             <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%" }}>
                 {/* Cédula */}
-                <Typography sx={{ color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, fontSize: "0.6rem", mb: 0.5 }}>
+                <Typography sx={{ color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, fontSize: "0.75rem", mb: 1 }}>
                     Cédula
                 </Typography>
                 <TextField
@@ -107,15 +107,24 @@ export default function LoginForm() {
                     value={cedula}
                     onChange={(e) => setCedula(e.target.value)}
                     sx={{
-                        mb: 1.5,
+                        mb: 2.5,
                         "& .MuiOutlinedInput-root": {
                             color: "#fff",
-                            borderRadius: "8px",
+                            backgroundColor: "#121212", // Fondo oscuro sólido
+                            borderRadius: "10px",
                             "& fieldset": { borderColor: "rgba(255,255,255,0.15)" },
                             "&:hover fieldset": { borderColor: "rgba(255,255,255,0.3)" },
                             "&.Mui-focused fieldset": { borderColor: "var(--tg-primary)" },
                         },
-                        "& .MuiInputBase-input": { py: 1, fontSize: "0.85rem" }
+                        "& .MuiInputBase-input": { 
+                            py: 1.5, 
+                            fontSize: "1rem",
+                            "&:-webkit-autofill": {
+                                WebkitBoxShadow: "0 0 0 100px #121212 inset !important",
+                                WebkitTextFillColor: "#fff !important",
+                                borderRadius: "inherit"
+                            }
+                        }
                     }}
                     InputProps={{
                         startAdornment: (
@@ -127,7 +136,7 @@ export default function LoginForm() {
                 />
 
                 {/* Contraseña */}
-                <Typography sx={{ color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, fontSize: "0.6rem", mb: 0.5 }}>
+                <Typography sx={{ color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: 1, fontSize: "0.75rem", mb: 1 }}>
                     Contraseña
                 </Typography>
                 <TextField
@@ -139,15 +148,24 @@ export default function LoginForm() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     sx={{
-                        mb: 0.5,
+                        mb: 1,
                         "& .MuiOutlinedInput-root": {
                             color: "#fff",
-                            borderRadius: "8px",
+                            backgroundColor: "#121212", // Fondo oscuro sólido
+                            borderRadius: "10px",
                             "& fieldset": { borderColor: "rgba(255,255,255,0.15)" },
                             "&:hover fieldset": { borderColor: "rgba(255,255,255,0.3)" },
                             "&.Mui-focused fieldset": { borderColor: "var(--tg-primary)" },
                         },
-                        "& .MuiInputBase-input": { py: 1, fontSize: "0.85rem" }
+                        "& .MuiInputBase-input": { 
+                            py: 1.5, 
+                            fontSize: "1rem",
+                            "&:-webkit-autofill": {
+                                WebkitBoxShadow: "0 0 0 100px #121212 inset !important",
+                                WebkitTextFillColor: "#fff !important",
+                                borderRadius: "inherit"
+                            }
+                        }
                     }}
                     InputProps={{
                         startAdornment: (
@@ -165,12 +183,12 @@ export default function LoginForm() {
                     }}
                 />
 
-                <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+                <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 3 }}>
                     <Typography
                         sx={{
                             color: "var(--tg-primary)",
                             cursor: "pointer",
-                            fontSize: "0.7rem",
+                            fontSize: "0.85rem",
                             "&:hover": { textDecoration: "underline" },
                         }}
                     >
@@ -188,22 +206,22 @@ export default function LoginForm() {
                     sx={{
                         bgcolor: "var(--tg-primary)",
                         color: "#000",
-                        py: 1,
-                        borderRadius: "8px",
+                        py: 1.5,
+                        borderRadius: "10px",
                         fontWeight: 700,
                         textTransform: "none",
-                        fontSize: "0.9rem",
+                        fontSize: "1.1rem",
                         "&:hover": { bgcolor: "#d6a000" },
                         "&.Mui-disabled": { bgcolor: "rgba(240,180,0,0.5)", color: "rgba(0,0,0,0.5)" },
-                        mb: 2
+                        mb: 3
                     }}
                 >
                     {loading ? "Ingresando..." : "Iniciar sesión"}
                 </Button>
 
                 {/* Divider */}
-                <Divider sx={{ "&::before, &::after": { borderColor: "rgba(255,255,255,0.1)" }, color: "rgba(255,255,255,0.4)", mb: 2 }}>
-                    <Typography sx={{ fontSize: "0.7rem" }}>o continúa con</Typography>
+                <Divider sx={{ "&::before, &::after": { borderColor: "rgba(255,255,255,0.1)" }, color: "rgba(255,255,255,0.4)", mb: 3 }}>
+                    <Typography sx={{ fontSize: "0.85rem" }}>o continúa con</Typography>
                 </Divider>
 
                 {/* Social Buttons */}
@@ -252,7 +270,7 @@ export default function LoginForm() {
                     </Button>
                 </Box>
 
-                <Typography align="center" sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>
+                <Typography align="center" sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", mt: 1 }}>
                     ¿No tienes una cuenta?{" "}
                     <span style={{ color: "var(--tg-primary)", cursor: "pointer", textDecoration: "underline" }}>
                         Contáctanos
