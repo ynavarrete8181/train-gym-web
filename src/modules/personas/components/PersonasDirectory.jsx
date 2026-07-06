@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+    Avatar,
     Box,
     Chip,
     FormControl,
@@ -25,6 +26,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import PremiumButton from "../../../components/ui/PremiumButton";
 import { filterInputSx, semanticIconButtonSx, semanticChipSx, tableSx } from "../../../Styles/muiTheme";
 import { pagePaperSx } from "../personas.utils";
+import { normalizeAssetUrl } from "../../../services/apiClient";
 
 export default function PersonasDirectory({
     personas,
@@ -175,7 +177,22 @@ export default function PersonasDirectory({
                                 paginatedPersonas.map((persona) => (
                                     <TableRow key={persona.id}>
                                         <TableCell sx={{ fontWeight: 800 }}>{persona.cedula}</TableCell>
-                                        <TableCell>{persona.nombres}</TableCell>
+                                        <TableCell>
+                                            <Stack direction="row" spacing={1.5} alignItems="center">
+                                                <Avatar 
+                                                    src={normalizeAssetUrl(persona.foto_url || "")} 
+                                                    alt={persona.nombres}
+                                                    sx={{ width: 36, height: 36, bgcolor: "var(--tg-primary-main)", color: "#000", fontWeight: 'bold' }}
+                                                >
+                                                    {persona.nombres?.charAt(0)?.toUpperCase()}
+                                                </Avatar>
+                                                <Box>
+                                                    <div style={{ fontWeight: 600, color: "#0f172a" }}>
+                                                        {persona.nombres} {persona.apellidos || ""}
+                                                    </div>
+                                                </Box>
+                                            </Stack>
+                                        </TableCell>
                                         <TableCell>
                                             <Stack direction="row" spacing={0.5}>
                                                 {persona.tipos?.map((tipo) => (
