@@ -22,7 +22,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
         nombres: "",
         apellidos: "",
         fecha_nacimiento: "",
-        sexo: "MASCULINO",
+        sexo: "M",
         telefono: "",
         email: "",
         direccion: "",
@@ -42,7 +42,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                     nombres: dataEdit.nombres_base || dataEdit.nombres || "",
                     apellidos: dataEdit.apellidos || "",
                     fecha_nacimiento: dataEdit.fecha_nacimiento || "",
-                    sexo: dataEdit.sexo || "MASCULINO",
+                    sexo: dataEdit.sexo || "M",
                     telefono: dataEdit.telefono || "",
                     email: dataEdit.email || "",
                     direccion: dataEdit.direccion || "",
@@ -64,7 +64,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                     nombres: "",
                     apellidos: "",
                     fecha_nacimiento: "",
-                    sexo: "MASCULINO",
+                    sexo: "M",
                     telefono: "",
                     email: "",
                     direccion: "",
@@ -279,8 +279,8 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                                 onChange={(e) => setForm({ ...form, sexo: e.target.value })}
                                 sx={modalFieldSx}
                             >
-                                <MenuItem value="MASCULINO">Masculino</MenuItem>
-                                <MenuItem value="FEMENINO">Femenino</MenuItem>
+                                <MenuItem value="M">Masculino</MenuItem>
+                                <MenuItem value="F">Femenino</MenuItem>
                                 <MenuItem value="OTRO">Otro / No especifica</MenuItem>
                             </Select>
                         </Box>
