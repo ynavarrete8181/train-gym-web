@@ -151,6 +151,7 @@ export default function PersonasDirectory({
                     <Table stickyHeader size="small" sx={{ ...tableSx, minWidth: 650 }}>
                         <TableHead>
                             <TableRow>
+                                <TableCell width={48}></TableCell>
                                 <TableCell>Identificación</TableCell>
                                 <TableCell>Nombres y Apellidos</TableCell>
                                 <TableCell>Plan / Membresía</TableCell>
@@ -161,35 +162,33 @@ export default function PersonasDirectory({
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
                                         Cargando listado...
                                     </TableCell>
                                 </TableRow>
                             ) : personas.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={5} align="center" sx={{ py: 6, color: "#64748b" }}>
+                                    <TableCell colSpan={6} align="center" sx={{ py: 6, color: "#64748b" }}>
                                         No se encontraron personas registradas en el gimnasio.
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 paginatedPersonas.map((persona) => (
                                     <TableRow key={persona.id}>
+                                        <TableCell>
+                                            <Avatar 
+                                                src={normalizeAssetUrl(persona.foto_url || "")} 
+                                                alt={persona.nombres}
+                                                sx={{ width: 36, height: 36, bgcolor: "var(--tg-primary-main)", color: "#000", fontWeight: 'bold' }}
+                                            >
+                                                {persona.nombres?.charAt(0)?.toUpperCase()}
+                                            </Avatar>
+                                        </TableCell>
                                         <TableCell sx={{ fontWeight: 800 }}>{persona.cedula}</TableCell>
                                         <TableCell>
-                                            <Stack direction="row" spacing={1.5} alignItems="center">
-                                                <Avatar 
-                                                    src={normalizeAssetUrl(persona.foto_url || "")} 
-                                                    alt={persona.nombres}
-                                                    sx={{ width: 36, height: 36, bgcolor: "var(--tg-primary-main)", color: "#000", fontWeight: 'bold' }}
-                                                >
-                                                    {persona.nombres?.charAt(0)?.toUpperCase()}
-                                                </Avatar>
-                                                <Box>
-                                                    <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                                                        {persona.nombres} {persona.apellidos || ""}
-                                                    </div>
-                                                </Box>
-                                            </Stack>
+                                            <div style={{ fontWeight: 600, color: "#0f172a" }}>
+                                                {persona.nombres} {persona.apellidos || ""}
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             {persona.es_socio ? (
