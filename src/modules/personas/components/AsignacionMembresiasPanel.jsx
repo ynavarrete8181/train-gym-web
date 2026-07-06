@@ -439,7 +439,7 @@ export default function AsignacionMembresiasPanel() {
                             Cancelar
                         </PremiumButton>
                         <PremiumButton variant="guardar" onClick={handleSaveBatch} loading={saving}>
-                            Guardar asignación
+                            Guardar
                         </PremiumButton>
                     </>
                 }
