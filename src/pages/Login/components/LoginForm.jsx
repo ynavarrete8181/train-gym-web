@@ -64,29 +64,10 @@ export default function LoginForm() {
                 border: "2px solid var(--tg-primary)",
                 display: "flex",
                 flexDirection: "column",
-                alignItems: "center",
-                maxHeight: "90vh",
-                overflowY: "auto",
-                "&::-webkit-scrollbar": {
-                    display: "none"
-                },
-                scrollbarWidth: "none",
-                msOverflowStyle: "none"
+                alignItems: "center"
             }}
         >
-            {/* Shield Logo */}
-            <Box
-                component="img"
-                src={escudoPng}
-                alt="Revive Icon"
-                sx={{ 
-                    width: "min(10vh, 70px)", 
-                    height: "min(10vh, 70px)", 
-                    objectFit: "contain",
-                    mb: "min(2vh, 16px)",
-                }}
-            />
-
+            {/* Shield Logo oculto por ahora */}
             <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "min(5vh, 2rem)", mb: "min(1vh, 4px)" }}>
                 Bienvenido de nuevo
             </Typography>
@@ -225,56 +206,7 @@ export default function LoginForm() {
                     {loading ? "Ingresando..." : "Iniciar sesión"}
                 </Button>
 
-                {/* Divider */}
-                <Divider sx={{ "&::before, &::after": { borderColor: "rgba(255,255,255,0.1)" }, color: "rgba(255,255,255,0.4)", mb: "min(3vh, 24px)" }}>
-                    <Typography sx={{ fontSize: "0.85rem" }}>o continúa con</Typography>
-                </Divider>
-
-                {/* Social Buttons */}
-                <Box sx={{ display: "flex", gap: 1.5, mb: 2 }}>
-                    <Button
-                        fullWidth
-                        variant="outlined"
-                        sx={{
-                            borderColor: "rgba(255,255,255,0.15)",
-                            bgcolor: "rgba(240,180,0,0.12)",
-                            py: 0.8,
-                            borderRadius: "8px",
-                            minWidth: 0,
-                            "&:hover": { bgcolor: "rgba(240,180,0,0.2)", borderColor: "rgba(240,180,0,0.3)" }
-                        }}
-                    >
-                        <GoogleIcon sx={{ color: "#DB4437", fontSize: 20 }} />
-                    </Button>
-                    <Button
-                        fullWidth
-                        variant="outlined"
-                        sx={{
-                            borderColor: "rgba(255,255,255,0.15)",
-                            bgcolor: "rgba(255,255,255,0.04)",
-                            py: 0.8,
-                            borderRadius: "8px",
-                            minWidth: 0,
-                            "&:hover": { bgcolor: "rgba(255,255,255,0.08)" }
-                        }}
-                    >
-                        <FacebookIcon sx={{ color: "#4267B2", fontSize: 20 }} />
-                    </Button>
-                    <Button
-                        fullWidth
-                        variant="outlined"
-                        sx={{
-                            borderColor: "rgba(255,255,255,0.15)",
-                            bgcolor: "rgba(255,255,255,0.04)",
-                            py: 0.8,
-                            borderRadius: "8px",
-                            minWidth: 0,
-                            "&:hover": { bgcolor: "rgba(255,255,255,0.08)" }
-                        }}
-                    >
-                        <AppleIcon sx={{ color: "#fff", fontSize: 20 }} />
-                    </Button>
-                </Box>
+                {/* Botones sociales y divider ocultos por ahora */}
 
                 <Typography align="center" sx={{ color: "rgba(255,255,255,0.5)", fontSize: "0.9rem", mt: 1 }}>
                     ¿No tienes una cuenta?{" "}
