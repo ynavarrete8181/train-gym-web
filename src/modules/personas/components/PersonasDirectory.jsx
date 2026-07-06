@@ -153,8 +153,6 @@ export default function PersonasDirectory({
                             <TableRow>
                                 <TableCell>Identificación</TableCell>
                                 <TableCell>Nombres y Apellidos</TableCell>
-                                <TableCell>Tipo</TableCell>
-                                <TableCell>Sede</TableCell>
                                 <TableCell>Plan / Membresía</TableCell>
                                 <TableCell>Contacto</TableCell>
                                 <TableCell align="center">Acciones</TableCell>
@@ -163,13 +161,13 @@ export default function PersonasDirectory({
                         <TableBody>
                             {loading ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 6 }}>
+                                    <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                                         Cargando listado...
                                     </TableCell>
                                 </TableRow>
                             ) : personas.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 6, color: "#64748b" }}>
+                                    <TableCell colSpan={5} align="center" sx={{ py: 6, color: "#64748b" }}>
                                         No se encontraron personas registradas en el gimnasio.
                                     </TableCell>
                                 </TableRow>
@@ -192,25 +190,6 @@ export default function PersonasDirectory({
                                                     </div>
                                                 </Box>
                                             </Stack>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Stack direction="row" spacing={0.5}>
-                                                {persona.tipos?.map((tipo) => (
-                                                    <Chip
-                                                        key={tipo.codigo}
-                                                        size="small"
-                                                        label={tipo.nombre}
-                                                        sx={semanticChipSx(tipo.codigo === "SOCIO" ? "mustard" : "neutral")}
-                                                    />
-                                                ))}
-                                            </Stack>
-                                        </TableCell>
-                                        <TableCell>
-                                            {persona.sede_nombre ? (
-                                                <span style={{ fontWeight: 600, fontSize: "13px" }}>{persona.sede_nombre}</span>
-                                            ) : (
-                                                <span style={{ color: "#cbd5e1", fontSize: 12 }}>—</span>
-                                            )}
                                         </TableCell>
                                         <TableCell>
                                             {persona.es_socio ? (
