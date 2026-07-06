@@ -210,13 +210,13 @@ export default function AsignacionMembresiasPanel() {
 
     const handleAddSocio = (socio) => {
         setSelectedSocios((prev) => {
-            if (prev.some((item) => Number(item.socio_id) === Number(socio.socio_id))) return prev;
+            if (prev.some((item) => Number(item.persona_id) === Number(socio.persona_id))) return prev;
             return [...prev, socio];
         });
     };
 
-    const handleRemoveSocio = (socioId) => {
-        setSelectedSocios((prev) => prev.filter((item) => Number(item.socio_id) !== Number(socioId)));
+    const handleRemoveSocio = (personaId) => {
+        setSelectedSocios((prev) => prev.filter((item) => Number(item.persona_id) !== Number(personaId)));
     };
 
     const handleSaveBatch = async () => {
@@ -228,7 +228,7 @@ export default function AsignacionMembresiasPanel() {
         setSaving(true);
         try {
             await apiClient.post("/gimnasio/membresias/asignaciones/lote", {
-                socio_ids: selectedSocios.map((socio) => socio.socio_id),
+                persona_ids: selectedSocios.map((socio) => socio.persona_id),
                 membresia_id: Number(filters.membresia_id),
                 sede_id: Number(filters.sede_id),
                 fecha_inicio: assignForm.fecha_inicio,
@@ -505,10 +505,10 @@ export default function AsignacionMembresiasPanel() {
                                     <TableBody>
                                         {sociosFiltered.map((socio) => {
                                             const active = isActiveMembership(socio.membresia_actual);
-                                            const selected = selectedSocios.some((item) => Number(item.socio_id) === Number(socio.socio_id));
+                                            const isSelected = selectedSocios.some((s) => Number(s.persona_id) === Number(socio.persona_id));
 
                                             return (
-                                                <TableRow key={socio.socio_id}>
+                                                <TableRow key={socio.persona_id} hover>
                                                     <TableCell>
                                                         <Typography sx={{ fontWeight: 800 }}>{socio.nombre_completo}</Typography>
                                                         <Typography sx={{ fontSize: 11, color: "#64748b" }}>{socio.codigo_socio} · {socio.cedula}</Typography>
@@ -528,7 +528,7 @@ export default function AsignacionMembresiasPanel() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell align="center">
-                                                        <IconButton disabled={selected} onClick={() => handleAddSocio(socio)} sx={semanticIconButtonSx(selected ? "neutral" : "success")}>
+                                                        <IconButton disabled={isSelected} onClick={() => handleAddSocio(socio)} sx={semanticIconButtonSx(isSelected ? "neutral" : "success")}>
                                                             <AddIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
                                                     </TableCell>
@@ -551,7 +551,7 @@ export default function AsignacionMembresiasPanel() {
                                     selectedSocios.map((socio) => {
                                         const active = isActiveMembership(socio.membresia_actual);
                                         return (
-                                            <Box key={socio.socio_id} sx={{ p: 1.25, border: "1px solid #e2e8f0", bgcolor: "#fff", display: "flex", justifyContent: "space-between", gap: 1 }}>
+                                            <Box key={socio.persona_id} sx={{ p: 1.25, border: "1px solid #e2e8f0", bgcolor: "#fff", display: "flex", justifyContent: "space-between", gap: 1 }}>
                                                 <Box>
                                                     <Typography sx={{ fontWeight: 900, color: "#0f172a", fontSize: 13 }}>{socio.nombre_completo}</Typography>
                                                     <Typography sx={{ color: "#64748b", fontSize: 11 }}>{socio.cedula}</Typography>
@@ -561,7 +561,7 @@ export default function AsignacionMembresiasPanel() {
                                                         </Typography>
                                                     )}
                                                 </Box>
-                                                <IconButton size="small" onClick={() => handleRemoveSocio(socio.socio_id)} sx={semanticIconButtonSx("danger")}>
+                                                <IconButton size="small" onClick={() => handleRemoveSocio(socio.persona_id)} sx={semanticIconButtonSx("danger")}>
                                                     <DeleteOutlineIcon sx={{ fontSize: 16 }} />
                                                 </IconButton>
                                             </Box>
