@@ -76,13 +76,9 @@ export default function LoginForm() {
                     width: "min(10vh, 70px)", 
                     height: "min(10vh, 70px)", 
                     objectFit: "contain",
-                    mb: "min(2vh, 16px)",
+                    mb: "min(4vh, 32px)",
                 }}
             />
-
-            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "min(5vh, 2rem)", mb: "min(4vh, 32px)" }}>
-                Bienvenido de nuevo
-            </Typography>
 
             {error && (
                 <Typography sx={{ color: "#ef4444", fontSize: "0.8rem", mb: 1.5, textAlign: "center" }}>
