@@ -67,12 +67,21 @@ export default function LoginForm() {
                 alignItems: "center"
             }}
         >
-            {/* Shield Logo oculto por ahora */}
-            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "min(5vh, 2rem)", mb: "min(1vh, 4px)" }}>
+            {/* Shield Logo */}
+            <Box
+                component="img"
+                src={escudoPng}
+                alt="Revive Icon"
+                sx={{ 
+                    width: "min(10vh, 70px)", 
+                    height: "min(10vh, 70px)", 
+                    objectFit: "contain",
+                    mb: "min(2vh, 16px)",
+                }}
+            />
+
+            <Typography sx={{ fontWeight: 700, color: "#fff", fontSize: "min(5vh, 2rem)", mb: "min(4vh, 32px)" }}>
                 Bienvenido de nuevo
-            </Typography>
-            <Typography sx={{ color: "rgba(255,255,255,0.6)", fontSize: "min(2.5vh, 1rem)", mb: "min(4vh, 32px)" }}>
-                Accede a tu panel Revive Sports
             </Typography>
 
             {error && (
