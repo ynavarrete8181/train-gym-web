@@ -146,6 +146,11 @@ export default function MembresiasPanel() {
                                                 {item.precios_sede.length} precio(s) por sede
                                             </Typography>
                                         )}
+                                        {!item.facturacion_automatica && (
+                                            <Typography sx={{ mt: 0.5, fontSize: 11, color: "#0284c7", fontWeight: 800 }}>
+                                                No genera factura en asignación
+                                            </Typography>
+                                        )}
                                     </TableCell>
                                     <TableCell>{item.duracion_dias} días</TableCell>
                                     <TableCell>{money(item.precio)}</TableCell>

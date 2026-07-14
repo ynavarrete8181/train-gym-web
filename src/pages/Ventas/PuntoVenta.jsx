@@ -5,6 +5,7 @@ import ReceiptLongRoundedIcon from "@mui/icons-material/ReceiptLongRounded";
 import RestartAltRoundedIcon from "@mui/icons-material/RestartAltRounded";
 import SearchRoundedIcon from "@mui/icons-material/SearchRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
+import AutorenewRoundedIcon from "@mui/icons-material/AutorenewRounded";
 import { apiClient, getApiErrorMessage, normalizeAssetUrl, openModalSwal } from "../../services/apiClient";
 import PremiumButton from "../../components/ui/PremiumButton";
 import { useAuth } from "../../context/AuthContext";
@@ -262,6 +263,25 @@ export default function PuntoVenta() {
     const [referenciaDraft, setReferenciaDraft] = useState("");
     const [cedulaCliente, setCedulaCliente] = useState("");
     const [cliente, setCliente] = useState(null);
+    const [clienteMembresias, setClienteMembresias] = useState([]);
+
+    useEffect(() => {
+        if (cliente?.cedula) {
+            let ignore = false;
+            apiClient.get("/gimnasio/membresias/asignaciones", {
+                params: { buscar: cliente.cedula }
+            }).then(({ data }) => {
+                if (!ignore && Array.isArray(data)) {
+                    setClienteMembresias(data.map(a => Number(a.membresia_id)));
+                }
+            }).catch(() => {
+                if (!ignore) setClienteMembresias([]);
+            });
+            return () => { ignore = true; };
+        } else {
+            setClienteMembresias([]);
+        }
+    }, [cliente?.cedula]);
     const [buscandoCliente, setBuscandoCliente] = useState(false);
 
     useEffect(() => {
@@ -2421,6 +2441,51 @@ export default function PuntoVenta() {
                                 </div>
                             ) : null}
 
+                            {clienteSeleccionado && cliente?.socio?.membresia_nombre ? (
+                                <div className="rev-status-panel" style={{ marginBottom: 18, borderLeft: "4px solid var(--rev-gold)" }}>
+                                    <div className="rev-section-head" style={{ marginBottom: 10 }}>
+                                        <div>
+                                            <p className="rev-kicker">Membresía del cliente</p>
+                                            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 950 }}>
+                                                {cliente.socio.membresia_nombre}
+                                            </h3>
+                                            <p style={{ color: "var(--rev-muted)", marginTop: 6, fontSize: 13 }}>
+                                                Desde {cliente.socio.fecha_inicio || "-"} hasta {cliente.socio.fecha_fin || "-"}
+                                            </p>
+                                        </div>
+                                        <div className="rev-badge" style={{
+                                            alignSelf: "flex-start",
+                                            background: cliente.socio.membresia_estado_codigo === "ACTIVO" ? "var(--rev-success-soft)" : "var(--rev-danger-soft)",
+                                            borderColor: cliente.socio.membresia_estado_codigo === "ACTIVO" ? "var(--rev-success-border)" : "var(--rev-danger-border)",
+                                            color: cliente.socio.membresia_estado_codigo === "ACTIVO" ? "var(--rev-success)" : "var(--rev-danger)",
+                                        }}>
+                                            {cliente.socio.membresia_estado_codigo === "ACTIVO" ? "Vigente" : "Vencida"}
+                                        </div>
+                                    </div>
+                                    {cliente.socio.membresia_id ? (
+                                        <div style={{ marginTop: 12 }}>
+                                            <PremiumButton
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    setMembresiaSeleccionadaId(String(cliente.socio.membresia_id));
+                                                    openModalSwal({
+                                                        icon: "success",
+                                                        title: "Membresía seleccionada",
+                                                        text: "Se ha seleccionado la membresía para cobro en el catálogo inferior.",
+                                                        timer: 2000,
+                                                        showConfirmButton: false,
+                                                    });
+                                                }}
+                                                startIcon={<AutorenewRoundedIcon fontSize="small" />}
+                                            >
+                                                Renovar este plan
+                                            </PremiumButton>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ) : null}
+
                             <div className="rev-section-head">
                                 <div>
                                     <p className="rev-kicker">Paso 2 · Catálogo</p>
@@ -2476,7 +2541,9 @@ export default function PuntoVenta() {
                             </div>
 
                             <div className="rev-membership-grid">
-                                {membresias.map((membresia) => (
+                                {membresias
+                                    .filter((membresia) => !clienteSeleccionado || clienteMembresias.includes(Number(membresia.id)))
+                                    .map((membresia) => (
                                     <button
                                         key={membresia.id}
                                         type="button"
@@ -2491,6 +2558,13 @@ export default function PuntoVenta() {
                                         </div>
                                     </button>
                                 ))}
+                                {clienteSeleccionado && membresias.filter(m => clienteMembresias.includes(Number(m.id))).length === 0 && (
+                                    <div className="rev-empty-cart" style={{ gridColumn: "1 / -1", minHeight: 120 }}>
+                                        <div>ℹ️</div>
+                                        <h3 style={{ fontSize: 16 }}>Sin membresías asignadas</h3>
+                                        <p style={{ fontSize: 13, color: "var(--rev-muted)", marginTop: 6 }}>El cliente no tiene asignaciones vigentes para facturar aquí.</p>
+                                    </div>
+                                )}
                             </div>
 
                         </div>

@@ -29,7 +29,11 @@ import { apiClient, getApiErrorMessage } from "../../../services/apiClient";
 import { modalFieldSx, semanticChipSx, semanticIconButtonSx, tableSx } from "../../../Styles/muiTheme";
 import Swal from "sweetalert2";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
+};
 
 const createInitialForm = (plan) => ({
     sede_id: "",

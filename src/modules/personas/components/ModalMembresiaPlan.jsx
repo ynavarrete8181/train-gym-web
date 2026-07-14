@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, InputLabel, MenuItem, Select, TextField, Typography } from "@mui/material";
+import { Box, InputLabel, MenuItem, Select, TextField, FormControlLabel, Switch, Typography } from "@mui/material";
 import WorkspacePremiumIcon from "@mui/icons-material/WorkspacePremium";
 
 import PremiumModal from "../../../components/ui/PremiumModal";
@@ -21,6 +21,7 @@ export default function ModalMembresiaPlan({ open, onClose, onSave, isEditMode, 
         duracion_dias: 30,
         precio: "",
         activa: true,
+        facturacion_automatica: true,
     });
 
     useEffect(() => {
@@ -33,6 +34,7 @@ export default function ModalMembresiaPlan({ open, onClose, onSave, isEditMode, 
             duracion_dias: dataEdit?.duracion_dias ?? 30,
             precio: dataEdit?.precio ?? "",
             activa: dataEdit?.activa ?? true,
+            facturacion_automatica: dataEdit?.facturacion_automatica ?? true,
         });
     }, [open, dataEdit]);
 
@@ -132,6 +134,31 @@ export default function ModalMembresiaPlan({ open, onClose, onSave, isEditMode, 
                             placeholder="60.00"
                         />
                     </Box>
+                </Box>
+
+                <Box sx={{ mt: 1, p: 2, borderRadius: 2, bgcolor: "var(--tg-bg-light)", border: "1px solid var(--tg-border)" }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={form.facturacion_automatica}
+                                onChange={(e) => setForm((prev) => ({ ...prev, facturacion_automatica: e.target.checked }))}
+                                sx={{
+                                    "& .MuiSwitch-switchBase.Mui-checked": { color: "var(--tg-primary)" },
+                                    "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": { backgroundColor: "var(--tg-primary)" },
+                                }}
+                            />
+                        }
+                        label={
+                            <Box>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 700, color: "var(--tg-text-main)" }}>
+                                    Generar factura al asignar
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: "var(--tg-text-light)", fontSize: "12px", lineHeight: 1.3 }}>
+                                    Crea una cuenta pendiente automáticamente en el Punto de Venta al asignar este plan. (Desactívalo para pases diarios).
+                                </Typography>
+                            </Box>
+                        }
+                    />
                 </Box>
             </Box>
         </PremiumModal>

@@ -259,3 +259,112 @@ a {
 .swal2-container {
   z-index: 10000 !important;
 }
+
+.app-error-boundary {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--tg-content-bg);
+  color: var(--tg-text-dark);
+}
+
+.app-error-boundary__panel {
+  width: min(100%, 720px);
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid var(--tg-card-border);
+  box-shadow: var(--tg-shadow);
+}
+
+.app-error-boundary__eyebrow {
+  margin: 0 0 8px;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.app-error-boundary h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.app-error-boundary p {
+  margin: 0 0 14px;
+  color: var(--tg-muted-dark);
+}
+
+.app-error-boundary pre {
+  max-height: 220px;
+  overflow: auto;
+  padding: 12px;
+  background: #111111;
+  color: #ffffff;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+}
+
+.app-error-boundary button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1.5px solid var(--tg-primary);
+  background: #ffffff;
+  color: var(--tg-text-dark);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.runtime-error-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.56);
+}
+
+.runtime-error-panel__body {
+  width: min(100%, 680px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 20px;
+  background: #ffffff;
+  color: var(--tg-text-dark);
+  border: 1px solid var(--tg-card-border);
+}
+
+.runtime-error-panel__eyebrow {
+  margin: 0 0 8px;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.runtime-error-panel h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.runtime-error-panel pre {
+  max-height: 260px;
+  overflow: auto;
+  padding: 12px;
+  background: #111111;
+  color: #ffffff;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12px;
+}
+
+.runtime-error-panel button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1.5px solid var(--tg-primary);
+  background: #ffffff;
+  color: var(--tg-text-dark);
+  font-weight: 900;
+}
