@@ -29,6 +29,20 @@ export default function ModalUsuario({
     sedes,
     editing,
 }) {
+    const selectedPersona = personas.find((persona) => String(persona.id) === String(formData.persona_id));
+
+    const handlePersonaChange = (personaId) => {
+        const nextPersona = personas.find((persona) => String(persona.id) === String(personaId));
+        const cedula = String(nextPersona?.cedula || "").trim();
+
+        setFormData((prev) => ({
+            ...prev,
+            persona_id: personaId,
+            email: cedula || prev.email,
+            password: !editing && cedula ? cedula : prev.password,
+        }));
+    };
+
     const inputLabelSx = {
         mb: 0.65,
         fontSize: "12px",
@@ -152,7 +166,7 @@ export default function ModalUsuario({
                                     fullWidth
                                     displayEmpty
                                     value={formData.persona_id}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, persona_id: e.target.value }))}
+                                    onChange={(e) => handlePersonaChange(e.target.value)}
                                     sx={selectSx}
                                 >
                                     <MenuItem value="" sx={{ fontSize: "12px" }}>Sin asociar</MenuItem>
@@ -171,29 +185,31 @@ export default function ModalUsuario({
                             </Box>
 
                             <Box>
-                                <InputLabel sx={inputLabelSx}>Correo electrónico *</InputLabel>
+                                <InputLabel sx={inputLabelSx}>Usuario / Cédula *</InputLabel>
                                 <TextField
                                     fullWidth
                                     variant="outlined"
                                     size="small"
-                                    type="email"
-                                    placeholder="ejemplo@correo.com"
+                                    type="text"
+                                    placeholder="Ingrese la cédula"
                                     value={formData.email}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value.trim() }))}
+                                    helperText={selectedPersona?.cedula ? "Se usa la cédula como usuario de acceso." : "Seleccione una persona o ingrese la cédula del usuario."}
                                     sx={inputSx}
                                 />
                             </Box>
 
                             <Box>
-                                <InputLabel sx={inputLabelSx}>{editing ? "Nueva contraseña (opcional)" : "Contraseña *"}</InputLabel>
+                                <InputLabel sx={inputLabelSx}>{editing ? "Nueva contraseña (opcional)" : "Contraseña inicial / Cédula *"}</InputLabel>
                                 <TextField
                                     fullWidth
                                     variant="outlined"
                                     size="small"
                                     type="password"
-                                    placeholder={editing ? "Dejar en blanco para no cambiar" : "Ingrese contraseña"}
+                                    placeholder={editing ? "Dejar en blanco para no cambiar" : "Se llena con la cédula"}
                                     value={formData.password}
                                     onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                                    helperText={!editing && selectedPersona?.cedula ? "Se asigna la misma cédula como contraseña inicial." : ""}
                                     sx={inputSx}
                                 />
                             </Box>

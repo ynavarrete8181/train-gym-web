@@ -33,7 +33,7 @@ import { apiClient, getApiErrorMessage } from "../../services/apiClient";
 import { filterInputSx, semanticChipSx, semanticIconButtonSx, tableSx } from "../../Styles/muiTheme";
 import { pagePaperSx } from "../personas/personas.utils";
 
-const emptyForm = {
+const createEmptyForm = () => ({
     id: null,
     persona_id: "",
     email: "",
@@ -41,13 +41,15 @@ const emptyForm = {
     estado: "ACTIVO",
     roles: [],
     sedes: [],
-};
+});
 
 const estadoTone = {
     ACTIVO: "success",
     INACTIVO: "mustard",
     BLOQUEADO: "danger",
 };
+
+const hasUsername = (value) => String(value || "").trim().length > 0;
 
 export default function Usuarios() {
     const [usuarios, setUsuarios] = useState([]);
@@ -59,7 +61,7 @@ export default function Usuarios() {
     const [rolId, setRolId] = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState(emptyForm);
+    const [formData, setFormData] = useState(createEmptyForm());
 
     const fetchCatalogos = async () => {
         const { data } = await apiClient.get("/gimnasio/seguridad/usuarios/catalogos");
@@ -92,12 +94,12 @@ export default function Usuarios() {
     }, [buscar, estado, rolId]);
 
     const resetForm = () => {
-        setFormData(emptyForm);
+        setFormData(createEmptyForm());
         setModalOpen(false);
     };
 
     const openCreate = () => {
-        setFormData(emptyForm);
+        setFormData(createEmptyForm());
         setModalOpen(true);
     };
 
@@ -115,11 +117,22 @@ export default function Usuarios() {
     };
 
     const submitForm = async () => {
+        if (!hasUsername(formData.email)) {
+            Swal.fire("Usuario requerido", "Ingrese la cédula que usará el usuario para iniciar sesión.", "warning");
+            return;
+        }
+
+        if (!formData.id && !String(formData.password || "").trim()) {
+            Swal.fire("Contraseña requerida", "Ingrese una contraseña para crear el usuario.", "warning");
+            return;
+        }
+
         setLoading(true);
         try {
             const payload = {
                 persona_id: formData.persona_id || null,
-                email: formData.email,
+                email: formData.email.trim(),
+                cedula: formData.email.trim(),
                 estado: formData.estado,
                 roles: formData.roles,
                 sedes: formData.sedes,
@@ -193,7 +206,7 @@ export default function Usuarios() {
                                 <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1 }}>
                                     <TextField
                                         size="small"
-                                        placeholder="Buscar por correo, cédula o persona..."
+                                        placeholder="Buscar por usuario, cédula o persona..."
                                         value={buscar}
                                         onChange={(e) => setBuscar(e.target.value)}
                                         sx={{ ...filterInputSx, width: 280 }}

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
+    Autocomplete,
     Box,
+    createFilterOptions,
     FormControlLabel,
     IconButton,
     MenuItem,
@@ -31,6 +33,19 @@ const modosAplicacion = [
 ];
 
 const tiposBloque = ["DEPORTIVO", "HIBRIDO", "FUERZA", "POTENCIA", "ACCESORIOS", "MOVILIDAD"];
+
+const exerciseFilter = createFilterOptions({
+    ignoreAccents: true,
+    ignoreCase: true,
+    limit: 45,
+    stringify: (option) => [
+        option?.nombre,
+        option?.grupo_muscular,
+        option?.categoria,
+        option?.equipamiento,
+        option?.nivel,
+    ].filter(Boolean).join(" "),
+});
 
 const cardSx = {
     border: "1px solid rgba(148, 163, 184, 0.22)",
@@ -142,6 +157,75 @@ const normalizeNumber = (value) => {
     const parsed = Number(value);
     return Number.isNaN(parsed) ? null : parsed;
 };
+
+const findExerciseById = (ejercicios, value) => (
+    ejercicios.find((item) => String(item.id) === String(value)) || null
+);
+
+const getExerciseMeta = (item) => [
+    item?.grupo_muscular,
+    item?.categoria,
+    item?.equipamiento,
+].filter(Boolean).join(" · ");
+
+function ExerciseAutocomplete({ ejercicios, value, label, placeholder, onChange, sx }) {
+    const selectedExercise = findExerciseById(ejercicios, value);
+
+    return (
+        <Autocomplete
+            size="small"
+            options={ejercicios}
+            value={selectedExercise}
+            onChange={(_, option) => onChange(option?.id ? String(option.id) : "")}
+            filterOptions={exerciseFilter}
+            getOptionLabel={(option) => option?.nombre || ""}
+            isOptionEqualToValue={(option, selected) => String(option.id) === String(selected.id)}
+            noOptionsText="Sin resultados"
+            clearText="Limpiar"
+            openText="Abrir buscador"
+            closeText="Cerrar buscador"
+            sx={sx}
+            renderInput={(params) => (
+                <TextField
+                    {...params}
+                    label={label}
+                    placeholder={placeholder}
+                    helperText={ejercicios.length ? `${ejercicios.length} ejercicios disponibles` : "Cargando ejercicios..."}
+                />
+            )}
+            renderOption={(props, option) => {
+                const { key, ...optionProps } = props;
+                const meta = getExerciseMeta(option);
+
+                return (
+                    <Box component="li" key={key} {...optionProps} sx={{ display: "block", py: 1 }}>
+                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: "#111827" }}>
+                            {option.nombre}
+                        </Typography>
+                        {meta ? (
+                            <Typography sx={{ fontSize: 11, color: "#64748b", mt: 0.25 }}>
+                                {meta}
+                            </Typography>
+                        ) : null}
+                    </Box>
+                );
+            }}
+            slotProps={{
+                paper: {
+                    sx: {
+                        borderRadius: 2,
+                        boxShadow: "0 18px 45px rgba(15, 23, 42, 0.18)",
+                    },
+                },
+                listbox: {
+                    sx: {
+                        maxHeight: 360,
+                    },
+                },
+            }}
+        />
+    );
+}
 
 export default function DayPlanEditor({ dayName, initialDay, ejercicios, saving, onSave, onCancel }) {
     const [state, setState] = useState({
@@ -549,16 +633,14 @@ export default function DayPlanEditor({ dayName, initialDay, ejercicios, saving,
                                 </Stack>
 
                                 <Box sx={fieldGridSx}>
-                                    <Select
-                                        size="small"
+                                    <ExerciseAutocomplete
+                                        ejercicios={ejercicios}
                                         value={ejercicio.ejercicio_id}
-                                        onChange={(event) => updateExercise(blockIndex, exerciseIndex, "ejercicio_id", event.target.value)}
-                                        displayEmpty
+                                        label="Ejercicio"
+                                        placeholder="Buscar ejercicio..."
+                                        onChange={(value) => updateExercise(blockIndex, exerciseIndex, "ejercicio_id", value)}
                                         sx={{ gridColumn: { md: "span 5" }, ...compactFieldSx }}
-                                    >
-                                        <MenuItem value="" disabled>Selecciona ejercicio</MenuItem>
-                                        {ejercicios.map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}
-                                    </Select>
+                                    />
                                     <TextField
                                         label="Orden"
                                         size="small"
@@ -749,16 +831,14 @@ export default function DayPlanEditor({ dayName, initialDay, ejercicios, saving,
                                                 </Stack>
 
                                                 <Box sx={fieldGridSx}>
-                                                    <Select
-                                                        size="small"
+                                                    <ExerciseAutocomplete
+                                                        ejercicios={ejercicios}
                                                         value={transferencia.ejercicio_id}
-                                                        onChange={(event) => updateTransfer(blockIndex, exerciseIndex, transferIndex, "ejercicio_id", event.target.value)}
-                                                        displayEmpty
+                                                        label="Transferencia"
+                                                        placeholder="Buscar transferencia..."
+                                                        onChange={(value) => updateTransfer(blockIndex, exerciseIndex, transferIndex, "ejercicio_id", value)}
                                                         sx={{ gridColumn: { md: "span 6" }, ...compactFieldSx }}
-                                                    >
-                                                        <MenuItem value="" disabled>Selecciona transferencia</MenuItem>
-                                                        {ejercicios.map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}
-                                                    </Select>
+                                                    />
                                                     <TextField
                                                         label="Orden"
                                                         size="small"

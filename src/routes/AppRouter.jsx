@@ -37,6 +37,7 @@ import EvaluacionesFuncionales from "../modules/entrenamiento/evaluaciones/Evalu
 import ConfiguracionPlanEntrenamiento from "../pages/Entrenamiento/ConfiguracionPlanEntrenamiento/ConfiguracionPlanEntrenamiento";
 import PizarraPlanEntrenamiento from "../pages/Entrenamiento/PizarraPlanEntrenamiento/PizarraPlanEntrenamiento";
 import AccesoPizarraPlanEntrenamiento from "../pages/Entrenamiento/PizarraPlanEntrenamiento/AccesoPizarraPlanEntrenamiento";
+import EjercicioAnimacionDemo from "../pages/Entrenamiento/EjercicioAnimacionDemo/EjercicioAnimacionDemo";
 export default function AppRouter() {
     return (
         <Routes>
@@ -107,6 +108,7 @@ export default function AppRouter() {
                 <Route path="/gimnasio/asignacion-membresias" element={<AsignacionMembresiasPanel />} />
                 <Route path="/gimnasio/clientes/membresias" element={<Navigate to="/gimnasio/membresias" replace />} />
                 <Route path="/entrenamiento/ejercicios" element={<Ejercicios />} />
+                <Route path="/entrenamiento/ejercicios/demo-animacion" element={<EjercicioAnimacionDemo />} />
                 <Route path="/entrenamiento/evaluaciones" element={<EvaluacionesFuncionales />} />
                 <Route path="/entrenamiento/fichas" element={<FichasGenerales />} />
                 <Route path="/entrenamiento/rm" element={<RegistroRm />} />
