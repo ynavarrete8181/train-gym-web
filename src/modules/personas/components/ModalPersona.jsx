@@ -10,6 +10,13 @@ const ui = {
     text: "#0f172a",
 };
 
+const VALID_PERSONA_TYPES = ["CLIENTE", "SOCIO", "FUNCIONARIO", "ENTRENADOR"];
+
+const normalizePersonaType = (value) => {
+    const normalized = String(value || "").trim().toUpperCase();
+    return VALID_PERSONA_TYPES.includes(normalized) ? normalized : "CLIENTE";
+};
+
 export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEdit }) {
     const [fotoFile, setFotoFile] = useState(null);
     const [fotoPreview, setFotoPreview] = useState("");
@@ -48,7 +55,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                     direccion: dataEdit.direccion || "",
                     ciudad: dataEdit.ciudad || "",
                     provincia: dataEdit.provincia || "",
-                    tipo_persona: dataEdit.tipos?.[0]?.codigo || "CLIENTE",
+                    tipo_persona: normalizePersonaType(dataEdit.tipos?.[0]?.codigo || dataEdit.tipo_persona),
                     sede_id: dataEdit.sede_id?.toString() || "1",
                     foto_url: dataEdit.foto_url || "",
                 });
@@ -87,6 +94,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
         e.preventDefault();
         onSave({
             ...form,
+            tipo_persona: normalizePersonaType(form.tipo_persona),
             foto_file: fotoFile,
             remove_foto: removeFoto,
         });
@@ -105,6 +113,14 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
             }
         }
 
+        if (!error?.response) {
+            if (error?.code === "ECONNABORTED") {
+                return "La IA tardó demasiado en quitar el fondo.";
+            }
+
+            return "No se pudo conectar con el servicio de IA para quitar el fondo.";
+        }
+
         return getApiErrorMessage(error, error?.message || fallback);
     };
 
@@ -114,7 +130,10 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
 
         const response = await apiClient.post("/gimnasio/personas/foto/quitar-fondo", formData, {
             responseType: "blob",
-            headers: { Accept: "image/png, application/json" },
+            headers: {
+                Accept: "image/png, application/json",
+                "Content-Type": "multipart/form-data",
+            },
             timeout: 90000,
         });
 
@@ -138,11 +157,10 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
             setPhotoMessage("");
         } catch (error) {
             console.error("No se pudo quitar el fondo de la foto del cliente.", error);
-            URL.revokeObjectURL(originalPreview);
-            setFotoFile(null);
-            setFotoPreview(normalizeAssetUrl(form.foto_url || ""));
-            await getPhotoProcessingErrorMessage(error, "No se pudo quitar el fondo.");
-            setPhotoMessage("No se pudo quitar el fondo.");
+            setFotoFile(file);
+            setFotoPreview(originalPreview);
+            const reason = await getPhotoProcessingErrorMessage(error, "No se pudo quitar el fondo.");
+            setPhotoMessage(`${reason} Se usara la foto original.`);
         } finally {
             setProcessingPhoto(false);
         }
@@ -392,7 +410,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                             sx={{
                                 fontSize: 10,
                                 fontWeight: 900,
-                                color: processingPhoto || photoMessage.includes("respaldo local")
+                                color: processingPhoto || photoMessage.includes("foto original")
                                     ? "#b77900"
                                     : (photoMessage.startsWith("No se") || photoMessage.includes("Error") ? "#b91c1c" : "#15803d"),
                             }}
@@ -401,7 +419,7 @@ export default function ModalPersona({ open, onClose, onSave, isEditMode, dataEd
                         </Typography>
                     )}
                     <Typography sx={{ fontSize: 10, color: "#64748b", textAlign: "center" }}>
-                        Se limpia el fondo automáticamente
+                        Se intenta limpiar el fondo automáticamente
                     </Typography>
                     <Stack direction="row" spacing={1} sx={{ width: "100%" }}>
                         <Box

@@ -21,13 +21,25 @@ import MembresiasPanel from "./components/MembresiasPanel";
 import { apiClient, getApiErrorMessage } from "../../services/apiClient";
 import { pagePaperSx } from "./personas.utils";
 
+const VALID_PERSONA_TYPES = ["CLIENTE", "SOCIO", "FUNCIONARIO", "ENTRENADOR"];
+
+const normalizePersonaType = (value) => {
+    const normalized = String(value || "").trim().toUpperCase();
+    return VALID_PERSONA_TYPES.includes(normalized) ? normalized : "CLIENTE";
+};
+
 const buildPersonaRequest = (payload, method = "post") => {
-    if (!payload?.foto_file) return payload;
+    const normalizedPayload = {
+        ...payload,
+        tipo_persona: normalizePersonaType(payload?.tipo_persona),
+    };
+
+    if (!normalizedPayload?.foto_file) return normalizedPayload;
 
     const formData = new FormData();
     if (method !== "post") formData.append("_method", method.toUpperCase());
 
-    Object.entries(payload).forEach(([key, value]) => {
+    Object.entries(normalizedPayload).forEach(([key, value]) => {
         if (key === "foto_file") return;
         if (key === "remove_foto") {
             formData.append(key, value ? "1" : "0");
@@ -36,7 +48,7 @@ const buildPersonaRequest = (payload, method = "post") => {
         if (value !== undefined && value !== null) formData.append(key, value);
     });
 
-    formData.append("foto", payload.foto_file);
+    formData.append("foto", normalizedPayload.foto_file);
     return formData;
 };
 

@@ -24,6 +24,8 @@ import Swal from "sweetalert2";
 import { apiClient, getApiErrorMessage } from "../../services/apiClient";
 import { filterInputSx, semanticChipSx, tableSx } from "../../Styles/muiTheme";
 import { pagePaperSx } from "../personas/personas.utils";
+import ReportExportButtons from "./ReportExportButtons";
+import ReportMetricChip from "./ReportMetricChip";
 
 const getTone = (adherencia, dolor) => {
     if (dolor >= 7 || adherencia < 60) return "danger";
@@ -80,6 +82,27 @@ export default function ReportesEvolucion() {
         return [...data.ultimos_rm].sort((a, b) => Number(b.rm_estimado || 0) - Number(a.rm_estimado || 0))[0];
     }, [data.ultimos_rm]);
 
+    const clientesColumns = [
+        { key: "nombre_completo", label: "Cliente" },
+        { key: "sesiones", label: "Sesiones" },
+        { key: "adherencia_promedio", label: "Adherencia", exportValue: (row) => `${row.adherencia_promedio}%` },
+        { key: "dolor_promedio", label: "Dolor / RPE", exportValue: (row) => `${row.dolor_promedio || 0} / ${row.rpe_promedio || 0}` },
+        { key: "mejor_rm", label: "Mejor RM", exportValue: (row) => row.mejor_rm ? `${row.mejor_rm.valor} - ${row.mejor_rm.ejercicio_nombre}` : "Sin RM" },
+        { key: "ultima_evaluacion", label: "Última evaluación", exportValue: (row) => row.ultima_evaluacion ? `${row.ultima_evaluacion.tipo_evaluacion} - ${row.ultima_evaluacion.fecha_evaluacion}` : "Sin evaluación" },
+    ];
+    const rmColumns = [
+        { key: "nombre_completo", label: "Cliente" },
+        { key: "ejercicio_nombre", label: "Ejercicio" },
+        { key: "rm_estimado", label: "RM" },
+        { key: "fecha_registro", label: "Fecha" },
+    ];
+    const evaluacionColumns = [
+        { key: "nombre_completo", label: "Cliente" },
+        { key: "tipo_evaluacion", label: "Tipo" },
+        { key: "resultado_resumen", label: "Resumen", exportValue: (row) => row.resultado_resumen || "Sin resumen" },
+        { key: "fecha_evaluacion", label: "Fecha" },
+    ];
+
     return (
         <Stack spacing={3}>
             <Paper elevation={0} sx={{ ...pagePaperSx, p: 3, display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
@@ -120,53 +143,41 @@ export default function ReportesEvolucion() {
                 </Stack>
             </Paper>
 
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Clientes</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{data.resumen.clientes}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Sesiones</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{data.resumen.sesiones}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Adherencia promedio</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{data.resumen.adherencia_promedio}%</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Registros RM</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{data.resumen.rm_registros}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Evaluaciones</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{data.resumen.evaluaciones}</Typography>
-                </Paper>
+            <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
+                <ReportMetricChip label="Clientes" value={data.resumen.clientes} />
+                <ReportMetricChip label="Sesiones" value={data.resumen.sesiones} />
+                <ReportMetricChip label="Adherencia promedio" value={`${data.resumen.adherencia_promedio}%`} tone="success" />
+                <ReportMetricChip label="Registros RM" value={data.resumen.rm_registros} tone="mustard" />
+                <ReportMetricChip label="Evaluaciones" value={data.resumen.evaluaciones} tone="mustard" />
             </Stack>
 
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Cliente más estable</Typography>
-                    <Typography sx={{ fontSize: 16, fontWeight: 900, color: "#0f172a", mt: 0.6 }}>
-                        {topCliente ? topCliente.nombre_completo : "Sin datos"}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#64748b", mt: 0.4 }}>
-                        {topCliente ? `${topCliente.adherencia_promedio}% adherencia · dolor ${topCliente.dolor_promedio}` : "Aún no hay datos suficientes."}
-                    </Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>RM destacado</Typography>
-                    <Typography sx={{ fontSize: 16, fontWeight: 900, color: "#0f172a", mt: 0.6 }}>
-                        {topRm ? `${topRm.rm_estimado} · ${topRm.ejercicio_nombre}` : "Sin datos"}
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#64748b", mt: 0.4 }}>
-                        {topRm ? `${topRm.nombre_completo} · ${topRm.fecha_registro}` : "Registra RM para comparar evolución."}
-                    </Typography>
-                </Paper>
+            <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
+                <ReportMetricChip
+                    label="Cliente más estable"
+                    value={topCliente ? topCliente.nombre_completo : "Sin datos"}
+                    helper={topCliente ? `${topCliente.adherencia_promedio}% adherencia · dolor ${topCliente.dolor_promedio}` : "Aún no hay datos suficientes."}
+                    tone="success"
+                />
+                <ReportMetricChip
+                    label="RM destacado"
+                    value={topRm ? `${topRm.rm_estimado}` : "Sin datos"}
+                    helper={topRm ? `${topRm.ejercicio_nombre} · ${topRm.nombre_completo}` : "Registra RM para comparar evolución."}
+                    tone="mustard"
+                />
             </Stack>
 
-            <Paper elevation={0} sx={{ ...pagePaperSx, p: 3 }}>
-                <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.5 }}>Resumen por cliente</Typography>
-                <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none" }}>
+            <Paper elevation={0} sx={{ ...pagePaperSx, p: 0, overflow: "hidden" }}>
+                <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.5}
+                    alignItems={{ xs: "stretch", sm: "center" }}
+                    justifyContent="space-between"
+                    sx={{ px: 2.5, py: 2, borderBottom: "1px solid #e5e7eb", backgroundColor: "#ffffff" }}
+                >
+                    <Typography sx={{ fontWeight: 900, color: "#0f172a", fontSize: 16 }}>Resumen por cliente</Typography>
+                    <ReportExportButtons title="Resumen por cliente" rows={data.clientes} columns={clientesColumns} />
+                </Stack>
+                <TableContainer sx={{ boxShadow: "none" }}>
                     <Table size="small" sx={tableSx}>
                         <TableHead>
                             <TableRow>
@@ -220,9 +231,18 @@ export default function ReportesEvolucion() {
             </Paper>
 
             <Stack direction={{ xs: "column", xl: "row" }} spacing={2}>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 3, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.5 }}>Últimos RM</Typography>
-                    <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none" }}>
+                <Paper elevation={0} sx={{ ...pagePaperSx, p: 0, flex: 1, overflow: "hidden" }}>
+                    <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1.5}
+                        alignItems={{ xs: "stretch", sm: "center" }}
+                        justifyContent="space-between"
+                        sx={{ px: 2.5, py: 2, borderBottom: "1px solid #e5e7eb", backgroundColor: "#ffffff" }}
+                    >
+                        <Typography sx={{ fontWeight: 900, color: "#0f172a", fontSize: 16 }}>Últimos RM</Typography>
+                        <ReportExportButtons title="Últimos RM" rows={data.ultimos_rm} columns={rmColumns} />
+                    </Stack>
+                    <TableContainer sx={{ boxShadow: "none" }}>
                         <Table size="small" sx={tableSx}>
                             <TableHead>
                                 <TableRow>
@@ -252,9 +272,18 @@ export default function ReportesEvolucion() {
                     </TableContainer>
                 </Paper>
 
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 3, flex: 1 }}>
-                    <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.5 }}>Últimas evaluaciones</Typography>
-                    <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none" }}>
+                <Paper elevation={0} sx={{ ...pagePaperSx, p: 0, flex: 1, overflow: "hidden" }}>
+                    <Stack
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={1.5}
+                        alignItems={{ xs: "stretch", sm: "center" }}
+                        justifyContent="space-between"
+                        sx={{ px: 2.5, py: 2, borderBottom: "1px solid #e5e7eb", backgroundColor: "#ffffff" }}
+                    >
+                        <Typography sx={{ fontWeight: 900, color: "#0f172a", fontSize: 16 }}>Últimas evaluaciones</Typography>
+                        <ReportExportButtons title="Últimas evaluaciones" rows={data.ultimas_evaluaciones} columns={evaluacionColumns} />
+                    </Stack>
+                    <TableContainer sx={{ boxShadow: "none" }}>
                         <Table size="small" sx={tableSx}>
                             <TableHead>
                                 <TableRow>

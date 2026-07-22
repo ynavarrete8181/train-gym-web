@@ -30,6 +30,7 @@ export default function PremiumModal({
             maxWidth={maxWidth}
             fullWidth={fullWidth}
             PaperProps={{
+                className: "tg-modal-paper",
                 sx: {
                     borderRadius: "var(--tg-radius)",
                     overflow: "hidden",
@@ -39,6 +40,7 @@ export default function PremiumModal({
         >
             {/* Header */}
             <DialogTitle
+                className="tg-modal-title"
                 sx={{
                     bgcolor: globalUi.black,
                     color: "#fff",
@@ -49,9 +51,9 @@ export default function PremiumModal({
                     px: 3.2
                 }}
             >
-                <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
+                <Box className="tg-modal-title__inner" sx={{ display: "flex", alignItems: "flex-start", gap: 1.5 }}>
                     {icon && (
-                        <Box sx={{ 
+                        <Box className="tg-modal-title__icon" sx={{ 
                             display: "flex", 
                             alignItems: "center", 
                             justifyContent: "center",
@@ -63,11 +65,11 @@ export default function PremiumModal({
                         </Box>
                     )}
                     <Box>
-                        <Typography sx={{ fontWeight: 800, fontSize: "14px", letterSpacing: "0.2px", lineHeight: 1.2 }}>
+                        <Typography className="tg-modal-title__heading" sx={{ fontWeight: 800, fontSize: "14px", letterSpacing: "0.2px", lineHeight: 1.2 }}>
                             {title}
                         </Typography>
                         {subtitle && (
-                            <Typography sx={{ fontSize: "11px", color: "rgba(255,255,255,0.65)", mt: 0.4, fontWeight: 500 }}>
+                            <Typography className="tg-modal-title__subtitle" sx={{ fontSize: "11px", color: "rgba(255,255,255,0.65)", mt: 0.4, fontWeight: 500 }}>
                                 {subtitle}
                             </Typography>
                         )}
@@ -81,6 +83,7 @@ export default function PremiumModal({
 
             {/* Content */}
             <DialogContent
+                className="tg-modal-content"
                 sx={{
                     p: 2.25,
                     pt: 2,
@@ -98,6 +101,7 @@ export default function PremiumModal({
                 <>
                     <Divider />
                     <DialogActions
+                        className="tg-modal-actions"
                         sx={{
                             p: 1.75,
                             px: 2,

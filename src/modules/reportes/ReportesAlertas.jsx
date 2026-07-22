@@ -20,6 +20,8 @@ import Swal from "sweetalert2";
 import { apiClient, getApiErrorMessage } from "../../services/apiClient";
 import { filterInputSx, semanticChipSx, tableSx } from "../../Styles/muiTheme";
 import { pagePaperSx } from "../personas/personas.utils";
+import ReportExportButtons from "./ReportExportButtons";
+import ReportMetricChip from "./ReportMetricChip";
 import { buildClientRecommendations } from "./recomendaciones";
 
 export default function ReportesAlertas() {
@@ -43,6 +45,14 @@ export default function ReportesAlertas() {
                 return weight(b) - weight(a);
             });
     }, [clientes]);
+
+    const alertaColumns = [
+        { key: "nombre_completo", label: "Cliente" },
+        { key: "adherencia_promedio", label: "Adherencia", exportValue: (row) => `${row.adherencia_promedio}%` },
+        { key: "dolor_promedio", label: "Dolor / RPE", exportValue: (row) => `${row.dolor_promedio || 0} / ${row.rpe_promedio || 0}` },
+        { key: "ultima_sesion", label: "Última sesión", exportValue: (row) => row.ultima_sesion || "Sin datos" },
+        { key: "alerts", label: "Alertas", exportValue: (row) => row.alerts.map((alert) => alert.label).join(", ") },
+    ];
 
     return (
         <Stack spacing={3}>
@@ -69,28 +79,32 @@ export default function ReportesAlertas() {
                 />
             </Paper>
 
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Clientes con alertas</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{clientesConAlertas.length}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Alertas críticas</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>
-                        {clientesConAlertas.filter((item) => item.alerts.some((alert) => alert.tone === "danger")).length}
-                    </Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Seguimiento</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>
-                        {clientesConAlertas.filter((item) => item.alerts.every((alert) => alert.tone !== "danger")).length}
-                    </Typography>
-                </Paper>
+            <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
+                <ReportMetricChip label="Clientes con alertas" value={clientesConAlertas.length} tone="mustard" />
+                <ReportMetricChip
+                    label="Alertas críticas"
+                    value={clientesConAlertas.filter((item) => item.alerts.some((alert) => alert.tone === "danger")).length}
+                    tone="danger"
+                />
+                <ReportMetricChip
+                    label="Seguimiento"
+                    value={clientesConAlertas.filter((item) => item.alerts.every((alert) => alert.tone !== "danger")).length}
+                    tone="success"
+                />
             </Stack>
 
-            <Paper elevation={0} sx={{ ...pagePaperSx, p: 3 }}>
-                <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.5 }}>Panel de alertas</Typography>
-                <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none" }}>
+            <Paper elevation={0} sx={{ ...pagePaperSx, p: 0, overflow: "hidden" }}>
+                <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.5}
+                    alignItems={{ xs: "stretch", sm: "center" }}
+                    justifyContent="space-between"
+                    sx={{ px: 2.5, py: 2, borderBottom: "1px solid #e5e7eb", backgroundColor: "#ffffff" }}
+                >
+                    <Typography sx={{ fontWeight: 900, color: "#0f172a", fontSize: 16 }}>Panel de alertas</Typography>
+                    <ReportExportButtons title="Panel de alertas" rows={clientesConAlertas} columns={alertaColumns} />
+                </Stack>
+                <TableContainer sx={{ boxShadow: "none" }}>
                     <Table size="small" sx={tableSx}>
                         <TableHead>
                             <TableRow>

@@ -28,6 +28,17 @@ export function AuthProvider({ children }) {
 
     const [booting, setBooting] = useState(true);
 
+    const persistUser = (data) => {
+        const normalized = normalizeUser(data);
+        if (normalized) {
+            localStorage.setItem("USER", JSON.stringify(normalized));
+        } else {
+            localStorage.removeItem("USER");
+        }
+        setUser(normalized);
+        return normalized;
+    };
+
     useEffect(() => {
         const token = localStorage.getItem("ACCESS_TOKEN");
         if (!token) {
@@ -39,9 +50,7 @@ export function AuthProvider({ children }) {
         apiClient
             .get("/auth/me")
             .then(({ data }) => {
-                const normalized = normalizeUser(data);
-                setUser(normalized);
-                localStorage.setItem("USER", JSON.stringify(normalized));
+                persistUser(data);
             })
             .catch(() => {
                 clearStoredAuth();
@@ -63,8 +72,7 @@ export function AuthProvider({ children }) {
             if (!token || !u) return { ok: false, message: "Respuesta inválida del servidor" };
 
             localStorage.setItem("ACCESS_TOKEN", token);
-            localStorage.setItem("USER", JSON.stringify(u));
-            setUser(u);
+            persistUser(u);
 
             return { ok: true };
         } catch (error) {
@@ -86,7 +94,17 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const value = useMemo(() => ({ user, booting, login, logout }), [user, booting]);
+    const refreshUser = async () => {
+        const { data } = await apiClient.get("/auth/me");
+        return persistUser(data);
+    };
+
+    const updateUser = (nextUser) => persistUser(nextUser);
+
+    const value = useMemo(
+        () => ({ user, booting, login, logout, refreshUser, updateUser }),
+        [user, booting]
+    );
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

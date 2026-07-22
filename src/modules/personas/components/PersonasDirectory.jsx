@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Avatar,
     Box,
@@ -45,21 +45,21 @@ export default function PersonasDirectory({
     onEditPersona,
 }) {
     const [page, setPage] = useState(0);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const rowsPerPage = 5;
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
     };
 
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
     const paginatedPersonas = personas.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+    useEffect(() => {
+        setPage(0);
+    }, [personas.length]);
 
     return (
         <Paper
+            className="tg-module-card"
             elevation={0}
             sx={{
                 ...pagePaperSx,
@@ -69,8 +69,8 @@ export default function PersonasDirectory({
                 overflow: "hidden",
             }}
         >
-            <Box sx={{ px: 4, py: 2.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1 }}>
+            <Box className="tg-module-toolbar">
+                <Stack className="tg-module-toolbar__filters" direction="row" spacing={1.5} alignItems="center">
                     <TextField
                         size="small"
                         placeholder="Buscar por cédula o nombre..."
@@ -104,13 +104,16 @@ export default function PersonasDirectory({
                     </FormControl>
                 </Stack>
 
-                <PremiumButton variant="anadir" onClick={onCreate}>
-                    Añadir
-                </PremiumButton>
+                <Box className="tg-module-toolbar__actions">
+                    <PremiumButton variant="anadir" onClick={onCreate}>
+                        Añadir
+                    </PremiumButton>
+                </Box>
             </Box>
 
-            <Box sx={{ px: 4, pb: 4 }}>
+            <Box className="tg-module-table-area">
                 <TableContainer
+                    className="tg-table-wrap tg-table-wrap--scroll"
                     component={Paper}
                     sx={{
                         overflowX: "auto",
@@ -142,8 +145,18 @@ export default function PersonasDirectory({
                                 </TableRow>
                             ) : personas.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} align="center" sx={{ py: 6, color: "#64748b" }}>
-                                        No se encontraron personas registradas en el gimnasio.
+                                    <TableCell colSpan={6}>
+                                        <Box className="tg-empty-state">
+                                            <Box>
+                                                <Box className="tg-empty-state__icon">
+                                                    <SearchOutlinedIcon sx={{ fontSize: 34 }} />
+                                                </Box>
+                                                <p className="tg-empty-state__title">Sin clientes</p>
+                                                <p className="tg-empty-state__text">
+                                                    No se encontraron personas registradas en el gimnasio.
+                                                </p>
+                                            </Box>
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -256,13 +269,14 @@ export default function PersonasDirectory({
                 </TableContainer>
                 
                 <TablePagination
+                    className="tg-table-pagination"
                     component="div"
                     count={personas.length}
                     page={page}
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    rowsPerPageOptions={[5, 10, 25]}
+                    onRowsPerPageChange={() => {}}
+                    rowsPerPageOptions={[5]}
                     labelRowsPerPage="Filas por página:"
                     labelDisplayedRows={({ from, to, count }) => `${from}–${to} de ${count !== -1 ? count : `más de ${to}`}`}
                 />

@@ -29,8 +29,16 @@ import Ejecucion from "../modules/ejecucion/Ejecucion";
 import ReportesEvolucion from "../modules/reportes/ReportesEvolucion";
 import ReportesAdherencia from "../modules/reportes/ReportesAdherencia";
 import ReportesAlertas from "../modules/reportes/ReportesAlertas";
+import ReportesPremium from "../modules/reportes/ReportesPremium";
+import ReportesOperativos from "../modules/reportes/ReportesOperativos";
 import Usuarios from "../modules/usuarios/Usuarios";
 import Auditoria from "../modules/auditoria/Auditoria";
+import LogsSistema from "../modules/logs/LogsSistema";
+import Notificaciones from "../modules/notificaciones/Notificaciones";
+import CumpleanosConfig from "../modules/notificaciones/CumpleanosConfig";
+import CheckIn from "../pages/Acceso/CheckIn";
+import Staff from "../modules/staff/Staff";
+import ReservasDiarias from "../modules/reservas/ReservasDiarias";
 import RegistroRm from "../modules/entrenamiento/rm/RegistroRm";
 import FichasGenerales from "../modules/entrenamiento/fichas/FichasGenerales";
 import EvaluacionesFuncionales from "../modules/entrenamiento/evaluaciones/EvaluacionesFuncionales";
@@ -71,9 +79,22 @@ export default function AppRouter() {
                 }
             >
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/notificaciones" element={<Notificaciones />} />
+                <Route path="/gimnasio/notificaciones" element={<Navigate to="/notificaciones" replace />} />
+                <Route path="/comunicaciones" element={<Navigate to="/comunicaciones/cumpleanos" replace />} />
+                <Route path="/comunicaciones/notificaciones" element={<Notificaciones />} />
+                <Route path="/comunicaciones/cumpleanos" element={<CumpleanosConfig />} />
+                <Route path="/comunicaciones/plantillas" element={<CumpleanosConfig vista="plantillas" />} />
+                <Route path="/comunicaciones/historial" element={<CumpleanosConfig vista="historial" />} />
+                <Route path="/comunicaciones/reenvios" element={<CumpleanosConfig vista="reenvios" />} />
                 <Route path="/gimnasio/horario" element={<Horarios />} />
                 <Route path="/gimnasio/categoria-servicio" element={<CategoriaServicio />} />
                 <Route path="/gimnasio/servicio" element={<Servicio />} />
+                <Route path="/gimnasio/reservas" element={<ReservasDiarias />} />
+                <Route path="/staff/equipo" element={<Staff vista="perfiles" />} />
+                <Route path="/staff/turnos" element={<Staff vista="turnos" />} />
+                <Route path="/staff/clientes" element={<Staff vista="clientes" />} />
+                <Route path="/staff/mis-clientes" element={<Staff vista="seguimiento" />} />
                 <Route path="/inventario/producto" element={<Producto />} />
                 <Route path="/inventario/entradas" element={<EntradasInventario />} />
                 <Route path="/inventario/salidas" element={<SalidasInventario />} />
@@ -106,6 +127,8 @@ export default function AppRouter() {
                 <Route path="/gimnasio/clientes/ficha-fisica" element={<Navigate to="/gimnasio/clientes" replace />} />
                 <Route path="/gimnasio/membresias" element={<MembresiasPanel />} />
                 <Route path="/gimnasio/asignacion-membresias" element={<AsignacionMembresiasPanel />} />
+                <Route path="/gimnasio/clientes/cumpleanos" element={<Navigate to="/comunicaciones/cumpleanos" replace />} />
+                <Route path="/gimnasio/check-in" element={<CheckIn />} />
                 <Route path="/gimnasio/clientes/membresias" element={<Navigate to="/gimnasio/membresias" replace />} />
                 <Route path="/entrenamiento/ejercicios" element={<Ejercicios />} />
                 <Route path="/entrenamiento/ejercicios/demo-animacion" element={<EjercicioAnimacionDemo />} />
@@ -120,8 +143,19 @@ export default function AppRouter() {
                 <Route path="/reportes/evolucion" element={<ReportesEvolucion />} />
                 <Route path="/reportes/adherencia" element={<ReportesAdherencia />} />
                 <Route path="/reportes/alertas" element={<ReportesAlertas />} />
+                <Route path="/reportes/premium" element={<ReportesPremium />} />
+                <Route path="/reportes/asistencias" element={<ReportesOperativos tipo="asistencias" />} />
+                <Route path="/reportes/membresias" element={<ReportesOperativos tipo="membresias" />} />
+                <Route path="/reportes/reservas" element={<ReportesOperativos tipo="reservas" />} />
+                <Route path="/reportes/coaches" element={<ReportesOperativos tipo="coaches" />} />
+                <Route path="/reportes/ventas" element={<ReportesOperativos tipo="ventas" />} />
+                <Route path="/reportes/auditoria" element={<ReportesOperativos tipo="auditoria" />} />
+                <Route path="/reportes/logs" element={<ReportesOperativos tipo="logs" />} />
                 <Route path="/seguridad/usuarios" element={<Usuarios />} />
-                <Route path="/seguridad/auditoria" element={<Auditoria />} />
+                <Route path="/auditoria/eventos" element={<Auditoria />} />
+                <Route path="/auditoria/logs" element={<LogsSistema />} />
+                <Route path="/seguridad/auditoria" element={<Navigate to="/auditoria/eventos" replace />} />
+                <Route path="/seguridad/logs" element={<Navigate to="/auditoria/logs" replace />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

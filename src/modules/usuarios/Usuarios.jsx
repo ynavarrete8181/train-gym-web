@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Box,
+    Button,
     Chip,
+    Fade,
     FormControl,
     InputAdornment,
     MenuItem,
@@ -13,32 +15,45 @@ import {
     TableCell,
     TableContainer,
     TableHead,
+    TablePagination,
     TableRow,
     TextField,
-    Typography,
-    IconButton,
     Tooltip,
-    Fade
+    Typography,
 } from "@mui/material";
-import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
-import CheckCircleOutlineOutlinedIcon from "@mui/icons-material/CheckCircleOutlineOutlined";
+import MarkEmailReadOutlinedIcon from "@mui/icons-material/MarkEmailReadOutlined";
+import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
+import VpnKeyOutlinedIcon from "@mui/icons-material/VpnKeyOutlined";
 import Swal from "sweetalert2";
 
 import PremiumButton from "../../components/ui/PremiumButton";
 import PageHeader from "../../components/ui/PageHeader";
 import ModalUsuario from "./components/ModalUsuario";
+import ModalAccesosUsuario from "./components/ModalAccesosUsuario";
 import { apiClient, getApiErrorMessage } from "../../services/apiClient";
-import { filterInputSx, semanticChipSx, semanticIconButtonSx, tableSx } from "../../Styles/muiTheme";
+import { filterInputSx, semanticChipSx, tableSx } from "../../Styles/muiTheme";
 import { pagePaperSx } from "../personas/personas.utils";
+
+const ROWS_PER_PAGE = 5;
 
 const createEmptyForm = () => ({
     id: null,
     persona_id: "",
     email: "",
+    cedula: "",
+    email_credenciales: "",
     password: "",
     estado: "ACTIVO",
+    enviar_credenciales: true,
+});
+
+const createAccessForm = () => ({
+    id: null,
+    nombre: "",
     roles: [],
     sedes: [],
 });
@@ -49,7 +64,35 @@ const estadoTone = {
     BLOQUEADO: "danger",
 };
 
-const hasUsername = (value) => String(value || "").trim().length > 0;
+const credentialTone = (usuario) => {
+    if (usuario.requiere_cambio_password) return "mustard";
+    if (usuario.email_credenciales || usuario.persona_email) return "success";
+    return "danger";
+};
+
+const credentialLabel = (usuario) => {
+    if (usuario.requiere_cambio_password) return "Clave temporal";
+    if (usuario.email_credenciales || usuario.persona_email) return "Correo listo";
+    return "Sin correo";
+};
+
+const normalizeIds = (items) => (items || []).map((value) => Number(value)).filter((value) => Number.isFinite(value));
+
+const ActionButton = ({ title, tone = "mustard", onClick, children }) => (
+    <Tooltip title={title}>
+        <Button
+            type="button"
+            aria-label={title}
+            onClick={onClick}
+            className={[
+                "btn-icon-action",
+                tone === "danger" ? "btn-icon-action-danger btn-icon-action--danger" : `btn-icon-action--${tone}`,
+            ].filter(Boolean).join(" ")}
+        >
+            {children}
+        </Button>
+    </Tooltip>
+);
 
 export default function Usuarios() {
     const [usuarios, setUsuarios] = useState([]);
@@ -59,9 +102,12 @@ export default function Usuarios() {
     const [buscar, setBuscar] = useState("");
     const [estado, setEstado] = useState("");
     const [rolId, setRolId] = useState("");
-    const [modalOpen, setModalOpen] = useState(false);
+    const [page, setPage] = useState(0);
+    const [modalCuentaOpen, setModalCuentaOpen] = useState(false);
+    const [modalAccesosOpen, setModalAccesosOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState(createEmptyForm());
+    const [accessData, setAccessData] = useState(createAccessForm());
 
     const fetchCatalogos = async () => {
         const { data } = await apiClient.get("/gimnasio/seguridad/usuarios/catalogos");
@@ -70,7 +116,7 @@ export default function Usuarios() {
         setSedes(data?.sedes || []);
     };
 
-    const fetchUsuarios = async () => {
+    const fetchUsuarios = useCallback(async () => {
         const { data } = await apiClient.get("/gimnasio/seguridad/usuarios", {
             params: {
                 buscar: buscar || undefined,
@@ -79,7 +125,7 @@ export default function Usuarios() {
             },
         });
         setUsuarios(data || []);
-    };
+    }, [buscar, estado, rolId]);
 
     useEffect(() => {
         fetchCatalogos().catch((error) => {
@@ -88,42 +134,69 @@ export default function Usuarios() {
     }, []);
 
     useEffect(() => {
+        setPage(0);
+    }, [buscar, estado, rolId]);
+
+    useEffect(() => {
         fetchUsuarios().catch((error) => {
             Swal.fire("Error", getApiErrorMessage(error, "No se pudieron cargar los usuarios."), "error");
         });
-    }, [buscar, estado, rolId]);
+    }, [fetchUsuarios]);
 
-    const resetForm = () => {
+    const visibleUsuarios = useMemo(
+        () => usuarios.slice(page * ROWS_PER_PAGE, page * ROWS_PER_PAGE + ROWS_PER_PAGE),
+        [usuarios, page],
+    );
+
+    const resetCuenta = () => {
         setFormData(createEmptyForm());
-        setModalOpen(false);
+        setModalCuentaOpen(false);
+    };
+
+    const resetAccesos = () => {
+        setAccessData(createAccessForm());
+        setModalAccesosOpen(false);
     };
 
     const openCreate = () => {
         setFormData(createEmptyForm());
-        setModalOpen(true);
+        setModalCuentaOpen(true);
     };
 
     const openEdit = (usuario) => {
         setFormData({
             id: usuario.id,
             persona_id: usuario.persona_id || "",
-            email: usuario.email || "",
+            email: usuario.email || usuario.cedula || "",
+            cedula: usuario.cedula || "",
+            email_credenciales: usuario.email_credenciales || usuario.persona_email || "",
             password: "",
             estado: usuario.estado || "ACTIVO",
-            roles: usuario.roles_ids || [],
-            sedes: usuario.sedes_ids || [],
+            enviar_credenciales: false,
         });
-        setModalOpen(true);
+        setModalCuentaOpen(true);
+    };
+
+    const openAccess = (usuario) => {
+        setAccessData({
+            id: usuario.id,
+            nombre: usuario.nombre_completo || usuario.email || `Usuario #${usuario.id}`,
+            roles: normalizeIds(usuario.roles_ids),
+            sedes: normalizeIds(usuario.sedes_ids),
+        });
+        setModalAccesosOpen(true);
     };
 
     const submitForm = async () => {
-        if (!hasUsername(formData.email)) {
-            Swal.fire("Usuario requerido", "Ingrese la cédula que usará el usuario para iniciar sesión.", "warning");
+        const username = String(formData.email || formData.cedula || "").trim();
+
+        if (!username) {
+            Swal.fire("Usuario requerido", "Ingrese o seleccione la cédula que usará para iniciar sesión.", "warning");
             return;
         }
 
-        if (!formData.id && !String(formData.password || "").trim()) {
-            Swal.fire("Contraseña requerida", "Ingrese una contraseña para crear el usuario.", "warning");
+        if (!formData.id && !String(formData.email_credenciales || "").trim()) {
+            Swal.fire("Correo requerido", "Ingrese el correo donde se enviarán las credenciales temporales.", "warning");
             return;
         }
 
@@ -131,15 +204,18 @@ export default function Usuarios() {
         try {
             const payload = {
                 persona_id: formData.persona_id || null,
-                email: formData.email.trim(),
-                cedula: formData.email.trim(),
+                email: username,
+                cedula: username,
                 estado: formData.estado,
-                roles: formData.roles,
-                sedes: formData.sedes,
+                email_credenciales: String(formData.email_credenciales || "").trim() || null,
             };
 
             if (formData.password) {
                 payload.password = formData.password;
+            }
+
+            if (!formData.id) {
+                payload.enviar_credenciales = Boolean(formData.enviar_credenciales);
             }
 
             if (formData.id) {
@@ -149,12 +225,62 @@ export default function Usuarios() {
             }
 
             await Promise.all([fetchUsuarios(), fetchCatalogos()]);
-            resetForm();
-            Swal.fire("Listo", formData.id ? "Usuario actualizado." : "Usuario creado.", "success");
+            resetCuenta();
+            Swal.fire("Listo", formData.id ? "Usuario actualizado." : "Usuario creado con clave temporal.", "success");
         } catch (error) {
             Swal.fire("Error", getApiErrorMessage(error, "No se pudo guardar el usuario."), "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const submitAccess = async () => {
+        if (!accessData.id) return;
+
+        setLoading(true);
+        try {
+            await apiClient.put(`/gimnasio/seguridad/usuarios/${accessData.id}/accesos`, {
+                roles: normalizeIds(accessData.roles),
+                sedes: normalizeIds(accessData.sedes),
+            });
+            await fetchUsuarios();
+            resetAccesos();
+            Swal.fire("Listo", "Accesos actualizados.", "success");
+        } catch (error) {
+            Swal.fire("Error", getApiErrorMessage(error, "No se pudieron guardar los accesos."), "error");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resendCredentials = async (usuario) => {
+        const result = await Swal.fire({
+            title: "Reenviar credenciales",
+            text: `Se generará una nueva clave temporal para ${usuario.nombre_completo || usuario.email}.`,
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Reenviar",
+            cancelButtonText: "Cancelar",
+            reverseButtons: true,
+            buttonsStyling: false,
+            customClass: {
+                popup: "tg-swal-popup",
+                title: "tg-swal-title",
+                htmlContainer: "tg-swal-text",
+                actions: "tg-swal-actions",
+                confirmButton: "btn-save tg-swal-confirm",
+                cancelButton: "btn-cancel tg-swal-cancel",
+            },
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await apiClient.post(`/gimnasio/seguridad/usuarios/${usuario.id}/reenviar-credenciales`);
+            await fetchUsuarios();
+            Swal.fire("Enviado", "Se enviaron las credenciales temporales.", "success");
+        } catch (error) {
+            Swal.fire("Error", getApiErrorMessage(error, "No se pudieron reenviar las credenciales."), "error");
         }
     };
 
@@ -174,42 +300,20 @@ export default function Usuarios() {
                 <Fade in timeout={400}>
                     <Stack spacing={3}>
                         <PageHeader
-                            title="Catálogo de Usuarios"
-                            rightContent={
-                                <Box
-                                    sx={{
-                                        px: 2,
-                                        py: 0.8,
-                                        borderRadius: "6px",
-                                        bgcolor: "rgba(15, 23, 42, 0.05)",
-                                        color: "#0f172a",
-                                        fontSize: "11px",
-                                        fontWeight: 900,
-                                    }}
-                                >
-                                    {usuarios.length} REGISTROS
-                                </Box>
-                            }
+                            title="Cuentas del sistema"
+                            icon={<VpnKeyOutlinedIcon />}
+                            rightContent={<Chip label={`${usuarios.length} REGISTROS`} sx={semanticChipSx("neutral")} />}
                         />
 
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                ...pagePaperSx,
-                                bgcolor: "#ffffff",
-                                borderRadius: "8px",
-                                border: "1px solid #e2e8f0",
-                                overflow: "hidden",
-                            }}
-                        >
-                            <Box sx={{ px: 4, py: 2.5, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2 }}>
-                                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ flexGrow: 1 }}>
+                        <Paper elevation={0} sx={{ ...pagePaperSx, bgcolor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0", overflow: "hidden" }}>
+                            <Box className="tg-module-toolbar">
+                                <Box className="tg-module-toolbar__filters">
                                     <TextField
                                         size="small"
                                         placeholder="Buscar por usuario, cédula o persona..."
                                         value={buscar}
                                         onChange={(e) => setBuscar(e.target.value)}
-                                        sx={{ ...filterInputSx, width: 280 }}
+                                        sx={{ ...filterInputSx, width: { xs: "100%", md: 300 } }}
                                         InputProps={{
                                             startAdornment: (
                                                 <InputAdornment position="start">
@@ -219,13 +323,8 @@ export default function Usuarios() {
                                         }}
                                     />
 
-                                    <FormControl size="small" sx={{ ...filterInputSx, width: 180 }}>
-                                        <Select
-                                            value={estado}
-                                            onChange={(e) => setEstado(e.target.value)}
-                                            displayEmpty
-                                            sx={{ fontSize: "13px" }}
-                                        >
+                                    <FormControl size="small" sx={{ ...filterInputSx, width: { xs: "100%", md: 180 } }}>
+                                        <Select value={estado} onChange={(e) => setEstado(e.target.value)} displayEmpty sx={{ fontSize: "13px" }}>
                                             <MenuItem value="">Cualquier estado</MenuItem>
                                             <MenuItem value="ACTIVO">Activo</MenuItem>
                                             <MenuItem value="INACTIVO">Inactivo</MenuItem>
@@ -233,13 +332,8 @@ export default function Usuarios() {
                                         </Select>
                                     </FormControl>
 
-                                    <FormControl size="small" sx={{ ...filterInputSx, width: 180 }}>
-                                        <Select
-                                            value={rolId}
-                                            onChange={(e) => setRolId(e.target.value)}
-                                            displayEmpty
-                                            sx={{ fontSize: "13px" }}
-                                        >
+                                    <FormControl size="small" sx={{ ...filterInputSx, width: { xs: "100%", md: 180 } }}>
+                                        <Select value={rolId} onChange={(e) => setRolId(e.target.value)} displayEmpty sx={{ fontSize: "13px" }}>
                                             <MenuItem value="">Cualquier rol</MenuItem>
                                             {roles.map((rol) => (
                                                 <MenuItem key={rol.id} value={rol.id}>
@@ -248,81 +342,89 @@ export default function Usuarios() {
                                             ))}
                                         </Select>
                                     </FormControl>
-                                </Stack>
+                                </Box>
 
-                                <PremiumButton
-                                    variant="anadir"
-                                    onClick={openCreate}
-                                >
-                                    Añadir
-                                </PremiumButton>
+                                <Box className="tg-module-toolbar__actions">
+                                    <PremiumButton variant="anadir" onClick={openCreate}>
+                                        Añadir
+                                    </PremiumButton>
+                                </Box>
                             </Box>
 
-                            <Box sx={{ px: 4, pb: 4 }}>
+                            <Box sx={{ px: { xs: 2, md: 4 }, pb: 2 }}>
                                 <TableContainer>
-                                    <Table sx={{ ...tableSx, minWidth: 800 }}>
+                                    <Table sx={{ ...tableSx, minWidth: 980 }}>
                                         <TableHead>
                                             <TableRow>
                                                 <TableCell>Usuario</TableCell>
                                                 <TableCell>Persona</TableCell>
-                                                <TableCell>Roles</TableCell>
+                                                <TableCell>Accesos</TableCell>
                                                 <TableCell>Estado</TableCell>
+                                                <TableCell>Credenciales</TableCell>
                                                 <TableCell>Actualizado</TableCell>
                                                 <TableCell align="right">Acciones</TableCell>
                                             </TableRow>
                                         </TableHead>
                                         <TableBody>
-                                            {usuarios.length === 0 ? (
+                                            {visibleUsuarios.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={6} align="center" sx={{ py: 5, color: "#64748b" }}>
+                                                    <TableCell colSpan={7} align="center" sx={{ py: 5, color: "#64748b" }}>
                                                         No hay usuarios con los filtros actuales.
                                                     </TableCell>
                                                 </TableRow>
-                                            ) : usuarios.map((usuario) => (
+                                            ) : visibleUsuarios.map((usuario) => (
                                                 <TableRow key={usuario.id} hover>
                                                     <TableCell>
-                                                        <Typography sx={{ fontWeight: 800, fontSize: "13px", color: "#0f172a" }}>{usuario.email}</Typography>
-                                                        <Typography sx={{ fontSize: "12px", color: "#64748b", mt: 0.5 }}>#{usuario.id}</Typography>
+                                                        <Typography sx={{ fontWeight: 900, fontSize: "13px", color: "#0f172a" }}>{usuario.email}</Typography>
+                                                        <Typography sx={{ fontSize: "12px", color: "#64748b", mt: 0.5 }}>ID {usuario.id}</Typography>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Typography sx={{ fontWeight: 800, fontSize: "13px", color: "#0f172a" }}>{usuario.nombre_completo || "Sin persona"}</Typography>
+                                                        <Typography sx={{ fontWeight: 900, fontSize: "13px", color: "#0f172a" }}>{usuario.nombre_completo || "Sin persona"}</Typography>
                                                         <Typography sx={{ fontSize: "12px", color: "#64748b", mt: 0.5 }}>{usuario.cedula || "Sin cédula"}</Typography>
                                                     </TableCell>
                                                     <TableCell>
                                                         <Stack direction="row" spacing={0.7} useFlexGap flexWrap="wrap">
                                                             {(usuario.roles || []).length === 0 ? (
-                                                                <Chip label="Sin roles" size="small" sx={{ ...semanticChipSx("mustard"), fontWeight: 800 }} />
-                                                            ) : usuario.roles.map((rol) => (
-                                                                <Chip key={rol.id} label={rol.nombre} size="small" sx={{ ...semanticChipSx("neutral"), fontWeight: 800 }} />
+                                                                <Chip label="Sin roles" size="small" sx={semanticChipSx("mustard")} />
+                                                            ) : usuario.roles.slice(0, 2).map((rol) => (
+                                                                <Chip key={rol.id} label={rol.nombre} size="small" sx={semanticChipSx("neutral")} />
                                                             ))}
+                                                            {(usuario.sedes || []).length > 0 && (
+                                                                <Chip label={`${usuario.sedes.length} sedes`} size="small" sx={semanticChipSx("inventory")} />
+                                                            )}
                                                         </Stack>
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Chip label={usuario.estado} size="small" sx={{ ...semanticChipSx(estadoTone[usuario.estado] || "neutral"), fontWeight: 800 }} />
+                                                        <Chip label={usuario.estado} size="small" sx={semanticChipSx(estadoTone[usuario.estado] || "neutral")} />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip label={credentialLabel(usuario)} size="small" sx={semanticChipSx(credentialTone(usuario))} />
+                                                        <Typography sx={{ fontSize: "11px", color: "#64748b", mt: 0.6 }}>
+                                                            {usuario.email_credenciales || usuario.persona_email || "Configure un correo"}
+                                                        </Typography>
                                                     </TableCell>
                                                     <TableCell sx={{ fontSize: "13px", color: "#64748b" }}>
                                                         {usuario.updated_at ? String(usuario.updated_at).slice(0, 16).replace("T", " ") : "Sin fecha"}
                                                     </TableCell>
                                                     <TableCell align="right">
                                                         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                                                            <Tooltip title="Editar">
-                                                                <IconButton onClick={() => openEdit(usuario)} sx={semanticIconButtonSx("mustard")}>
-                                                                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
-                                                                </IconButton>
-                                                            </Tooltip>
-
+                                                            <ActionButton title="Editar cuenta" tone="mustard" onClick={() => openEdit(usuario)}>
+                                                                <EditOutlinedIcon />
+                                                            </ActionButton>
+                                                            <ActionButton title="Roles y sedes" tone="inventory" onClick={() => openAccess(usuario)}>
+                                                                <AdminPanelSettingsOutlinedIcon />
+                                                            </ActionButton>
+                                                            <ActionButton title="Reenviar credenciales" tone="success" onClick={() => resendCredentials(usuario)}>
+                                                                <MarkEmailReadOutlinedIcon />
+                                                            </ActionButton>
                                                             {usuario.estado === "ACTIVO" ? (
-                                                                <Tooltip title="Bloquear">
-                                                                    <IconButton onClick={() => changeStatus(usuario, "BLOQUEADO")} sx={semanticIconButtonSx("danger")}>
-                                                                        <LockOutlinedIcon sx={{ fontSize: 16 }} />
-                                                                    </IconButton>
-                                                                </Tooltip>
+                                                                <ActionButton title="Bloquear" tone="danger" onClick={() => changeStatus(usuario, "BLOQUEADO")}>
+                                                                    <LockOutlinedIcon />
+                                                                </ActionButton>
                                                             ) : (
-                                                                <Tooltip title="Activar">
-                                                                    <IconButton onClick={() => changeStatus(usuario, "ACTIVO")} sx={semanticIconButtonSx("success")}>
-                                                                        <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 16 }} />
-                                                                    </IconButton>
-                                                                </Tooltip>
+                                                                <ActionButton title="Activar" tone="success" onClick={() => changeStatus(usuario, "ACTIVO")}>
+                                                                    <CheckCircleOutlineOutlinedIcon />
+                                                                </ActionButton>
                                                             )}
                                                         </Stack>
                                                     </TableCell>
@@ -331,6 +433,19 @@ export default function Usuarios() {
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
+
+                                <TablePagination
+                                    className="tg-table-pagination"
+                                    component="div"
+                                    count={usuarios.length}
+                                    page={page}
+                                    onPageChange={(_, nextPage) => setPage(nextPage)}
+                                    rowsPerPage={ROWS_PER_PAGE}
+                                    onRowsPerPageChange={() => {}}
+                                    rowsPerPageOptions={[ROWS_PER_PAGE]}
+                                    labelRowsPerPage="Filas por página:"
+                                    labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                                />
                             </Box>
                         </Paper>
                     </Stack>
@@ -338,16 +453,25 @@ export default function Usuarios() {
             </Box>
 
             <ModalUsuario
-                open={modalOpen}
-                onClose={resetForm}
+                open={modalCuentaOpen}
+                onClose={resetCuenta}
                 onSubmit={submitForm}
                 loading={loading}
                 formData={formData}
                 setFormData={setFormData}
-                roles={roles}
                 personas={personas}
-                sedes={sedes}
                 editing={Boolean(formData.id)}
+            />
+
+            <ModalAccesosUsuario
+                open={modalAccesosOpen}
+                onClose={resetAccesos}
+                onSubmit={submitAccess}
+                loading={loading}
+                formData={accessData}
+                setFormData={setAccessData}
+                roles={roles}
+                sedes={sedes}
             />
         </Box>
     );

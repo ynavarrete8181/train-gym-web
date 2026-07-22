@@ -20,6 +20,8 @@ import Swal from "sweetalert2";
 import { apiClient, getApiErrorMessage } from "../../services/apiClient";
 import { filterInputSx, semanticChipSx, tableSx } from "../../Styles/muiTheme";
 import { pagePaperSx } from "../personas/personas.utils";
+import ReportExportButtons from "./ReportExportButtons";
+import ReportMetricChip from "./ReportMetricChip";
 
 const getTone = (value) => {
     if (value < 60) return "danger";
@@ -49,6 +51,18 @@ export default function ReportesAdherencia() {
         };
     }, [data.clientes]);
 
+    const rankingColumns = [
+        { key: "nombre_completo", label: "Cliente" },
+        { key: "sesiones", label: "Sesiones" },
+        { key: "adherencia_promedio", label: "Adherencia", exportValue: (row) => `${row.adherencia_promedio}%` },
+        { key: "ultima_sesion", label: "Última sesión", exportValue: (row) => row.ultima_sesion || "Sin datos" },
+        {
+            key: "estado",
+            label: "Estado",
+            exportValue: (row) => Number(row.adherencia_promedio || 0) < 60 ? "Riesgo" : Number(row.adherencia_promedio || 0) < 80 ? "Seguimiento" : "Estable",
+        },
+    ];
+
     return (
         <Stack spacing={3}>
             <Paper elevation={0} sx={{ ...pagePaperSx, p: 3, display: "flex", justifyContent: "space-between", gap: 2, flexWrap: "wrap" }}>
@@ -74,28 +88,25 @@ export default function ReportesAdherencia() {
                 />
             </Paper>
 
-            <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Clientes</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{resumen.total}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Adherencia alta</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{resumen.alto}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Seguimiento medio</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{resumen.medio}</Typography>
-                </Paper>
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 2.5, flex: 1 }}>
-                    <Typography sx={{ fontSize: 11, fontWeight: 900, color: "#64748b", textTransform: "uppercase" }}>Riesgo bajo</Typography>
-                    <Typography sx={{ fontSize: 28, fontWeight: 950, color: "#0f172a" }}>{resumen.bajo}</Typography>
-                </Paper>
+            <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
+                <ReportMetricChip label="Clientes" value={resumen.total} />
+                <ReportMetricChip label="Adherencia alta" value={resumen.alto} tone="success" />
+                <ReportMetricChip label="Seguimiento medio" value={resumen.medio} tone="mustard" />
+                <ReportMetricChip label="Riesgo bajo" value={resumen.bajo} tone="danger" />
             </Stack>
 
-            <Paper elevation={0} sx={{ ...pagePaperSx, p: 3 }}>
-                <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.5 }}>Ranking de adherencia</Typography>
-                <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none" }}>
+            <Paper elevation={0} sx={{ ...pagePaperSx, p: 0, overflow: "hidden" }}>
+                <Stack
+                    direction={{ xs: "column", sm: "row" }}
+                    spacing={1.5}
+                    alignItems={{ xs: "stretch", sm: "center" }}
+                    justifyContent="space-between"
+                    sx={{ px: 2.5, py: 2, borderBottom: "1px solid #e5e7eb", backgroundColor: "#ffffff" }}
+                >
+                    <Typography sx={{ fontWeight: 900, color: "#0f172a", fontSize: 16 }}>Ranking de adherencia</Typography>
+                    <ReportExportButtons title="Ranking de adherencia" rows={data.clientes || []} columns={rankingColumns} />
+                </Stack>
+                <TableContainer sx={{ boxShadow: "none" }}>
                     <Table size="small" sx={tableSx}>
                         <TableHead>
                             <TableRow>

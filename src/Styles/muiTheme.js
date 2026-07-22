@@ -251,18 +251,30 @@ export const tableSx = {
     fontSize: 11,
     fontWeight: 900,
     color: "var(--tg-text-dark)",
-    backgroundColor: "rgba(15,23,42,0.04) !important",
-    borderBottom: "1px solid var(--tg-card-border)",
-    py: 1,
+    backgroundColor: "#e5e7eb !important",
+    borderBottom: "1px solid #d1d5db",
+    py: 1.35,
+    px: 2,
     textTransform: "uppercase",
+    letterSpacing: 0,
   },
   "& td": {
     fontSize: 12,
-    borderBottom: "1px solid rgba(0,0,0,0.04)",
-    py: 0.8,
+    color: "#1f2937",
+    borderBottom: "1px solid #edf0f3",
+    py: 1.35,
+    px: 2,
+    verticalAlign: "middle",
+    backgroundColor: "#ffffff",
+  },
+  "& tbody tr:nth-of-type(even) td": {
+    backgroundColor: "#fcfcfd",
   },
   "& tbody tr:hover": {
-    backgroundColor: "rgba(0,0,0,0.015)",
+    backgroundColor: "transparent",
+  },
+  "& tbody tr:hover td": {
+    backgroundColor: "#f8fafc",
   },
 };
 
@@ -289,6 +301,76 @@ export const filterInputSx = {
     borderRadius: "var(--tg-radius-xs)",
     backgroundColor: "#ffffff",
   },
+};
+
+export const reportShellSx = {
+  borderRadius: "var(--tg-radius-sm)",
+  backgroundColor: "#ffffff",
+  border: "1px solid #e5e7eb",
+  boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
+  overflow: "hidden",
+};
+
+export const reportTitleCardSx = {
+  borderRadius: "var(--tg-radius-sm)",
+  backgroundColor: "#ffffff",
+  border: "1px solid #e5e7eb",
+  boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
+  px: 3,
+  py: 2,
+};
+
+export const reportBodyCardSx = {
+  borderRadius: "var(--tg-radius-sm)",
+  backgroundColor: "#ffffff",
+  border: "1px solid #e5e7eb",
+  boxShadow: "0 8px 22px rgba(15, 23, 42, 0.05)",
+  overflow: "hidden",
+};
+
+export const reportHeaderSx = {
+  px: 3,
+  py: 2.4,
+  borderBottom: "1px solid #e5e7eb",
+  backgroundColor: "#ffffff",
+};
+
+export const reportFilterGridSx = {
+  display: "grid",
+  gridTemplateColumns: {
+    xs: "1fr",
+    md: "minmax(260px, 1.2fr) minmax(180px, 0.7fr) minmax(150px, 0.5fr) minmax(150px, 0.5fr)",
+  },
+  gap: 1.5,
+  alignItems: "center",
+};
+
+export const reportMetricsSx = {
+  px: 2.5,
+  py: 1.6,
+  borderBottom: "1px solid #e5e7eb",
+  backgroundColor: "#fbfbfc",
+};
+
+export const reportResultsSx = {
+  p: 2.5,
+};
+
+export const reportTableBlockSx = {
+  border: "1px solid #e5e7eb",
+  minWidth: 0,
+  overflow: "hidden",
+  backgroundColor: "#ffffff",
+};
+
+export const reportEmptyStateSx = {
+  minHeight: 260,
+  display: "grid",
+  placeItems: "center",
+  textAlign: "center",
+  px: 2,
+  py: 5,
+  color: "#64748b",
 };
 
 export const iconActionSx = (color = "#111") => ({

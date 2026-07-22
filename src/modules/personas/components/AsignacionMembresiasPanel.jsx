@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
     Box,
     Chip,
@@ -14,19 +14,22 @@ import {
     TableCell,
     TableContainer,
     TableHead,
+    TablePagination,
     TableRow,
     TextField,
     Typography,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import EditIcon from "@mui/icons-material/Edit";
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import Swal from "sweetalert2";
 
+import PageHeader from "../../../components/ui/PageHeader";
 import PremiumButton from "../../../components/ui/PremiumButton";
 import PremiumModal from "../../../components/ui/PremiumModal";
 import { apiClient, getApiErrorMessage } from "../../../services/apiClient";
@@ -73,32 +76,86 @@ export default function AsignacionMembresiasPanel() {
     const [socios, setSocios] = useState([]);
     const [hasSearched, setHasSearched] = useState(false);
     const [loadingHistory, setLoadingHistory] = useState(false);
+    const [filtersReady, setFiltersReady] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [page, setPage] = useState(0);
+    const rowsPerPage = 5;
 
     const [filters, setFilters] = useState({
+        buscar: "",
         sede_id: "",
         membresia_id: "",
     });
     const [addOpen, setAddOpen] = useState(false);
     const [buscarSocio, setBuscarSocio] = useState("");
     const [selectedSocios, setSelectedSocios] = useState([]);
+    const [detalleClienteKey, setDetalleClienteKey] = useState(null);
     const [assignForm, setAssignForm] = useState({
+        sede_id: "",
+        membresia_id: "",
         fecha_inicio: today(),
         modo_conflicto: "RENOVAR",
     });
 
-    const selectedPlan = useMemo(
+    const selectedHistoryPlan = useMemo(
         () => catalogo.find((plan) => String(plan.id) === String(filters.membresia_id)),
         [catalogo, filters.membresia_id]
     );
 
-    const fechaFin = useMemo(() => {
-        if (!selectedPlan || !assignForm.fecha_inicio) return "";
-        return addDays(assignForm.fecha_inicio, Number(selectedPlan.duracion_dias || 1) - 1);
-    }, [selectedPlan, assignForm.fecha_inicio]);
+    const selectedAssignPlan = useMemo(
+        () => catalogo.find((plan) => String(plan.id) === String(assignForm.membresia_id)),
+        [catalogo, assignForm.membresia_id]
+    );
 
-    const selectedTotal = Number(selectedPlan?.precio || 0) * selectedSocios.length;
+    const fechaFin = useMemo(() => {
+        if (!selectedAssignPlan || !assignForm.fecha_inicio) return "";
+        return addDays(assignForm.fecha_inicio, Number(selectedAssignPlan.duracion_dias || 1) - 1);
+    }, [selectedAssignPlan, assignForm.fecha_inicio]);
+
+    const selectedTotal = selectedSocios.length ? Number(selectedAssignPlan?.precio || 0) : 0;
     const hasConflicts = selectedSocios.some((socio) => isActiveMembership(socio.membresia_actual));
+    const canSaveAssignment = Boolean(selectedSocios.length && assignForm.sede_id && assignForm.membresia_id && selectedAssignPlan);
+    const clientesAsignacion = useMemo(() => {
+        const grouped = new Map();
+
+        asignaciones.forEach((item) => {
+            const key = String(item.socio_id || item.cedula || item.codigo_socio || item.id);
+            const current = grouped.get(key) || {
+                key,
+                socio_id: item.socio_id,
+                nombre_completo: item.nombre_completo,
+                codigo_socio: item.codigo_socio,
+                cedula: item.cedula,
+                membresias: [],
+            };
+
+            current.membresias.push(item);
+            grouped.set(key, current);
+        });
+
+        return Array.from(grouped.values()).map((cliente) => {
+            const membresias = [...cliente.membresias].sort((a, b) => String(b.fecha_fin || "").localeCompare(String(a.fecha_fin || "")));
+            const vigente = membresias.find((item) => getMembershipStatus(item.fecha_fin).code !== "VENCIDA");
+            const actual = vigente || membresias[0] || null;
+
+            return {
+                ...cliente,
+                membresias,
+                actual,
+                total_membresias: membresias.length,
+            };
+        });
+    }, [asignaciones]);
+
+    const paginatedClientes = useMemo(
+        () => clientesAsignacion.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+        [clientesAsignacion, page]
+    );
+
+    const detalleCliente = useMemo(
+        () => clientesAsignacion.find((cliente) => cliente.key === detalleClienteKey) || null,
+        [clientesAsignacion, detalleClienteKey]
+    );
 
     const fetchSedes = async () => {
         const [inventarioResult, seguridadResult] = await Promise.allSettled([
@@ -128,28 +185,25 @@ export default function AsignacionMembresiasPanel() {
         setSocios(Array.isArray(data) ? data : []);
     };
 
-    const fetchHistory = async () => {
-        if (!filters.sede_id || !filters.membresia_id) {
-            Swal.fire("Atención", "Selecciona sede y membresía antes de buscar.", "warning");
-            return;
-        }
-
+    const fetchHistory = useCallback(async () => {
         setLoadingHistory(true);
         try {
             const { data } = await apiClient.get("/gimnasio/membresias/asignaciones", {
                 params: {
-                    sede_id: filters.sede_id,
-                    membresia_id: filters.membresia_id,
+                    buscar: filters.buscar || undefined,
+                    sede_id: filters.sede_id || undefined,
+                    membresia_id: filters.membresia_id || undefined,
                 },
             });
             setAsignaciones(Array.isArray(data) ? data : []);
             setHasSearched(true);
+            setPage(0);
         } catch (error) {
             Swal.fire("Error", getApiErrorMessage(error, "No se pudo cargar el historial de asignaciones."), "error");
         } finally {
             setLoadingHistory(false);
         }
-    };
+    }, [filters.buscar, filters.membresia_id, filters.sede_id]);
 
     useEffect(() => {
         (async () => {
@@ -158,9 +212,11 @@ export default function AsignacionMembresiasPanel() {
                 setSedes(sedesData);
                 setFilters((prev) => ({
                     ...prev,
-                    sede_id: prev.sede_id || (sedesData[0]?.id ? String(sedesData[0].id) : ""),
+                    sede_id: prev.sede_id || "",
                 }));
+                await fetchCatalogo(null);
                 await fetchSocios();
+                setFiltersReady(true);
             } catch (error) {
                 Swal.fire("Error", getApiErrorMessage(error, "No se pudo cargar el módulo de asignaciones."), "error");
             }
@@ -168,8 +224,17 @@ export default function AsignacionMembresiasPanel() {
     }, []);
 
     useEffect(() => {
-        if (!filters.sede_id) return;
-        fetchCatalogo(filters.sede_id).catch((error) => {
+        if (!filtersReady) return undefined;
+
+        const timer = setTimeout(() => {
+            fetchHistory();
+        }, filters.buscar ? 350 : 0);
+
+        return () => clearTimeout(timer);
+    }, [fetchHistory, filters.buscar, filtersReady]);
+
+    useEffect(() => {
+        fetchCatalogo(filters.sede_id || null).catch((error) => {
             Swal.fire("Error", getApiErrorMessage(error, "No se pudo cargar el catálogo de membresías por sede."), "error");
         });
     }, [filters.sede_id]);
@@ -193,34 +258,40 @@ export default function AsignacionMembresiasPanel() {
             [key]: value,
             ...(key === "sede_id" ? { membresia_id: "" } : {}),
         }));
-        setHasSearched(false);
-        setAsignaciones([]);
+        setPage(0);
     };
 
-    const handleOpenAdd = () => {
-        if (!filters.sede_id || !filters.membresia_id || !selectedPlan) {
-            Swal.fire("Atención", "Primero selecciona sede y membresía.", "warning");
+    const handleOpenAdd = async () => {
+        const sedeId = filters.sede_id || "";
+        if (!sedes.length) {
+            Swal.fire("Atención", "Primero registra una sede activa.", "warning");
             return;
         }
+
+        await fetchCatalogo(sedeId || null);
         setSelectedSocios([]);
         setBuscarSocio("");
-        setAssignForm({ fecha_inicio: today(), modo_conflicto: "RENOVAR" });
+        setAssignForm({
+            sede_id: sedeId,
+            membresia_id: filters.membresia_id || "",
+            fecha_inicio: today(),
+            modo_conflicto: "RENOVAR",
+        });
         setAddOpen(true);
     };
 
     const handleAddSocio = (socio) => {
         const active = isActiveMembership(socio.membresia_actual);
-        const isSamePlanAndSede = active && socio.membresia_actual.membresia_id === Number(filters.membresia_id) && socio.membresia_actual.sede_id === Number(filters.sede_id);
+        const isSamePlanAndSede = active
+            && socio.membresia_actual.membresia_id === Number(assignForm.membresia_id)
+            && socio.membresia_actual.sede_id === Number(assignForm.sede_id);
 
         if (isSamePlanAndSede) {
-            Swal.fire("Atención", "El usuario ya tiene esta membresía activa en esta sede.", "warning");
+            Swal.fire("Atención", "El cliente ya tiene esta membresía activa en esta sede.", "warning");
             return;
         }
 
-        setSelectedSocios((prev) => {
-            if (prev.some((item) => Number(item.persona_id) === Number(socio.persona_id))) return prev;
-            return [...prev, socio];
-        });
+        setSelectedSocios([socio]);
     };
 
     const handleRemoveSocio = (personaId) => {
@@ -229,14 +300,18 @@ export default function AsignacionMembresiasPanel() {
 
     const handleSaveBatch = async () => {
         if (!selectedSocios.length) {
-            Swal.fire("Atención", "Agrega al menos un usuario a la asignación.", "warning");
+            Swal.fire("Atención", "Selecciona un cliente para la asignación.", "warning");
+            return;
+        }
+        if (!assignForm.sede_id || !assignForm.membresia_id || !selectedAssignPlan) {
+            Swal.fire("Atención", "Selecciona sede y membresía para continuar.", "warning");
             return;
         }
 
-        const autoFactura = selectedPlan?.facturacion_automatica;
+        const autoFactura = selectedAssignPlan?.facturacion_automatica;
         const textMessage = autoFactura
-            ? `Se asignará la membresía a ${selectedSocios.length} usuario(s) y se generará una deuda PENDIENTE de $${Number(selectedPlan.precio || 0).toFixed(2)} por cada uno.`
-            : `Se asignará la membresía a ${selectedSocios.length} usuario(s) sin generar deuda automática.`;
+            ? `Se asignará la membresía a ${selectedSocios[0]?.nombre_completo || "el cliente"} y se generará una deuda PENDIENTE de $${Number(selectedAssignPlan.precio || 0).toFixed(2)}.`
+            : `Se asignará la membresía a ${selectedSocios[0]?.nombre_completo || "el cliente"} sin generar deuda automática.`;
 
         const confirmText = autoFactura ? "Sí, asignar y facturar" : "Sí, asignar membresía";
         
@@ -265,11 +340,11 @@ export default function AsignacionMembresiasPanel() {
         try {
             await apiClient.post("/gimnasio/membresias/asignaciones/lote", {
                 persona_ids: selectedSocios.map((socio) => socio.persona_id),
-                membresia_id: Number(filters.membresia_id),
-                sede_id: Number(filters.sede_id),
+                membresia_id: Number(assignForm.membresia_id),
+                sede_id: Number(assignForm.sede_id),
                 fecha_inicio: assignForm.fecha_inicio,
                 fecha_fin: fechaFin,
-                precio_aplicado: Number(selectedPlan.precio || 0),
+                precio_aplicado: Number(selectedAssignPlan.precio || 0),
                 modo_conflicto: assignForm.modo_conflicto,
             });
 
@@ -324,132 +399,159 @@ export default function AsignacionMembresiasPanel() {
 
     return (
         <Stack spacing={3}>
+            <PageHeader
+                title="Asignación de Membresías"
+                icon={<AssignmentTurnedInIcon sx={{ fontSize: 24 }} />}
+                rightContent={
+                    hasSearched ? (
+                        <>
+                            {loadingHistory && (
+                                <Chip label="ACTUALIZANDO" sx={{ fontWeight: 900, bgcolor: "#fff7ed", color: "#b45309" }} />
+                            )}
+                            <Box sx={{ px: 2, py: 0.8, borderRadius: "6px", bgcolor: "rgba(15, 23, 42, 0.05)", color: "#0f172a", fontSize: "11px", fontWeight: 900 }}>
+                                {clientesAsignacion.length} CLIENTES
+                            </Box>
+                        </>
+                    ) : null
+                }
+            />
+
             <Paper
+                className="tg-module-card"
                 elevation={0}
                 sx={{
                     ...pagePaperSx,
-                    p: 3,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 2,
-                    flexWrap: "wrap",
-                    alignItems: "center",
+                    bgcolor: "#ffffff",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    overflow: "hidden",
                 }}
             >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                    <AssignmentTurnedInIcon sx={{ color: "#0f172a" }} />
-                    <Box>
-                        <Typography sx={{ fontWeight: 900, fontSize: 18, color: "#0f172a" }}>
-                            Asignación de Membresías
-                        </Typography>
-                        <Typography sx={{ mt: 0.5, color: "#64748b", fontSize: 13 }}>
-                            Consulta historial por sede y membresía; luego agrega usuarios a ese plan.
-                        </Typography>
-                    </Box>
+                <Box className="tg-module-toolbar">
+                    <Stack className="tg-module-toolbar__filters" direction="row" spacing={1.5} alignItems="center">
+                        <TextField
+                            size="small"
+                            placeholder="Buscar por cédula, cliente o código..."
+                            value={filters.buscar}
+                            onChange={(e) => handleFilterChange("buscar", e.target.value)}
+                            sx={{ ...filterInputSx, width: 300 }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchOutlinedIcon sx={{ fontSize: 18, color: "#64748b" }} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+
+                        <FormControl size="small" sx={{ ...filterInputSx, width: 200 }}>
+                            <Select
+                                value={filters.sede_id}
+                                onChange={(e) => handleFilterChange("sede_id", e.target.value)}
+                                displayEmpty
+                                sx={{ fontSize: 13 }}
+                            >
+                                <MenuItem value="">Todas las sedes</MenuItem>
+                                {sedes.map((sede) => (
+                                    <MenuItem key={sede.id} value={String(sede.id)}>{sede.nombre}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <FormControl size="small" sx={{ ...filterInputSx, width: 240 }}>
+                            <Select
+                                value={filters.membresia_id}
+                                onChange={(e) => handleFilterChange("membresia_id", e.target.value)}
+                                displayEmpty
+                                sx={{ fontSize: 13 }}
+                            >
+                                <MenuItem value="">Todas las membresías</MenuItem>
+                                {catalogo.filter((plan) => plan.activa).map((plan) => (
+                                    <MenuItem key={plan.id} value={String(plan.id)}>
+                                        {plan.nombre} - {money(plan.precio)}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Stack>
+
+                    <Stack className="tg-module-toolbar__actions" direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+                        {selectedHistoryPlan && (
+                            <Chip label={`Plan: ${selectedHistoryPlan.nombre}`} sx={semanticChipSx("inventory")} />
+                        )}
+                        <PremiumButton variant="anadir" onClick={handleOpenAdd}>
+                            Añadir
+                        </PremiumButton>
+                    </Stack>
                 </Box>
 
-                {hasSearched && (
-                    <Chip label={`${asignaciones.length} REGISTROS`} sx={{ fontWeight: 900, bgcolor: "#f1f5f9", color: "#64748b" }} />
-                )}
-            </Paper>
-
-            <Paper elevation={0} sx={{ ...pagePaperSx, p: 3 }}>
-                <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.5 }}>Consulta de asignaciones</Typography>
-                <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "1fr 1.2fr auto" }, alignItems: "center" }}>
-                    <FormControl size="small" sx={modalFieldSx}>
-                        <Select value={filters.sede_id} onChange={(e) => handleFilterChange("sede_id", e.target.value)} displayEmpty>
-                            <MenuItem value="">Selecciona sede</MenuItem>
-                            {sedes.map((sede) => (
-                                <MenuItem key={sede.id} value={String(sede.id)}>{sede.nombre}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-
-                    <FormControl size="small" sx={modalFieldSx}>
-                        <Select value={filters.membresia_id} onChange={(e) => handleFilterChange("membresia_id", e.target.value)} displayEmpty>
-                            <MenuItem value="">Selecciona membresía</MenuItem>
-                            {catalogo.filter((plan) => plan.activa).map((plan) => (
-                                <MenuItem key={plan.id} value={String(plan.id)}>
-                                    {plan.nombre} - {money(plan.precio)}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-
-                    <PremiumButton variant="outline" onClick={fetchHistory} loading={loadingHistory} startIcon={<SearchOutlinedIcon />}>
-                        Buscar
-                    </PremiumButton>
-                </Box>
-            </Paper>
-
-            {hasSearched && (
-                <Paper elevation={0} sx={{ ...pagePaperSx, p: 3 }}>
-                    <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, mb: 2, flexWrap: "wrap" }}>
-                        <Box>
-                            <Typography sx={{ fontWeight: 900, color: "#0f172a" }}>Historial de asignaciones</Typography>
-                            <Typography sx={{ color: "#64748b", fontSize: 12 }}>
-                                Resultado de la sede y membresía seleccionadas.
-                            </Typography>
-                        </Box>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
-                            {selectedPlan && (
-                                <>
-                                    <Chip label={`Plan: ${selectedPlan.nombre}`} sx={semanticChipSx("inventory")} />
-                                    <Chip label={`Precio actual: ${money(selectedPlan.precio)}`} sx={semanticChipSx("mustard")} />
-                                </>
-                            )}
-                            <PremiumButton variant="anadir" onClick={handleOpenAdd}>
-                                Añadir
-                            </PremiumButton>
-                        </Stack>
-                    </Box>
-
-                    <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none" }}>
+                <Box className="tg-module-table-area">
+                    <TableContainer className="tg-table-wrap tg-table-wrap--scroll" component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none", borderRadius: "6px", overflow: "hidden" }}>
                         <Table size="small" sx={tableSx}>
                             <TableHead>
                                 <TableRow>
-                                    <TableCell>Usuario</TableCell>
+                                    <TableCell>Cliente</TableCell>
                                     <TableCell>Cédula</TableCell>
+                                    <TableCell>Membresía actual</TableCell>
+                                    <TableCell>Sede</TableCell>
                                     <TableCell>Vigencia</TableCell>
-                                    <TableCell>Precio aplicado</TableCell>
                                     <TableCell>Estado</TableCell>
                                     <TableCell align="center">Acciones</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
-                                {asignaciones.length === 0 ? (
+                                {clientesAsignacion.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={6} align="center" sx={{ py: 5, color: "#64748b" }}>
-                                            No hay asignaciones registradas para esta sede y membresía.
+                                        <TableCell colSpan={7}>
+                                            <Box className="tg-empty-state">
+                                                <Box>
+                                                    <Box className="tg-empty-state__icon">
+                                                        <SearchOutlinedIcon sx={{ fontSize: 34 }} />
+                                                    </Box>
+                                                    <p className="tg-empty-state__title">Sin asignaciones</p>
+                                                    <p className="tg-empty-state__text">
+                                                        No hay asignaciones registradas para estos filtros.
+                                                    </p>
+                                                </Box>
+                                            </Box>
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    asignaciones.map((item) => {
-                                        const status = getMembershipStatus(item.fecha_fin);
+                                    paginatedClientes.map((cliente) => {
+                                        const actual = cliente.actual;
+                                        const status = getMembershipStatus(actual?.fecha_fin);
 
                                         return (
-                                            <TableRow key={item.id}>
+                                            <TableRow key={cliente.key}>
                                                 <TableCell>
-                                                    <Typography sx={{ fontWeight: 800 }}>{item.nombre_completo}</Typography>
-                                                    <Typography sx={{ fontSize: 11, color: "#64748b" }}>{item.codigo_socio}</Typography>
+                                                    <Typography sx={{ fontWeight: 800 }}>{cliente.nombre_completo}</Typography>
+                                                    <Typography sx={{ fontSize: 11, color: "#64748b" }}>{cliente.codigo_socio}</Typography>
                                                 </TableCell>
-                                                <TableCell>{item.cedula}</TableCell>
+                                                <TableCell>{cliente.cedula}</TableCell>
                                                 <TableCell>
-                                                    <Typography sx={{ fontSize: 12, fontWeight: 800 }}>{item.fecha_inicio}</Typography>
-                                                    <Typography sx={{ fontSize: 11, color: "#64748b" }}>hasta {item.fecha_fin}</Typography>
+                                                    <Typography sx={{ fontSize: 12, fontWeight: 800 }}>{actual?.membresia_nombre || "-"}</Typography>
+                                                    <Typography sx={{ fontSize: 11, color: "#64748b" }}>
+                                                        {cliente.total_membresias} membresía{cliente.total_membresias === 1 ? "" : "s"}
+                                                    </Typography>
                                                 </TableCell>
-                                                <TableCell>{money(item.precio)}</TableCell>
+                                                <TableCell>{actual?.sede_nombre || "-"}</TableCell>
+                                                <TableCell>
+                                                    <Typography sx={{ fontSize: 12, fontWeight: 800 }}>{actual?.fecha_inicio || "-"}</Typography>
+                                                    <Typography sx={{ fontSize: 11, color: "#64748b" }}>hasta {actual?.fecha_fin || "-"}</Typography>
+                                                </TableCell>
                                                 <TableCell>
                                                     <Chip label={status.label} sx={semanticChipSx(status.tone)} />
                                                 </TableCell>
                                                 <TableCell align="center">
                                                     <Stack direction="row" spacing={1} justifyContent="center">
-                                                        <IconButton onClick={() => handleRenewFromAssignment(item)} sx={semanticIconButtonSx("inventory")} title="Renovar">
-                                                            <AutorenewIcon sx={{ fontSize: 16 }} />
+                                                        <IconButton onClick={() => setDetalleClienteKey(cliente.key)} sx={semanticIconButtonSx("inventory")} title="Ver membresías">
+                                                            <VisibilityOutlinedIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
-                                                        <IconButton onClick={() => handleDeleteAsignacion(item.id)} sx={semanticIconButtonSx("danger")} title="Eliminar">
-                                                            <DeleteOutlineIcon sx={{ fontSize: 16 }} />
-                                                        </IconButton>
+                                                        {actual && (
+                                                            <IconButton onClick={() => handleRenewFromAssignment(actual)} sx={semanticIconButtonSx("mustard")} title="Editar membresía actual">
+                                                                <EditIcon sx={{ fontSize: 16 }} />
+                                                            </IconButton>
+                                                        )}
                                                     </Stack>
                                                 </TableCell>
                                             </TableRow>
@@ -459,14 +561,90 @@ export default function AsignacionMembresiasPanel() {
                             </TableBody>
                         </Table>
                     </TableContainer>
-                </Paper>
-            )}
+                    <TablePagination
+                        className="tg-table-pagination"
+                        component="div"
+                        count={clientesAsignacion.length}
+                        page={page}
+                        onPageChange={(_event, nextPage) => setPage(nextPage)}
+                        rowsPerPage={rowsPerPage}
+                        onRowsPerPageChange={() => {}}
+                        rowsPerPageOptions={[5]}
+                        labelRowsPerPage="Filas por página:"
+                        labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                    />
+                </Box>
+            </Paper>
+
+            <PremiumModal
+                open={Boolean(detalleCliente)}
+                onClose={() => setDetalleClienteKey(null)}
+                title={detalleCliente?.nombre_completo || "Membresías del cliente"}
+                subtitle={detalleCliente ? `${detalleCliente.codigo_socio || "Sin código"} · ${detalleCliente.cedula || "Sin cédula"}` : ""}
+                icon={<VisibilityOutlinedIcon sx={{ fontSize: 22, color: "#fff" }} />}
+                maxWidth="md"
+                actions={
+                    <PremiumButton variant="cancelar" onClick={() => setDetalleClienteKey(null)}>
+                        Cerrar
+                    </PremiumButton>
+                }
+            >
+                <Stack spacing={2}>
+                    <TableContainer component={Paper} sx={{ border: "1px solid #e2e8f0", boxShadow: "none", borderRadius: "6px", overflow: "hidden" }}>
+                        <Table size="small" sx={tableSx}>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Membresía</TableCell>
+                                    <TableCell>Sede</TableCell>
+                                    <TableCell>Vigencia</TableCell>
+                                    <TableCell>Precio</TableCell>
+                                    <TableCell>Estado</TableCell>
+                                    <TableCell align="center">Acciones</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {(detalleCliente?.membresias || []).map((item) => {
+                                    const status = getMembershipStatus(item.fecha_fin);
+
+                                    return (
+                                        <TableRow key={item.id}>
+                                            <TableCell>
+                                                <Typography sx={{ fontWeight: 800 }}>{item.membresia_nombre}</Typography>
+                                                <Typography sx={{ fontSize: 11, color: "#64748b" }}>#{item.id}</Typography>
+                                            </TableCell>
+                                            <TableCell>{item.sede_nombre || "-"}</TableCell>
+                                            <TableCell>
+                                                <Typography sx={{ fontSize: 12, fontWeight: 800 }}>{item.fecha_inicio}</Typography>
+                                                <Typography sx={{ fontSize: 11, color: "#64748b" }}>hasta {item.fecha_fin}</Typography>
+                                            </TableCell>
+                                            <TableCell>{money(item.precio)}</TableCell>
+                                            <TableCell>
+                                                <Chip label={status.label} sx={semanticChipSx(status.tone)} />
+                                            </TableCell>
+                                            <TableCell align="center">
+                                                <Stack direction="row" spacing={1} justifyContent="center">
+                                                    <IconButton onClick={() => handleRenewFromAssignment(item)} sx={semanticIconButtonSx("mustard")} title="Editar membresía">
+                                                        <EditIcon sx={{ fontSize: 16 }} />
+                                                    </IconButton>
+                                                    <IconButton onClick={() => handleDeleteAsignacion(item.id)} sx={semanticIconButtonSx("danger")} title="Eliminar">
+                                                        <DeleteOutlineIcon sx={{ fontSize: 16 }} />
+                                                    </IconButton>
+                                                </Stack>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                </Stack>
+            </PremiumModal>
 
             <PremiumModal
                 open={addOpen}
                 onClose={() => setAddOpen(false)}
-                title="Añadir usuarios"
-                subtitle={selectedPlan ? `${selectedPlan.nombre} · ${money(selectedPlan.precio)}` : "Asignación de membresía"}
+                title="Asignar membresía"
+                subtitle={selectedAssignPlan ? `${selectedAssignPlan.nombre} · ${money(selectedAssignPlan.precio)}` : "Busca un cliente, selecciona membresía y guarda"}
                 icon={<PersonAddAltIcon sx={{ fontSize: 22, color: "#fff" }} />}
                 maxWidth="lg"
                 actions={
@@ -474,46 +652,23 @@ export default function AsignacionMembresiasPanel() {
                         <PremiumButton variant="cancelar" onClick={() => setAddOpen(false)}>
                             Cancelar
                         </PremiumButton>
-                        <PremiumButton variant="guardar" onClick={handleSaveBatch} loading={saving}>
+                        <PremiumButton variant="guardar" onClick={handleSaveBatch} loading={saving} disabled={!canSaveAssignment}>
                             Guardar
                         </PremiumButton>
                     </>
                 }
             >
                 <Stack spacing={2.25}>
-                    <Box sx={{ display: "grid", gap: 1.5, gridTemplateColumns: { xs: "1fr", md: "0.8fr 1.2fr 1fr" }, alignItems: "center" }}>
-                        <TextField
-                            size="small"
-                            type="date"
-                            value={assignForm.fecha_inicio}
-                            onChange={(e) => setAssignForm((prev) => ({ ...prev, fecha_inicio: e.target.value }))}
-                            sx={modalFieldSx}
-                        />
-                        <FormControl size="small" sx={modalFieldSx}>
-                            <Select
-                                value={assignForm.modo_conflicto}
-                                onChange={(e) => setAssignForm((prev) => ({ ...prev, modo_conflicto: e.target.value }))}
-                            >
-                                <MenuItem value="RENOVAR">Si tiene activa: renovar al finalizar</MenuItem>
-                                <MenuItem value="REEMPLAZAR">Si tiene activa: reemplazar desde la fecha</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                            <Chip icon={<EventAvailableIcon />} label={`Fin: ${fechaFin || "-"}`} sx={semanticChipSx("inventory")} />
-                            <Chip label={`Total: ${money(selectedTotal)}`} sx={semanticChipSx("mustard")} />
-                        </Stack>
-                    </Box>
-
-                    {hasConflicts && (
+                    {hasConflicts && selectedAssignPlan && (
                         <Box sx={{ p: 1.25, border: "1px solid #f59e0b", color: "#92400e", bgcolor: "rgba(245,158,11,0.08)", fontSize: 12, fontWeight: 800 }}>
-                            Hay usuarios seleccionados con membresía activa. Se aplicará la opción elegida arriba.
+                            El cliente seleccionado tiene una membresía activa. Se aplicará la opción elegida arriba.
                         </Box>
                     )}
 
                     <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "1.25fr 0.75fr" } }}>
                         <Box>
                             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, mb: 1.25 }}>
-                                <Typography sx={{ fontWeight: 900, color: "#0f172a" }}>Buscar usuario</Typography>
+                                <Typography sx={{ fontWeight: 900, color: "#0f172a" }}>Buscar cliente</Typography>
                                 <TextField
                                     size="small"
                                     placeholder="Nombre, cédula o código..."
@@ -533,7 +688,7 @@ export default function AsignacionMembresiasPanel() {
                                 <Table size="small" sx={tableSx} stickyHeader>
                                     <TableHead>
                                         <TableRow>
-                                            <TableCell>Usuario</TableCell>
+                                            <TableCell>Cliente</TableCell>
                                             <TableCell>Membresía actual</TableCell>
                                             <TableCell align="center">Añadir</TableCell>
                                         </TableRow>
@@ -542,6 +697,7 @@ export default function AsignacionMembresiasPanel() {
                                         {sociosFiltered.map((socio) => {
                                             const active = isActiveMembership(socio.membresia_actual);
                                             const isSelected = selectedSocios.some((s) => Number(s.persona_id) === Number(socio.persona_id));
+                                            const hasOtherSelected = selectedSocios.length > 0 && !isSelected;
 
                                             return (
                                                 <TableRow key={socio.persona_id} hover>
@@ -564,7 +720,12 @@ export default function AsignacionMembresiasPanel() {
                                                         )}
                                                     </TableCell>
                                                     <TableCell align="center">
-                                                        <IconButton disabled={isSelected} onClick={() => handleAddSocio(socio)} sx={semanticIconButtonSx(isSelected ? "neutral" : "success")}>
+                                                        <IconButton
+                                                            disabled={isSelected}
+                                                            onClick={() => handleAddSocio(socio)}
+                                                            sx={semanticIconButtonSx(isSelected ? "neutral" : hasOtherSelected ? "mustard" : "success")}
+                                                            title={hasOtherSelected ? "Reemplazar cliente seleccionado" : "Seleccionar cliente"}
+                                                        >
                                                             <AddIcon sx={{ fontSize: 16 }} />
                                                         </IconButton>
                                                     </TableCell>
@@ -577,11 +738,76 @@ export default function AsignacionMembresiasPanel() {
                         </Box>
 
                         <Box>
-                            <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.25 }}>Usuarios a asignar</Typography>
+                            <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.25 }}>Membresía a asignar</Typography>
+                            <Stack spacing={1.25} sx={{ mb: 2 }}>
+                                <FormControl size="small" sx={modalFieldSx}>
+                                    <Select
+                                        value={assignForm.sede_id}
+                                        onChange={async (e) => {
+                                            const sedeId = e.target.value;
+                                            setAssignForm((prev) => ({ ...prev, sede_id: sedeId, membresia_id: "" }));
+                                            await fetchCatalogo(sedeId);
+                                        }}
+                                        displayEmpty
+                                    >
+                                        <MenuItem value="">Sede</MenuItem>
+                                        {sedes.map((sede) => (
+                                            <MenuItem key={sede.id} value={String(sede.id)}>{sede.nombre}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+
+                                <FormControl size="small" sx={modalFieldSx}>
+                                    <Select
+                                        value={assignForm.membresia_id}
+                                        onChange={(e) => {
+                                            setAssignForm((prev) => ({ ...prev, membresia_id: e.target.value }));
+                                        }}
+                                        displayEmpty
+                                    >
+                                        <MenuItem value="">Membresía</MenuItem>
+                                        {catalogo.filter((plan) => plan.activa).map((plan) => (
+                                            <MenuItem key={plan.id} value={String(plan.id)}>
+                                                {plan.nombre} - {money(plan.precio)}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+
+                                <TextField
+                                    size="small"
+                                    type="date"
+                                    value={assignForm.fecha_inicio}
+                                    onChange={(e) => setAssignForm((prev) => ({ ...prev, fecha_inicio: e.target.value }))}
+                                    sx={modalFieldSx}
+                                />
+
+                                <FormControl size="small" sx={modalFieldSx}>
+                                    <Select
+                                        value={assignForm.modo_conflicto}
+                                        onChange={(e) => setAssignForm((prev) => ({ ...prev, modo_conflicto: e.target.value }))}
+                                    >
+                                        <MenuItem value="RENOVAR">Si tiene activa: renovar al finalizar</MenuItem>
+                                        <MenuItem value="REEMPLAZAR">Si tiene activa: reemplazar desde la fecha</MenuItem>
+                                    </Select>
+                                </FormControl>
+
+                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                    <Chip icon={<EventAvailableIcon />} label={fechaFin ? `Fin: ${fechaFin}` : "Fin pendiente"} sx={semanticChipSx(fechaFin ? "inventory" : "neutral")} />
+                                    <Chip label={selectedAssignPlan ? `Total: ${money(selectedTotal)}` : "Total pendiente"} sx={semanticChipSx(selectedAssignPlan ? "mustard" : "neutral")} />
+                                </Stack>
+                                {!canSaveAssignment && (
+                                    <Typography sx={{ color: "#64748b", fontSize: 12, fontWeight: 700 }}>
+                                        Selecciona un cliente, una sede y una membresía para guardar.
+                                    </Typography>
+                                )}
+                            </Stack>
+
+                            <Typography sx={{ fontWeight: 900, color: "#0f172a", mb: 1.25 }}>Cliente seleccionado</Typography>
                             <Stack spacing={1.1} sx={{ maxHeight: 405, overflowY: "auto", pr: 0.5 }}>
                                 {selectedSocios.length === 0 ? (
                                     <Box sx={{ border: "1px dashed #cbd5e1", p: 3, textAlign: "center", color: "#64748b" }}>
-                                        Añade usuarios desde la tabla.
+                                        Selecciona un cliente desde la tabla.
                                     </Box>
                                 ) : (
                                     selectedSocios.map((socio) => {

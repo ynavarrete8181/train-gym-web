@@ -40,9 +40,10 @@ const formatMoney = (value) =>
         minimumFractionDigits: 2,
     }).format(Number(value || 0));
 
-const listVentasRealizadas = async (sedeId) => {
+const listVentasRealizadas = async (sedeId, buscar = "") => {
     const { data } = await apiClient.get("/gimnasio/ventas", {
         headers: { "X-Sede-Id": sedeId },
+        params: { buscar: buscar.trim() || undefined },
     });
     return data;
 };
@@ -70,7 +71,7 @@ export default function VentasRealizadas() {
         const fetchVentas = async () => {
             try {
                 setLoading(true);
-                const data = await listVentasRealizadas(sedeId);
+                const data = await listVentasRealizadas(sedeId, searchTerm);
                 setVentas(Array.isArray(data) ? data : []);
             } catch {
                 Swal.fire("Error", "No se pudieron cargar las ventas realizadas.", "error");
@@ -81,7 +82,7 @@ export default function VentasRealizadas() {
         };
 
         fetchVentas();
-    }, [sedeId]);
+    }, [sedeId, searchTerm]);
 
     const filteredVentas = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -95,6 +96,10 @@ export default function VentasRealizadas() {
                 venta.vendedor_id,
                 venta.referencia,
                 venta.forma_pago,
+                venta.cliente_cedula,
+                venta.cliente_nombre,
+                venta.vendedor_cedula,
+                venta.vendedor_nombre,
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -127,7 +132,7 @@ export default function VentasRealizadas() {
 
                 <TextField
                     size="small"
-                    placeholder="Buscar por venta, cliente, pago..."
+                    placeholder="Buscar por cédula, cliente, venta, pago..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     sx={{ ...filterInputSx, minWidth: 300 }}
@@ -231,7 +236,7 @@ export default function VentasRealizadas() {
                                             {venta.cliente_nombre?.trim() || "Consumidor final"}
                                         </Typography>
                                         <Typography sx={{ fontSize: 11, color: "#64748b" }}>
-                                            Vendedor: {venta.vendedor_nombre?.trim() || "Desconocido"}
+                                            {venta.cliente_cedula || "Sin cédula"} · Vendedor: {venta.vendedor_nombre?.trim() || "Desconocido"}
                                         </Typography>
                                     </TableCell>
                                     <TableCell>{String(venta.estado_pago || "").toUpperCase() === "PENDIENTE" ? "Por pagar" : (venta.forma_pago || "No definido")}</TableCell>

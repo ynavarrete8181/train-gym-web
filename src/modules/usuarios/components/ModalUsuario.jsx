@@ -1,19 +1,20 @@
 import {
-    FormControl,
+    Autocomplete,
+    Box,
+    Checkbox,
+    FormControlLabel,
     InputLabel,
     MenuItem,
-    OutlinedInput,
     Select,
     Stack,
     TextField,
-    Box,
     Typography,
 } from "@mui/material";
-
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+
 import PremiumModal from "../../../components/ui/PremiumModal";
 import PremiumButton from "../../../components/ui/PremiumButton";
-import { globalUi, globalInputSx } from "../../../components/ui/GlobalUiTheme";
+import { globalInputSx, globalMenuProps, globalUi } from "../../../components/ui/GlobalUiTheme";
 
 const ESTADOS = ["ACTIVO", "INACTIVO", "BLOQUEADO"];
 
@@ -24,24 +25,13 @@ export default function ModalUsuario({
     loading,
     formData,
     setFormData,
-    roles,
     personas,
-    sedes,
     editing,
 }) {
-    const selectedPersona = personas.find((persona) => String(persona.id) === String(formData.persona_id));
-
-    const handlePersonaChange = (personaId) => {
-        const nextPersona = personas.find((persona) => String(persona.id) === String(personaId));
-        const cedula = String(nextPersona?.cedula || "").trim();
-
-        setFormData((prev) => ({
-            ...prev,
-            persona_id: personaId,
-            email: cedula || prev.email,
-            password: !editing && cedula ? cedula : prev.password,
-        }));
-    };
+    const selectedPersona = personas.find((persona) => String(persona.id) === String(formData.persona_id)) || null;
+    const personaTieneOtroUsuario = (persona) => (
+        Boolean(persona?.usuario_id) && String(persona.usuario_id) !== String(formData.id || "")
+    );
 
     const inputLabelSx = {
         mb: 0.65,
@@ -54,14 +44,12 @@ export default function ModalUsuario({
     const inputSx = {
         ...globalInputSx,
         "& .MuiInputBase-root": {
-            height: 38,
             minHeight: 38,
             fontSize: "12px",
             backgroundColor: "#fff",
-            borderRadius: "10px",
+            borderRadius: "6px",
         },
         "& .MuiInputBase-input": {
-            height: 38,
             boxSizing: "border-box",
             fontSize: "12px",
         },
@@ -72,7 +60,7 @@ export default function ModalUsuario({
         height: 38,
         minHeight: 38,
         backgroundColor: "#fff",
-        borderRadius: "10px",
+        borderRadius: "6px",
         "& .MuiSelect-select": {
             height: 38,
             minHeight: 38,
@@ -80,61 +68,31 @@ export default function ModalUsuario({
             display: "flex",
             alignItems: "center",
             fontSize: "12px",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
             pr: "32px !important",
         },
     };
 
-    const panelSx = {
-        minWidth: 0,
-        border: `1px solid ${globalUi.borderSoft}`,
-        borderRadius: "18px",
-        background: "#FFFFFF",
-        p: 2.25,
+    const handlePersonaChange = (_, persona) => {
+        const cedula = String(persona?.cedula || "").trim();
+        const email = String(persona?.email || "").trim();
+
+        setFormData((prev) => ({
+            ...prev,
+            persona_id: persona?.id || "",
+            email: cedula || prev.email,
+            cedula: cedula || prev.cedula,
+            email_credenciales: email || prev.email_credenciales,
+        }));
     };
-
-    const sectionHeader = (number, title, subtitle) => (
-        <Box sx={{ display: "flex", alignItems: "flex-start", gap: 1.2, mb: 2 }}>
-            <Box
-                sx={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "9px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    fontSize: "12px",
-                    fontWeight: 900,
-                    color: globalUi.black,
-                    background: globalUi.mustardSoft,
-                    border: `1px solid ${globalUi.mustardBorder}`,
-                }}
-            >
-                {number}
-            </Box>
-
-            <Box sx={{ minWidth: 0 }}>
-                <Typography sx={{ fontSize: "14px", fontWeight: 950, color: globalUi.black, lineHeight: 1.15 }}>
-                    {title}
-                </Typography>
-                <Typography sx={{ mt: 0.35, fontSize: "12px", color: globalUi.muted, lineHeight: 1.35 }}>
-                    {subtitle}
-                </Typography>
-            </Box>
-        </Box>
-    );
 
     return (
         <PremiumModal
             open={open}
             onClose={onClose}
-            title={editing ? "Editar Usuario" : "Nuevo Usuario"}
-            subtitle="Configura el acceso y los roles del usuario del sistema"
+            title={editing ? "Editar cuenta" : "Nuevo usuario"}
+            subtitle="Datos de acceso y credenciales temporales."
             icon={<AccountCircleIcon sx={{ fontSize: 22, color: "#fff" }} />}
-            maxWidth="md"
+            maxWidth="sm"
             actions={
                 <>
                     <PremiumButton variant="cancelar" onClick={onClose} disabled={loading}>
@@ -147,143 +105,134 @@ export default function ModalUsuario({
                 </>
             }
         >
-            <Box sx={{ py: 0.5 }}>
-                <Box
-                    sx={{
-                        display: "grid",
-                        gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-                        gap: 2.5,
-                        alignItems: "stretch",
-                    }}
-                >
-                    <Box sx={panelSx}>
-                        {sectionHeader("1", "Información del usuario", "Datos de acceso principales.")}
+            <Stack spacing={2.1} sx={{ py: 0.5 }}>
+                <Box>
+                    <InputLabel sx={inputLabelSx}>Persona asociada</InputLabel>
+                    <Autocomplete
+                        options={personas}
+                        value={selectedPersona}
+                        onChange={handlePersonaChange}
+                        getOptionDisabled={personaTieneOtroUsuario}
+                        getOptionLabel={(option) => option ? `${option.nombre_completo || "Sin nombre"} · ${option.cedula || "Sin cédula"}` : ""}
+                        isOptionEqualToValue={(option, value) => String(option.id) === String(value.id)}
+                        noOptionsText="No hay personas registradas"
+                        renderOption={(props, option) => {
+                            const { key, ...optionProps } = props;
+                            const bloqueada = personaTieneOtroUsuario(option);
 
-                        <Stack spacing={2}>
-                            <Box>
-                                <InputLabel sx={inputLabelSx}>Persona asociada *</InputLabel>
-                                <Select
-                                    fullWidth
-                                    displayEmpty
-                                    value={formData.persona_id}
-                                    onChange={(e) => handlePersonaChange(e.target.value)}
-                                    sx={selectSx}
+                            return (
+                                <Box
+                                    key={key}
+                                    component="li"
+                                    {...optionProps}
+                                    sx={{
+                                        display: "block !important",
+                                        py: "7px !important",
+                                        opacity: bloqueada ? 0.58 : 1,
+                                    }}
                                 >
-                                    <MenuItem value="" sx={{ fontSize: "12px" }}>Sin asociar</MenuItem>
-                                    {personas.map((persona) => (
-                                        <MenuItem
-                                            key={persona.id}
-                                            value={persona.id}
-                                            disabled={Boolean(persona.usuario_id && persona.usuario_id !== formData.id)}
-                                            sx={{ fontSize: "12px" }}
-                                        >
-                                            {persona.nombre_completo} · {persona.cedula}
-                                            {persona.usuario_id ? ` · ${persona.usuario_email || "Ya vinculado"}` : ""}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </Box>
+                                    <Typography sx={{ fontSize: "12px", fontWeight: 900, color: globalUi.black }}>
+                                        {option.nombre_completo || "Sin nombre"}
+                                    </Typography>
+                                    <Typography sx={{ fontSize: "11px", color: globalUi.muted, mt: 0.2 }}>
+                                        {option.cedula || "Sin cédula"}
+                                        {bloqueada ? ` · Ya tiene usuario: ${option.usuario_email || `ID ${option.usuario_id}`}` : ""}
+                                    </Typography>
+                                </Box>
+                            );
+                        }}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                placeholder="Buscar persona por nombre o cédula..."
+                                size="small"
+                                sx={inputSx}
+                            />
+                        )}
+                    />
+                </Box>
 
-                            <Box>
-                                <InputLabel sx={inputLabelSx}>Usuario / Cédula *</InputLabel>
-                                <TextField
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    type="text"
-                                    placeholder="Ingrese la cédula"
-                                    value={formData.email}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value.trim() }))}
-                                    helperText={selectedPersona?.cedula ? "Se usa la cédula como usuario de acceso." : "Seleccione una persona o ingrese la cédula del usuario."}
-                                    sx={inputSx}
-                                />
-                            </Box>
-
-                            <Box>
-                                <InputLabel sx={inputLabelSx}>{editing ? "Nueva contraseña (opcional)" : "Contraseña inicial / Cédula *"}</InputLabel>
-                                <TextField
-                                    fullWidth
-                                    variant="outlined"
-                                    size="small"
-                                    type="password"
-                                    placeholder={editing ? "Dejar en blanco para no cambiar" : "Se llena con la cédula"}
-                                    value={formData.password}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                                    helperText={!editing && selectedPersona?.cedula ? "Se asigna la misma cédula como contraseña inicial." : ""}
-                                    sx={inputSx}
-                                />
-                            </Box>
-                        </Stack>
+                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 2 }}>
+                    <Box>
+                        <InputLabel sx={inputLabelSx}>Usuario / Cédula *</InputLabel>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Ingrese la cédula"
+                            value={formData.email}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value.trim(), cedula: e.target.value.trim() }))}
+                            sx={inputSx}
+                        />
                     </Box>
 
-                    <Box sx={panelSx}>
-                        {sectionHeader("2", "Acceso y Roles", "Configuración de permisos en el sistema.")}
-
-                        <Stack spacing={2}>
-                            <Box>
-                                <InputLabel sx={inputLabelSx}>Estado de la cuenta *</InputLabel>
-                                <Select
-                                    fullWidth
-                                    displayEmpty
-                                    value={formData.estado}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, estado: e.target.value }))}
-                                    sx={selectSx}
-                                >
-                                    {ESTADOS.map((estado) => (
-                                        <MenuItem key={estado} value={estado} sx={{ fontSize: "12px" }}>
-                                            {estado}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </Box>
-
-                            <Box>
-                                <InputLabel sx={inputLabelSx}>Roles asignados</InputLabel>
-                                <Select
-                                    multiple
-                                    fullWidth
-                                    displayEmpty
-                                    value={formData.roles || []}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, roles: e.target.value }))}
-                                    sx={selectSx}
-                                    renderValue={(selected) => selected.length === 0 ? "Seleccionar roles..." : roles
-                                        .filter((rol) => selected.includes(rol.id))
-                                        .map((rol) => rol.nombre)
-                                        .join(", ")}
-                                >
-                                    {roles.map((rol) => (
-                                        <MenuItem key={rol.id} value={rol.id} sx={{ fontSize: "12px" }}>
-                                            {rol.nombre}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </Box>
-
-                            <Box>
-                                <InputLabel sx={inputLabelSx}>Sedes donde puede operar</InputLabel>
-                                <Select
-                                    multiple
-                                    fullWidth
-                                    displayEmpty
-                                    value={formData.sedes || []}
-                                    onChange={(e) => setFormData((prev) => ({ ...prev, sedes: e.target.value }))}
-                                    sx={selectSx}
-                                    renderValue={(selected) => selected.length === 0 ? "Seleccionar sedes..." : sedes
-                                        .filter((sede) => selected.includes(sede.id))
-                                        .map((sede) => sede.nombre)
-                                        .join(", ")}
-                                >
-                                    {sedes.map((sede) => (
-                                        <MenuItem key={sede.id} value={sede.id} sx={{ fontSize: "12px" }}>
-                                            {sede.nombre}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </Box>
-                        </Stack>
+                    <Box>
+                        <InputLabel sx={inputLabelSx}>Estado de la cuenta *</InputLabel>
+                        <Select
+                            fullWidth
+                            value={formData.estado}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, estado: e.target.value }))}
+                            sx={selectSx}
+                            MenuProps={globalMenuProps}
+                        >
+                            {ESTADOS.map((estado) => (
+                                <MenuItem key={estado} value={estado}>
+                                    {estado}
+                                </MenuItem>
+                            ))}
+                        </Select>
                     </Box>
                 </Box>
-            </Box>
+
+                <Box>
+                    <InputLabel sx={inputLabelSx}>Correo para credenciales *</InputLabel>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        type="email"
+                        placeholder="correo@ejemplo.com"
+                        value={formData.email_credenciales}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, email_credenciales: e.target.value.trim() }))}
+                        sx={inputSx}
+                    />
+                </Box>
+
+                <Box>
+                    <InputLabel sx={inputLabelSx}>{editing ? "Nueva clave temporal opcional" : "Clave temporal opcional"}</InputLabel>
+                    <TextField
+                        fullWidth
+                        size="small"
+                        type="password"
+                        placeholder={editing ? "Dejar vacío para no cambiar" : "Se genera automáticamente si se deja vacío"}
+                        value={formData.password}
+                        onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                        sx={inputSx}
+                    />
+                </Box>
+
+                {!editing && (
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={Boolean(formData.enviar_credenciales)}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, enviar_credenciales: e.target.checked }))}
+                                sx={{
+                                    color: globalUi.mustard,
+                                    "&.Mui-checked": { color: globalUi.mustard },
+                                }}
+                            />
+                        }
+                        label={
+                            <Typography sx={{ fontSize: "13px", fontWeight: 800, color: globalUi.black }}>
+                                Enviar usuario y clave temporal por correo
+                            </Typography>
+                        }
+                    />
+                )}
+
+                <Typography sx={{ fontSize: "12px", color: globalUi.muted }}>
+                    La primera vez que ingrese, el usuario deberá cambiar la clave temporal.
+                </Typography>
+            </Stack>
         </PremiumModal>
     );
 }
