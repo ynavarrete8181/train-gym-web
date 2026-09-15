@@ -43,17 +43,29 @@ export function LoginPage({ cargando, error, onLogin }) {
           }}
         >
           <Box
-            component="img"
-            src={reviveLogo}
-            alt="Revive Sports"
             sx={{
-              width: { xs: 118, sm: 136, md: 150 },
-              height: 'auto',
-              display: 'block',
+              width: { xs: 42, sm: 46, md: 50 },
+              height: { xs: 42, sm: 46, md: 50 },
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
               borderRadius: 1,
-              boxShadow: '0 10px 28px rgba(0,0,0,0.22)',
+              boxShadow: '0 10px 28px rgba(0,0,0,0.18)',
             }}
-          />
+          >
+            <Box
+              component="img"
+              src={reviveLogo}
+              alt="Revive"
+              sx={{
+                width: { xs: 118, sm: 136, md: 150 },
+                height: 'auto',
+                display: 'block',
+                flexShrink: 0,
+              }}
+            />
+          </Box>
 
           <Box sx={{ maxWidth: 560, color: '#fff' }}>
             <Typography
