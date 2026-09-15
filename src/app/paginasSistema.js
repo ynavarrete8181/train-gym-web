@@ -1,4 +1,5 @@
 import { lazy } from 'react'
+import { ClientesRouterPage } from '../features/gimnasio/pages/ClientesRouterPage.jsx'
 
 const modulosPagina = import.meta.glob([
   '../features/**/pages/*Page.jsx',
@@ -95,5 +96,6 @@ export const catalogoPaginasSistema = Object.values(registroPaginas)
   .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
 export function obtenerPaginaSistema(clave) {
+  if (clave === 'DeportistasPage') return ClientesRouterPage
   return registroPaginas[clave]?.Componente || null
 }
