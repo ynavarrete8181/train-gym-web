@@ -4,6 +4,17 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined'
 import { Alert, Box, Button, IconButton, InputAdornment, Stack, TextField } from '@mui/material'
 import { useState } from 'react'
 
+const estilosEtiqueta = {
+  bgcolor: '#fff',
+  px: 0.65,
+  borderRadius: 0.75,
+  color: 'text.secondary',
+  fontWeight: 700,
+  '&.Mui-focused': {
+    color: 'primary.main',
+  },
+}
+
 export function LoginForm({ cargando, error, onSubmit }) {
   const [formulario, setFormulario] = useState({ email: '', password: '' })
   const [mostrarClave, setMostrarClave] = useState(false)
@@ -33,6 +44,7 @@ export function LoginForm({ cargando, error, onSubmit }) {
           required
           slotProps={{
             htmlInput: { 'aria-label': 'Correo de acceso' },
+            inputLabel: { sx: estilosEtiqueta },
           }}
         />
 
@@ -46,6 +58,7 @@ export function LoginForm({ cargando, error, onSubmit }) {
           required
           slotProps={{
             htmlInput: { 'aria-label': 'Contraseña' },
+            inputLabel: { sx: estilosEtiqueta },
             input: {
               endAdornment: (
                 <InputAdornment position="end">
