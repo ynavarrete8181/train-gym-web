@@ -2,7 +2,11 @@ import { apiClient as api } from '../../../services/apiClient.js';
 
 export const gimnasioServicio = {
   obtenerUsuarios: async (parametros = {}) => {
-    const { data } = await api.get('/base/seguridad/usuarios', { params: parametros });
+    const esCatalogoDeportistas = String(parametros?.rol || '').toUpperCase() === 'DEPORTISTA';
+    const endpoint = esCatalogoDeportistas
+      ? '/base/gimnasio/clientes/usuarios-disponibles'
+      : '/base/seguridad/usuarios';
+    const { data } = await api.get(endpoint, { params: esCatalogoDeportistas ? {} : parametros });
     return data;
   },
   obtenerEstructuraOperativa: async () => {
