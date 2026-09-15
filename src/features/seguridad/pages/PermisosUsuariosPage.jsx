@@ -40,6 +40,17 @@ export function PermisosUsuariosPage() {
   const [mensaje, setMensaje] = useState('')
   const modificado = usuario && (String(rol) !== String(inicial.rol) || JSON.stringify([...seleccionadas].sort()) !== JSON.stringify([...inicial.funciones].sort()))
 
+  const resolverRolId = useCallback((seleccionado) => {
+    if (seleccionado?.usr_tipo !== undefined && seleccionado?.usr_tipo !== null && seleccionado?.usr_tipo !== '') {
+      return Number(seleccionado.usr_tipo)
+    }
+
+    if (!seleccionado?.rol_nombre) return ''
+
+    const encontrado = roles.find((item) => item.role === seleccionado.rol_nombre)
+    return encontrado ? Number(encontrado.id_userrole) : ''
+  }, [roles])
+
   const cargar = useCallback(async (parametros) => {
     setCargando(true)
     try {
@@ -57,18 +68,19 @@ export function PermisosUsuariosPage() {
     setCargando(true)
     setError('')
     try {
+      const rolActual = resolverRolId(seleccionado)
       const [disponibles, funcionesRol, funcionesUsuario] = await Promise.all([
         listarFuncionesDisponibles(),
-        listarFuncionesRol(seleccionado.usr_tipo),
+        rolActual ? listarFuncionesRol(rolActual) : Promise.resolve([]),
         listarFuncionesUsuario(seleccionado.id),
       ])
       const codigos = funcionesUsuario.map((funcion) => funcion.id_menu)
       setUsuario(seleccionado)
-      setRol(seleccionado.usr_tipo)
+      setRol(rolActual)
       setGrupos(disponibles)
       setRolBase(obtenerCodigos(funcionesRol))
       setSeleccionadas(codigos)
-      setInicial({ rol: seleccionado.usr_tipo, funciones: codigos })
+      setInicial({ rol: rolActual, funciones: codigos })
     } catch (err) {
       setError(obtenerMensajeError(err, 'No se pudieron cargar los accesos del usuario.'))
     } finally { setCargando(false) }
@@ -77,6 +89,12 @@ export function PermisosUsuariosPage() {
   const cambiarRol = async (nuevoRol) => {
     setRol(nuevoRol)
     setError('')
+    if (!nuevoRol) {
+      setRolBase([])
+      setSeleccionadas([])
+      return
+    }
+
     try {
       const funcionesRol = await listarFuncionesRol(nuevoRol)
       const codigos = obtenerCodigos(funcionesRol)
@@ -104,6 +122,11 @@ export function PermisosUsuariosPage() {
   }
 
   const guardar = async () => {
+    if (!rol) {
+      setError('Selecciona un rol antes de guardar los accesos.')
+      return
+    }
+
     setCargando(true)
     setError('')
     try {
@@ -128,12 +151,13 @@ export function PermisosUsuariosPage() {
         onToggle={alternar}
         onSincronizar={() => setSeleccionadas(rolBase)}
         controlRol={<TextField select label="Rol" value={rol} onChange={(evento) => cambiarRol(evento.target.value)} disabled={cargando} sx={{ width: { xs: 220, sm: 300 } }}>
+          <MenuItem value=""><em>Sin rol</em></MenuItem>
           {roles.map((item) => <MenuItem key={item.id_userrole} value={item.id_userrole}>{item.role}</MenuItem>)}
         </TextField>}
       />
       <Stack direction="row" spacing={1} sx={{ mt: 2, justifyContent: 'flex-end' }}>
         <BotonVolver texto="Cancelar" onClick={volver} disabled={cargando} />
-        <BotonGuardar texto="Guardar accesos" onClick={guardar} guardando={cargando} disabled={!modificado} />
+        <BotonGuardar texto="Guardar accesos" onClick={guardar} guardando={cargando} disabled={!modificado || !rol} />
       </Stack>
     </Paper>
   </Box>
