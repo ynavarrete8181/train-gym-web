@@ -23,8 +23,8 @@ const configuracion = {
   sedes: {
     titulo: 'Sedes', singular: 'sede',
     descripcion: 'Administra las sedes, sucursales y ubicaciones de operación.',
-    ayuda: 'Las sedes identifican dónde funciona cada área o servicio de Revive.',
-    clave: 'sedes', pk: 'id_sede', icono: LocationOnOutlinedIcon, color: '#0b6bcb',
+    ayuda: 'Configura los datos de contacto, horarios y capacidades operativas de cada sede Revive.',
+    clave: 'sedes', pk: 'id_sede', icono: LocationOnOutlinedIcon, color: '#d9a900',
   },
   unidades: {
     titulo: 'Facultades / Direcciones', singular: 'facultad o dirección',
@@ -41,7 +41,11 @@ const configuracion = {
 }
 
 const vacio = {
-  sedes: { nombre: '', codigo: '', aliases: [], activo: true },
+  sedes: {
+    nombre: '', codigo: '', direccion: '', ciudad: '', provincia: '', telefono: '', whatsapp: '', email: '',
+    hora_apertura: '', hora_cierre: '', maneja_caja: true, maneja_inventario: true,
+    permite_reservas: true, permite_entrenamiento: true, aliases: [], activo: true,
+  },
   unidades: { nombre: '', tipo: 'FACULTAD', id_sede: '', codigo: '', aliases: [], activo: true },
   'carreras-areas': { nombre: '', tipo: 'CARRERA', id_sede: '', id_sede_unidad: '', codigo: '', codigo_ces: '', id_campo_amplio: '', aliases: [], activo: true },
 }
@@ -78,6 +82,8 @@ function codigoVista(seccion, form, datos) {
   return `${form.tipo}_${normalizar(sede.codigo).replace(/^SEDE_/, '')}_${normalizar(form.nombre)}`
 }
 
+const normalizarHora = (valor) => String(valor || '').slice(0, 5)
+
 export function EstructuraCatalogo({ seccion }) {
   const config = configuracion[seccion]
   const IconoCatalogo = config.icono
@@ -104,7 +110,11 @@ export function EstructuraCatalogo({ seccion }) {
 
   const filas = useMemo(() => datos[config.clave] || [], [datos, config.clave])
   const filtradas = useMemo(() => filas.filter((fila) => {
-    const texto = [fila.codigo, fila.codigo_ces, fila.nombre, fila.tipo, fila.sede_nombre, fila.unidad_nombre, fila.campo_amplio_nombre, ...(fila.aliases || []), fila.activo ? 'activo' : 'inactivo'].join(' ').toLowerCase()
+    const texto = [
+      fila.codigo, fila.codigo_ces, fila.nombre, fila.tipo, fila.sede_nombre, fila.unidad_nombre, fila.campo_amplio_nombre,
+      fila.direccion, fila.ciudad, fila.provincia, fila.telefono, fila.whatsapp, fila.email,
+      ...(fila.aliases || []), fila.activo ? 'activo' : 'inactivo',
+    ].join(' ').toLowerCase()
     const estado = (seccion === 'unidades' ? fila.relacion_activa : fila.activo) ? 'Activo' : 'Inactivo'
     return texto.includes(buscar.toLowerCase())
       && coincide(filtrosColumna.codigo, fila.codigo)
@@ -149,8 +159,16 @@ export function EstructuraCatalogo({ seccion }) {
 
   const editar = (fila) => {
     setEditando(fila)
-    if (seccion === 'sedes') setForm({ nombre: fila.nombre, codigo: fila.codigo, aliases: fila.aliases || [], activo: Boolean(fila.activo) })
-    else if (seccion === 'unidades') setForm({ nombre: fila.nombre, tipo: fila.tipo, id_sede: fila.id_sede, codigo: fila.codigo, aliases: fila.aliases || [], activo: Boolean(fila.relacion_activa) })
+    if (seccion === 'sedes') {
+      setForm({
+        nombre: fila.nombre || '', codigo: fila.codigo || '', direccion: fila.direccion || '', ciudad: fila.ciudad || '',
+        provincia: fila.provincia || '', telefono: fila.telefono || '', whatsapp: fila.whatsapp || '', email: fila.email || '',
+        hora_apertura: normalizarHora(fila.hora_apertura), hora_cierre: normalizarHora(fila.hora_cierre),
+        maneja_caja: fila.maneja_caja ?? true, maneja_inventario: fila.maneja_inventario ?? true,
+        permite_reservas: fila.permite_reservas ?? true, permite_entrenamiento: fila.permite_entrenamiento ?? true,
+        aliases: fila.aliases || [], activo: Boolean(fila.activo),
+      })
+    } else if (seccion === 'unidades') setForm({ nombre: fila.nombre, tipo: fila.tipo, id_sede: fila.id_sede, codigo: fila.codigo, aliases: fila.aliases || [], activo: Boolean(fila.relacion_activa) })
     else setForm({ nombre: fila.nombre, tipo: fila.tipo, id_sede: fila.id_sede || '', id_sede_unidad: fila.id_sede_unidad || '', codigo: fila.codigo, codigo_ces: fila.codigo_ces || '', id_campo_amplio: fila.id_campo_amplio || '', aliases: fila.aliases || [], activo: Boolean(fila.activo) })
     setModoForm(true)
   }
@@ -163,6 +181,7 @@ export function EstructuraCatalogo({ seccion }) {
 
   const guardar = async () => {
     if (guardando || !form.nombre.trim()) return
+    if (seccion === 'sedes' && form.hora_apertura && form.hora_cierre && form.hora_cierre <= form.hora_apertura) return setError('La hora de cierre debe ser posterior a la hora de apertura.')
     if (seccion === 'unidades' && !form.id_sede) return setError('Selecciona una sede.')
     if (seccion === 'carreras-areas' && !form.id_sede) return setError('Selecciona una sede.')
     if (seccion === 'carreras-areas' && !form.id_sede_unidad) return setError('Selecciona una estructura.')
@@ -203,6 +222,28 @@ export function EstructuraCatalogo({ seccion }) {
               <Stack direction="row" spacing={1.2} sx={{ mb: 2.5, alignItems: 'center', color: config.color }}><InfoOutlinedIcon fontSize="small" /><Typography sx={{ fontSize: 13, fontWeight: 750, color: '#52677d' }}>{config.ayuda}</Typography></Stack>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>
                 <TextField label="Nombre" value={form.nombre} onChange={(e) => actualizar({ nombre: e.target.value })} required />
+
+                {seccion === 'sedes' ? <>
+                  <TextField label="Ciudad" value={form.ciudad} onChange={(e) => actualizar({ ciudad: e.target.value })} />
+                  <TextField label="Provincia" value={form.provincia} onChange={(e) => actualizar({ provincia: e.target.value })} />
+                  <TextField label="Dirección" value={form.direccion} onChange={(e) => actualizar({ direccion: e.target.value })} sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }} />
+                  <TextField label="Teléfono" value={form.telefono} onChange={(e) => actualizar({ telefono: e.target.value })} />
+                  <TextField label="WhatsApp" value={form.whatsapp} onChange={(e) => actualizar({ whatsapp: e.target.value })} />
+                  <TextField label="Correo" type="email" value={form.email} onChange={(e) => actualizar({ email: e.target.value })} />
+                  <Box />
+                  <TextField label="Hora de apertura" type="time" value={form.hora_apertura} onChange={(e) => actualizar({ hora_apertura: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Hora de cierre" type="time" value={form.hora_cierre} onChange={(e) => actualizar({ hora_cierre: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+                  <Box sx={{ gridColumn: '1 / -1', border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#f8fafc', p: 2 }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 900, mb: 1.25, color: '#52677d', textTransform: 'uppercase', letterSpacing: 0.5 }}>Operación habilitada</Typography>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 1 }}>
+                      <FormControlLabel control={<Switch checked={Boolean(form.maneja_caja)} onChange={(e) => actualizar({ maneja_caja: e.target.checked })} />} label="Caja y ventas" />
+                      <FormControlLabel control={<Switch checked={Boolean(form.maneja_inventario)} onChange={(e) => actualizar({ maneja_inventario: e.target.checked })} />} label="Inventario" />
+                      <FormControlLabel control={<Switch checked={Boolean(form.permite_reservas)} onChange={(e) => actualizar({ permite_reservas: e.target.checked })} />} label="Reservas" />
+                      <FormControlLabel control={<Switch checked={Boolean(form.permite_entrenamiento)} onChange={(e) => actualizar({ permite_entrenamiento: e.target.checked })} />} label="Entrenamiento" />
+                    </Box>
+                  </Box>
+                </> : null}
+
                 {seccion !== 'sedes' ? <TextField select label="Tipo" value={form.tipo} onChange={(e) => actualizar({ tipo: e.target.value, id_sede_unidad: '' })}>{(seccion === 'unidades' ? ['FACULTAD', 'DIRECCION'] : ['CARRERA', 'AREA']).map((valor) => <MenuItem key={valor} value={valor}>{valor === 'DIRECCION' ? 'Dirección' : valor.charAt(0) + valor.slice(1).toLowerCase()}</MenuItem>)}</TextField> : null}
                 {seccion === 'unidades' ? <TextField select label="Sede" value={form.id_sede} onChange={(e) => actualizar({ id_sede: e.target.value })} required>{sedesActivas.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}</TextField> : null}
                 {seccion === 'carreras-areas' ? <>
@@ -226,6 +267,12 @@ export function EstructuraCatalogo({ seccion }) {
             <TableHead><TableRow>
               <FilterHeaderCell value={filtrosColumna.codigo} onChange={(v) => cambiarFiltro('codigo', v)} options={opcionesFiltro.codigo}>Código</FilterHeaderCell>
               <FilterHeaderCell value={filtrosColumna.nombre} onChange={(v) => cambiarFiltro('nombre', v)} options={opcionesFiltro.nombre}>Nombre</FilterHeaderCell>
+              {seccion === 'sedes' ? <>
+                <TableCell>Ubicación</TableCell>
+                <TableCell>Contacto</TableCell>
+                <TableCell>Horario</TableCell>
+                <TableCell>Operación</TableCell>
+              </> : null}
               {seccion !== 'sedes' ? <FilterHeaderCell value={filtrosColumna.tipo} onChange={(v) => cambiarFiltro('tipo', v)} options={opcionesFiltro.tipo}>Tipo</FilterHeaderCell> : null}
               {seccion === 'unidades' ? <FilterHeaderCell value={filtrosColumna.sede} onChange={(v) => cambiarFiltro('sede', v)} options={opcionesFiltro.sede}>Sede</FilterHeaderCell> : null}
               {seccion === 'carreras-areas' ? <>
@@ -241,12 +288,31 @@ export function EstructuraCatalogo({ seccion }) {
               {visibles.length ? visibles.map((fila) => <TableRow key={fila[config.pk]} hover>
                 <TableCell><Chip size="small" variant="outlined" label={fila.codigo} /></TableCell>
                 <TableCell><Typography sx={{ fontSize: 12.5, fontWeight: 800 }}>{fila.nombre}</Typography></TableCell>
+                {seccion === 'sedes' ? <>
+                  <TableCell>
+                    <Typography sx={{ fontSize: 12.2, fontWeight: 750 }}>{[fila.ciudad, fila.provincia].filter(Boolean).join(', ') || '—'}</Typography>
+                    {fila.direccion ? <Typography color="text.secondary" sx={{ fontSize: 11.2 }}>{fila.direccion}</Typography> : null}
+                  </TableCell>
+                  <TableCell>
+                    <Typography sx={{ fontSize: 11.8 }}>{fila.telefono || fila.whatsapp || '—'}</Typography>
+                    {fila.email ? <Typography color="text.secondary" sx={{ fontSize: 11.1 }}>{fila.email}</Typography> : null}
+                  </TableCell>
+                  <TableCell>{fila.hora_apertura && fila.hora_cierre ? `${normalizarHora(fila.hora_apertura)} - ${normalizarHora(fila.hora_cierre)}` : '—'}</TableCell>
+                  <TableCell>
+                    <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                      {fila.maneja_caja ? <Chip size="small" variant="outlined" label="Caja" /> : null}
+                      {fila.maneja_inventario ? <Chip size="small" variant="outlined" label="Inventario" /> : null}
+                      {fila.permite_reservas ? <Chip size="small" variant="outlined" label="Reservas" /> : null}
+                      {fila.permite_entrenamiento ? <Chip size="small" variant="outlined" label="Entrenamiento" /> : null}
+                    </Stack>
+                  </TableCell>
+                </> : null}
                 {seccion !== 'sedes' ? <TableCell><Chip size="small" label={fila.tipo === 'DIRECCION' ? 'Dirección' : fila.tipo.charAt(0) + fila.tipo.slice(1).toLowerCase()} /></TableCell> : null}
                 {seccion === 'unidades' ? <TableCell>{fila.sede_nombre}</TableCell> : null}
                 {seccion === 'carreras-areas' ? <><TableCell>{fila.sede_nombre || '—'}</TableCell><TableCell>{fila.unidad_nombre || '—'}</TableCell><TableCell>{fila.codigo_ces || '—'}</TableCell><TableCell>{fila.campo_amplio_nombre || '—'}</TableCell></> : null}
                 <TableCell><EstadoToggleCell activo={seccion === 'unidades' ? Boolean(fila.relacion_activa) : Boolean(fila.activo)} onToggle={() => alternar(fila)} /></TableCell>
                 <TableCell align="right"><Tooltip title="Editar"><IconButton sx={dbanuStyles.actionEdit} onClick={() => editar(fila)}><EditOutlinedIcon /></IconButton></Tooltip></TableCell>
-              </TableRow>) : <TablaEstadoFila colSpan={seccion === 'carreras-areas' ? 9 : seccion === 'unidades' ? 6 : 4} cargando={cargando} texto="No existen registros por ahora." />}
+              </TableRow>) : <TablaEstadoFila colSpan={seccion === 'carreras-areas' ? 9 : seccion === 'unidades' ? 6 : seccion === 'sedes' ? 8 : 4} cargando={cargando} texto="No existen registros por ahora." />}
             </TableBody>
           </TablaGestion>
         </>}
