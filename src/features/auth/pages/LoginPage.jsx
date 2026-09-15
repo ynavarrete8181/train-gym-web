@@ -1,4 +1,7 @@
 import { Box, Paper, Stack, Typography } from '@mui/material'
+import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined'
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined'
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import { LoginForm } from '../components/LoginForm.jsx'
 import reviveLogo from '../../../assets/brand/revive-logo.jpeg'
 
@@ -18,79 +21,120 @@ export function LoginPage({ cargando, error, onLogin }) {
     >
       <Box
         sx={{
-          minHeight: { xs: 220, sm: 280, md: '100vh' },
-          display: 'flex',
-          alignItems: 'center',
+          minHeight: { xs: 320, sm: 420, md: '100vh' },
           position: 'relative',
           overflow: 'hidden',
-          backgroundImage: `radial-gradient(circle at 18% 18%, rgba(245,196,0,0.18), transparent 28%), linear-gradient(90deg, rgba(8,8,8,0.94) 0%, rgba(8,8,8,0.84) 48%, rgba(8,8,8,0.62) 100%), url(${imagenFondo})`,
+          backgroundImage: `linear-gradient(180deg, rgba(5,5,5,0.20) 0%, rgba(5,5,5,0.12) 34%, rgba(5,5,5,0.78) 74%, rgba(5,5,5,0.96) 100%), linear-gradient(90deg, rgba(5,5,5,0.45) 0%, rgba(5,5,5,0.10) 52%, rgba(5,5,5,0.18) 100%), url(${imagenFondo})`,
           backgroundPosition: 'center',
           backgroundSize: 'cover',
           backgroundRepeat: 'no-repeat',
-          px: { xs: 3, sm: 5, md: 'clamp(48px, 8vw, 150px)' },
-          py: { xs: 4, md: 6 },
         }}
       >
-        <Stack spacing={{ xs: 2, md: 3 }} sx={{ color: '#fff', maxWidth: 680, position: 'relative', zIndex: 1 }}>
+        <Box
+          sx={{
+            position: 'absolute',
+            inset: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            px: { xs: 3, sm: 4.5, md: 5 },
+            py: { xs: 3, sm: 4, md: 4.5 },
+            zIndex: 1,
+          }}
+        >
           <Box
             component="img"
             src={reviveLogo}
             alt="Revive Sports"
             sx={{
-              width: { xs: 170, sm: 220, md: 276 },
-              maxWidth: '100%',
+              width: { xs: 118, sm: 136, md: 150 },
               height: 'auto',
               display: 'block',
-              borderRadius: 1.5,
-              boxShadow: '0 22px 60px rgba(0,0,0,0.5)',
+              borderRadius: 1,
+              boxShadow: '0 10px 28px rgba(0,0,0,0.22)',
             }}
           />
 
-          <Box>
-            <Typography
-              variant="overline"
-              sx={{
-                display: { xs: 'none', sm: 'block' },
-                fontWeight: 900,
-                color: amarilloRevive,
-                letterSpacing: 0.5,
-              }}
-            >
-              Plataforma de gestión deportiva
-            </Typography>
-
+          <Box sx={{ maxWidth: 560, color: '#fff' }}>
             <Typography
               component="h1"
               sx={{
-                mt: { xs: 0.5, md: 1 },
-                fontSize: { xs: 32, sm: 42, md: 64 },
-                lineHeight: 1.02,
-                fontWeight: 900,
-                color: '#fff',
-                textShadow: '0 3px 18px rgba(0,0,0,0.4)',
+                fontSize: { xs: 36, sm: 48, md: 56 },
+                lineHeight: 0.98,
+                fontWeight: 950,
+                letterSpacing: -1.4,
+                textShadow: '0 4px 20px rgba(0,0,0,0.45)',
               }}
             >
-              Revive{' '}
+              ENTRENA.
+              <br />
+              PROGRESA.
+              <br />
               <Box component="span" sx={{ color: amarilloRevive }}>
-                Sports
+                REVIVE.
               </Box>
             </Typography>
 
             <Typography
               sx={{
-                display: { xs: 'none', sm: 'block' },
                 mt: 2,
-                maxWidth: 620,
-                fontSize: { sm: 17, md: 20 },
+                maxWidth: 420,
+                fontSize: { xs: 13, sm: 15, md: 16 },
                 lineHeight: 1.55,
                 color: 'rgba(255,255,255,0.86)',
-                textShadow: '0 2px 12px rgba(0,0,0,0.45)',
+                textShadow: '0 2px 10px rgba(0,0,0,0.45)',
               }}
             >
-              Controla clientes, membresías, reservas, asistencia, ventas, inventario y entrenamiento desde una sola operación.
+              Todo lo que necesitas para impulsar tu entrenamiento y gestionar tu experiencia deportiva desde un solo lugar.
+            </Typography>
+
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 1, sm: 3 }}
+              sx={{
+                mt: 3,
+                pt: 2.2,
+                borderTop: '1px solid rgba(255,255,255,0.18)',
+              }}
+            >
+              {[
+                { icono: FitnessCenterOutlinedIcon, titulo: 'Entrenamiento', texto: 'seguimiento deportivo' },
+                { icono: BadgeOutlinedIcon, titulo: 'Membresías', texto: 'control y acceso' },
+                { icono: DescriptionOutlinedIcon, titulo: 'Gestión', texto: 'servicios integrados' },
+              ].map(({ icono: Icono, titulo, texto }) => (
+                <Stack key={titulo} direction="row" spacing={1.1} sx={{ alignItems: 'center', minWidth: 0 }}>
+                  <Box
+                    sx={{
+                      width: 30,
+                      height: 30,
+                      border: `1px solid rgba(245,196,0,0.42)`,
+                      display: 'grid',
+                      placeItems: 'center',
+                      color: amarilloRevive,
+                      borderRadius: 1,
+                      bgcolor: 'rgba(0,0,0,0.16)',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icono sx={{ fontSize: 17 }} />
+                  </Box>
+                  <Box>
+                    <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>
+                      {titulo}
+                    </Typography>
+                    <Typography sx={{ fontSize: 10.5, color: 'rgba(255,255,255,0.58)', lineHeight: 1.25 }}>
+                      {texto}
+                    </Typography>
+                  </Box>
+                </Stack>
+              ))}
+            </Stack>
+
+            <Typography sx={{ mt: 2.2, fontSize: 10.5, color: 'rgba(255,255,255,0.46)' }}>
+              © 2026 Revive Sports. Todos los derechos reservados.
             </Typography>
           </Box>
-        </Stack>
+        </Box>
       </Box>
 
       <Box
