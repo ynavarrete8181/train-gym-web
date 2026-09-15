@@ -35,6 +35,14 @@ export const gimnasioServicio = {
     const { data } = await api.delete(`/base/gimnasio/entrenadores/${entrenadorId}/turnos/${horarioBloqueId}`);
     return data;
   },
+  obtenerMisDeportistasEntrenador: async () => {
+    const { data } = await api.get('/base/gimnasio/mi-entrenamiento/deportistas');
+    return data;
+  },
+  obtenerMiAgendaEntrenador: async () => {
+    const { data } = await api.get('/base/gimnasio/mi-entrenamiento/agenda');
+    return data;
+  },
 
   // --- Asignaciones entrenador - cliente ---
   obtenerAsignacionesEntrenador: async (params) => {
