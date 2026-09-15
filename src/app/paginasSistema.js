@@ -27,6 +27,8 @@ const nombresPaginas = {
   HistorialNotificacionesPage: 'Historial de notificaciones',
   EntrenadoresPage: 'Entrenadores',
   DeportistasPage: 'Clientes',
+  MisDeportistasPage: 'Mis deportistas',
+  MiAgendaEntrenadorPage: 'Mi agenda',
   PlanesPage: 'Planes de membresía',
   MembresiasPage: 'Asignar membresía',
   CategoriasServicioPage: 'Categorías de servicio',
