@@ -1,33 +1,31 @@
-# Clientes - ficha comercial por rol
+# Clientes - permisos por backend conservando Sistema Base
 
 Fecha: 2026-09-15
 
 ## Contexto
 
-Durante la validación del usuario Karol Cajero con rol `SUPERVISOR DE VENTAS`, la ficha de Clientes abría correctamente pero el frontend intentaba cargar también APIs de Entrenadores, Progreso y Entrenamiento. Esos accesos no forman parte de la matriz del Supervisor de Ventas y el middleware devolvía 403, mostrando el aviso global `No tienes permiso para realizar esta acción`.
+Durante la validación del usuario Karol Cajero con rol `SUPERVISOR DE VENTAS`, la ficha de Clientes abría correctamente pero algunas consultas complementarias devolvían 403. Inicialmente se intentó resolver creando una vista comercial separada por rol. Ese enfoque se descartó porque rompe la convención del proyecto: una misma funcionalidad debe conservar la estructura, componentes y estilos del Sistema Base.
 
-## Ajuste aplicado
+## Criterio definitivo
 
-Se creó una vista comercial específica para `SUPERVISOR DE VENTAS`:
+`DeportistasPage` continúa siendo la única pantalla de Clientes. No se mantienen vistas ni routers alternos por rol.
 
-- listado de Clientes;
-- ficha con pestaña `Datos del cliente`;
-- ficha con pestaña `Membresía`;
-- edición de datos comerciales permitidos;
-- consulta de membresías ya asociadas al cliente;
-- no se ejecutan llamadas a Entrenadores, Progreso ni Entrenamiento.
+La autorización se resuelve en backend:
 
-La página `ClientesRouterPage` decide qué vista usar a partir del rol almacenado en `base_usuario`:
+- el frontend conserva la misma estructura visual y únicamente consume/dibuja los datos autorizados;
+- las operaciones `GET` necesarias para construir la ficha integral del cliente pueden autorizarse con `GIMNASIO-DEPORTISTAS` además del permiso específico del módulo consultado;
+- las operaciones de escritura `POST`, `PUT`, `PATCH` y `DELETE` conservan sus permisos específicos;
+- no se abre el endpoint general de Seguridad > Usuarios para roles comerciales;
+- se usa un catálogo seguro de usuarios con rol `DEPORTISTA` para la creación de Clientes.
 
-- `SUPERVISOR DE VENTAS` -> `ClientesSupervisorPage`;
-- demás roles -> `DeportistasPage` existente.
+## Cambios aplicados
 
-`paginasSistema.js` mantiene la clave registrada `DeportistasPage`, pero la resuelve mediante el router de Clientes para no alterar los bindings de páginas existentes en base de datos.
+Se retiraron `ClientesSupervisorPage.jsx` y `ClientesRouterPage.jsx`, y `paginasSistema.js` volvió al registro dinámico estándar del Sistema Base.
 
-## Criterio de seguridad
+`gimnasioServicio.obtenerUsuarios()` usa el endpoint seguro `/base/gimnasio/clientes/usuarios-disponibles` cuando la pantalla solicita usuarios con rol `DEPORTISTA`.
 
-No se otorgaron nuevos permisos deportivos al Supervisor de Ventas. La corrección se realiza en la capa de presentación para que el frontend no solicite recursos que el rol no está autorizado a consultar.
+El backend separa lectura y escritura en Planes, Entrenadores, asignaciones y módulos de Entrenamiento para que la ficha pueda consultarse sin conceder capacidades administrativas adicionales.
 
-## Pendiente
+## Regla para cambios futuros
 
-La creación/renovación completa de membresías desde esta ficha comercial se revisará cuando se dividan permisos de lectura/escritura para Planes y Membresías. Por ahora el Supervisor puede consultar las membresías asociadas sin ampliar acceso a configuración de planes.
+No crear una segunda página por rol cuando el módulo base ya existe. Primero revisar permisos, rutas, servicios y reglas de negocio del backend. El frontend debe conservar los componentes compartidos, estilos y estructura de carpetas definidos por el Sistema Base.
