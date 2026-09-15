@@ -12,11 +12,25 @@ Durante la validación del usuario Karol Cajero con rol `SUPERVISOR DE VENTAS`, 
 
 La autorización se resuelve en backend:
 
-- el frontend conserva la misma estructura visual y únicamente consume/dibuja los datos autorizados;
-- las operaciones `GET` necesarias para construir la ficha integral del cliente pueden autorizarse con `GIMNASIO-DEPORTISTAS` además del permiso específico del módulo consultado;
+- el frontend conserva la misma estructura visual y únicamente consume/dibuja lo autorizado;
+- la matriz real del usuario continúa almacenada en `seguridad.cpu_userfunction`;
+- el backend expone las capacidades de la ficha mediante `/base/gimnasio/clientes/capacidades`;
+- la respuesta usa las mismas claves de las pestañas (`datos`, `entrenador`, `membresia`, `progreso`, `entrenamiento`), de modo que el componente compartido de pestañas solo dibuja las capacidades permitidas;
 - las operaciones de escritura `POST`, `PUT`, `PATCH` y `DELETE` conservan sus permisos específicos;
 - no se abre el endpoint general de Seguridad > Usuarios para roles comerciales;
 - se usa un catálogo seguro de usuarios con rol `DEPORTISTA` para la creación de Clientes.
+
+## Supervisor de Ventas
+
+La matriz base de `SUPERVISOR DE VENTAS` contiene `GIMNASIO-DEPORTISTAS` y `GIMNASIO-MEMBRESIAS`, pero no contiene `GIMNASIO-ENTRENADORES`, `ENTRENAMIENTO-PROGRESO`, `ENTRENAMIENTO-PLANES`, `ENTRENAMIENTO-RUTINAS` ni `ENTRENAMIENTO-RM`.
+
+Por tanto, en la ficha de Clientes el backend debe informar:
+
+- `datos: true`;
+- `membresia: true`;
+- `entrenador: false`;
+- `progreso: false`;
+- `entrenamiento: false`.
 
 ## Cambios aplicados
 
@@ -24,7 +38,7 @@ Se retiraron `ClientesSupervisorPage.jsx` y `ClientesRouterPage.jsx`, y `paginas
 
 `gimnasioServicio.obtenerUsuarios()` usa el endpoint seguro `/base/gimnasio/clientes/usuarios-disponibles` cuando la pantalla solicita usuarios con rol `DEPORTISTA`.
 
-El backend separa lectura y escritura en Planes, Entrenadores, asignaciones y módulos de Entrenamiento para que la ficha pueda consultarse sin conceder capacidades administrativas adicionales.
+Se agregó `src/services/capacidadesVistaService.js` como integración genérica entre vistas y capacidades declaradas por backend. `PestanasEstandar` conserva exactamente sus estilos y estructura, pero filtra las opciones cuando la vista actual cuenta con una fuente de capacidades backend.
 
 ## Regla para cambios futuros
 
