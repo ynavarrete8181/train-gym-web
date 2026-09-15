@@ -26,30 +26,20 @@ export function LoginPage({ cargando, error, onLogin }) {
         }}
       >
         <Stack spacing={{ xs: 1.5, md: 3 }} sx={{ color: '#fff', maxWidth: 650 }}>
-          <Stack direction="row" spacing={1.8} sx={{ alignItems: 'center' }}>
-            <Box
-              component="img"
-              src={reviveLogo}
-              alt="Revive Sports"
-              sx={{
-                width: { xs: 168, sm: 220, md: 276 },
-                maxWidth: '100%',
-                height: 'auto',
-                display: 'block',
-                borderRadius: 1.5,
-                boxShadow: '0 18px 48px rgba(0,0,0,0.32)',
-              }}
-            />
-            <Box sx={{ display: { xs: 'none', md: 'block' }, width: 3, height: 64, bgcolor: '#fff', borderRadius: 1, opacity: 0.78 }} />
-            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-              <Typography sx={{ fontSize: 22, fontWeight: 950, lineHeight: 1 }}>
-                Train Gym
-              </Typography>
-              <Typography sx={{ mt: 0.5, fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.78)', textTransform: 'uppercase', letterSpacing: 0 }}>
-                Gestión deportiva
-              </Typography>
-            </Box>
-          </Stack>
+          <Box
+            component="img"
+            src={reviveLogo}
+            alt="Revive Sports"
+            sx={{
+              width: { xs: 168, sm: 220, md: 276 },
+              maxWidth: '100%',
+              height: 'auto',
+              display: 'block',
+              borderRadius: 1.5,
+              boxShadow: '0 18px 48px rgba(0,0,0,0.32)',
+            }}
+          />
+
           <Box>
             <Typography
               variant="overline"
