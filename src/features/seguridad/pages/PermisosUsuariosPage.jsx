@@ -14,6 +14,15 @@ import { guardarAccesosUsuario, listarFuncionesDisponibles, listarFuncionesRol, 
 
 const metaInicial = { pagina_actual: 1, por_pagina: 5, total: 0, opciones_filtro: { usuario: [], correo: [] } }
 const obtenerCodigos = (grupos = []) => grupos.flatMap((grupo) => grupo.funciones.map((funcion) => funcion.id_menu))
+const obtenerMensajeError = (error, respaldo) => {
+  const datos = error?.response?.data
+  const errores = datos?.errors
+  const primerError = errores && typeof errores === 'object'
+    ? Object.values(errores).flat().find(Boolean)
+    : null
+
+  return primerError || datos?.mensaje || datos?.message || error?.message || respaldo
+}
 
 export function PermisosUsuariosPage() {
   const [usuarios, setUsuarios] = useState([])
@@ -60,17 +69,22 @@ export function PermisosUsuariosPage() {
       setRolBase(obtenerCodigos(funcionesRol))
       setSeleccionadas(codigos)
       setInicial({ rol: seleccionado.usr_tipo, funciones: codigos })
-    } catch {
-      setError('No se pudieron cargar los accesos del usuario.')
+    } catch (err) {
+      setError(obtenerMensajeError(err, 'No se pudieron cargar los accesos del usuario.'))
     } finally { setCargando(false) }
   }
 
   const cambiarRol = async (nuevoRol) => {
     setRol(nuevoRol)
-    const funcionesRol = await listarFuncionesRol(nuevoRol)
-    const codigos = obtenerCodigos(funcionesRol)
-    setRolBase(codigos)
-    setSeleccionadas(codigos)
+    setError('')
+    try {
+      const funcionesRol = await listarFuncionesRol(nuevoRol)
+      const codigos = obtenerCodigos(funcionesRol)
+      setRolBase(codigos)
+      setSeleccionadas(codigos)
+    } catch (err) {
+      setError(obtenerMensajeError(err, 'No se pudieron cargar los permisos del rol seleccionado.'))
+    }
   }
 
   const alternar = (codigo) => setSeleccionadas((actuales) => actuales.includes(codigo) ? actuales.filter((item) => item !== codigo) : [...actuales, codigo])
@@ -98,7 +112,7 @@ export function PermisosUsuariosPage() {
       setUsuario(null)
       await cargar(filtros)
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'No se pudieron guardar los accesos.')
+      setError(obtenerMensajeError(err, 'No se pudieron guardar los accesos.'))
     } finally { setCargando(false) }
   }
 
