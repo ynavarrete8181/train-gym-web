@@ -56,6 +56,8 @@ const metricasGenerales = [
   { titulo: 'Resumen', valor: '—', detalle: 'Indicador pendiente de integración' },
 ]
 
+const normalizarRol = (usuario) => String(usuario?.rol_nombre || usuario?.role || '').trim().toUpperCase()
+
 export function DashboardPage() {
   const [rol, setRol] = useState('')
 
@@ -64,7 +66,7 @@ export function DashboardPage() {
 
     obtenerUsuarioActual()
       .then((datos) => {
-        if (activo) setRol(datos?.usuario?.rol_nombre || '')
+        if (activo) setRol(normalizarRol(datos?.usuario))
       })
       .catch(() => {
         if (activo) setRol('')
