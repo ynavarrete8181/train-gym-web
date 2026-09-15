@@ -4,7 +4,7 @@ import { ClientesSupervisorPage } from './ClientesSupervisorPage.jsx';
 const obtenerRolActual = () => {
   try {
     const usuario = JSON.parse(localStorage.getItem('base_usuario') || 'null');
-    return usuario?.rol_nombre || '';
+    return String(usuario?.rol_nombre || usuario?.role || '').trim().toUpperCase();
   } catch {
     return '';
   }
