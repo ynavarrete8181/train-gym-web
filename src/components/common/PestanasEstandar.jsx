@@ -1,10 +1,39 @@
 import { Tab, Tabs } from '@mui/material'
+import { useEffect, useMemo, useState } from 'react'
+import { obtenerCapacidadesVista, vistaTieneCapacidadesBackend } from '../../services/capacidadesVistaService.js'
 
 /** Navegación por pestañas compartida y adaptable para todos los módulos. */
 export function PestanasEstandar({ value, onChange, opciones, sx = {}, ...props }) {
+  const vistaActual = localStorage.getItem('base_vista_actual') || ''
+  const [capacidades, setCapacidades] = useState(null)
+
+  useEffect(() => {
+    let activo = true
+
+    if (!vistaTieneCapacidadesBackend(vistaActual)) {
+      setCapacidades(null)
+      return () => { activo = false }
+    }
+
+    obtenerCapacidadesVista(vistaActual)
+      .then((datos) => {
+        if (activo) setCapacidades(datos || {})
+      })
+      .catch(() => {
+        if (activo) setCapacidades({})
+      })
+
+    return () => { activo = false }
+  }, [vistaActual])
+
+  const opcionesVisibles = useMemo(() => {
+    if (!vistaTieneCapacidadesBackend(vistaActual) || capacidades === null) return opciones
+    return opciones.filter((opcion) => capacidades[opcion.value] !== false)
+  }, [opciones, capacidades, vistaActual])
+
   return (
     <Tabs
-      value={value}
+      value={opcionesVisibles.some((opcion) => opcion.value === value) ? value : false}
       onChange={onChange}
       variant="scrollable"
       scrollButtons="auto"
@@ -21,7 +50,7 @@ export function PestanasEstandar({ value, onChange, opciones, sx = {}, ...props 
       }}
       {...props}
     >
-      {opciones.map(({ value: optionValue, label, icon, disabled }) => (
+      {opcionesVisibles.map(({ value: optionValue, label, icon, disabled }) => (
         <Tab key={optionValue ?? label} value={optionValue} label={label} icon={icon} iconPosition={icon ? 'start' : undefined} disabled={disabled} />
       ))}
     </Tabs>
