@@ -5,6 +5,7 @@ import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.js
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { CancelarMembresiaButton } from './CancelarMembresiaButton.jsx';
 
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC') : 'Sin fecha';
@@ -61,6 +62,7 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
+                <CancelarMembresiaButton membresia={membresia} />
               </Stack>
             </TableCell>
           </TableRow>
