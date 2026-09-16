@@ -63,10 +63,22 @@ export const dbanuStyles = {
     width: 28,
     height: 28,
     borderRadius: 0.5,
-    border: `1px solid ${uiTokens.colores.secundario}`,
+    border: `1px solid ${uiTokens.colores.secundario} !important`,
+    borderColor: `${uiTokens.colores.secundario} !important`,
     bgcolor: 'background.paper',
-    color: uiTokens.colores.secundario,
-    '&:hover': { bgcolor: uiTokens.colores.secundarioSuave, borderColor: uiTokens.colores.secundario },
+    color: `${uiTokens.colores.secundario} !important`,
+    '& .MuiSvgIcon-root': {
+      color: `${uiTokens.colores.secundario} !important`,
+      fill: 'currentColor',
+    },
+    '&:hover': {
+      bgcolor: `${uiTokens.colores.secundarioSuave} !important`,
+      borderColor: `${uiTokens.colores.secundario} !important`,
+      color: `${uiTokens.colores.secundarioOscuro} !important`,
+      '& .MuiSvgIcon-root': {
+        color: `${uiTokens.colores.secundarioOscuro} !important`,
+      },
+    },
   },
   actionView: {
     width: 28,
