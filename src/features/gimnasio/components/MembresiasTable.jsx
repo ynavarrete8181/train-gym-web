@@ -10,7 +10,7 @@ import { CancelarMembresiaButton } from './CancelarMembresiaButton.jsx';
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC') : 'Sin fecha';
 
-export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onPageChange, onRowsPerPageChange }) {
+export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onCancelada, onErrorCancelar, onPageChange, onRowsPerPageChange }) {
   return (
     <TablaGestion
       total={meta.total || 0}
@@ -62,7 +62,7 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
-                <CancelarMembresiaButton membresia={membresia} />
+                <CancelarMembresiaButton membresia={membresia} onCancelada={onCancelada} onError={onErrorCancelar} />
               </Stack>
             </TableCell>
           </TableRow>
