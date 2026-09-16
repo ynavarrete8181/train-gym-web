@@ -21,6 +21,7 @@ const nombresPaginas = {
   CamposAmpliosPage: 'Campos amplios',
   EstructuraInstitucionalPage: 'Estructura operativa',
   IntegracionesPage: 'Configuración de APIs',
+  EstadosConfiguracionPage: 'Estados',
   CampaniasNotificacionPage: 'Campañas y envíos',
   NotificacionesUsuariosPage: 'Invitaciones de acceso',
   PlantillasCorreoPage: 'Plantillas de correo',
