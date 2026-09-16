@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import PowerSettingsNewOutlinedIcon from '@mui/icons-material/PowerSettingsNewOutlined';
 import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, FormControlLabel, MenuItem, Paper, Switch, TextField, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -12,6 +10,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
+import { EstadosConfiguracionTable } from '../components/EstadosConfiguracionTable.jsx';
 import { configuracionServicio } from '../services/configuracionServicio.js';
 
 const estadoInicial = () => ({
@@ -29,29 +28,45 @@ const estadoInicial = () => ({
   protegido_sistema: false,
 });
 
+const filtrosIniciales = () => ({ busqueda: '', page: 1, per_page: 5 });
+const filtrosColumnaIniciales = () => ({
+  codigo: [],
+  entidad: [],
+  valor_interno: [],
+  nombre: [],
+  color: [],
+  inicial: [],
+  final: [],
+  protegido: [],
+  estado: [],
+});
+
 const colores = [
-  ['default', 'Neutro'], ['info', 'Informativo'], ['success', 'Éxito'], ['warning', 'Advertencia'], ['error', 'Error / cancelado'],
+  ['default', 'Neutro'],
+  ['info', 'Informativo'],
+  ['success', 'Éxito'],
+  ['warning', 'Advertencia'],
+  ['error', 'Error / cancelado'],
 ];
 
 export function EstadosConfiguracionPage() {
   const [vista, setVista] = useState('lista');
   const [items, setItems] = useState([]);
-  const [meta, setMeta] = useState({ entidades: [] });
+  const [meta, setMeta] = useState({});
   const [formData, setFormData] = useState(estadoInicial());
-  const [busqueda, setBusqueda] = useState('');
-  const [entidad, setEntidad] = useState('');
+  const [filtros, setFiltros] = useState(filtrosIniciales());
+  const [filtrosColumna, setFiltrosColumna] = useState(filtrosColumnaIniciales());
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
-  const entidades = useMemo(() => meta.entidades || [], [meta]);
 
-  const cargar = async (params = {}) => {
+  const cargar = async (parametros = filtros) => {
     setCargando(true);
     try {
-      const response = await configuracionServicio.obtenerEstados({ busqueda, entidad, ...params });
+      const response = await configuracionServicio.obtenerEstados(parametros);
       setItems(response.datos || []);
-      setMeta(response.meta || { entidades: [] });
+      setMeta(response.meta || {});
     } catch (error) {
       showNotificacion(error.response?.data?.mensaje || 'No se pudo cargar el catálogo de estados', 'error');
     } finally {
@@ -59,7 +74,33 @@ export function EstadosConfiguracionPage() {
     }
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    if (vista === 'lista') cargar();
+  }, [vista]);
+
+  const buscar = (parametros) => {
+    const nuevos = { ...parametros, page: 1 };
+    setFiltros(nuevos);
+    cargar(nuevos);
+  };
+
+  const aplicarFiltroColumna = (columna, valor) => {
+    const nuevasColumnas = { ...filtrosColumna, [columna]: valor };
+    const nuevosFiltros = { ...filtros, ...nuevasColumnas, [columna]: valor, page: 1 };
+    setFiltrosColumna(nuevasColumnas);
+    setFiltros(nuevosFiltros);
+    cargar(nuevosFiltros);
+  };
+
+  const handleNuevo = () => {
+    setFormData(estadoInicial());
+    setVista('formulario');
+  };
+
+  const handleEditar = (item) => {
+    setFormData({ ...estadoInicial(), ...item });
+    setVista('formulario');
+  };
 
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target;
@@ -72,6 +113,7 @@ export function EstadosConfiguracionPage() {
         showNotificacion('Complete código, entidad, valor interno y nombre', 'warning');
         return;
       }
+
       const payload = {
         ...formData,
         codigo: String(formData.codigo).trim().toUpperCase(),
@@ -82,27 +124,41 @@ export function EstadosConfiguracionPage() {
         es_inicial: Boolean(formData.es_inicial),
         es_final: Boolean(formData.es_final),
       };
-      if (formData.id) await configuracionServicio.actualizarEstado(formData.id, payload);
-      else await configuracionServicio.crearEstado(payload);
-      showNotificacion(formData.id ? 'Estado actualizado correctamente' : 'Estado creado correctamente', 'success');
+
+      if (formData.id) {
+        await configuracionServicio.actualizarEstado(formData.id, payload);
+        showNotificacion('Estado actualizado correctamente', 'success');
+      } else {
+        await configuracionServicio.crearEstado(payload);
+        showNotificacion('Estado creado correctamente', 'success');
+      }
+
       setVista('lista');
       cargar();
     } catch (error) {
       const errores = error.response?.data?.errors;
-      showNotificacion((errores && Object.values(errores)[0]?.[0]) || error.response?.data?.mensaje || 'No se pudo guardar el estado', 'error');
+      const primerError = errores ? Object.values(errores)[0]?.[0] : null;
+      showNotificacion(primerError || error.response?.data?.mensaje || 'No se pudo guardar el estado', 'error');
     }
   };
 
   const handleDesactivar = async (item) => {
-    const confirmado = await confirmarAccion({ titulo: 'Desactivar estado', texto: `¿Deseas desactivar el estado “${item.nombre}”?`, textoConfirmar: 'Sí, desactivar', icono: 'warning' });
+    const confirmado = await confirmarAccion({
+      titulo: 'Desactivar estado',
+      texto: `¿Deseas desactivar el estado “${item.nombre}”?`,
+      textoConfirmar: 'Sí, desactivar',
+      icono: 'warning',
+    });
     if (!confirmado) return;
+
     try {
       await configuracionServicio.desactivarEstado(item.id);
       showNotificacion('Estado desactivado correctamente', 'success');
       cargar();
     } catch (error) {
       const errores = error.response?.data?.errors;
-      showNotificacion((errores && Object.values(errores)[0]?.[0]) || error.response?.data?.mensaje || 'No se pudo desactivar el estado', 'error');
+      const primerError = errores ? Object.values(errores)[0]?.[0] : null;
+      showNotificacion(primerError || error.response?.data?.mensaje || 'No se pudo desactivar el estado', 'error');
     }
   };
 
@@ -110,7 +166,13 @@ export function EstadosConfiguracionPage() {
     const protegido = Boolean(formData.protegido_sistema);
     return (
       <Box className="page-wrapper">
-        <PageHeader titulo={formData.id ? 'Editar estado' : 'Nuevo estado'} descripcion="Catálogos → Estados. El código y valor interno de estados protegidos no se modifican; su presentación sí." icono={<TuneOutlinedIcon />} acciones={<BotonVolver onClick={() => setVista('lista')} />} />
+        <PageHeader
+          titulo={formData.id ? 'Editar estado' : 'Nuevo estado'}
+          descripcion="Catálogos → Estados. El código y valor interno de estados protegidos no se modifican; su presentación sí."
+          icono={<TuneOutlinedIcon />}
+          acciones={<BotonVolver onClick={() => setVista('lista')} />}
+        />
+
         <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
             <Box sx={formStyles.seccion}>
@@ -120,7 +182,9 @@ export function EstadosConfiguracionPage() {
                 <TextField label="Entidad" name="entidad" value={formData.entidad} onChange={handleChange} required size="small" disabled={protegido} helperText="Ej.: MEMBRESIA, VENTA, PAGO" />
                 <TextField label="Valor interno" name="valor_interno" value={formData.valor_interno} onChange={handleChange} required size="small" disabled={protegido} helperText="Valor guardado en la tabla, ej.: PENDIENTE_PAGO" />
                 <TextField label="Nombre visible" name="nombre" value={formData.nombre} onChange={handleChange} required size="small" />
-                <TextField select label="Color" name="color" value={formData.color} onChange={handleChange} required size="small">{colores.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}</TextField>
+                <TextField select label="Color" name="color" value={formData.color} onChange={handleChange} required size="small">
+                  {colores.map(([value, label]) => <MenuItem key={value} value={value}>{label}</MenuItem>)}
+                </TextField>
                 <TextField label="Orden" name="orden" type="number" value={formData.orden} onChange={handleChange} required size="small" />
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', gridColumn: { xs: 'auto', md: 'span 3' } }}>
                   <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={handleChange} />} label="Activo" />
@@ -133,6 +197,7 @@ export function EstadosConfiguracionPage() {
           </Box>
           <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
         </Paper>
+
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
       </Box>
     );
@@ -140,24 +205,41 @@ export function EstadosConfiguracionPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader titulo="Estados" descripcion="Catálogos → Estados. Administra nombres, presentación y estados adicionales por entidad sin dispersarlos por el código." icono={<TuneOutlinedIcon />} />
+      <PageHeader
+        titulo="Estados"
+        descripcion="Catálogos → Estados. Administra nombres, presentación y estados adicionales por entidad sin dispersarlos por el código."
+        icono={<TuneOutlinedIcon />}
+      />
+
       <Paper className="page-content-container" elevation={0}>
-        <GestionToolbar total={items.length} busqueda={busqueda} onBusqueda={(valor) => { setBusqueda(valor); cargar({ busqueda: valor }); }} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setFormData(estadoInicial()); setVista('formulario'); }} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <Box sx={{ px: 2, pb: 1.5, maxWidth: 320 }}><TextField select fullWidth size="small" label="Entidad" value={entidad} onChange={(e) => { setEntidad(e.target.value); cargar({ entidad: e.target.value }); }}><MenuItem value="">Todas</MenuItem>{entidades.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField></Box>
-        <TableContainer>
-          <Table size="small">
-            <TableHead><TableRow><TableCell>Código</TableCell><TableCell>Entidad</TableCell><TableCell>Valor interno</TableCell><TableCell>Nombre visible</TableCell><TableCell>Color</TableCell><TableCell align="center">Inicial</TableCell><TableCell align="center">Final</TableCell><TableCell align="center">Protegido</TableCell><TableCell align="center">Acciones</TableCell></TableRow></TableHead>
-            <TableBody>
-              {!cargando && items.length === 0 ? <TableRow><TableCell colSpan={9} align="center">No hay estados registrados.</TableCell></TableRow> : items.map((item) => (
-                <TableRow key={item.id} hover>
-                  <TableCell>{item.codigo}</TableCell><TableCell>{item.entidad}</TableCell><TableCell>{item.valor_interno}</TableCell><TableCell>{item.nombre}</TableCell><TableCell>{item.color}</TableCell><TableCell align="center">{item.es_inicial ? 'Sí' : 'No'}</TableCell><TableCell align="center">{item.es_final ? 'Sí' : 'No'}</TableCell><TableCell align="center">{item.protegido_sistema ? 'Sí' : 'No'}</TableCell>
-                  <TableCell align="center"><Tooltip title="Editar"><IconButton size="small" onClick={() => { setFormData({ ...estadoInicial(), ...item }); setVista('formulario'); }} sx={dbanuStyles.actionEdit}><EditOutlinedIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>{item.activo && !item.protegido_sistema ? <Tooltip title="Desactivar"><IconButton size="small" onClick={() => handleDesactivar(item)} sx={dbanuStyles.actionDelete}><PowerSettingsNewOutlinedIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip> : null}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+        <GestionToolbar
+          total={meta.total || 0}
+          busqueda={filtros.busqueda}
+          onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })}
+          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>}
+        />
+
+        <EstadosConfiguracionTable
+          items={items}
+          meta={meta}
+          cargando={cargando}
+          filtrosColumna={filtrosColumna}
+          onFiltroColumna={aplicarFiltroColumna}
+          onEditar={handleEditar}
+          onDesactivar={handleDesactivar}
+          onPageChange={(page) => {
+            const nuevos = { ...filtros, page };
+            setFiltros(nuevos);
+            cargar(nuevos);
+          }}
+          onRowsPerPageChange={(perPage) => {
+            const nuevos = { ...filtros, page: 1, per_page: perPage };
+            setFiltros(nuevos);
+            cargar(nuevos);
+          }}
+        />
       </Paper>
+
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
   );
