@@ -29,7 +29,12 @@ export function CancelarMembresiaButton({ membresia, onCancelada }) {
         : {}),
     });
 
-    if (onCancelada) onCancelada(membresia.id);
+    if (onCancelada) {
+      onCancelada(membresia.id);
+      return;
+    }
+
+    window.location.reload();
   };
 
   if (String(membresia.estado || '').toUpperCase() === 'CANCELADA') return null;
