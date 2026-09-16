@@ -48,6 +48,7 @@ export function ContextosUsuarioSelector({
           seleccion.sede &&
           contextos.some(
             (contexto) =>
+              contexto.id_unidad !== null &&
               mismoId(contexto.id_sede, seleccion.sede) &&
               mismoId(contexto.id_unidad, unidad.id_unidad),
           ),
@@ -85,7 +86,7 @@ export function ContextosUsuarioSelector({
   const abrirEditar = (contexto) => {
     setSeleccion({
       sede: contexto.id_sede,
-      unidad: contexto.id_unidad,
+      unidad: contexto.id_unidad ?? "",
       carreraArea: contexto.id_carrera_area ?? "",
     });
     setErrorEditor("");
@@ -109,17 +110,69 @@ export function ContextosUsuarioSelector({
   };
 
   const guardarAsignacion = () => {
-    const contexto = contextos.find(
-      (item) =>
-        mismoId(item.id_sede, seleccion.sede) &&
-        mismoId(item.id_unidad, seleccion.unidad) &&
+    const contexto = contextos.find((item) => {
+      if (!mismoId(item.id_sede, seleccion.sede)) return false;
+
+      if (!seleccion.unidad) {
+        return item.id_unidad === null && item.id_carrera_area === null;
+      }
+
+      return mismoId(item.id_unidad, seleccion.unidad) &&
         (seleccion.carreraArea
           ? mismoId(item.id_carrera_area, seleccion.carreraArea)
-          : item.id_carrera_area === null),
-    );
+          : item.id_carrera_area === null);
+    });
 
     if (!contexto) {
-      setErrorEditor("La combinación seleccionada no está disponible.");
+      setErrorEditor(
+        seleccion.unidad
+          ? "La combinación seleccionada no está disponible."
+          : "No existe todavía el contexto general de esta sede. Actualiza la estructura e inténtalo nuevamente.",
+      );
+      return;
+    }
+
+    const otros = seleccionados.filter(
+      (item) => !mismoId(item.id_contexto, editor?.idOriginal),
+    );
+
+    const contextoSedeExistente = otros.find(
+      (item) => mismoId(item.id_sede, contexto.id_sede) && item.id_unidad === null,
+    );
+
+    if (contextoSedeExistente && contexto.id_unidad !== null) {
+      setErrorEditor("El usuario ya tiene acceso a toda esta sede; no es necesario agregar un área o línea adicional.");
+      return;
+    }
+
+    if (contexto.id_unidad === null && otros.some((item) => mismoId(item.id_sede, contexto.id_sede))) {
+      setErrorEditor("Ya existen asignaciones específicas en esta sede. Quítalas primero si deseas reemplazarlas por acceso a toda la sede.");
+      return;
+    }
+
+    const contextoAreaExistente = otros.find(
+      (item) =>
+        contexto.id_unidad !== null &&
+        mismoId(item.id_sede, contexto.id_sede) &&
+        mismoId(item.id_unidad, contexto.id_unidad) &&
+        item.id_carrera_area === null,
+    );
+
+    if (contextoAreaExistente && contexto.id_carrera_area !== null) {
+      setErrorEditor("El usuario ya tiene acceso a toda esta área; no es necesario agregar una línea adicional.");
+      return;
+    }
+
+    if (
+      contexto.id_unidad !== null &&
+      contexto.id_carrera_area === null &&
+      otros.some(
+        (item) =>
+          mismoId(item.id_sede, contexto.id_sede) &&
+          mismoId(item.id_unidad, contexto.id_unidad),
+      )
+    ) {
+      setErrorEditor("Ya existen líneas específicas dentro de esta área. Quítalas primero si deseas asignar toda el área.");
       return;
     }
 
@@ -174,7 +227,7 @@ export function ContextosUsuarioSelector({
             Asignaciones operativas
           </Typography>
           <Typography sx={{ mt: 0.2, fontSize: 11, color: "text.secondary" }}>
-            La primera asignación se considera principal.
+            La primera asignación se considera principal. Puedes asignar toda una sede o restringirla a un área/línea.
           </Typography>
         </Box>
         {!editor ? (
@@ -224,10 +277,9 @@ export function ContextosUsuarioSelector({
                   ) : null}
                 </Stack>
                 <Typography color="text.secondary" sx={{ mt: 0.25, fontSize: 11, lineHeight: 1.4 }}>
-                  {contexto.unidad_nombre}
-                  {contexto.carrera_area_nombre
-                    ? ` · ${contexto.carrera_area_nombre}`
-                    : " · Toda la unidad"}
+                  {contexto.unidad_nombre
+                    ? `${contexto.unidad_nombre}${contexto.carrera_area_nombre ? ` · ${contexto.carrera_area_nombre}` : " · Toda el área"}`
+                    : "Toda la sede"}
                 </Typography>
               </Box>
 
@@ -288,12 +340,13 @@ export function ContextosUsuarioSelector({
             {editor.tipo === "editar" ? "Editar asignación" : "Nueva asignación"}
           </Typography>
           <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, minmax(0, 1fr))" }, gap: 1.5 }}>
-            <TextField select label="Sede" value={seleccion.sede} onChange={(evento) => cambiarSede(evento.target.value)} disabled={disabled}>
+            <TextField select label="Sede" value={seleccion.sede} onChange={(evento) => cambiarSede(evento.target.value)} disabled={disabled} required>
               {sedes.map((sede) => (
                 <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
               ))}
             </TextField>
-            <TextField select label="Área operativa" value={seleccion.unidad} onChange={(evento) => cambiarUnidad(evento.target.value)} disabled={disabled || !seleccion.sede || !unidades.length}>
+            <TextField select label="Área operativa (opcional)" value={seleccion.unidad} onChange={(evento) => cambiarUnidad(evento.target.value)} disabled={disabled || !seleccion.sede}>
+              <MenuItem value="">Toda la sede</MenuItem>
               {unidades.map((unidad) => (
                 <MenuItem key={unidad.id_unidad} value={unidad.id_unidad}>{unidad.nombre}</MenuItem>
               ))}
@@ -307,8 +360,8 @@ export function ContextosUsuarioSelector({
           </Box>
 
           {seleccion.sede && !unidades.length ? (
-            <Alert severity="warning" variant="outlined" sx={{ mt: 1.25 }}>
-              Esta sede todavía no tiene áreas operativas asociadas.
+            <Alert severity="info" variant="outlined" sx={{ mt: 1.25 }}>
+              Esta sede no tiene áreas operativas configuradas. Puedes asignar el usuario a toda la sede sin crear un área artificial.
             </Alert>
           ) : null}
           {errorEditor ? <Alert severity="error" variant="outlined" sx={{ mt: 1.25 }}>{errorEditor}</Alert> : null}
@@ -317,7 +370,7 @@ export function ContextosUsuarioSelector({
             <Button variant="text" startIcon={<CloseOutlinedIcon />} onClick={cerrarEditor} disabled={disabled}>
               Cancelar
             </Button>
-            <Button variant="contained" startIcon={<SaveOutlinedIcon />} onClick={guardarAsignacion} disabled={disabled || !seleccion.sede || !seleccion.unidad}>
+            <Button variant="contained" startIcon={<SaveOutlinedIcon />} onClick={guardarAsignacion} disabled={disabled || !seleccion.sede}>
               {editor.tipo === "editar" ? "Actualizar" : "Añadir"}
             </Button>
           </Stack>
