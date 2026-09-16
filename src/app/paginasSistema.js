@@ -45,6 +45,7 @@ const nombresPaginas = {
   ProductosPage: 'Productos',
   MovimientosInventarioPage: 'Movimientos / Kardex',
   CajasPage: 'Cajas',
+  TurnosCajaPage: 'Turnos de caja',
   VentasPage: 'Ventas',
   PagosPage: 'Pagos',
   ComprobantesPage: 'Comprobantes',
