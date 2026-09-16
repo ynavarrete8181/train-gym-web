@@ -30,11 +30,8 @@ const formInicial = () => ({
 });
 
 const limpiarFecha = (valor) => valor ? String(valor).slice(0, 10) : '';
+const obtenerDeportistaContexto = () => new URLSearchParams(window.location.search).get('deportista_id') || '';
 
-// Calcula la fecha de fin de una membresía sumando la duración del plan
-// (DIAS, MESES o ANIOS) a la fecha de inicio. Mismo criterio que el proyecto
-// de referencia (Desarrollo/Revive): se suma la duración tal cual, sin
-// restar un día, para mantener el mismo comportamiento en todo el sistema.
 const calcularFechaFin = (fechaInicioStr, plan) => {
   if (!fechaInicioStr || !plan) return '';
   const duracion = Number(plan.duracion || 0);
@@ -64,8 +61,9 @@ const precioAplicable = (plan, sedeId) => {
 };
 
 export function MembresiasPage() {
-  const [vista, setVista] = useState('lista');
-  const [formData, setFormData] = useState(formInicial());
+  const deportistaContextoId = obtenerDeportistaContexto();
+  const [vista, setVista] = useState(deportistaContextoId ? 'formulario' : 'lista');
+  const [formData, setFormData] = useState(() => ({ ...formInicial(), deportista_id: deportistaContextoId }));
   const [membresias, setMembresias] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [planes, setPlanes] = useState([]);
@@ -111,9 +109,6 @@ export function MembresiasPage() {
     else cargarCatalogosFormulario();
   }, [vista]);
 
-  // Recalcula automáticamente la fecha_fin cuando cambian el plan o la fecha
-  // de inicio, solo al crear (no al editar, para no pisar una fecha que el
-  // administrador ya ajustó manualmente en una membresía existente).
   useEffect(() => {
     if (formData.id) return;
     if (!formData.fecha_inicio || !formData.plan_id) return;
@@ -144,6 +139,14 @@ export function MembresiasPage() {
   const handleNuevo = () => {
     setFormData(formInicial());
     setVista('formulario');
+  };
+
+  const handleCancelarFormulario = () => {
+    if (deportistaContextoId && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    setVista('lista');
   };
 
   const handleEditar = (membresia) => {
@@ -187,6 +190,11 @@ export function MembresiasPage() {
         showNotificacion('Membresía creada con éxito', 'success');
       }
 
+      if (deportistaContextoId && !formData.id && window.history.length > 1) {
+        window.history.back();
+        return;
+      }
+
       setVista('lista');
       cargarMembresias();
     } catch (error) {
@@ -195,13 +203,14 @@ export function MembresiasPage() {
   };
 
   if (vista === 'formulario') {
+    const clienteContextual = Boolean(deportistaContextoId && !formData.id);
     return (
       <Box className="page-wrapper">
         <PageHeader
           titulo={formData.id ? 'Editar Membresía' : 'Nueva Membresía'}
-          descripcion="Asigna planes, vigencias y estados a los clientes."
+          descripcion={clienteContextual ? 'Cliente preseleccionado desde su ficha. Completa plan, sede, vigencia y estado.' : 'Asigna planes, vigencias y estados a los clientes.'}
           icono={<CardMembershipOutlinedIcon />}
-          acciones={<BotonVolver onClick={() => setVista('lista')} />}
+          acciones={<BotonVolver onClick={handleCancelarFormulario} />}
         />
 
         <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
@@ -209,12 +218,22 @@ export function MembresiasPage() {
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de la membresía</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-                <TextField select label="Cliente" name="deportista_id" value={formData.deportista_id || ''} onChange={handleChange} required size="small" disabled={!!formData.id}>
+                <TextField
+                  select
+                  label="Cliente"
+                  name="deportista_id"
+                  value={formData.deportista_id || ''}
+                  onChange={handleChange}
+                  required
+                  size="small"
+                  disabled={!!formData.id || clienteContextual}
+                  helperText={clienteContextual ? 'Cliente recibido desde su ficha.' : ''}
+                >
                   {clientes.map((cliente) => (
                     <MenuItem key={cliente.id} value={cliente.id}>{cliente.usuario_nombre || cliente.name || 'Cliente'} - {cliente.codigo_deportista}</MenuItem>
                   ))}
-                  {formData.id && !clientes.find((cliente) => String(cliente.id) === String(formData.deportista_id)) ? (
-                    <MenuItem value={formData.deportista_id}>{formData.deportista_nombre || 'Cliente asignado'}</MenuItem>
+                  {(formData.id || clienteContextual) && !clientes.find((cliente) => String(cliente.id) === String(formData.deportista_id)) ? (
+                    <MenuItem value={formData.deportista_id}>{formData.deportista_nombre || 'Cliente seleccionado'}</MenuItem>
                   ) : null}
                 </TextField>
                 <TextField select label="Plan" name="plan_id" value={formData.plan_id || ''} onChange={handleChange} required size="small" disabled={!!formData.id}>
@@ -280,7 +299,7 @@ export function MembresiasPage() {
               </Box>
             </Box>
           </Box>
-          <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
+          <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelarFormulario} />
         </Paper>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
       </Box>
@@ -291,7 +310,7 @@ export function MembresiasPage() {
     <Box className="page-wrapper">
       <PageHeader
         titulo="Membresías"
-        descripcion="Planes asignados, vigencias y estados de los clientes."
+        descripcion="Contratos de membresía asignados a clientes, con plan, sede, vigencia y estado."
         icono={<CardMembershipOutlinedIcon />}
       />
 
