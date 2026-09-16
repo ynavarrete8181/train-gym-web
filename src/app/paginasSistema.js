@@ -30,7 +30,7 @@ const nombresPaginas = {
   MisDeportistasPage: 'Mis deportistas',
   MiAgendaEntrenadorPage: 'Mi agenda',
   PlanesPage: 'Planes de membresía',
-  MembresiasPage: 'Asignar membresía',
+  MembresiasPage: 'Membresías',
   CategoriasServicioPage: 'Categorías de servicio',
   ServiciosPage: 'Servicios',
   HorariosPage: 'Horarios',
