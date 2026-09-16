@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
-import { Box, Button, FormControlLabel, MenuItem, Paper, Switch, TextField, Typography } from '@mui/material';
+import { Box, Button, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
+import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
+import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
@@ -42,12 +44,12 @@ const calcularFechaFin = (fechaInicioStr, plan) => {
   if (!fechaInicioStr || !plan) return '';
   const duracion = Number(plan.duracion || 0);
   if (!duracion) return '';
-
   const fecha = new Date(`${fechaInicioStr}T00:00:00`);
+
   switch (plan.tipo_duracion) {
-    case 'DIAS': fecha.setDate(fecha.getDate() + duracion); break;
-    case 'MESES': fecha.setMonth(fecha.getMonth() + duracion); break;
-    case 'ANIOS': fecha.setFullYear(fecha.getFullYear() + duracion); break;
+    case 'DIAS': fecha.setDate(fecha.getDate() + Math.max(duracion - 1, 0)); break;
+    case 'MESES': fecha.setMonth(fecha.getMonth() + duracion); fecha.setDate(fecha.getDate() - 1); break;
+    case 'ANIOS': fecha.setFullYear(fecha.getFullYear() + duracion); fecha.setDate(fecha.getDate() - 1); break;
     default: return '';
   }
   return fecha.toISOString().slice(0, 10);
@@ -71,6 +73,7 @@ export function MembresiasPage() {
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({ codigo: [], cliente: [], plan: [], estado: [] });
   const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const [sedeHistoricaEditable, setSedeHistoricaEditable] = useState(false);
 
@@ -165,28 +168,45 @@ export function MembresiasPage() {
     setFormData((actual) => ({ ...actual, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const handleGuardar = async () => {
+  const handleGuardar = async (generarVenta = false) => {
     try {
-      if (!formData.deportista_id || !formData.plan_id || !formData.sede_id || !formData.codigo_contrato || !formData.fecha_inicio || !formData.fecha_fin) {
+      if (!formData.deportista_id || !formData.plan_id || !formData.sede_id || !formData.fecha_inicio) {
         showNotificacion('Complete los campos obligatorios', 'warning');
         return;
       }
 
-      const payload = {
-        ...formData,
-        estado: normalizarEstado(formData.estado),
-        dias_gracia: Number(formData.dias_gracia || 0),
-        renovacion_automatica: Boolean(formData.renovacion_automatica),
-      };
-      if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
-      if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
+      setGuardando(true);
 
       if (formData.id) {
+        const payload = {
+          sede_id: formData.sede_id || null,
+          fecha_inicio: formData.fecha_inicio,
+          estado: normalizarEstado(formData.estado),
+          dias_gracia: Number(formData.dias_gracia || 0),
+          renovacion_automatica: Boolean(formData.renovacion_automatica),
+          fecha_congelacion_inicio: formData.fecha_congelacion_inicio || null,
+          fecha_congelacion_fin: formData.fecha_congelacion_fin || null,
+        };
         await gimnasioServicio.actualizarMembresia(formData.id, payload);
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
-        await gimnasioServicio.crearMembresia(payload);
-        showNotificacion('Membresía creada con éxito', 'success');
+        const respuesta = await gimnasioServicio.crearMembresia({
+          deportista_id: formData.deportista_id,
+          plan_id: formData.plan_id,
+          sede_id: formData.sede_id,
+          fecha_inicio: formData.fecha_inicio,
+          dias_gracia: Number(formData.dias_gracia || 0),
+          renovacion_automatica: Boolean(formData.renovacion_automatica),
+          generar_venta: Boolean(generarVenta),
+        });
+
+        const ventaNumero = respuesta.datos?.venta_numero;
+        showNotificacion(
+          ventaNumero
+            ? `Membresía creada. Venta ${ventaNumero} generada y pendiente de pago.`
+            : 'Membresía creada como pendiente de pago.',
+          'success'
+        );
       }
 
       setSedeHistoricaEditable(false);
@@ -198,6 +218,8 @@ export function MembresiasPage() {
       cargarMembresias();
     } catch (error) {
       showNotificacion(error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar la membresía', 'error');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -206,22 +228,18 @@ export function MembresiasPage() {
     cargarMembresias();
   };
 
-  const handleErrorCancelarMembresia = (error) => {
-    showNotificacion(error.response?.data?.mensaje || 'No se pudo cancelar la membresía', 'error');
-  };
+  const handleErrorCancelarMembresia = (error) => showNotificacion(error.response?.data?.mensaje || 'No se pudo cancelar la membresía', 'error');
 
   if (vista === 'formulario') {
     const clienteContextual = Boolean(deportistaContextoId && !formData.id);
     const esEdicion = Boolean(formData.id);
+    const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
+    const puedeGenerarVenta = Boolean(planSeleccionado?.generar_venta ?? true);
+    const esRenovable = Boolean(planSeleccionado?.renovable ?? true);
 
     return (
       <Box className="page-wrapper">
-        <PageHeader
-          titulo={esEdicion ? 'Editar Membresía' : 'Nueva Membresía'}
-          descripcion={clienteContextual ? 'Cliente preseleccionado desde su ficha. Completa plan, sede, vigencia y estado.' : 'Asigna planes, vigencias y estados a los clientes.'}
-          icono={<CardMembershipOutlinedIcon />}
-          acciones={<BotonVolver onClick={handleCancelarFormulario} />}
-        />
+        <PageHeader titulo={esEdicion ? 'Editar Membresía' : 'Nueva Membresía'} descripcion={esEdicion ? 'Actualiza la vigencia y estado del contrato.' : 'Selecciona cliente, plan y sede. El código, la vigencia y el estado inicial se gestionan automáticamente.'} icono={<CardMembershipOutlinedIcon />} acciones={<BotonVolver onClick={handleCancelarFormulario} />} />
 
         <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
@@ -238,50 +256,47 @@ export function MembresiasPage() {
                   {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
                 </TextField>
 
-                <TextField
-                  select
-                  label="Sede"
-                  name="sede_id"
-                  value={formData.sede_id || ''}
-                  onChange={handleChange}
-                  required
-                  size="small"
-                  disabled={esEdicion && !sedeHistoricaEditable}
-                  helperText={sedeHistoricaEditable
-                    ? 'Registro histórico sin sede. Selecciónala y guarda para completar el contrato.'
-                    : (!esEdicion && formData.plan_id && formData.sede_id
-                      ? `Precio aplicado: $${precioAplicable(planes.find((p) => String(p.id) === String(formData.plan_id)), formData.sede_id).toFixed(2)}`
-                      : '')}
-                >
+                <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={handleChange} required size="small" disabled={esEdicion && !sedeHistoricaEditable} helperText={sedeHistoricaEditable ? 'Registro histórico sin sede. Selecciónala y guarda.' : (!esEdicion && formData.plan_id && formData.sede_id ? `Precio aplicado: $${precioAplicable(planSeleccionado, formData.sede_id).toFixed(2)}` : '')}>
                   {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
                   {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
                 </TextField>
 
-                <TextField label="Código contrato" name="codigo_contrato" value={formData.codigo_contrato || ''} onChange={handleChange} required size="small" disabled={esEdicion} />
+                <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
                 <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                <TextField label="Fecha fin" name="fecha_fin" type="date" value={formData.fecha_fin || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} helperText={!esEdicion ? 'Calculada según la duración del plan. Puedes ajustarla si es necesario.' : ''} />
+                <TextField label="Fecha fin" type="date" value={formData.fecha_fin || ''} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Calculada automáticamente según la duración del plan." />
 
-                <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
-                  <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
-                  <MenuItem value="ACTIVA">Activa</MenuItem>
-                  <MenuItem value="VENCIDA">Vencida</MenuItem>
-                  <MenuItem value="CONGELADA">Congelada</MenuItem>
-                  <MenuItem value="CANCELADA">Cancelada</MenuItem>
-                </TextField>
-                <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" />
-                <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} />} label="Renovación automática" />
+                {esEdicion ? (
+                  <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small"><MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem><MenuItem value="ACTIVA">Activa</MenuItem><MenuItem value="VENCIDA">Vencida</MenuItem><MenuItem value="CONGELADA">Congelada</MenuItem><MenuItem value="CANCELADA">Cancelada</MenuItem></TextField>
+                ) : (
+                  <TextField label="Estado inicial" value="Pendiente de pago" size="small" disabled helperText="Se activa automáticamente cuando el pago queda confirmado." />
+                )}
+
+                <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" helperText="Acceso adicional después del vencimiento; no cambia la fecha contractual." />
+                <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
               </Box>
             </Box>
 
-            <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-              <Typography sx={formStyles.modalSeccionTitulo}>Congelación</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
-                <TextField label="Inicio congelación" name="fecha_congelacion_inicio" type="date" value={formData.fecha_congelacion_inicio || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                <TextField label="Fin congelación" name="fecha_congelacion_fin" type="date" value={formData.fecha_congelacion_fin || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+            {esEdicion ? (
+              <Box sx={{ ...formStyles.seccion, mt: 2 }}>
+                <Typography sx={formStyles.modalSeccionTitulo}>Congelación</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Usa estas fechas solo cuando el contrato deba pausarse temporalmente.</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                  <TextField label="Inicio congelación" name="fecha_congelacion_inicio" type="date" value={formData.fecha_congelacion_inicio || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Fin congelación" name="fecha_congelacion_fin" type="date" value={formData.fecha_congelacion_fin || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                </Box>
               </Box>
-            </Box>
+            ) : null}
           </Box>
-          <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelarFormulario} />
+
+          {esEdicion ? (
+            <AccionesFormulario onGuardar={() => handleGuardar(false)} onCancelar={handleCancelarFormulario} guardando={guardando} />
+          ) : (
+            <Stack direction="row" sx={dbanuStyles.formActions} spacing={1}>
+              <BotonCancelar onClick={handleCancelarFormulario} disabled={guardando} />
+              <BotonGuardar onClick={() => handleGuardar(false)} texto="Guardar pendiente" guardando={guardando} />
+              {puedeGenerarVenta ? <BotonGuardar onClick={() => handleGuardar(true)} texto="Guardar y cobrar" guardando={guardando} /> : null}
+            </Stack>
+          )}
         </Paper>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
       </Box>
@@ -290,29 +305,10 @@ export function MembresiasPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader titulo="Membresías" descripcion="Contratos de membresía asignados a clientes, con plan, sede, vigencia y estado." icono={<CardMembershipOutlinedIcon />} />
+      <PageHeader titulo="Membresías" descripcion="Contratos asignados a clientes, con plan, sede, vigencia, cobro y estado." icono={<CardMembershipOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || membresias.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <MembresiasTable
-          membresias={membresias}
-          meta={meta}
-          cargando={cargando}
-          filtrosColumna={filtrosColumna}
-          onFiltroColumna={aplicarFiltroColumna}
-          onEditar={handleEditar}
-          onCancelada={handleMembresiaCancelada}
-          onErrorCancelar={handleErrorCancelarMembresia}
-          onPageChange={(page) => {
-            const nuevos = { ...filtros, page };
-            setFiltros(nuevos);
-            cargarMembresias(nuevos);
-          }}
-          onRowsPerPageChange={(perPage) => {
-            const nuevos = { ...filtros, page: 1, per_page: perPage };
-            setFiltros(nuevos);
-            cargarMembresias(nuevos);
-          }}
-        />
+        <MembresiasTable membresias={membresias} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={aplicarFiltroColumna} onEditar={handleEditar} onCancelada={handleMembresiaCancelada} onErrorCancelar={handleErrorCancelarMembresia} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargarMembresias(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargarMembresias(nuevos); }} />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
