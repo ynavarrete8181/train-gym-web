@@ -11,6 +11,7 @@ import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
+import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
 
@@ -69,6 +70,7 @@ export function MembresiasPage() {
   const [clientes, setClientes] = useState([]);
   const [planes, setPlanes] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [estadosMembresia, setEstadosMembresia] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({ codigo: [], cliente: [], plan: [], estado: [] });
@@ -85,6 +87,7 @@ export function MembresiasPage() {
       const response = await gimnasioServicio.obtenerMembresias(parametros);
       setMembresias(response.datos || []);
       setMeta(response.meta || {});
+      if (response.meta?.estados) setEstadosMembresia(response.meta.estados);
     } catch {
       showNotificacion('Error al cargar membresías', 'error');
     } finally {
@@ -94,14 +97,16 @@ export function MembresiasPage() {
 
   const cargarCatalogosFormulario = async () => {
     try {
-      const [clientesResponse, planesResponse, estructuraResponse] = await Promise.all([
+      const [clientesResponse, planesResponse, estructuraResponse, estadosResponse] = await Promise.all([
         gimnasioServicio.obtenerDeportistas({ per_page: 100 }),
         gimnasioServicio.obtenerPlanes({ per_page: 100 }),
         gimnasioServicio.obtenerEstructuraOperativa(),
+        configuracionServicio.obtenerEstados({ entidad: 'MEMBRESIA', activo: true, per_page: 100 }),
       ]);
       setClientes(clientesResponse.datos || []);
       setPlanes(planesResponse.datos || []);
       setSedes(estructuraResponse.datos?.sedes || []);
+      setEstadosMembresia(estadosResponse.datos || []);
     } catch {
       showNotificacion('Error al cargar catálogos del formulario', 'error');
     }
@@ -153,7 +158,7 @@ export function MembresiasPage() {
     setFormData({
       ...membresia,
       sede_id: membresia.sede_id || '',
-      estado: normalizarEstado(membresia.estado),
+      estado: normalizarEstado(membresia.estado_valor || membresia.estado),
       fecha_inicio: limpiarFecha(membresia.fecha_inicio),
       fecha_fin: limpiarFecha(membresia.fecha_fin),
       fecha_congelacion_inicio: limpiarFecha(membresia.fecha_congelacion_inicio),
@@ -202,9 +207,7 @@ export function MembresiasPage() {
 
         const ventaNumero = respuesta.datos?.venta_numero;
         showNotificacion(
-          ventaNumero
-            ? `Membresía creada. Venta ${ventaNumero} generada y pendiente de pago.`
-            : 'Membresía creada como pendiente de pago.',
+          ventaNumero ? `Membresía creada. Venta ${ventaNumero} generada y pendiente de pago.` : 'Membresía creada como pendiente de pago.',
           'success'
         );
       }
@@ -236,6 +239,7 @@ export function MembresiasPage() {
     const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
     const puedeGenerarVenta = Boolean(planSeleccionado?.generar_venta ?? true);
     const esRenovable = Boolean(planSeleccionado?.renovable ?? true);
+    const estadoInicial = estadosMembresia.find((estado) => estado.es_inicial) || estadosMembresia.find((estado) => estado.valor_interno === 'PENDIENTE_PAGO');
 
     return (
       <Box className="page-wrapper">
@@ -266,9 +270,11 @@ export function MembresiasPage() {
                 <TextField label="Fecha fin" type="date" value={formData.fecha_fin || ''} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Calculada automáticamente según la duración del plan." />
 
                 {esEdicion ? (
-                  <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small"><MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem><MenuItem value="ACTIVA">Activa</MenuItem><MenuItem value="VENCIDA">Vencida</MenuItem><MenuItem value="CONGELADA">Congelada</MenuItem><MenuItem value="CANCELADA">Cancelada</MenuItem></TextField>
+                  <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
+                    {estadosMembresia.map((estado) => <MenuItem key={estado.id} value={estado.valor_interno}>{estado.nombre}</MenuItem>)}
+                  </TextField>
                 ) : (
-                  <TextField label="Estado inicial" value="Pendiente de pago" size="small" disabled helperText="Se activa automáticamente cuando el pago queda confirmado." />
+                  <TextField label="Estado inicial" value={estadoInicial?.nombre || 'Pendiente de pago'} size="small" disabled helperText="Se activa automáticamente cuando el pago queda confirmado." />
                 )}
 
                 <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" helperText="Acceso adicional después del vencimiento; no cambia la fecha contractual." />
