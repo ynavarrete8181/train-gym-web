@@ -13,6 +13,15 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
+const limpiarFecha = (valor) => (valor ? String(valor).slice(0, 10) : '');
+const obtenerDeportistaContexto = () => new URLSearchParams(window.location.search).get('deportista_id') || '';
+
+const normalizarEstado = (estado) => {
+  const valor = String(estado || '').toUpperCase();
+  if (valor === 'ACTIVO') return 'ACTIVA';
+  if (valor === 'PENDIENTE') return 'PENDIENTE_PAGO';
+  return valor || 'PENDIENTE_PAGO';
+};
 
 const formInicial = () => ({
   id: null,
@@ -29,9 +38,6 @@ const formInicial = () => ({
   fecha_congelacion_fin: '',
 });
 
-const limpiarFecha = (valor) => valor ? String(valor).slice(0, 10) : '';
-const obtenerDeportistaContexto = () => new URLSearchParams(window.location.search).get('deportista_id') || '';
-
 const calcularFechaFin = (fechaInicioStr, plan) => {
   if (!fechaInicioStr || !plan) return '';
   const duracion = Number(plan.duracion || 0);
@@ -39,17 +45,10 @@ const calcularFechaFin = (fechaInicioStr, plan) => {
 
   const fecha = new Date(`${fechaInicioStr}T00:00:00`);
   switch (plan.tipo_duracion) {
-    case 'DIAS':
-      fecha.setDate(fecha.getDate() + duracion);
-      break;
-    case 'MESES':
-      fecha.setMonth(fecha.getMonth() + duracion);
-      break;
-    case 'ANIOS':
-      fecha.setFullYear(fecha.getFullYear() + duracion);
-      break;
-    default:
-      return '';
+    case 'DIAS': fecha.setDate(fecha.getDate() + duracion); break;
+    case 'MESES': fecha.setMonth(fecha.getMonth() + duracion); break;
+    case 'ANIOS': fecha.setFullYear(fecha.getFullYear() + duracion); break;
+    default: return '';
   }
   return fecha.toISOString().slice(0, 10);
 };
@@ -82,7 +81,7 @@ export function MembresiasPage() {
       const response = await gimnasioServicio.obtenerMembresias(parametros);
       setMembresias(response.datos || []);
       setMeta(response.meta || {});
-    } catch (error) {
+    } catch {
       showNotificacion('Error al cargar membresías', 'error');
     } finally {
       setCargando(false);
@@ -99,7 +98,7 @@ export function MembresiasPage() {
       setClientes(clientesResponse.datos || []);
       setPlanes(planesResponse.datos || []);
       setSedes(estructuraResponse.datos?.sedes || []);
-    } catch (error) {
+    } catch {
       showNotificacion('Error al cargar catálogos del formulario', 'error');
     }
   };
@@ -110,16 +109,10 @@ export function MembresiasPage() {
   }, [vista]);
 
   useEffect(() => {
-    if (formData.id) return;
-    if (!formData.fecha_inicio || !formData.plan_id) return;
-
+    if (formData.id || !formData.fecha_inicio || !formData.plan_id) return;
     const plan = planes.find((p) => String(p.id) === String(formData.plan_id));
-    if (!plan) return;
-
     const nuevaFechaFin = calcularFechaFin(formData.fecha_inicio, plan);
-    if (nuevaFechaFin) {
-      setFormData((actual) => ({ ...actual, fecha_fin: nuevaFechaFin }));
-    }
+    if (nuevaFechaFin) setFormData((actual) => ({ ...actual, fecha_fin: nuevaFechaFin }));
   }, [formData.fecha_inicio, formData.plan_id, formData.id, planes]);
 
   const buscar = (parametros) => {
@@ -152,6 +145,8 @@ export function MembresiasPage() {
   const handleEditar = (membresia) => {
     setFormData({
       ...membresia,
+      sede_id: membresia.sede_id || '',
+      estado: normalizarEstado(membresia.estado),
       fecha_inicio: limpiarFecha(membresia.fecha_inicio),
       fecha_fin: limpiarFecha(membresia.fecha_fin),
       fecha_congelacion_inicio: limpiarFecha(membresia.fecha_congelacion_inicio),
@@ -175,10 +170,10 @@ export function MembresiasPage() {
 
       const payload = {
         ...formData,
+        estado: normalizarEstado(formData.estado),
         dias_gracia: Number(formData.dias_gracia || 0),
         renovacion_automatica: Boolean(formData.renovacion_automatica),
       };
-
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
 
@@ -194,11 +189,10 @@ export function MembresiasPage() {
         window.history.back();
         return;
       }
-
       setVista('lista');
       cargarMembresias();
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al guardar la membresía', 'error');
+      showNotificacion(error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar la membresía', 'error');
     }
   };
 
@@ -213,10 +207,13 @@ export function MembresiasPage() {
 
   if (vista === 'formulario') {
     const clienteContextual = Boolean(deportistaContextoId && !formData.id);
+    const esEdicion = Boolean(formData.id);
+    const sedeHistoricaFaltante = esEdicion && !formData.sede_id;
+
     return (
       <Box className="page-wrapper">
         <PageHeader
-          titulo={formData.id ? 'Editar Membresía' : 'Nueva Membresía'}
+          titulo={esEdicion ? 'Editar Membresía' : 'Nueva Membresía'}
           descripcion={clienteContextual ? 'Cliente preseleccionado desde su ficha. Completa plan, sede, vigencia y estado.' : 'Asigna planes, vigencias y estados a los clientes.'}
           icono={<CardMembershipOutlinedIcon />}
           acciones={<BotonVolver onClick={handleCancelarFormulario} />}
@@ -227,32 +224,16 @@ export function MembresiasPage() {
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de la membresía</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-                <TextField
-                  select
-                  label="Cliente"
-                  name="deportista_id"
-                  value={formData.deportista_id || ''}
-                  onChange={handleChange}
-                  required
-                  size="small"
-                  disabled={!!formData.id || clienteContextual}
-                  helperText={clienteContextual ? 'Cliente recibido desde su ficha.' : ''}
-                >
-                  {clientes.map((cliente) => (
-                    <MenuItem key={cliente.id} value={cliente.id}>{cliente.usuario_nombre || cliente.name || 'Cliente'} - {cliente.codigo_deportista}</MenuItem>
-                  ))}
-                  {(formData.id || clienteContextual) && !clientes.find((cliente) => String(cliente.id) === String(formData.deportista_id)) ? (
-                    <MenuItem value={formData.deportista_id}>{formData.deportista_nombre || 'Cliente seleccionado'}</MenuItem>
-                  ) : null}
+                <TextField select label="Cliente" name="deportista_id" value={formData.deportista_id || ''} onChange={handleChange} required size="small" disabled={esEdicion || clienteContextual} helperText={clienteContextual ? 'Cliente recibido desde su ficha.' : ''}>
+                  {clientes.map((cliente) => <MenuItem key={cliente.id} value={cliente.id}>{cliente.usuario_nombre || cliente.name || 'Cliente'} - {cliente.codigo_deportista}</MenuItem>)}
+                  {(esEdicion || clienteContextual) && !clientes.find((cliente) => String(cliente.id) === String(formData.deportista_id)) ? <MenuItem value={formData.deportista_id}>{formData.deportista_nombre || 'Cliente seleccionado'}</MenuItem> : null}
                 </TextField>
-                <TextField select label="Plan" name="plan_id" value={formData.plan_id || ''} onChange={handleChange} required size="small" disabled={!!formData.id}>
-                  {planes.map((plan) => (
-                    <MenuItem key={plan.id} value={plan.id}>{plan.nombre} - ${Number(plan.precio_base || 0).toFixed(2)}</MenuItem>
-                  ))}
-                  {formData.id && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? (
-                    <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem>
-                  ) : null}
+
+                <TextField select label="Plan" name="plan_id" value={formData.plan_id || ''} onChange={handleChange} required size="small" disabled={esEdicion}>
+                  {planes.map((plan) => <MenuItem key={plan.id} value={plan.id}>{plan.nombre} - ${Number(plan.precio_base || 0).toFixed(2)}</MenuItem>)}
+                  {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
                 </TextField>
+
                 <TextField
                   select
                   label="Sede"
@@ -261,41 +242,29 @@ export function MembresiasPage() {
                   onChange={handleChange}
                   required
                   size="small"
-                  disabled={!!formData.id}
-                  helperText={
-                    !formData.id && formData.plan_id && formData.sede_id
+                  disabled={esEdicion && !sedeHistoricaFaltante}
+                  helperText={sedeHistoricaFaltante
+                    ? 'Registro histórico sin sede. Selecciónala una vez para completar el contrato.'
+                    : (!esEdicion && formData.plan_id && formData.sede_id
                       ? `Precio aplicado: $${precioAplicable(planes.find((p) => String(p.id) === String(formData.plan_id)), formData.sede_id).toFixed(2)}`
-                      : ''
-                  }
+                      : '')}
                 >
-                  {sedes.map((sede) => (
-                    <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
-                  ))}
-                  {formData.id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? (
-                    <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem>
-                  ) : null}
+                  {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
+                  {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
                 </TextField>
-                <TextField label="Código contrato" name="codigo_contrato" value={formData.codigo_contrato || ''} onChange={handleChange} required size="small" disabled={!!formData.id} />
+
+                <TextField label="Código contrato" name="codigo_contrato" value={formData.codigo_contrato || ''} onChange={handleChange} required size="small" disabled={esEdicion} />
                 <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                <TextField
-                  label="Fecha fin"
-                  name="fecha_fin"
-                  type="date"
-                  value={formData.fecha_fin || ''}
-                  onChange={handleChange}
-                  required
-                  size="small"
-                  slotProps={{ inputLabel: { shrink: true } }}
-                  helperText={!formData.id ? 'Calculada según la duración del plan. Puedes ajustarla si es necesario.' : ''}
-                />
-                <TextField select label="Estado" name="estado" value={formData.estado || 'PENDIENTE_PAGO'} onChange={handleChange} required size="small">
+                <TextField label="Fecha fin" name="fecha_fin" type="date" value={formData.fecha_fin || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} helperText={!esEdicion ? 'Calculada según la duración del plan. Puedes ajustarla si es necesario.' : ''} />
+
+                <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
                   <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
                   <MenuItem value="ACTIVA">Activa</MenuItem>
                   <MenuItem value="VENCIDA">Vencida</MenuItem>
                   <MenuItem value="CONGELADA">Congelada</MenuItem>
                   <MenuItem value="CANCELADA">Cancelada</MenuItem>
                 </TextField>
-                <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia || 0} onChange={handleChange} size="small" />
+                <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" />
                 <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} />} label="Renovación automática" />
               </Box>
             </Box>
@@ -317,19 +286,9 @@ export function MembresiasPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader
-        titulo="Membresías"
-        descripcion="Contratos de membresía asignados a clientes, con plan, sede, vigencia y estado."
-        icono={<CardMembershipOutlinedIcon />}
-      />
-
+      <PageHeader titulo="Membresías" descripcion="Contratos de membresía asignados a clientes, con plan, sede, vigencia y estado." icono={<CardMembershipOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
-        <GestionToolbar
-          total={meta.total || membresias.length}
-          busqueda={filtros.busqueda}
-          onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })}
-          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>}
-        />
+        <GestionToolbar total={meta.total || membresias.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
         <MembresiasTable
           membresias={membresias}
           meta={meta}
