@@ -36,6 +36,9 @@ const inicial = {
   contextos: [],
 };
 
+const ROLES_SIN_CONTEXTO_OPERATIVO = ["SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
+const ROLES_APP_SIN_PERMISOS_WEB = ["DEPORTISTA", "RESPONSABLE"];
+
 export function UsuarioForm({
   usuario,
   roles,
@@ -59,7 +62,9 @@ export function UsuarioForm({
   const rolSeleccionado = roles.find(
     (rol) => String(rol.id_userrole) === String(formulario.usr_tipo),
   );
-  const esDeportista = rolSeleccionado?.role === "DEPORTISTA";
+  const rolNombre = rolSeleccionado?.role || "";
+  const requiereContextoOperativo = !ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNombre);
+  const esRolAppSinPermisosWeb = ROLES_APP_SIN_PERMISOS_WEB.includes(rolNombre);
 
   useEffect(() => {
     setEtapa(0);
@@ -84,7 +89,9 @@ export function UsuarioForm({
     const rolNuevo = roles.find(
       (rol) => String(rol.id_userrole) === String(valor),
     );
-    const limpiarContextos = campo === "usr_tipo" && rolNuevo?.role === "DEPORTISTA";
+    const limpiarContextos =
+      campo === "usr_tipo" &&
+      ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNuevo?.role || "");
 
     setFormulario((actual) => {
       const siguiente = {
@@ -142,6 +149,9 @@ export function UsuarioForm({
       }
 
       if (!formulario.usr_tipo) nuevosErrores.usr_tipo = "Selecciona un rol.";
+      if (requiereContextoOperativo && !formulario.contextos.length) {
+        nuevosErrores.contextos = "Agrega al menos una asignación operativa.";
+      }
     }
 
     setErrores(nuevosErrores);
@@ -205,9 +215,7 @@ export function UsuarioForm({
                   <TextField
                     label="Nombres"
                     value={formulario.nombres}
-                    onChange={(evento) =>
-                      cambiar("nombres", evento.target.value)
-                    }
+                    onChange={(evento) => cambiar("nombres", evento.target.value)}
                     required
                     error={Boolean(errores.nombres)}
                     helperText={errores.nombres}
@@ -216,9 +224,7 @@ export function UsuarioForm({
                   <TextField
                     label="Apellidos"
                     value={formulario.apellidos}
-                    onChange={(evento) =>
-                      cambiar("apellidos", evento.target.value)
-                    }
+                    onChange={(evento) => cambiar("apellidos", evento.target.value)}
                     required
                     error={Boolean(errores.apellidos)}
                     helperText={errores.apellidos}
@@ -226,9 +232,7 @@ export function UsuarioForm({
                   <TextField
                     label="Cédula"
                     value={formulario.cedula}
-                    onChange={(evento) =>
-                      cambiar("cedula", evento.target.value)
-                    }
+                    onChange={(evento) => cambiar("cedula", evento.target.value)}
                     required
                     error={Boolean(errores.cedula)}
                     helperText={errores.cedula}
@@ -264,9 +268,7 @@ export function UsuarioForm({
                       name="nueva_clave_usuario"
                       autoComplete="new-password"
                       value={formulario.password}
-                      onChange={(evento) =>
-                        cambiar("password", evento.target.value)
-                      }
+                      onChange={(evento) => cambiar("password", evento.target.value)}
                       required
                       error={Boolean(errores.password)}
                       helperText={errores.password}
@@ -285,9 +287,7 @@ export function UsuarioForm({
                     select
                     label="Rol"
                     value={formulario.usr_tipo}
-                    onChange={(evento) =>
-                      cambiar("usr_tipo", evento.target.value)
-                    }
+                    onChange={(evento) => cambiar("usr_tipo", evento.target.value)}
                     required
                     error={Boolean(errores.usr_tipo)}
                     helperText={errores.usr_tipo}
@@ -302,9 +302,7 @@ export function UsuarioForm({
                     select
                     label="Estado"
                     value={formulario.usr_estado}
-                    onChange={(evento) =>
-                      cambiar("usr_estado", evento.target.value)
-                    }
+                    onChange={(evento) => cambiar("usr_estado", evento.target.value)}
                   >
                     <MenuItem value={1}>Activo</MenuItem>
                     <MenuItem value={0}>Inactivo</MenuItem>
@@ -312,7 +310,7 @@ export function UsuarioForm({
                 </Box>
               </Box>
 
-              {!esDeportista ? <Box sx={formStyles.seccion}>
+              {requiereContextoOperativo ? <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>
                   Asignación operativa
                 </Typography>
@@ -324,22 +322,26 @@ export function UsuarioForm({
                   helperText={errores.contextos}
                   disabled={cargando}
                 />
-              </Box> : null}
+              </Box> : (
+                <Alert severity="info" variant="outlined">
+                  {rolNombre === "SUPERADMINISTRADOR"
+                    ? "Este rol tiene alcance global y no requiere una asignación operativa por sede."
+                    : "Este rol pertenece a la experiencia de cliente/app y su sede se determina por membresías, reservas o relaciones del negocio; no por una asignación operativa interna."}
+                </Alert>
+              )}
             </Stack>
           ) : null}
 
           {etapa === 1 ? (
             <Stack spacing={2}>
               <Alert severity="info" variant="outlined">
-                <strong>
-                  {formulario.nombres} {formulario.apellidos}
-                </strong>{" "}
+                <strong>{formulario.nombres} {formulario.apellidos}</strong>{" "}
                 tendrá {funcionesSeleccionadas.length} permiso(s) activo(s).
-                {esDeportista
-                  ? " El acceso administrativo queda sin permisos."
+                {esRolAppSinPermisosWeb
+                  ? " El acceso administrativo web queda sin permisos."
                   : " Revisa las opciones antes de guardar."}
               </Alert>
-              {esDeportista ? null : gruposFunciones.length ? (
+              {esRolAppSinPermisosWeb ? null : gruposFunciones.length ? (
                 <FuncionesUsuarioPanel
                   grupos={gruposFunciones}
                   funcionesRolBase={funcionesRolBase}
