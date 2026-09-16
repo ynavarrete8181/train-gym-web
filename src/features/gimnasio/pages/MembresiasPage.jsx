@@ -72,6 +72,7 @@ export function MembresiasPage() {
   const [filtrosColumna, setFiltrosColumna] = useState({ codigo: [], cliente: [], plan: [], estado: [] });
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const [sedeHistoricaEditable, setSedeHistoricaEditable] = useState(false);
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -130,11 +131,13 @@ export function MembresiasPage() {
   };
 
   const handleNuevo = () => {
+    setSedeHistoricaEditable(false);
     setFormData(formInicial());
     setVista('formulario');
   };
 
   const handleCancelarFormulario = () => {
+    setSedeHistoricaEditable(false);
     if (deportistaContextoId && window.history.length > 1) {
       window.history.back();
       return;
@@ -143,6 +146,7 @@ export function MembresiasPage() {
   };
 
   const handleEditar = (membresia) => {
+    setSedeHistoricaEditable(!membresia.sede_id);
     setFormData({
       ...membresia,
       sede_id: membresia.sede_id || '',
@@ -185,6 +189,7 @@ export function MembresiasPage() {
         showNotificacion('Membresía creada con éxito', 'success');
       }
 
+      setSedeHistoricaEditable(false);
       if (deportistaContextoId && !formData.id && window.history.length > 1) {
         window.history.back();
         return;
@@ -208,7 +213,6 @@ export function MembresiasPage() {
   if (vista === 'formulario') {
     const clienteContextual = Boolean(deportistaContextoId && !formData.id);
     const esEdicion = Boolean(formData.id);
-    const sedeHistoricaFaltante = esEdicion && !formData.sede_id;
 
     return (
       <Box className="page-wrapper">
@@ -242,9 +246,9 @@ export function MembresiasPage() {
                   onChange={handleChange}
                   required
                   size="small"
-                  disabled={esEdicion && !sedeHistoricaFaltante}
-                  helperText={sedeHistoricaFaltante
-                    ? 'Registro histórico sin sede. Selecciónala una vez para completar el contrato.'
+                  disabled={esEdicion && !sedeHistoricaEditable}
+                  helperText={sedeHistoricaEditable
+                    ? 'Registro histórico sin sede. Selecciónala y guarda para completar el contrato.'
                     : (!esEdicion && formData.plan_id && formData.sede_id
                       ? `Precio aplicado: $${precioAplicable(planes.find((p) => String(p.id) === String(formData.plan_id)), formData.sede_id).toFixed(2)}`
                       : '')}
