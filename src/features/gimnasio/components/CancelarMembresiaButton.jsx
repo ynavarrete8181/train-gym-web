@@ -4,7 +4,7 @@ import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 
-export function CancelarMembresiaButton({ membresia, onCancelada }) {
+export function CancelarMembresiaButton({ membresia, onCancelada, onError }) {
   const handleCancelar = async () => {
     const confirmado = await confirmarAccion({
       titulo: 'Cancelar membresía',
@@ -15,26 +15,29 @@ export function CancelarMembresiaButton({ membresia, onCancelada }) {
 
     if (!confirmado) return;
 
-    await gimnasioServicio.actualizarMembresia(membresia.id, {
-      fecha_inicio: String(membresia.fecha_inicio).slice(0, 10),
-      fecha_fin: String(membresia.fecha_fin).slice(0, 10),
-      estado: 'CANCELADA',
-      dias_gracia: Number(membresia.dias_gracia || 0),
-      renovacion_automatica: false,
-      ...(membresia.fecha_congelacion_inicio
-        ? { fecha_congelacion_inicio: String(membresia.fecha_congelacion_inicio).slice(0, 10) }
-        : {}),
-      ...(membresia.fecha_congelacion_fin
-        ? { fecha_congelacion_fin: String(membresia.fecha_congelacion_fin).slice(0, 10) }
-        : {}),
-    });
+    try {
+      await gimnasioServicio.actualizarMembresia(membresia.id, {
+        fecha_inicio: String(membresia.fecha_inicio).slice(0, 10),
+        fecha_fin: String(membresia.fecha_fin).slice(0, 10),
+        estado: 'CANCELADA',
+        dias_gracia: Number(membresia.dias_gracia || 0),
+        renovacion_automatica: false,
+        ...(membresia.fecha_congelacion_inicio
+          ? { fecha_congelacion_inicio: String(membresia.fecha_congelacion_inicio).slice(0, 10) }
+          : {}),
+        ...(membresia.fecha_congelacion_fin
+          ? { fecha_congelacion_fin: String(membresia.fecha_congelacion_fin).slice(0, 10) }
+          : {}),
+      });
 
-    if (onCancelada) {
-      onCancelada(membresia.id);
-      return;
+      if (onCancelada) onCancelada(membresia.id);
+    } catch (error) {
+      if (onError) {
+        onError(error);
+        return;
+      }
+      throw error;
     }
-
-    window.location.reload();
   };
 
   if (String(membresia.estado || '').toUpperCase() === 'CANCELADA') return null;
