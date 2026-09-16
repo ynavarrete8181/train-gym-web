@@ -202,6 +202,15 @@ export function MembresiasPage() {
     }
   };
 
+  const handleMembresiaCancelada = () => {
+    showNotificacion('Membresía cancelada. El contrato se conserva en el historial.', 'success');
+    cargarMembresias();
+  };
+
+  const handleErrorCancelarMembresia = (error) => {
+    showNotificacion(error.response?.data?.mensaje || 'No se pudo cancelar la membresía', 'error');
+  };
+
   if (vista === 'formulario') {
     const clienteContextual = Boolean(deportistaContextoId && !formData.id);
     return (
@@ -328,6 +337,8 @@ export function MembresiasPage() {
           filtrosColumna={filtrosColumna}
           onFiltroColumna={aplicarFiltroColumna}
           onEditar={handleEditar}
+          onCancelada={handleMembresiaCancelada}
+          onErrorCancelar={handleErrorCancelarMembresia}
           onPageChange={(page) => {
             const nuevos = { ...filtros, page };
             setFiltros(nuevos);
