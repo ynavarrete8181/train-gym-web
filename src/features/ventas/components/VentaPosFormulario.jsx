@@ -47,6 +47,7 @@ const tipos = [
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fechaHora = (valor) => (valor ? new Date(valor).toLocaleString('es-EC') : '—');
+const AZUL_REVIVE = 'rgba(20, 73, 133, 1)';
 
 export function VentaPosFormulario({ onVolver, onGuardado }) {
   const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], productos: [] });
@@ -88,11 +89,14 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
   }, []);
 
   const subtotal = useMemo(
-    () => carrito.reduce((totalActual, item) => totalActual + Number(item.total_linea || 0), 0),
+    () => carrito.reduce((acumulado, item) => acumulado + Number(item.total_linea || 0), 0),
     [carrito],
   );
   const total = Math.max(0, subtotal - Number(descuento || 0) + Number(impuesto || 0));
-  const cambio = metodoPago === 'EFECTIVO' ? Math.max(0, Number(recibido || 0) - total) : 0;
+  const recibidoNumero = Number(recibido || 0);
+  const cambio = metodoPago === 'EFECTIVO' ? Math.max(0, recibidoNumero - total) : 0;
+  const faltante = metodoPago === 'EFECTIVO' ? Math.max(0, total - recibidoNumero) : 0;
+  const totalItems = carrito.reduce((acc, item) => acc + Number(item.cantidad || 0), 0);
 
   const disponibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -106,7 +110,9 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
     if (!texto) return items;
 
     return items.filter((item) =>
-      `${item.nombre || ''} ${item.codigo || ''} ${item.categoria || ''}`.toLowerCase().includes(texto),
+      `${item.nombre || ''} ${item.codigo || ''} ${item.categoria || ''} ${item.descripcion || ''}`
+        .toLowerCase()
+        .includes(texto),
     );
   }, [tipo, contexto, busqueda]);
 
@@ -125,11 +131,11 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
     setCarrito((actual) => {
       const existe = actual.find((fila) => fila.clave === clave);
       if (existe) {
-        return actual.map((fila) =>
-          fila.clave === clave
-            ? { ...fila, cantidad: fila.cantidad + 1, total_linea: (fila.cantidad + 1) * fila.precio_unitario }
-            : fila,
-        );
+        return actual.map((fila) => {
+          if (fila.clave !== clave) return fila;
+          const cantidad = Number(fila.cantidad || 0) + 1;
+          return { ...fila, cantidad, total_linea: cantidad * Number(fila.precio_unitario || 0) };
+        });
       }
 
       return [...actual, {
@@ -171,7 +177,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
     const valor = Math.max(1, Number(cantidad || 1));
     setCarrito((actual) => actual.map((item) =>
       item.clave === clave
-        ? { ...item, cantidad: valor, total_linea: valor * item.precio_unitario }
+        ? { ...item, cantidad: valor, total_linea: valor * Number(item.precio_unitario || 0) }
         : item,
     ));
   };
@@ -193,7 +199,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
       avisar('Agrega al menos un ítem a la venta.', 'warning');
       return;
     }
-    if (cobrar && metodoPago === 'EFECTIVO' && Number(recibido || 0) < total) {
+    if (cobrar && metodoPago === 'EFECTIVO' && recibidoNumero < total) {
       avisar('El valor recibido en efectivo no puede ser menor que el total de la venta.', 'warning');
       return;
     }
@@ -220,9 +226,9 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
             ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.`
             : 'Cobro registrado desde POS.',
         });
-        avisar('Venta y pago registrados correctamente.', 'success');
+        avisar(`Venta ${venta.numero || ''} y pago registrados correctamente.`, 'success');
       } else {
-        avisar('Venta guardada como pendiente de pago.', 'success');
+        avisar(`Venta ${venta.numero || ''} guardada como pendiente de pago.`, 'success');
       }
 
       setTimeout(() => onGuardado?.(), 500);
@@ -246,7 +252,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
         acciones={<BotonVolver onClick={onVolver} />}
       />
 
-      <Paper className="page-content-container" elevation={0} sx={{ mt: 2, p: { xs: 1.5, md: 2.25 } }}>
+      <Paper className="page-content-container" elevation={0} sx={{ mt: 2, p: { xs: 1.5, md: 2.2 } }}>
         {errorContexto ? <Alert severity="error" sx={{ mb: 2 }}>{errorContexto}</Alert> : null}
         {!cargando && !errorContexto && !turno?.id ? (
           <Alert severity="warning" sx={{ mb: 2 }}>
@@ -257,81 +263,59 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', md: '1fr auto' },
+            gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.55fr) minmax(355px, .78fr)' },
             gap: 2,
             alignItems: 'start',
-            pb: 2,
-            mb: 2,
-            borderBottom: '1px solid #e5eaf1',
           }}
         >
-          <Box>
-            <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1.2 }}>
-              REVIVE SPORTS · FACTURACIÓN
-            </Typography>
-            <Typography variant="h6" fontWeight={800} sx={{ lineHeight: 1.2 }}>
-              Punto de venta
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: .45 }}>
-              {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
-            </Typography>
-          </Box>
-
-          <Box sx={{ textAlign: { xs: 'left', md: 'right' }, minWidth: { md: 220 } }}>
-            <Typography variant="caption" color="text.secondary" display="block">VENTA</Typography>
-            <Typography variant="h4" fontWeight={900} sx={{ letterSpacing: -.8, lineHeight: 1.05 }}>
-              # NUEVA
-            </Typography>
-            <Chip label="Pendiente de pago" size="small" color="warning" variant="outlined" sx={{ mt: .8, fontWeight: 700 }} />
-          </Box>
-        </Box>
-
-        <SeccionFlotante titulo="Datos de la operación" sx={{ mb: 2 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, 1fr)' }, gap: 0 }}>
-            <DatoOperacion label="Fecha y hora" valor={fechaHora(new Date())} />
-            <DatoOperacion label="Sede" valor={turno?.sede_nombre || '—'} />
-            <DatoOperacion label="Caja" valor={turno ? `${turno.caja_nombre} · ${turno.caja_codigo}` : '—'} />
-            <DatoOperacion label="Turno" valor={turno?.id ? `#${turno.id}` : '—'} />
-            <DatoOperacion label="Estado" valor="Pendiente de pago" destacado />
-          </Box>
-        </SeccionFlotante>
-
-        <SeccionFlotante titulo="Cliente" sx={{ mb: 2 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: cliente ? 'minmax(0, 1.5fr) minmax(260px, .75fr)' : '1fr' }, gap: 1.5, alignItems: 'center' }}>
-            <Autocomplete
-              options={contexto.clientes || []}
-              value={cliente}
-              onChange={(_, value) => setCliente(value)}
-              getOptionLabel={(item) => `${item.nombre || ''}${item.codigo ? ` · ${item.codigo}` : ''}`}
-              isOptionEqualToValue={(a, b) => a.id === b.id}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  size="small"
-                  placeholder="Buscar por nombre, código, cédula o teléfono"
-                />
-              )}
-            />
-
-            {cliente ? (
-              <Box sx={{ px: 1.4, py: 1, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                <Typography variant="body2" fontWeight={800}>{cliente.nombre}</Typography>
-                <Typography variant="caption" color="text.secondary" display="block">
-                  {cliente.codigo || 'Sin código'} · {cliente.telefono || 'Sin teléfono'}
-                </Typography>
-                <Chip size="small" label="Cliente activo" color="success" variant="outlined" sx={{ mt: .7 }} />
-              </Box>
-            ) : (
-              <Typography variant="caption" color="text.secondary">
-                Sin selección: la venta se registrará como consumidor final.
-              </Typography>
-            )}
-          </Box>
-        </SeccionFlotante>
-
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'minmax(0, 1.65fr) minmax(320px, .65fr)' }, gap: 2, alignItems: 'start' }}>
           <Stack spacing={2}>
-            <SeccionFlotante titulo={`Catálogo de venta · ${turno?.sede_nombre || 'sede actual'}`}>
+            <SeccionFlotante titulo="Cliente">
+              <Autocomplete
+                options={contexto.clientes || []}
+                value={cliente}
+                onChange={(_, value) => setCliente(value)}
+                getOptionLabel={(item) => `${item.nombre || ''}${item.codigo ? ` · ${item.codigo}` : ''}`}
+                isOptionEqualToValue={(a, b) => a.id === b.id}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    placeholder="Buscar por nombre, código, cédula o teléfono"
+                  />
+                )}
+              />
+
+              {cliente ? (
+                <Box
+                  sx={{
+                    mt: 1.2,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: '1fr auto' },
+                    gap: 1,
+                    alignItems: 'center',
+                    px: 1.3,
+                    py: 1,
+                    bgcolor: '#f8fafc',
+                    border: '1px solid #e1e7ef',
+                    borderRadius: 1.5,
+                  }}
+                >
+                  <Box>
+                    <Typography variant="body2" fontWeight={900}>{cliente.nombre}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {cliente.codigo || 'Sin código'} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
+                    </Typography>
+                  </Box>
+                  <Chip size="small" label="Cliente activo" color="success" variant="outlined" />
+                </Box>
+              ) : (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Sin cliente seleccionado: la venta se registrará como consumidor final.
+                </Typography>
+              )}
+            </SeccionFlotante>
+
+            <SeccionFlotante titulo={`Catálogo · ${turno?.sede_nombre || 'sede actual'}`}>
               <ToggleButtonGroup
                 value={tipo}
                 exclusive
@@ -340,36 +324,35 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                   setTipo(value);
                   setBusqueda('');
                 }}
-                fullWidth
                 size="small"
                 sx={{
-                  mb: 1.5,
+                  mb: 1.4,
+                  display: 'flex',
                   flexWrap: 'wrap',
-                  gap: .75,
+                  gap: .7,
                   '& .MuiToggleButtonGroup-grouped': {
-                    border: '1px solid #d9e2ef !important',
-                    borderRadius: '8px !important',
-                    px: 1.25,
-                    py: .8,
-                    flex: '1 1 120px',
+                    border: '1px solid #dce4ee !important',
+                    borderRadius: '7px !important',
+                    px: 1.15,
+                    py: .65,
                     textTransform: 'none',
-                    fontWeight: 700,
+                    fontWeight: 800,
+                    color: '#52606d',
+                    '&.Mui-selected': {
+                      bgcolor: 'rgba(20, 73, 133, .08)',
+                      borderColor: `${AZUL_REVIVE} !important`,
+                      color: AZUL_REVIVE,
+                    },
                   },
                 }}
               >
                 {tipos.map((item) => (
                   <ToggleButton key={item.value} value={item.value}>
                     {item.icono}
-                    <Typography variant="caption" sx={{ ml: .65, fontWeight: 800 }}>{item.label}</Typography>
+                    <Typography variant="caption" sx={{ ml: .55, fontWeight: 900 }}>{item.label}</Typography>
                   </ToggleButton>
                 ))}
               </ToggleButtonGroup>
-
-              {tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO' ? (
-                <Alert severity="info" sx={{ mb: 1.5, py: .2 }}>
-                  Se muestran como referencia comercial. La asignación contractual continúa realizándose desde Membresías.
-                </Alert>
-              ) : null}
 
               {tipo !== 'OTRO' ? (
                 <>
@@ -378,7 +361,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                     onChange={(e) => setBusqueda(e.target.value)}
                     size="small"
                     fullWidth
-                    placeholder={`Buscar en ${tipos.find((item) => item.value === tipo)?.label?.toLowerCase() || 'catálogo'}...`}
+                    placeholder={`Buscar ${tipos.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
                     slotProps={{
                       input: {
                         startAdornment: (
@@ -390,13 +373,19 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                     }}
                   />
 
+                  {(tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? (
+                    <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
+                      Se muestran como referencia. La asignación contractual se realiza desde Membresías.
+                    </Alert>
+                  ) : null}
+
                   <Box
                     sx={{
-                      mt: 1.5,
+                      mt: 1.35,
                       display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
-                      gap: 1.25,
-                      maxHeight: 470,
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
+                      gap: 1,
+                      maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 },
                       overflowY: 'auto',
                       pr: .5,
                     }}
@@ -421,186 +410,204 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                 </Box>
               )}
             </SeccionFlotante>
-
-            <SeccionFlotante titulo="Detalle de la venta">
-              {carrito.length === 0 ? (
-                <Box sx={{ py: 4.5, textAlign: 'center', color: 'text.secondary' }}>
-                  <ShoppingCartOutlinedIcon sx={{ fontSize: 38, opacity: .35, mb: .5 }} />
-                  <Typography variant="body2">Selecciona un producto o servicio para comenzar la venta.</Typography>
-                </Box>
-              ) : (
-                <Stack spacing={.75}>
-                  {carrito.map((item) => (
-                    <Box
-                      key={item.clave}
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr auto', md: 'minmax(0, 1fr) 140px 105px 105px 42px' },
-                        gap: 1,
-                        alignItems: 'center',
-                        p: 1,
-                        border: '1px solid #e6ebf2',
-                        borderRadius: 1.5,
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight={800} noWrap>{item.descripcion}</Typography>
-                        <Typography variant="caption" color="text.secondary">{item.tipo}</Typography>
-                      </Box>
-
-                      <CantidadControl
-                        cantidad={item.cantidad}
-                        onMenos={() => ajustarCantidad(item.clave, -1)}
-                        onMas={() => ajustarCantidad(item.clave, 1)}
-                        onChange={(valor) => cambiarCantidad(item.clave, valor)}
-                      />
-
-                      <Box sx={{ textAlign: 'right', display: { xs: 'none', md: 'block' } }}>
-                        <Typography variant="caption" color="text.secondary" display="block">P. unit.</Typography>
-                        <Typography variant="body2" fontWeight={700}>{dinero(item.precio_unitario)}</Typography>
-                      </Box>
-
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography variant="caption" color="text.secondary" display="block">Total</Typography>
-                        <Typography variant="body2" fontWeight={900}>{dinero(item.total_linea)}</Typography>
-                      </Box>
-
-                      <Tooltip title="Quitar del carrito">
-                        <IconButton size="small" color="error" onClick={() => setCarrito((a) => a.filter((fila) => fila.clave !== item.clave))}>
-                          <DeleteOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </SeccionFlotante>
-
-            <SeccionFlotante titulo="Observaciones">
-              <TextField
-                fullWidth
-                multiline
-                minRows={2}
-                size="small"
-                value={observaciones}
-                onChange={(e) => setObservaciones(e.target.value)}
-                placeholder="Observaciones opcionales de la venta"
-              />
-            </SeccionFlotante>
           </Stack>
 
-          <Box sx={{ position: { xl: 'sticky' }, top: { xl: 16 } }}>
-            <SeccionFlotante titulo="Carrito y cobro">
-              <Stack spacing={1.1}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: .8 }}>
-                    <ShoppingCartOutlinedIcon fontSize="small" />
-                    <Typography variant="body2" fontWeight={800}>Carrito</Typography>
+          <Box sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
+            <Box
+              sx={{
+                border: '1px solid #dbe3ec',
+                borderRadius: 2,
+                overflow: 'hidden',
+                bgcolor: '#fff',
+                boxShadow: '0 12px 28px rgba(15, 58, 107, .08)',
+              }}
+            >
+              <Box sx={{ p: 1.7, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'flex-start' }}>
+                  <Box>
+                    <Typography variant="overline" sx={{ color: AZUL_REVIVE, fontWeight: 900, letterSpacing: 1.1 }}>
+                      REVIVE SPORTS · FACTURACIÓN
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
+                    </Typography>
                   </Box>
-                  <Chip size="small" label={`${carrito.reduce((acc, item) => acc + Number(item.cantidad || 0), 0)} ítems`} />
+
+                  <Box sx={{ textAlign: 'right', minWidth: 135 }}>
+                    <Typography variant="caption" color="text.secondary" display="block">N.º VENTA</Typography>
+                    <Typography variant="h4" fontWeight={900} sx={{ color: AZUL_REVIVE, lineHeight: 1 }}>
+                      NUEVA
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Se asigna al guardar
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Chip label="Pendiente de pago" size="small" color="warning" variant="outlined" sx={{ mt: 1, fontWeight: 800 }} />
+              </Box>
+
+              <Box sx={{ px: 1.7, py: 1.35, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.2, borderBottom: '1px solid #edf1f5' }}>
+                <DatoFactura label="Fecha" valor={fechaHora(new Date())} />
+                <DatoFactura label="Turno" valor={turno?.id ? `#${turno.id}` : '—'} />
+                <DatoFactura label="Caja" valor={turno?.caja_codigo || '—'} />
+                <DatoFactura label="Atendido por" valor={turno?.cajero_nombre || 'Usuario actual'} />
+              </Box>
+
+              <Box sx={{ p: 1.7 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.15 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: .7 }}>
+                    <ShoppingCartOutlinedIcon sx={{ fontSize: 20, color: AZUL_REVIVE }} />
+                    <Typography variant="subtitle2" fontWeight={900}>Detalle de la venta</Typography>
+                  </Box>
+                  <Chip size="small" label={`${totalItems} ítems`} />
                 </Box>
 
                 {carrito.length === 0 ? (
-                  <Typography variant="caption" color="text.secondary">Aún no has agregado conceptos a la venta.</Typography>
+                  <Box sx={{ py: 4.5, textAlign: 'center', border: '1px dashed #d7e0ea', borderRadius: 1.5, bgcolor: '#fbfcfe' }}>
+                    <ShoppingCartOutlinedIcon sx={{ fontSize: 38, opacity: .22, mb: .5 }} />
+                    <Typography variant="body2" fontWeight={700} color="text.secondary">Carrito vacío</Typography>
+                    <Typography variant="caption" color="text.secondary">Selecciona un ítem del catálogo.</Typography>
+                  </Box>
                 ) : (
-                  <Stack spacing={.8} sx={{ maxHeight: 220, overflowY: 'auto', pr: .4 }}>
+                  <Stack spacing={1} sx={{ maxHeight: 285, overflowY: 'auto', pr: .3 }}>
                     {carrito.map((item) => (
-                      <Box key={`mini-${item.clave}`} sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: .75, alignItems: 'center' }}>
-                        <Box sx={{ minWidth: 0 }}>
-                          <Typography variant="caption" fontWeight={800} noWrap>{item.descripcion}</Typography>
-                          <Typography variant="caption" color="text.secondary" display="block">{item.cantidad} × {dinero(item.precio_unitario)}</Typography>
+                      <Box key={item.clave} sx={{ p: 1, border: '1px solid #e4eaf1', borderRadius: 1.5 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'flex-start' }}>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={900}>{item.descripcion}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {dinero(item.precio_unitario)} unitario
+                            </Typography>
+                          </Box>
+                          <Tooltip title="Quitar">
+                            <IconButton size="small" color="error" onClick={() => setCarrito((actual) => actual.filter((fila) => fila.clave !== item.clave))}>
+                              <DeleteOutlineOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
                         </Box>
-                        <Typography variant="body2" fontWeight={800}>{dinero(item.total_linea)}</Typography>
+
+                        <Box sx={{ mt: .8, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, alignItems: 'center' }}>
+                          <CantidadControl
+                            cantidad={item.cantidad}
+                            onMenos={() => ajustarCantidad(item.clave, -1)}
+                            onMas={() => ajustarCantidad(item.clave, 1)}
+                            onChange={(valor) => cambiarCantidad(item.clave, valor)}
+                          />
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              {item.cantidad} × {dinero(item.precio_unitario)}
+                            </Typography>
+                            <Typography variant="body1" fontWeight={900}>{dinero(item.total_linea)}</Typography>
+                          </Box>
+                        </Box>
                       </Box>
                     ))}
                   </Stack>
                 )}
 
-                <Divider />
-                <ResumenFila label="Subtotal" valor={dinero(subtotal)} />
+                <Divider sx={{ my: 1.4 }} />
 
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 108px', gap: 1, alignItems: 'center' }}>
-                  <Typography variant="body2">Descuento</Typography>
-                  <TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} inputProps={{ min: 0 }} />
-                </Box>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 108px', gap: 1, alignItems: 'center' }}>
-                  <Typography variant="body2">Impuesto</Typography>
-                  <TextField size="small" type="number" value={impuesto} onChange={(e) => setImpuesto(e.target.value)} inputProps={{ min: 0 }} />
-                </Box>
-
-                <Box sx={{ bgcolor: '#f8fafc', border: '1px solid #dbe4ef', borderRadius: 1.5, p: 1.35, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="subtitle1" fontWeight={900}>TOTAL</Typography>
-                  <Typography variant="h5" fontWeight={900}>{dinero(total)}</Typography>
-                </Box>
-
-                <TextField select label="Método de pago" size="small" fullWidth value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
-                  <MenuItem value="EFECTIVO">Efectivo</MenuItem>
-                  <MenuItem value="TARJETA">Tarjeta</MenuItem>
-                  <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                  <MenuItem value="DEPOSITO">Depósito</MenuItem>
-                  <MenuItem value="OTRO">Otro</MenuItem>
-                </TextField>
-
-                {metodoPago === 'EFECTIVO' ? (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                    <TextField
-                      label="Recibido"
-                      size="small"
-                      type="number"
-                      value={recibido}
-                      onChange={(e) => setRecibido(e.target.value)}
-                      inputProps={{ min: 0 }}
-                    />
-                    <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 1.25, px: 1.25, py: .7, bgcolor: '#fbfcfe' }}>
-                      <Typography variant="caption" color="text.secondary" display="block">Cambio</Typography>
-                      <Typography variant="body1" fontWeight={900}>{dinero(cambio)}</Typography>
-                    </Box>
+                <Stack spacing={.75}>
+                  <ResumenFila label="Subtotal" valor={dinero(subtotal)} />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">Descuento</Typography>
+                    <TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} inputProps={{ min: 0 }} />
                   </Box>
-                ) : (
-                  <TextField label="Referencia / comprobante" size="small" fullWidth value={referencia} onChange={(e) => setReferencia(e.target.value)} />
-                )}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}>
+                    <Typography variant="body2" color="text.secondary">Impuesto</Typography>
+                    <TextField size="small" type="number" value={impuesto} onChange={(e) => setImpuesto(e.target.value)} inputProps={{ min: 0 }} />
+                  </Box>
+                </Stack>
 
-                <Button
-                  variant="contained"
-                  disabled={guardando || carrito.length === 0 || !turno?.id}
-                  onClick={() => guardar(true)}
-                  sx={dbanuStyles.addButtonRevive}
-                  startIcon={<ReceiptLongOutlinedIcon />}
-                >
-                  Guardar y cobrar
-                </Button>
-                <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)}>
-                  Guardar pendiente
-                </Button>
+                <Box sx={{ mt: 1.25, px: 1.3, py: 1.15, bgcolor: AZUL_REVIVE, color: '#fff', borderRadius: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="subtitle1" fontWeight={900}>TOTAL</Typography>
+                  <Typography variant="h4" fontWeight={900}>{dinero(total)}</Typography>
+                </Box>
 
-                <Typography variant="caption" color="text.secondary">
-                  Caja y turno se asignan automáticamente desde la sesión operativa actual.
-                </Typography>
-              </Stack>
-            </SeccionFlotante>
+                <SeccionInterna titulo="Cobro" sx={{ mt: 1.8 }}>
+                  <TextField select label="Método de pago" size="small" fullWidth value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+                    <MenuItem value="EFECTIVO">Efectivo</MenuItem>
+                    <MenuItem value="TARJETA">Tarjeta</MenuItem>
+                    <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+                    <MenuItem value="DEPOSITO">Depósito</MenuItem>
+                    <MenuItem value="OTRO">Otro</MenuItem>
+                  </TextField>
+
+                  {metodoPago === 'EFECTIVO' ? (
+                    <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                      <TextField
+                        label="Recibido"
+                        size="small"
+                        type="number"
+                        value={recibido}
+                        onChange={(e) => setRecibido(e.target.value)}
+                        inputProps={{ min: 0 }}
+                      />
+                      <Box sx={{ px: 1.1, py: .7, borderRadius: 1.25, border: '1px solid #e0e7ef', bgcolor: '#f8fafc' }}>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {faltante > 0 ? 'Faltante' : 'Cambio'}
+                        </Typography>
+                        <Typography variant="body1" fontWeight={900} color={faltante > 0 ? 'error.main' : 'success.main'}>
+                          {dinero(faltante > 0 ? faltante : cambio)}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  ) : (
+                    <TextField
+                      label="Referencia / comprobante"
+                      size="small"
+                      fullWidth
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </SeccionInterna>
+
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={2}
+                  size="small"
+                  label="Observaciones"
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  sx={{ mt: 1.4 }}
+                />
+
+                <Stack spacing={1} sx={{ mt: 1.4 }}>
+                  <Button
+                    variant="contained"
+                    disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)}
+                    onClick={() => guardar(true)}
+                    sx={dbanuStyles.addButtonRevive}
+                    startIcon={<ReceiptLongOutlinedIcon />}
+                  >
+                    Cobrar {dinero(total)}
+                  </Button>
+                  <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)}>
+                    Guardar pendiente
+                  </Button>
+                </Stack>
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Paper>
 
-      <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion((a) => ({ ...a, mensaje: '' }))} />
+      <NotificacionSnackbar
+        mensaje={notificacion.mensaje}
+        tipo={notificacion.tipo}
+        onClose={() => setNotificacion((actual) => ({ ...actual, mensaje: '' }))}
+      />
     </Box>
   );
 }
 
-function SeccionFlotante({ titulo, children, sx = {} }) {
+function SeccionFlotante({ titulo, children }) {
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        border: '1px solid #dce4ee',
-        borderRadius: 2,
-        px: { xs: 1.25, md: 1.6 },
-        pt: 2.15,
-        pb: 1.5,
-        bgcolor: '#fff',
-        ...sx,
-      }}
-    >
+    <Box sx={{ position: 'relative', border: '1px solid #dce4ed', borderRadius: 2, px: 1.5, pt: 2.05, pb: 1.45, bgcolor: '#fff' }}>
       <Typography
         variant="caption"
         sx={{
@@ -609,10 +616,24 @@ function SeccionFlotante({ titulo, children, sx = {} }) {
           left: 14,
           px: .8,
           bgcolor: '#fff',
+          color: AZUL_REVIVE,
           fontWeight: 900,
-          color: 'text.primary',
-          letterSpacing: .15,
+          letterSpacing: .25,
         }}
+      >
+        {titulo}
+      </Typography>
+      {children}
+    </Box>
+  );
+}
+
+function SeccionInterna({ titulo, children, sx = {} }) {
+  return (
+    <Box sx={{ position: 'relative', border: '1px solid #e1e7ef', borderRadius: 1.5, px: 1.1, pt: 1.8, pb: 1.05, ...sx }}>
+      <Typography
+        variant="caption"
+        sx={{ position: 'absolute', top: -9, left: 11, px: .55, bgcolor: '#fff', fontWeight: 900, color: AZUL_REVIVE }}
       >
         {titulo}
       </Typography>
@@ -636,68 +657,60 @@ function CatalogoCard({ item, tipo, onAgregar }) {
     <Box
       sx={{
         border: '1px solid #e1e7ef',
-        borderRadius: 2,
+        borderRadius: 1.6,
         overflow: 'hidden',
         bgcolor: '#fff',
+        minHeight: 188,
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 215,
         transition: 'transform .15s ease, box-shadow .15s ease, border-color .15s ease',
-        '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 20px rgba(15, 23, 42, .07)', borderColor: '#c8d4e3' },
+        '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 18px rgba(15, 58, 107, .08)', borderColor: '#b9c9dc' },
       }}
     >
-      <Box
-        sx={{
-          height: 76,
-          bgcolor: '#f5f8fc',
-          borderBottom: '1px solid #edf1f6',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
+      <Box sx={{ height: 68, bgcolor: '#f4f7fb', display: 'grid', placeItems: 'center', borderBottom: '1px solid #edf1f5' }}>
         {item.imagen_url || item.imagen ? (
           <Box component="img" src={item.imagen_url || item.imagen} alt={item.nombre} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
-          <Avatar sx={{ width: 44, height: 44, bgcolor: 'rgba(20, 73, 133, .10)', color: 'rgba(20, 73, 133, 1)' }}>
+          <Avatar sx={{ width: 40, height: 40, bgcolor: 'rgba(20, 73, 133, .10)', color: AZUL_REVIVE }}>
             {icono}
           </Avatar>
         )}
       </Box>
 
-      <Box sx={{ p: 1.25, display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.2, minHeight: 34 }}>
+      <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.2, minHeight: 32 }}>
           {item.nombre}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: .35, minHeight: 18 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: .3 }}>
           {tipo === 'SERVICIO'
             ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}`
             : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
         </Typography>
 
-        <Box sx={{ mt: 'auto', pt: 1 }}>
-          <Typography variant="h6" fontWeight={900} color={sinPrecio ? 'warning.main' : 'text.primary'}>
-            {sinPrecio ? 'Por configurar' : dinero(item.precio)}
-          </Typography>
-          {tipo === 'PRODUCTO' && item.controla_stock ? (
-            <Typography variant="caption" color="text.secondary">Stock: {Number(item.stock_actual || 0)}</Typography>
-          ) : null}
+        <Box sx={{ mt: 'auto', pt: .75 }}>
+          <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: .6 }}>
+            <Box>
+              <Typography variant="subtitle1" fontWeight={900} color={sinPrecio ? 'warning.main' : AZUL_REVIVE}>
+                {sinPrecio ? 'Por configurar' : dinero(item.precio)}
+              </Typography>
+              {tipo === 'PRODUCTO' && item.controla_stock ? (
+                <Typography variant="caption" color="text.secondary">Stock {Number(item.stock_actual || 0)}</Typography>
+              ) : null}
+            </Box>
 
-          <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio comercial' : 'Agregar al carrito'}>
-            <span>
-              <Button
-                fullWidth
-                size="small"
-                variant="outlined"
-                startIcon={<AddShoppingCartOutlinedIcon />}
-                sx={{ mt: .9, textTransform: 'none', fontWeight: 800 }}
-                onClick={onAgregar}
-                disabled={sinPrecio || contractual}
-              >
-                {contractual ? 'Ver en Membresías' : 'Agregar'}
-              </Button>
-            </span>
-          </Tooltip>
+            <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={onAgregar}
+                  disabled={sinPrecio || contractual}
+                  sx={{ border: '1px solid #d6e0eb', borderRadius: 1, color: AZUL_REVIVE }}
+                >
+                  <AddShoppingCartOutlinedIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
     </Box>
@@ -706,43 +719,41 @@ function CatalogoCard({ item, tipo, onAgregar }) {
 
 function CantidadControl({ cantidad, onMenos, onMas, onChange }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: .25, border: '1px solid #dde4ed', borderRadius: 1.25, p: .2 }}>
-      <IconButton size="small" onClick={onMenos} disabled={Number(cantidad) <= 1}>
-        <RemoveOutlinedIcon fontSize="small" />
+    <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid #dce4ed', borderRadius: 1.1, overflow: 'hidden' }}>
+      <IconButton size="small" onClick={onMenos} disabled={Number(cantidad) <= 1} sx={{ borderRadius: 0 }}>
+        <RemoveOutlinedIcon sx={{ fontSize: 17 }} />
       </IconButton>
       <TextField
         variant="standard"
         type="number"
         value={cantidad}
         onChange={(e) => onChange(e.target.value)}
-        inputProps={{ min: 1, style: { textAlign: 'center', width: 34, fontWeight: 800 } }}
-        InputProps={{ disableUnderline: true }}
+        slotProps={{
+          input: { disableUnderline: true },
+          htmlInput: { min: 1, style: { textAlign: 'center', width: 32, fontWeight: 900, padding: 0 } },
+        }}
       />
-      <IconButton size="small" onClick={onMas}>
-        <AddOutlinedIcon fontSize="small" />
+      <IconButton size="small" onClick={onMas} sx={{ borderRadius: 0 }}>
+        <AddOutlinedIcon sx={{ fontSize: 17 }} />
       </IconButton>
     </Box>
   );
 }
 
-function DatoOperacion({ label, valor, destacado = false }) {
+function DatoFactura({ label, valor }) {
   return (
-    <Box sx={{ px: 1.35, py: .45, minWidth: 0, borderRight: { md: '1px solid #e2e8f0' } }}>
+    <Box sx={{ minWidth: 0 }}>
       <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
-      {destacado ? (
-        <Chip size="small" label={valor} color="warning" variant="outlined" sx={{ mt: .45, fontWeight: 700 }} />
-      ) : (
-        <Typography variant="body2" fontWeight={800} noWrap title={valor}>{valor}</Typography>
-      )}
+      <Typography variant="body2" fontWeight={800} noWrap title={valor}>{valor}</Typography>
     </Box>
   );
 }
 
 function ResumenFila({ label, valor }) {
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: .3 }}>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', py: .25 }}>
       <Typography variant="body2" color="text.secondary">{label}</Typography>
-      <Typography variant="body2" fontWeight={800}>{valor}</Typography>
+      <Typography variant="body2" fontWeight={900}>{valor}</Typography>
     </Box>
   );
 }
