@@ -319,18 +319,16 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
           <Box sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
             <Box sx={{ border: '1px solid #dbe3ec', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 12px 28px rgba(15, 58, 107, .08)' }}>
               <Box sx={{ p: 1.7, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'flex-start' }}>
-                  <Box>
-                    <Typography variant="overline" sx={{ color: AZUL_REVIVE, fontWeight: 900, letterSpacing: 1.1 }}>RESUMEN DE VENTA</Typography>
-                    <Typography variant="caption" color="text.secondary" display="block">{turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}</Typography>
-                  </Box>
-                  <Box sx={{ textAlign: 'right', minWidth: 135 }}>
-                    <Typography variant="caption" color="text.secondary" display="block">TOTAL</Typography>
-                    <Typography variant="h4" fontWeight={900} sx={{ color: AZUL_REVIVE, lineHeight: 1 }}>{dinero(total)}</Typography>
-                    <Typography variant="caption" color="text.secondary">Actualizado en tiempo real</Typography>
-                  </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2 }}>
+                  <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary' }}>TOTAL</Typography>
+                  <Typography variant="h3" fontWeight={900} sx={{ color: AZUL_REVIVE, lineHeight: 1 }}>{dinero(total)}</Typography>
                 </Box>
-                <Chip label="Pendiente de pago" size="small" color="warning" variant="outlined" sx={{ mt: 1, fontWeight: 800 }} />
+                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
+                  </Typography>
+                  <Chip label="Pendiente de pago" size="small" color="warning" variant="outlined" sx={{ fontWeight: 800 }} />
+                </Box>
               </Box>
 
               <Box sx={{ px: 1.7, py: 1.35, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.2, borderBottom: '1px solid #edf1f5' }}>
