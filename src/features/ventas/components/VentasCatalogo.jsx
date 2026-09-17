@@ -28,11 +28,31 @@ const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : '
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
 const estadoTexto = (valor) => String(valor || '').toLowerCase().replace('pagada', 'activo').replace('confirmado', 'activo').replace('emitido', 'activo');
 
+const descripcionCajaGeneral = (sedeNombre) => sedeNombre
+  ? `Caja operativa para la gestión de cobros y ventas de la sede ${sedeNombre}.`
+  : '';
+
+const codigoCajaVista = (formData, catalogos) => {
+  if (formData.codigo) return formData.codigo;
+  const sede = (catalogos.sedes || []).find((item) => String(item.id) === String(formData.sede_id));
+  if (!sede?.nombre) return 'Se generará al guardar';
+
+  const sedeCodigo = String(sede.nombre)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/^REVIVE[\s_-]+/, '')
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return `CAJA-${sedeCodigo || 'SEDE'}-###`;
+};
+
 const configs = {
   cajas: {
-    titulo: 'Cajas', singular: 'Caja', descripcion: 'Administra puntos de cobro y cajas operativas.', icono: <PointOfSaleOutlinedIcon />,
+    titulo: 'Cajas', singular: 'Caja', descripcion: 'Administra puntos de cobro permanentes por sede.', icono: <PointOfSaleOutlinedIcon />,
     obtener: 'obtenerCajas', crear: 'crearCaja', actualizar: 'actualizarCaja',
-    inicial: { id: null, sede_id: '', codigo: '', nombre: '', descripcion: '', saldo_inicial: 0, activa: true },
+    inicial: { id: null, sede_id: '', codigo: '', nombre: '', descripcion: '', activa: true },
   },
   ventas: {
     titulo: 'Ventas', singular: 'Venta', descripcion: 'Registra ventas de productos, servicios y membresías.', icono: <ShoppingCartOutlinedIcon />,
@@ -103,6 +123,23 @@ export function VentasCatalogo({ tipo }) {
       setFormData((actual) => ({ ...actual, detalle: { ...(actual.detalle || {}), [key]: value } }));
       return;
     }
+
+    if (tipo === 'cajas' && name === 'sede_id') {
+      setFormData((actual) => {
+        const sedeAnterior = (catalogos.sedes || []).find((item) => String(item.id) === String(actual.sede_id));
+        const sedeNueva = (catalogos.sedes || []).find((item) => String(item.id) === String(value));
+        const descripcionAnteriorAuto = descripcionCajaGeneral(sedeAnterior?.nombre);
+        const puedeAutocompletar = !String(actual.descripcion || '').trim() || actual.descripcion === descripcionAnteriorAuto;
+
+        return {
+          ...actual,
+          sede_id: value,
+          descripcion: puedeAutocompletar ? descripcionCajaGeneral(sedeNueva?.nombre) : actual.descripcion,
+        };
+      });
+      return;
+    }
+
     setFormData((actual) => ({ ...actual, [name]: inputType === 'checkbox' ? checked : value }));
   };
 
@@ -153,7 +190,32 @@ export function VentasCatalogo({ tipo }) {
 function Formulario({ tipo, formData, catalogos, onChange }) {
   const grid = { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 };
   if (tipo === 'cajas') {
-    return <Box sx={grid}><TextField label="Código" name="codigo" value={formData.codigo || ''} onChange={onChange} required size="small" /><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={onChange} size="small"><MenuItem value="">Sin sede</MenuItem>{(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}</TextField><TextField label="Saldo inicial" name="saldo_inicial" type="number" value={formData.saldo_inicial || 0} onChange={onChange} required size="small" /><FormControlLabel control={<Switch name="activa" checked={Boolean(formData.activa)} onChange={onChange} />} label="Activa" /><TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} /></Box>;
+    return <Box sx={grid}>
+      <TextField
+        label="Código generado"
+        value={codigoCajaVista(formData, catalogos)}
+        size="small"
+        helperText="Se genera automáticamente según la sede y el consecutivo disponible."
+        slotProps={{ input: { readOnly: true } }}
+      />
+      <TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" />
+      <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={onChange} required size="small">
+        <MenuItem value="">Seleccione una sede</MenuItem>
+        {(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}
+      </TextField>
+      <FormControlLabel control={<Switch name="activa" checked={Boolean(formData.activa)} onChange={onChange} />} label="Activa" sx={{ alignSelf: 'center' }} />
+      <TextField
+        label="Descripción"
+        name="descripcion"
+        value={formData.descripcion || ''}
+        onChange={onChange}
+        size="small"
+        multiline
+        minRows={2}
+        helperText="Se propone automáticamente una descripción general al seleccionar la sede; puedes ajustarla."
+        sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
+      />
+    </Box>;
   }
 
   if (tipo === 'ventas') {
@@ -198,7 +260,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'codigo', header: <TableCell key="codigo">Código</TableCell>, render: (item) => <Typography variant="body2" fontWeight="600">{item.codigo}</Typography> },
     { key: 'nombre', header: filtro('nombre', 'Caja', opciones(meta.opciones_filtro?.caja)), render: (item) => item.nombre },
     { key: 'sede', header: <TableCell key="sede">Sede</TableCell>, render: (item) => item.sede_nombre || 'Sin sede' },
-    { key: 'saldo', header: <TableCell key="saldo">Saldo inicial</TableCell>, render: (item) => dinero(item.saldo_inicial) },
+    { key: 'descripcion', header: <TableCell key="descripcion">Descripción</TableCell>, render: (item) => item.descripcion || 'Sin descripción' },
     { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'true', label: 'Activa' }, { value: 'false', label: 'Inactiva' }]), render: (item) => <StatusChip estado={estadoBool(item.activa)} /> },
   ];
   if (tipo === 'ventas') return [
@@ -228,8 +290,8 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
 
 function normalizar(tipo, data) {
   if (tipo === 'cajas') {
-    if (!data.codigo || !data.nombre) return null;
-    return { sede_id: data.sede_id ? Number(data.sede_id) : null, codigo: data.codigo, nombre: data.nombre, descripcion: data.descripcion || null, saldo_inicial: Number(data.saldo_inicial || 0), activa: Boolean(data.activa) };
+    if (!data.sede_id || !data.nombre) return null;
+    return { sede_id: Number(data.sede_id), nombre: data.nombre.trim(), descripcion: String(data.descripcion || '').trim() || null, activa: Boolean(data.activa) };
   }
   if (tipo === 'ventas') {
     if (!data.tipo_venta || !data.concepto || !data.total) return null;
