@@ -426,7 +426,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, alignItems: 'flex-start' }}>
                   <Box>
                     <Typography variant="overline" sx={{ color: AZUL_REVIVE, fontWeight: 900, letterSpacing: 1.1 }}>
-                      REVIVE SPORTS · FACTURACIÓN
+                      RESUMEN DE VENTA
                     </Typography>
                     <Typography variant="caption" color="text.secondary" display="block">
                       {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
