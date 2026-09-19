@@ -8,6 +8,7 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LocalActivityOutlinedIcon from '@mui/icons-material/LocalActivityOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import MoreHorizOutlinedIcon from '@mui/icons-material/MoreHorizOutlined';
@@ -332,9 +333,22 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                   <Typography variant="h3" fontWeight={950} sx={{ color: '#fff', lineHeight: 1, letterSpacing: -.8, position: 'relative', zIndex: 1 }}>{dinero(total)}</Typography>
                 </Box>
                 <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,.86)', fontWeight: 800, position: 'relative', zIndex: 1 }}>
-                    {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
-                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: .65, minWidth: 0, position: 'relative', zIndex: 1 }}>
+                    <LocationOnOutlinedIcon sx={{ fontSize: 17, color: '#fff', flexShrink: 0 }} />
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'rgba(255,255,255,.90)',
+                        fontWeight: 850,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                      title={`${turno?.sede_nombre || 'Sede pendiente'} · ${turno?.caja_nombre || 'Caja pendiente'}`}
+                    >
+                      {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
+                    </Typography>
+                  </Box>
                   <Chip label="Pendiente de pago" size="small" sx={{ fontWeight: 900, color: DORADO_REVIVE_OSCURO, bgcolor: '#fff', border: `1px solid ${DORADO_REVIVE}`, position: 'relative', zIndex: 1 }} />
                 </Box>
               </Box>
@@ -468,6 +482,7 @@ function SeccionInterna({ titulo, children, sx = {} }) {
 function CatalogoCard({ item, tipo, onAgregar }) {
   const sinPrecio = item.precio === null || item.precio === undefined || Number(item.precio) <= 0;
   const contractual = tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO';
+  const imagen = item.imagen_url || item.imagen || null;
   const icono = tipo === 'PRODUCTO'
     ? <Inventory2OutlinedIcon />
     : tipo === 'SERVICIO'
@@ -479,51 +494,122 @@ function CatalogoCard({ item, tipo, onAgregar }) {
   return (
     <Box
       sx={{
-        border: '1px solid #e1e5ea',
-        borderRadius: 2,
+        border: '1px solid #dfe4ea',
+        borderRadius: 1.8,
         overflow: 'hidden',
         bgcolor: '#fff',
-        minHeight: 236,
+        minHeight: 224,
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 5px 14px rgba(15,23,42,.045)',
+        boxShadow: '0 4px 12px rgba(15,23,42,.045)',
         transition: 'transform .16s ease, box-shadow .16s ease, border-color .16s ease',
         '&:hover': {
-          transform: 'translateY(-3px)',
-          boxShadow: '0 12px 26px rgba(15,23,42,.10)',
+          transform: 'translateY(-2px)',
+          boxShadow: '0 10px 22px rgba(15,23,42,.09)',
           borderColor: DORADO_REVIVE,
         },
       }}
     >
-      <Box sx={{ height: 92, bgcolor: '#f5f6f8', display: 'grid', placeItems: 'center', borderBottom: '1px solid #edf0f3' }}>
-        {item.imagen_url || item.imagen ? (
-          <Box component="img" src={item.imagen_url || item.imagen} alt={item.nombre} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      <Box
+        sx={{
+          height: 92,
+          position: 'relative',
+          overflow: 'hidden',
+          bgcolor: '#f3f4f6',
+          borderBottom: '1px solid #e8ebef',
+        }}
+      >
+        {imagen ? (
+          <Box
+            component="img"
+            src={imagen}
+            alt={item.nombre}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
         ) : (
-          <Avatar sx={{ width: 48, height: 48, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }}>
-            {icono}
-          </Avatar>
+          <Box
+            sx={{
+              width: '100%',
+              height: '100%',
+              display: 'grid',
+              placeItems: 'center',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #f2f3f5 55%, rgba(212,160,23,.14) 100%)',
+            }}
+          >
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
+                display: 'grid',
+                placeItems: 'center',
+                bgcolor: '#fff',
+                color: DORADO_REVIVE_OSCURO,
+                border: '1px solid rgba(212,160,23,.28)',
+                boxShadow: '0 4px 10px rgba(15,23,42,.07)',
+                '& .MuiSvgIcon-root': { fontSize: 22 },
+              }}
+            >
+              {icono}
+            </Box>
+          </Box>
         )}
       </Box>
 
-      <Box sx={{ p: 1.15, display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <Typography variant="body2" fontWeight={950} sx={{ color: NEGRO_REVIVE, lineHeight: 1.2, minHeight: 34 }}>
+      <Box sx={{ p: 1.05, display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 950,
+            color: NEGRO_REVIVE,
+            lineHeight: 1.2,
+            minHeight: 32,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+          title={item.nombre}
+        >
           {item.nombre}
         </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: .3, lineHeight: 1.3 }}>
+
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{
+            mt: .25,
+            lineHeight: 1.25,
+            minHeight: 30,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
           {tipo === 'SERVICIO'
             ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}`
             : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
         </Typography>
 
-        <Box sx={{ mt: 'auto', pt: 1 }}>
-          <Typography variant="h6" fontWeight={950} sx={{ color: sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO, lineHeight: 1.05 }}>
-            {sinPrecio ? 'Por configurar' : dinero(item.precio)}
-          </Typography>
-          {tipo === 'PRODUCTO' && item.controla_stock ? (
-            <Typography variant="caption" color="text.secondary">
-              Stock {Number(item.stock_actual || 0)}
+        <Box sx={{ mt: 'auto', pt: .8 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .8 }}>
+            <Typography
+              variant={sinPrecio ? 'body1' : 'h6'}
+              sx={{
+                fontWeight: 950,
+                color: sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO,
+                lineHeight: 1,
+              }}
+            >
+              {sinPrecio ? 'Por configurar' : dinero(item.precio)}
             </Typography>
-          ) : null}
+            {tipo === 'PRODUCTO' && item.controla_stock ? (
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                Stock {Number(item.stock_actual || 0)}
+              </Typography>
+            ) : null}
+          </Box>
 
           <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}>
             <span style={{ display: 'block', width: '100%' }}>
@@ -535,7 +621,6 @@ function CatalogoCard({ item, tipo, onAgregar }) {
                 onClick={onAgregar}
                 disabled={sinPrecio || contractual}
                 sx={{
-                  mt: 1,
                   minHeight: 34,
                   borderRadius: 1,
                   textTransform: 'none',
@@ -544,6 +629,10 @@ function CatalogoCard({ item, tipo, onAgregar }) {
                   color: '#111827',
                   boxShadow: 'none',
                   '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' },
+                  '&.Mui-disabled': {
+                    bgcolor: '#e5e7eb',
+                    color: '#9ca3af',
+                  },
                 }}
               >
                 {contractual ? 'Ver membresía' : 'Agregar'}
