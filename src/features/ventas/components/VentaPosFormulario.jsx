@@ -309,7 +309,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
                   />
                   {(tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
-                  <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 1.2, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
+                  <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', mt: 1.65, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
                     {disponibles.map((item) => <CatalogoCard key={`${tipo}-${item.id}`} item={item} tipo={tipo} onAgregar={() => agregar(item)} />)}
                   </Box>
                   {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
@@ -498,7 +498,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
         borderRadius: 1.8,
         overflow: 'hidden',
         bgcolor: '#fff',
-        minHeight: 224,
+        minHeight: 206,
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 4px 12px rgba(15,23,42,.045)',
@@ -512,7 +512,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
     >
       <Box
         sx={{
-          height: 92,
+          height: 104,
           position: 'relative',
           overflow: 'hidden',
           bgcolor: '#f3f4f6',
@@ -524,7 +524,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             component="img"
             src={imagen}
             alt={item.nombre}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 35%', display: 'block' }}
           />
         ) : (
           <Box
@@ -556,14 +556,14 @@ function CatalogoCard({ item, tipo, onAgregar }) {
         )}
       </Box>
 
-      <Box sx={{ p: 1.05, display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <Box sx={{ p: .9, display: 'flex', flexDirection: 'column', flex: 1 }}>
         <Typography
           variant="body2"
           sx={{
             fontWeight: 950,
             color: NEGRO_REVIVE,
             lineHeight: 1.2,
-            minHeight: 32,
+            minHeight: 28,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -580,7 +580,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
           sx={{
             mt: .25,
             lineHeight: 1.25,
-            minHeight: 30,
+            minHeight: 26,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -592,8 +592,8 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
         </Typography>
 
-        <Box sx={{ mt: 'auto', pt: .8 }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .8 }}>
+        <Box sx={{ mt: 'auto', pt: .65 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .65 }}>
             <Typography
               variant={sinPrecio ? 'body1' : 'h6'}
               sx={{
@@ -621,7 +621,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
                 onClick={onAgregar}
                 disabled={sinPrecio || contractual}
                 sx={{
-                  minHeight: 34,
+                  minHeight: 32,
                   borderRadius: 1,
                   textTransform: 'none',
                   fontWeight: 900,
