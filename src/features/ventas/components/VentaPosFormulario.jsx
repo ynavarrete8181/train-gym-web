@@ -504,8 +504,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
         boxShadow: '0 4px 12px rgba(15,23,42,.045)',
         transition: 'transform .16s ease, box-shadow .16s ease, border-color .16s ease',
         '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 10px 22px rgba(15,23,42,.09)',
+          boxShadow: `0 0 0 1px ${DORADO_REVIVE}, 0 10px 22px rgba(15,23,42,.09)`,
           borderColor: DORADO_REVIVE,
         },
       }}
@@ -594,16 +593,32 @@ function CatalogoCard({ item, tipo, onAgregar }) {
 
         <Box sx={{ mt: 'auto', pt: .65 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .65 }}>
-            <Typography
-              variant={sinPrecio ? 'body1' : 'h6'}
-              sx={{
-                fontWeight: 950,
-                color: sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO,
-                lineHeight: 1,
-              }}
-            >
-              {sinPrecio ? 'Por configurar' : dinero(item.precio)}
-            </Typography>
+            {sinPrecio ? (
+              <Chip
+                size="small"
+                label="Precio pendiente"
+                variant="outlined"
+                sx={{
+                  height: 24,
+                  fontWeight: 900,
+                  color: DORADO_REVIVE_OSCURO,
+                  borderColor: 'rgba(212,160,23,.45)',
+                  bgcolor: DORADO_SUAVE,
+                  '& .MuiChip-label': { px: .85 },
+                }}
+              />
+            ) : (
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 950,
+                  color: DORADO_REVIVE_OSCURO,
+                  lineHeight: 1,
+                }}
+              >
+                {dinero(item.precio)}
+              </Typography>
+            )}
             {tipo === 'PRODUCTO' && item.controla_stock ? (
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
                 Stock {Number(item.stock_actual || 0)}
@@ -611,7 +626,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             ) : null}
           </Box>
 
-          <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}>
+          <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura el precio comercial para esta sede' : 'Agregar al carrito'}>
             <span style={{ display: 'block', width: '100%' }}>
               <Button
                 fullWidth
