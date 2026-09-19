@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import AddShoppingCartOutlinedIcon from '@mui/icons-material/AddShoppingCartOutlined';
+import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
@@ -338,10 +340,10 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
               </Box>
 
               <Box sx={{ px: 1.7, py: 1.35, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.2, borderBottom: '1px solid #edf1f5' }}>
-                <DatoFactura label="Fecha" valor={fechaHora(new Date())} />
-                <DatoFactura label="Turno" valor={turno?.id ? `#${turno.id}` : '—'} />
-                <DatoFactura label="Caja" valor={turno?.caja_codigo || '—'} />
-                <DatoFactura label="Atendido por" valor={turno?.cajero_nombre || 'Usuario actual'} />
+                <DatoFactura icono={<CalendarTodayOutlinedIcon />} label="Fecha" valor={fechaHora(new Date())} />
+                <DatoFactura icono={<HistoryOutlinedIcon />} label="Turno" valor={turno?.id ? `#${turno.id}` : '—'} />
+                <DatoFactura icono={<PointOfSaleOutlinedIcon />} label="Caja" valor={turno?.caja_codigo || '—'} />
+                <DatoFactura icono={<PersonOutlineOutlinedIcon />} label="Atendido por" valor={turno?.cajero_nombre || 'Usuario actual'} />
               </Box>
 
               <Box sx={{ p: 1.7 }}>
@@ -564,8 +566,33 @@ function CantidadControl({ cantidad, onMenos, onMas, onChange }) {
   );
 }
 
-function DatoFactura({ label, valor }) {
-  return <Box sx={{ minWidth: 0 }}><Typography variant="caption" sx={{ color: DORADO_REVIVE_OSCURO, fontWeight: 850 }} display="block">{label}</Typography><Typography variant="body2" fontWeight={900} noWrap title={valor}>{valor}</Typography></Box>;
+function DatoFactura({ icono, label, valor }) {
+  return (
+    <Box sx={{ minWidth: 0, display: 'grid', gridTemplateColumns: '28px minmax(0, 1fr)', gap: .8, alignItems: 'start' }}>
+      <Box
+        sx={{
+          width: 28,
+          height: 28,
+          borderRadius: 1,
+          display: 'grid',
+          placeItems: 'center',
+          color: DORADO_REVIVE_OSCURO,
+          bgcolor: DORADO_SUAVE,
+          '& .MuiSvgIcon-root': { fontSize: 17 },
+        }}
+      >
+        {icono}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="caption" sx={{ color: DORADO_REVIVE_OSCURO, fontWeight: 900 }} display="block">
+          {label}
+        </Typography>
+        <Typography variant="body2" fontWeight={900} noWrap title={valor}>
+          {valor}
+        </Typography>
+      </Box>
+    </Box>
+  );
 }
 
 function ResumenFila({ label, valor }) {
