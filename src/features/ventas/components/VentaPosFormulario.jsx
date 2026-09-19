@@ -48,6 +48,10 @@ const tipos = [
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fechaHora = (valor) => (valor ? new Date(valor).toLocaleString('es-EC') : '—');
 const AZUL_REVIVE = 'rgba(20, 73, 133, 1)';
+const DORADO_REVIVE = '#B88A00';
+const DORADO_REVIVE_OSCURO = '#8A6500';
+const NEGRO_REVIVE = '#171717';
+const DORADO_SUAVE = 'rgba(184, 138, 0, .10)';
 
 export function VentaPosFormulario({ onVolver, onGuardado }) {
   const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], productos: [] });
@@ -282,7 +286,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                 exclusive
                 onChange={(_, value) => { if (value) { setTipo(value); setBusqueda(''); } }}
                 size="small"
-                sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .7, '& .MuiToggleButtonGroup-grouped': { border: '1px solid #dce4ee !important', borderRadius: '7px !important', px: 1.15, py: .65, textTransform: 'none', fontWeight: 800, color: '#52606d', '&.Mui-selected': { bgcolor: 'rgba(20, 73, 133, .08)', borderColor: `${AZUL_REVIVE} !important`, color: AZUL_REVIVE } } }}
+                sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .7, '& .MuiToggleButtonGroup-grouped': { border: '1px solid #dfe3e8 !important', borderRadius: '8px !important', px: 1.25, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#fff', transition: 'all .18s ease', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { bgcolor: DORADO_REVIVE, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', boxShadow: '0 5px 12px rgba(184, 138, 0, .20)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
               >
                 {tipos.map((item) => (
                   <ToggleButton key={item.value} value={item.value}>{item.icono}<Typography variant="caption" sx={{ ml: .55, fontWeight: 900 }}>{item.label}</Typography></ToggleButton>
@@ -297,7 +301,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                     size="small"
                     fullWidth
                     placeholder={`Buscar ${tipos.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
-                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" /></InputAdornment> } }}
+                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
                   />
                   {(tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
                   <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 1, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
@@ -317,14 +321,14 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
           </Stack>
 
           <Box sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
-            <Box sx={{ border: '1px solid #dbe3ec', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 12px 28px rgba(15, 58, 107, .08)' }}>
-              <Box sx={{ p: 1.7, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <Box sx={{ border: '1px solid #e3e6ea', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 14px 30px rgba(23, 23, 23, .08)' }}>
+              <Box sx={{ p: 1.7, background: 'linear-gradient(135deg, #ffffff 0%, #ffffff 64%, rgba(184, 138, 0, .08) 100%)', borderBottom: '1px solid #e7e2d2' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 900, color: 'text.secondary' }}>TOTAL</Typography>
-                  <Typography variant="h3" fontWeight={900} sx={{ color: AZUL_REVIVE, lineHeight: 1 }}>{dinero(total)}</Typography>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 950, color: NEGRO_REVIVE, letterSpacing: .45 }}>TOTAL</Typography>
+                  <Typography variant="h3" fontWeight={950} sx={{ color: DORADO_REVIVE, lineHeight: 1, letterSpacing: -.6, textShadow: '0 1px 0 rgba(255,255,255,.8)' }}>{dinero(total)}</Typography>
                 </Box>
                 <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ color: '#4b5563', fontWeight: 800 }}>
                     {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
                   </Typography>
                   <Chip label="Pendiente de pago" size="small" color="warning" variant="outlined" sx={{ fontWeight: 800 }} />
@@ -340,13 +344,13 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
 
               <Box sx={{ p: 1.7 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.15 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: .7 }}><ShoppingCartOutlinedIcon sx={{ fontSize: 20, color: AZUL_REVIVE }} /><Typography variant="subtitle2" fontWeight={900}>Detalle de la venta</Typography></Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: .7 }}><ShoppingCartOutlinedIcon sx={{ fontSize: 20, color: DORADO_REVIVE }} /><Typography variant="subtitle2" fontWeight={950} sx={{ color: NEGRO_REVIVE }}>Detalle de la venta</Typography></Box>
                   <Chip size="small" label={`${totalItems} ítems`} />
                 </Box>
 
                 {carrito.length === 0 ? (
                   <Box sx={{ py: 4.5, textAlign: 'center', border: '1px dashed #d7e0ea', borderRadius: 1.5, bgcolor: '#fbfcfe' }}>
-                    <ShoppingCartOutlinedIcon sx={{ fontSize: 38, opacity: .22, mb: .5 }} />
+                    <ShoppingCartOutlinedIcon sx={{ fontSize: 38, color: DORADO_REVIVE, opacity: .35, mb: .5 }} />
                     <Typography variant="body2" fontWeight={700} color="text.secondary">Carrito vacío</Typography>
                     <Typography variant="caption" color="text.secondary">Selecciona un ítem del catálogo.</Typography>
                   </Box>
@@ -374,7 +378,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Impuesto</Typography><TextField size="small" type="number" value={impuesto} onChange={(e) => setImpuesto(e.target.value)} inputProps={{ min: 0 }} /></Box>
                 </Stack>
 
-                <Box sx={{ mt: 1.25, px: 1.3, py: 1.15, bgcolor: AZUL_REVIVE, color: '#fff', borderRadius: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Typography variant="subtitle1" fontWeight={900}>TOTAL</Typography><Typography variant="h4" fontWeight={900}>{dinero(total)}</Typography></Box>
+                <Box sx={{ mt: 1.25, px: 1.35, py: 1.15, background: `linear-gradient(135deg, ${NEGRO_REVIVE} 0%, #2a2a2a 100%)`, color: '#fff', borderRadius: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 18px rgba(23,23,23,.12)' }}><Typography variant="subtitle1" fontWeight={950}>TOTAL</Typography><Typography variant="h4" fontWeight={950} sx={{ color: '#E0B62F' }}>{dinero(total)}</Typography></Box>
 
                 <SeccionInterna titulo="Cobro" sx={{ mt: 1.8 }}>
                   <TextField select label="Método de pago" size="small" fullWidth value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
@@ -390,8 +394,8 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
-                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={dbanuStyles.addButtonRevive} startIcon={<ReceiptLongOutlinedIcon />}>Cobrar {dinero(total)}</Button>
-                  <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)}>Guardar pendiente</Button>
+                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, bgcolor: DORADO_REVIVE, color: '#fff', fontWeight: 950, boxShadow: '0 7px 16px rgba(184,138,0,.22)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO } }} startIcon={<ReceiptLongOutlinedIcon />}>Cobrar {dinero(total)}</Button>
+                  <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)} sx={{ borderColor: '#c8cdd3', color: NEGRO_REVIVE, fontWeight: 900, '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO } }}>Guardar pendiente</Button>
                 </Stack>
               </Box>
             </Box>
@@ -406,8 +410,11 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
 
 function SeccionFlotante({ titulo, children }) {
   return (
-    <Box sx={{ position: 'relative', border: '1px solid #dce4ed', borderRadius: 2, px: 1.5, pt: 2.05, pb: 1.45, bgcolor: '#fff' }}>
-      <Typography variant="caption" sx={{ position: 'absolute', top: -10, left: 14, px: .8, bgcolor: '#fff', color: AZUL_REVIVE, fontWeight: 900, letterSpacing: .25 }}>{titulo}</Typography>
+    <Box sx={{ position: 'relative', border: '1px solid #e1e5ea', borderRadius: 2, px: 1.5, pt: 2.1, pb: 1.5, bgcolor: '#fff', boxShadow: '0 6px 18px rgba(23,23,23,.035)' }}>
+      <Box sx={{ position: 'absolute', top: -11, left: 14, px: .8, bgcolor: '#fff', display: 'flex', alignItems: 'center', gap: .7 }}>
+        <Box sx={{ width: 4, height: 14, borderRadius: 3, bgcolor: DORADO_REVIVE }} />
+        <Typography variant="caption" sx={{ color: NEGRO_REVIVE, fontWeight: 950, letterSpacing: .2 }}>{titulo}</Typography>
+      </Box>
       {children}
     </Box>
   );
@@ -415,8 +422,8 @@ function SeccionFlotante({ titulo, children }) {
 
 function SeccionInterna({ titulo, children, sx = {} }) {
   return (
-    <Box sx={{ position: 'relative', border: '1px solid #e1e7ef', borderRadius: 1.5, px: 1.1, pt: 1.8, pb: 1.05, ...sx }}>
-      <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 11, px: .55, bgcolor: '#fff', fontWeight: 900, color: AZUL_REVIVE }}>{titulo}</Typography>
+    <Box sx={{ position: 'relative', border: '1px solid #e4e6e9', borderRadius: 1.5, px: 1.1, pt: 1.8, pb: 1.05, ...sx }}>
+      <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 11, px: .55, bgcolor: '#fff', fontWeight: 950, color: NEGRO_REVIVE }}>{titulo}</Typography>
       {children}
     </Box>
   );
@@ -427,17 +434,17 @@ function CatalogoCard({ item, tipo, onAgregar }) {
   const contractual = tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO';
   const icono = tipo === 'PRODUCTO' ? <Inventory2OutlinedIcon /> : tipo === 'SERVICIO' ? <FitnessCenterOutlinedIcon /> : tipo === 'PASE_DIARIO' ? <LocalActivityOutlinedIcon /> : <BadgeOutlinedIcon />;
   return (
-    <Box sx={{ border: '1px solid #e1e7ef', borderRadius: 1.6, overflow: 'hidden', bgcolor: '#fff', minHeight: 188, display: 'flex', flexDirection: 'column', transition: 'transform .15s ease, box-shadow .15s ease, border-color .15s ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 8px 18px rgba(15, 58, 107, .08)', borderColor: '#b9c9dc' } }}>
-      <Box sx={{ height: 68, bgcolor: '#f4f7fb', display: 'grid', placeItems: 'center', borderBottom: '1px solid #edf1f5' }}>
-        {item.imagen_url || item.imagen ? <Box component="img" src={item.imagen_url || item.imagen} alt={item.nombre} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Avatar sx={{ width: 40, height: 40, bgcolor: 'rgba(20, 73, 133, .10)', color: AZUL_REVIVE }}>{icono}</Avatar>}
+    <Box sx={{ border: '1px solid #e3e6ea', borderRadius: 1.6, overflow: 'hidden', bgcolor: '#fff', minHeight: 188, display: 'flex', flexDirection: 'column', transition: 'transform .15s ease, box-shadow .15s ease, border-color .15s ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 10px 22px rgba(23, 23, 23, .08)', borderColor: DORADO_REVIVE } }}>
+      <Box sx={{ height: 68, background: 'linear-gradient(135deg, #f8f9fa 0%, #fff 70%, rgba(184, 138, 0, .09) 100%)', display: 'grid', placeItems: 'center', borderBottom: '1px solid #eee8d8' }}>
+        {item.imagen_url || item.imagen ? <Box component="img" src={item.imagen_url || item.imagen} alt={item.nombre} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Avatar sx={{ width: 40, height: 40, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }}>{icono}</Avatar>}
       </Box>
       <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
         <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.2, minHeight: 32 }}>{item.nombre}</Typography>
         <Typography variant="caption" color="text.secondary" sx={{ mt: .3 }}>{tipo === 'SERVICIO' ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}` : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}</Typography>
         <Box sx={{ mt: 'auto', pt: .75 }}>
           <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: .6 }}>
-            <Box><Typography variant="subtitle1" fontWeight={900} color={sinPrecio ? 'warning.main' : AZUL_REVIVE}>{sinPrecio ? 'Por configurar' : dinero(item.precio)}</Typography>{tipo === 'PRODUCTO' && item.controla_stock ? <Typography variant="caption" color="text.secondary">Stock {Number(item.stock_actual || 0)}</Typography> : null}</Box>
-            <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}><span><IconButton size="small" onClick={onAgregar} disabled={sinPrecio || contractual} sx={{ border: '1px solid #d6e0eb', borderRadius: 1, color: AZUL_REVIVE }}><AddShoppingCartOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
+            <Box><Typography variant="subtitle1" fontWeight={950} color={sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO}>{sinPrecio ? 'Por configurar' : dinero(item.precio)}</Typography>{tipo === 'PRODUCTO' && item.controla_stock ? <Typography variant="caption" color="text.secondary">Stock {Number(item.stock_actual || 0)}</Typography> : null}</Box>
+            <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}><span><IconButton size="small" onClick={onAgregar} disabled={sinPrecio || contractual} sx={{ border: '1px solid #d9d9d9', borderRadius: 1, color: DORADO_REVIVE_OSCURO, bgcolor: '#fff', '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE } }}><AddShoppingCartOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
           </Box>
         </Box>
       </Box>
@@ -456,7 +463,7 @@ function CantidadControl({ cantidad, onMenos, onMas, onChange }) {
 }
 
 function DatoFactura({ label, valor }) {
-  return <Box sx={{ minWidth: 0 }}><Typography variant="caption" color="text.secondary" display="block">{label}</Typography><Typography variant="body2" fontWeight={800} noWrap title={valor}>{valor}</Typography></Box>;
+  return <Box sx={{ minWidth: 0 }}><Typography variant="caption" sx={{ color: DORADO_REVIVE_OSCURO, fontWeight: 850 }} display="block">{label}</Typography><Typography variant="body2" fontWeight={900} noWrap title={valor}>{valor}</Typography></Box>;
 }
 
 function ResumenFila({ label, valor }) {
