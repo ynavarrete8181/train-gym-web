@@ -6,6 +6,8 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LocalActivityOutlinedIcon from '@mui/icons-material/LocalActivityOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
 import MoreHorizOutlinedIcon from '@mui/icons-material/MoreHorizOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
@@ -252,9 +254,9 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
           </Alert>
         ) : null}
 
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.55fr) minmax(355px, .78fr)' }, gap: 2, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1.75fr) minmax(380px, .82fr)' }, gap: 2.2, alignItems: 'start' }}>
           <Stack spacing={2}>
-            <SeccionFlotante titulo="Cliente">
+            <SeccionPos titulo="Cliente" icono={<PersonOutlineOutlinedIcon />} descripcion="Selecciona un cliente o registra la venta como consumidor final.">
               <Autocomplete
                 options={contexto.clientes || []}
                 value={cliente}
@@ -278,15 +280,15 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                   Sin cliente seleccionado: la venta se registrará como consumidor final.
                 </Typography>
               )}
-            </SeccionFlotante>
+            </SeccionPos>
 
-            <SeccionFlotante titulo={`Catálogo · ${turno?.sede_nombre || 'sede actual'}`}>
+            <SeccionPos titulo={`Catálogo · ${turno?.sede_nombre || 'sede actual'}`} icono={<AppsOutlinedIcon />} descripcion="Servicios, productos y opciones disponibles para esta sede.">
               <ToggleButtonGroup
                 value={tipo}
                 exclusive
                 onChange={(_, value) => { if (value) { setTipo(value); setBusqueda(''); } }}
                 size="small"
-                sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .7, '& .MuiToggleButtonGroup-grouped': { border: '1px solid #dfe3e8 !important', borderRadius: '8px !important', px: 1.25, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#fff', transition: 'all .18s ease', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { bgcolor: DORADO_REVIVE, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', boxShadow: '0 5px 12px rgba(184, 138, 0, .20)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
+                sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .75, '& .MuiToggleButtonGroup-grouped': { minHeight: 38, border: '1px solid #e1e5ea !important', borderRadius: '9px !important', px: 1.5, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#f8fafc', transition: 'all .18s ease', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { background: `linear-gradient(135deg, ${DORADO_REVIVE} 0%, ${DORADO_REVIVE_OSCURO} 100%)`, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', boxShadow: '0 6px 14px rgba(184, 138, 0, .22)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
               >
                 {tipos.map((item) => (
                   <ToggleButton key={item.value} value={item.value}>{item.icono}<Typography variant="caption" sx={{ ml: .55, fontWeight: 900 }}>{item.label}</Typography></ToggleButton>
@@ -304,7 +306,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
                   />
                   {(tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
-                  <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: 1, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
+                  <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 1.2, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
                     {disponibles.map((item) => <CatalogoCard key={`${tipo}-${item.id}`} item={item} tipo={tipo} onAgregar={() => agregar(item)} />)}
                   </Box>
                   {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
@@ -317,21 +319,21 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                   <Button startIcon={<AddShoppingCartOutlinedIcon />} variant="outlined" onClick={agregarOtro}>Agregar</Button>
                 </Box>
               )}
-            </SeccionFlotante>
+            </SeccionPos>
           </Stack>
 
           <Box sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
             <Box sx={{ border: '1px solid #e3e6ea', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 14px 30px rgba(23, 23, 23, .08)' }}>
-              <Box sx={{ p: 1.7, background: 'linear-gradient(135deg, #ffffff 0%, #ffffff 64%, rgba(184, 138, 0, .08) 100%)', borderBottom: '1px solid #e7e2d2' }}>
+              <Box sx={{ p: 2, background: `linear-gradient(135deg, ${NEGRO_REVIVE} 0%, #28230f 58%, ${DORADO_REVIVE_OSCURO} 145%)`, borderBottom: '1px solid rgba(255,255,255,.08)', position: 'relative', overflow: 'hidden', '&::after': { content: '""', position: 'absolute', width: 190, height: 190, right: -75, top: -110, borderRadius: '50%', bgcolor: 'rgba(212,160,23,.10)' } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 950, color: NEGRO_REVIVE, letterSpacing: .45 }}>TOTAL</Typography>
-                  <Typography variant="h3" fontWeight={950} sx={{ color: DORADO_REVIVE, lineHeight: 1, letterSpacing: -.6, textShadow: '0 1px 0 rgba(255,255,255,.8)' }}>{dinero(total)}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 950, color: '#fff', letterSpacing: .5, position: 'relative', zIndex: 1 }}>TOTAL</Typography>
+                  <Typography variant="h3" fontWeight={950} sx={{ color: '#fff', lineHeight: 1, letterSpacing: -.8, position: 'relative', zIndex: 1 }}>{dinero(total)}</Typography>
                 </Box>
                 <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
-                  <Typography variant="caption" sx={{ color: '#4b5563', fontWeight: 800 }}>
+                  <Typography variant="caption" sx={{ color: 'rgba(255,255,255,.86)', fontWeight: 800, position: 'relative', zIndex: 1 }}>
                     {turno?.sede_nombre || 'Sede pendiente'} · {turno?.caja_nombre || 'Caja pendiente'}
                   </Typography>
-                  <Chip label="Pendiente de pago" size="small" color="warning" variant="outlined" sx={{ fontWeight: 800 }} />
+                  <Chip label="Pendiente de pago" size="small" sx={{ fontWeight: 900, color: DORADO_REVIVE_OSCURO, bgcolor: '#fff', border: `1px solid ${DORADO_REVIVE}`, position: 'relative', zIndex: 1 }} />
                 </Box>
               </Box>
 
@@ -349,7 +351,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                 </Box>
 
                 {carrito.length === 0 ? (
-                  <Box sx={{ py: 4.5, textAlign: 'center', border: '1px dashed #d7e0ea', borderRadius: 1.5, bgcolor: '#fbfcfe' }}>
+                  <Box sx={{ py: 5.2, textAlign: 'center', border: '1px dashed #d8dee7', borderRadius: 2, bgcolor: '#fbfcfe' }}>
                     <ShoppingCartOutlinedIcon sx={{ fontSize: 38, color: DORADO_REVIVE, opacity: .35, mb: .5 }} />
                     <Typography variant="body2" fontWeight={700} color="text.secondary">Carrito vacío</Typography>
                     <Typography variant="caption" color="text.secondary">Selecciona un ítem del catálogo.</Typography>
@@ -378,7 +380,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Impuesto</Typography><TextField size="small" type="number" value={impuesto} onChange={(e) => setImpuesto(e.target.value)} inputProps={{ min: 0 }} /></Box>
                 </Stack>
 
-                <Box sx={{ mt: 1.25, px: 1.35, py: 1.15, background: `linear-gradient(135deg, ${NEGRO_REVIVE} 0%, #2a2a2a 100%)`, color: '#fff', borderRadius: 1.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 8px 18px rgba(23,23,23,.12)' }}><Typography variant="subtitle1" fontWeight={950}>TOTAL</Typography><Typography variant="h4" fontWeight={950} sx={{ color: '#E0B62F' }}>{dinero(total)}</Typography></Box>
+                <Box sx={{ mt: 1.3, pt: 1.25, borderTop: '1px solid #dfe4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Typography variant="h6" fontWeight={950} sx={{ color: NEGRO_REVIVE }}>TOTAL</Typography><Typography variant="h4" fontWeight={950} sx={{ color: DORADO_REVIVE_OSCURO }}>{dinero(total)}</Typography></Box>
 
                 <SeccionInterna titulo="Cobro" sx={{ mt: 1.8 }}>
                   <TextField select label="Método de pago" size="small" fullWidth value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
@@ -394,7 +396,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
-                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, borderRadius: 1, textTransform: 'none', color: '#111827', fontWeight: 950, boxShadow: '0 7px 16px rgba(184,138,0,.18)' }} startIcon={<ReceiptLongOutlinedIcon />}>Proceder al cobro · {dinero(total)}</Button>
+                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, minHeight: 46, borderRadius: 1.2, textTransform: 'none', color: '#111827', fontWeight: 950, fontSize: 13, boxShadow: '0 8px 18px rgba(184,138,0,.18)' }} startIcon={<ReceiptLongOutlinedIcon />}>Proceder al cobro · {dinero(total)}</Button>
                   <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)} sx={{ borderColor: '#c8cdd3', color: NEGRO_REVIVE, fontWeight: 900, '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO } }}>Guardar pendiente</Button>
                 </Stack>
               </Box>
@@ -404,6 +406,38 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
       </Paper>
 
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion((actual) => ({ ...actual, mensaje: '' }))} />
+    </Box>
+  );
+}
+
+function SeccionPos({ titulo, icono, descripcion, children }) {
+  return (
+    <Box
+      sx={{
+        border: '1px solid #e1e5ea',
+        borderRadius: 2,
+        bgcolor: '#fff',
+        px: { xs: 1.35, md: 1.7 },
+        py: 1.45,
+        boxShadow: '0 8px 22px rgba(15,23,42,.045)',
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, mb: 1.25, flexWrap: 'wrap' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: .9 }}>
+          <Box sx={{ width: 34, height: 34, borderRadius: 1.2, display: 'grid', placeItems: 'center', bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }}>
+            {icono}
+          </Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 950, color: NEGRO_REVIVE, lineHeight: 1 }}>
+            {titulo}
+          </Typography>
+        </Box>
+        {descripcion ? (
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+            {descripcion}
+          </Typography>
+        ) : null}
+      </Box>
+      {children}
     </Box>
   );
 }
@@ -432,44 +466,88 @@ function SeccionInterna({ titulo, children, sx = {} }) {
 function CatalogoCard({ item, tipo, onAgregar }) {
   const sinPrecio = item.precio === null || item.precio === undefined || Number(item.precio) <= 0;
   const contractual = tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO';
-  const icono = tipo === 'PRODUCTO' ? <Inventory2OutlinedIcon /> : tipo === 'SERVICIO' ? <FitnessCenterOutlinedIcon /> : tipo === 'PASE_DIARIO' ? <LocalActivityOutlinedIcon /> : <BadgeOutlinedIcon />;
+  const icono = tipo === 'PRODUCTO'
+    ? <Inventory2OutlinedIcon />
+    : tipo === 'SERVICIO'
+      ? <FitnessCenterOutlinedIcon />
+      : tipo === 'PASE_DIARIO'
+        ? <LocalActivityOutlinedIcon />
+        : <BadgeOutlinedIcon />;
+
   return (
-    <Box sx={{ border: '1px solid #e3e6ea', borderRadius: 1.6, overflow: 'hidden', bgcolor: '#fff', minHeight: 188, display: 'flex', flexDirection: 'column', transition: 'transform .15s ease, box-shadow .15s ease, border-color .15s ease', '&:hover': { transform: 'translateY(-2px)', boxShadow: '0 10px 22px rgba(23, 23, 23, .08)', borderColor: DORADO_REVIVE } }}>
-      <Box sx={{ height: 68, background: 'linear-gradient(135deg, #f8f9fa 0%, #fff 70%, rgba(184, 138, 0, .09) 100%)', display: 'grid', placeItems: 'center', borderBottom: '1px solid #eee8d8' }}>
-        {item.imagen_url || item.imagen ? <Box component="img" src={item.imagen_url || item.imagen} alt={item.nombre} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <Avatar sx={{ width: 40, height: 40, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }}>{icono}</Avatar>}
+    <Box
+      sx={{
+        border: '1px solid #e1e5ea',
+        borderRadius: 2,
+        overflow: 'hidden',
+        bgcolor: '#fff',
+        minHeight: 236,
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 5px 14px rgba(15,23,42,.045)',
+        transition: 'transform .16s ease, box-shadow .16s ease, border-color .16s ease',
+        '&:hover': {
+          transform: 'translateY(-3px)',
+          boxShadow: '0 12px 26px rgba(15,23,42,.10)',
+          borderColor: DORADO_REVIVE,
+        },
+      }}
+    >
+      <Box sx={{ height: 92, bgcolor: '#f5f6f8', display: 'grid', placeItems: 'center', borderBottom: '1px solid #edf0f3' }}>
+        {item.imagen_url || item.imagen ? (
+          <Box component="img" src={item.imagen_url || item.imagen} alt={item.nombre} sx={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : (
+          <Avatar sx={{ width: 48, height: 48, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }}>
+            {icono}
+          </Avatar>
+        )}
       </Box>
-      <Box sx={{ p: 1, display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.2, minHeight: 32 }}>{item.nombre}</Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ mt: .3 }}>{tipo === 'SERVICIO' ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}` : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}</Typography>
-        <Box sx={{ mt: 'auto', pt: .75 }}>
-          <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: .6 }}>
-            <Box><Typography variant="subtitle1" fontWeight={950} color={sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO}>{sinPrecio ? 'Por configurar' : dinero(item.precio)}</Typography>{tipo === 'PRODUCTO' && item.controla_stock ? <Typography variant="caption" color="text.secondary">Stock {Number(item.stock_actual || 0)}</Typography> : null}</Box>
-            <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}>
-              <span style={{ width: '100%' }}>
-                <Button
-                  fullWidth
-                  size="small"
-                  variant="contained"
-                  startIcon={<AddShoppingCartOutlinedIcon />}
-                  onClick={onAgregar}
-                  disabled={sinPrecio || contractual}
-                  sx={{
-                    mt: .8,
-                    minHeight: 32,
-                    borderRadius: 1,
-                    textTransform: 'none',
-                    fontWeight: 900,
-                    bgcolor: DORADO_REVIVE,
-                    color: '#111827',
-                    boxShadow: 'none',
-                    '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' },
-                  }}
-                >
-                  {contractual ? 'Ver membresía' : 'Agregar'}
-                </Button>
-              </span>
-            </Tooltip>
-          </Box>
+
+      <Box sx={{ p: 1.15, display: 'flex', flexDirection: 'column', flex: 1 }}>
+        <Typography variant="body2" fontWeight={950} sx={{ color: NEGRO_REVIVE, lineHeight: 1.2, minHeight: 34 }}>
+          {item.nombre}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: .3, lineHeight: 1.3 }}>
+          {tipo === 'SERVICIO'
+            ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}`
+            : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
+        </Typography>
+
+        <Box sx={{ mt: 'auto', pt: 1 }}>
+          <Typography variant="h6" fontWeight={950} sx={{ color: sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO, lineHeight: 1.05 }}>
+            {sinPrecio ? 'Por configurar' : dinero(item.precio)}
+          </Typography>
+          {tipo === 'PRODUCTO' && item.controla_stock ? (
+            <Typography variant="caption" color="text.secondary">
+              Stock {Number(item.stock_actual || 0)}
+            </Typography>
+          ) : null}
+
+          <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}>
+            <span style={{ display: 'block', width: '100%' }}>
+              <Button
+                fullWidth
+                size="small"
+                variant="contained"
+                startIcon={<AddShoppingCartOutlinedIcon />}
+                onClick={onAgregar}
+                disabled={sinPrecio || contractual}
+                sx={{
+                  mt: 1,
+                  minHeight: 34,
+                  borderRadius: 1,
+                  textTransform: 'none',
+                  fontWeight: 900,
+                  bgcolor: DORADO_REVIVE,
+                  color: '#111827',
+                  boxShadow: 'none',
+                  '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' },
+                }}
+              >
+                {contractual ? 'Ver membresía' : 'Agregar'}
+              </Button>
+            </span>
+          </Tooltip>
         </Box>
       </Box>
     </Box>
