@@ -35,6 +35,7 @@ import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { uiTokens } from '../../../styles/uiTokens.js';
 import { ventaServicio } from '../services/ventaServicio.js';
 
 const tipos = [
@@ -47,11 +48,10 @@ const tipos = [
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fechaHora = (valor) => (valor ? new Date(valor).toLocaleString('es-EC') : '—');
-const AZUL_REVIVE = 'rgba(20, 73, 133, 1)';
-const DORADO_REVIVE = '#B88A00';
-const DORADO_REVIVE_OSCURO = '#8A6500';
-const NEGRO_REVIVE = '#171717';
-const DORADO_SUAVE = 'rgba(184, 138, 0, .10)';
+const DORADO_REVIVE = uiTokens.colores.acento;
+const DORADO_REVIVE_OSCURO = uiTokens.colores.acentoOscuro;
+const NEGRO_REVIVE = uiTokens.colores.textoFuerte;
+const DORADO_SUAVE = uiTokens.colores.acentoSuave;
 
 export function VentaPosFormulario({ onVolver, onGuardado }) {
   const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], productos: [] });
@@ -394,7 +394,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
-                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, bgcolor: DORADO_REVIVE, color: '#fff', fontWeight: 950, boxShadow: '0 7px 16px rgba(184,138,0,.22)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO } }} startIcon={<ReceiptLongOutlinedIcon />}>Cobrar {dinero(total)}</Button>
+                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, borderRadius: 1, textTransform: 'none', color: '#111827', fontWeight: 950, boxShadow: '0 7px 16px rgba(184,138,0,.18)' }} startIcon={<ReceiptLongOutlinedIcon />}>Proceder al cobro · {dinero(total)}</Button>
                   <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)} sx={{ borderColor: '#c8cdd3', color: NEGRO_REVIVE, fontWeight: 900, '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO } }}>Guardar pendiente</Button>
                 </Stack>
               </Box>
@@ -444,7 +444,31 @@ function CatalogoCard({ item, tipo, onAgregar }) {
         <Box sx={{ mt: 'auto', pt: .75 }}>
           <Box sx={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', gap: .6 }}>
             <Box><Typography variant="subtitle1" fontWeight={950} color={sinPrecio ? 'warning.main' : DORADO_REVIVE_OSCURO}>{sinPrecio ? 'Por configurar' : dinero(item.precio)}</Typography>{tipo === 'PRODUCTO' && item.controla_stock ? <Typography variant="caption" color="text.secondary">Stock {Number(item.stock_actual || 0)}</Typography> : null}</Box>
-            <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}><span><IconButton size="small" onClick={onAgregar} disabled={sinPrecio || contractual} sx={{ border: '1px solid #d9d9d9', borderRadius: 1, color: DORADO_REVIVE_OSCURO, bgcolor: '#fff', '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE } }}><AddShoppingCartOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
+            <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura primero el precio' : 'Agregar al carrito'}>
+              <span style={{ width: '100%' }}>
+                <Button
+                  fullWidth
+                  size="small"
+                  variant="contained"
+                  startIcon={<AddShoppingCartOutlinedIcon />}
+                  onClick={onAgregar}
+                  disabled={sinPrecio || contractual}
+                  sx={{
+                    mt: .8,
+                    minHeight: 32,
+                    borderRadius: 1,
+                    textTransform: 'none',
+                    fontWeight: 900,
+                    bgcolor: DORADO_REVIVE,
+                    color: '#111827',
+                    boxShadow: 'none',
+                    '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' },
+                  }}
+                >
+                  {contractual ? 'Ver membresía' : 'Agregar'}
+                </Button>
+              </span>
+            </Tooltip>
           </Box>
         </Box>
       </Box>
