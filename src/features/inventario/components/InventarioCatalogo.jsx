@@ -64,7 +64,7 @@ const configs = {
     obtener: 'obtenerMovimientos',
     crear: 'crearMovimiento',
     actualizar: null,
-    inicial: { id: null, producto_id: '', sede_id: '', tipo_movimiento: 'ENTRADA', cantidad: '', referencia: '', observaciones: '' },
+    inicial: { id: null, producto_id: '', sede_id: '', lote_id: '', tipo_movimiento: 'ENTRADA', cantidad: '', referencia: '', observaciones: '' },
   },
 };
 
@@ -293,11 +293,23 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData }) {
     );
   }
 
+  const productoSeleccionado = (catalogos.productos || []).find((item) => Number(item.id) === Number(formData.producto_id));
+  const lotesDisponibles = (catalogos.lotes || []).filter((lote) =>
+    Number(lote.producto_id) === Number(formData.producto_id)
+    && (!formData.sede_id || Number(lote.sede_id) === Number(formData.sede_id))
+  );
+
   return (
     <Box sx={grid}>
       <TextField select label="Producto" name="producto_id" value={formData.producto_id || ''} onChange={onChange} required size="small">{(catalogos.productos || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.codigo} - {item.nombre} ({numero(item.stock_actual)})</MenuItem>)}</TextField>
-      <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={onChange} size="small"><MenuItem value="">Sin sede</MenuItem>{(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}</TextField>
+      <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={onChange} required size="small"><MenuItem value="">Seleccione sede</MenuItem>{(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}</TextField>
       <TextField select label="Tipo" name="tipo_movimiento" value={formData.tipo_movimiento || 'ENTRADA'} onChange={onChange} required size="small">{tiposMovimiento.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField>
+      {productoSeleccionado?.maneja_lotes ? (
+        <TextField select label="Lote" name="lote_id" value={formData.lote_id || ''} onChange={onChange} required size="small">
+          <MenuItem value="">Seleccione lote</MenuItem>
+          {lotesDisponibles.map((lote) => <MenuItem key={lote.id} value={lote.id}>{lote.codigo_lote} · {lote.sede_nombre} · stock {numero(lote.stock_actual)}{lote.fecha_vencimiento ? ` · vence ${lote.fecha_vencimiento}` : ''}</MenuItem>)}
+        </TextField>
+      ) : null}
       <TextField label="Cantidad" name="cantidad" type="number" value={formData.cantidad || ''} onChange={onChange} required size="small" />
       <TextField label="Referencia" name="referencia" value={formData.referencia || ''} onChange={onChange} size="small" />
       <TextField label="Observaciones" name="observaciones" value={formData.observaciones || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
@@ -384,5 +396,5 @@ function normalizar(tipo, data) {
     return { categoria_id: data.categoria_id ? Number(data.categoria_id) : null, proveedor_id: data.proveedor_id ? Number(data.proveedor_id) : null, codigo: data.codigo, nombre: data.nombre, descripcion: data.descripcion || null, marca: data.marca || null, imagen_url: data.imagen_url || null, unidad_medida: data.unidad_medida, precio_costo: Number(data.precio_costo || 0), precio_venta: Number(data.precio_venta || 0), stock_actual: Number(data.stock_actual || 0), stock_minimo: Number(data.stock_minimo || 0), controla_stock: Boolean(data.controla_stock), maneja_lotes: Boolean(data.maneja_lotes), activo: Boolean(data.activo), precios_sede: (data.precios_sede || []).map((x) => ({ sede_id: Number(x.sede_id), precio: Number(x.precio || 0), activo: x.activo !== false })), stocks_sede: (data.stocks_sede || []).map((x) => ({ sede_id: Number(x.sede_id), stock_actual: Number(x.stock_actual || 0), stock_minimo: Number(x.stock_minimo || 0) })), lotes: data.maneja_lotes ? (data.lotes || []).filter((x) => x.sede_id && x.codigo_lote).map((x) => ({ id: x.id || null, sede_id: Number(x.sede_id), codigo_lote: x.codigo_lote, fecha_vencimiento: x.fecha_vencimiento || null, cantidad_inicial: Number(x.cantidad_inicial || 0), stock_actual: Number(x.stock_actual || 0), costo_unitario: x.costo_unitario === '' || x.costo_unitario == null ? null : Number(x.costo_unitario), activo: x.activo !== false })) : [] };
   }
   if (!data.producto_id || !data.tipo_movimiento || !data.cantidad) return null;
-  return { producto_id: Number(data.producto_id), sede_id: data.sede_id ? Number(data.sede_id) : null, tipo_movimiento: data.tipo_movimiento, cantidad: Number(data.cantidad), referencia: data.referencia || null, observaciones: data.observaciones || null };
+  return { producto_id: Number(data.producto_id), sede_id: data.sede_id ? Number(data.sede_id) : null, lote_id: data.lote_id ? Number(data.lote_id) : null, tipo_movimiento: data.tipo_movimiento, cantidad: Number(data.cantidad), referencia: data.referencia || null, observaciones: data.observaciones || null };
 }
