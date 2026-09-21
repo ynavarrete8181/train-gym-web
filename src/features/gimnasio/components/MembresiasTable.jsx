@@ -26,6 +26,7 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
           <FilterHeaderCell value={filtrosColumna.codigo} onChange={(v) => onFiltroColumna('codigo', v)} options={opciones(meta.opciones_filtro?.codigo)}>Contrato</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.cliente} onChange={(v) => onFiltroColumna('cliente', v)} options={opciones(meta.opciones_filtro?.cliente)}>Cliente</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.plan} onChange={(v) => onFiltroColumna('plan', v)} options={opciones(meta.opciones_filtro?.plan)}>Plan</FilterHeaderCell>
+          <TableCell>Entrenador</TableCell>
           <TableCell>Vigencia</TableCell>
           <FilterHeaderCell value={filtrosColumna.estado} onChange={(v) => onFiltroColumna('estado', v)} options={[{ value: 'PENDIENTE_PAGO', label: 'Pendiente pago' }, { value: 'ACTIVA', label: 'Activa' }, { value: 'VENCIDA', label: 'Vencida' }, { value: 'CONGELADA', label: 'Congelada' }, { value: 'CANCELADA', label: 'Cancelada' }]}>Estado</FilterHeaderCell>
           <TableCell align="right">Acciones</TableCell>
@@ -45,6 +46,10 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
             <TableCell>
               <Typography variant="body2">{membresia.plan_nombre || 'Plan no asignado'}{membresia.precio_aplicado ? ` · $${Number(membresia.precio_aplicado).toFixed(2)}` : ''}</Typography>
               <Typography variant="caption" color="text.secondary">{membresia.sede_nombre || 'Sede no asignada'}</Typography>
+            </TableCell>
+            <TableCell>
+              <Typography variant="body2" fontWeight="500">{membresia.entrenador_nombre || 'Sin entrenador'}</Typography>
+              <Typography variant="caption" color="text.secondary">{membresia.entrenador_id ? 'Asignado a la membresía' : 'No requerido / pendiente'}</Typography>
             </TableCell>
             <TableCell>
               <Typography variant="body2">{fecha(membresia.fecha_inicio)} - {fecha(membresia.fecha_fin)}</Typography>
@@ -68,7 +73,7 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
           </TableRow>
         ))}
         {membresias.length === 0 ? (
-          <TablaEstadoFila colSpan={6} cargando={cargando} texto="No hay membresías registradas." />
+          <TablaEstadoFila colSpan={7} cargando={cargando} texto="No hay membresías registradas." />
         ) : null}
       </TableBody>
     </TablaGestion>
