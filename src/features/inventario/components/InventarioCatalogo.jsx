@@ -25,6 +25,7 @@ const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
+const colorEstado = (color) => ['default', 'info', 'success', 'warning', 'error'].includes(color) ? color : 'default';
 
 const configs = {
   categorias: {
@@ -387,7 +388,7 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotifi
       {productoSeleccionado?.maneja_lotes && !['SALIDA', 'BAJA'].includes(formData.tipo_movimiento) ? (
         <TextField select label="Lote" name="lote_id" value={formData.lote_id || ''} onChange={onChange} required size="small">
           <MenuItem value="">Seleccione lote</MenuItem>
-          {lotesDisponibles.map((lote) => <MenuItem key={lote.id} value={lote.id}>{lote.codigo_lote} · {lote.sede_nombre} · stock {numero(lote.stock_actual)}{lote.fecha_vencimiento ? ` · vence ${lote.fecha_vencimiento}` : ''}</MenuItem>)}
+          {lotesDisponibles.map((lote) => <MenuItem key={lote.id} value={lote.id}>{lote.codigo_lote} · {lote.sede_nombre} · stock {numero(lote.stock_actual)}{lote.fecha_vencimiento ? ` · vence ${lote.fecha_vencimiento}` : ''}{lote.estado_nombre ? ` · ${lote.estado_nombre}` : ''}</MenuItem>)}
         </TextField>
       ) : null}
       {productoSeleccionado?.maneja_lotes && ['SALIDA', 'BAJA'].includes(formData.tipo_movimiento) ? (
@@ -436,7 +437,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro) {
     { key: 'producto', header: filtro('producto', 'Producto', opciones(meta.opciones_filtro?.producto)), render: (item) => <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}><Avatar variant="rounded" src={item.imagen_url || undefined} sx={{ width: 34, height: 44, bgcolor: '#f3f4f6' }}><Inventory2OutlinedIcon sx={{ fontSize: 18 }} /></Avatar><Box><Typography variant="body2" fontWeight="700">{item.nombre}</Typography><Typography variant="caption" color="text.secondary">{item.codigo} · {item.marca || 'Sin marca'}</Typography></Box></Box> },
     { key: 'categoria', header: filtro('categoria', 'Categoría', opciones(meta.opciones_filtro?.categoria)), render: (item) => item.categoria_nombre || 'Sin categoría' },
     { key: 'sedes', header: <TableCell key="sedes">Precio / stock por sede</TableCell>, render: (item) => <Stack spacing={.25}>{(item.precios_sede || []).map((precio) => { const stock = (item.stocks_sede || []).find((x) => Number(x.sede_id) === Number(precio.sede_id)); return <Typography key={precio.sede_id} variant="caption"><b>{precio.sede_nombre}:</b> {dinero(precio.precio)} · stock {numero(stock?.stock_actual || 0)}</Typography>; })}</Stack> },
-    { key: 'lotes', header: <TableCell key="lotes">Lotes</TableCell>, render: (item) => item.maneja_lotes ? <Chip size="small" label={`${(item.lotes || []).length} activos`} variant="outlined" /> : <Typography variant="caption" color="text.secondary">No aplica</Typography> },
+    { key: 'lotes', header: <TableCell key="lotes">Lotes</TableCell>, render: (item) => item.maneja_lotes ? <Stack spacing={.35}>{(item.lotes || []).length ? (item.lotes || []).slice(0, 2).map((lote) => <Chip key={lote.id} size="small" label={`${lote.codigo_lote} · ${lote.estado_nombre || 'Sin estado'}`} color={colorEstado(lote.estado_color)} variant="outlined" sx={{ justifyContent: 'flex-start' }} />) : <Chip size="small" label="Sin lotes" variant="outlined" />}{(item.lotes || []).length > 2 ? <Typography variant="caption" color="text.secondary">+{(item.lotes || []).length - 2} lote(s)</Typography> : null}</Stack> : <Typography variant="caption" color="text.secondary">No aplica</Typography> },
     { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'true', label: 'Activo' }, { value: 'false', label: 'Inactivo' }]), render: (item) => <StatusChip estado={estadoBool(item.activo)} /> },
   ];
 
@@ -446,6 +447,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro) {
     { key: 'cantidad', header: <TableCell key="cantidad">Cantidad</TableCell>, render: (item) => numero(item.cantidad) },
     { key: 'stock', header: <TableCell key="stock">Stock anterior / nuevo</TableCell>, render: (item) => `${numero(item.stock_anterior)} / ${numero(item.stock_nuevo)}` },
     { key: 'sede', header: filtro('sede', 'Sede', opciones(meta.opciones_filtro?.sede)), render: (item) => item.sede_nombre || 'Sin sede' },
+    { key: 'estado_movimiento', header: <TableCell key="estado_movimiento">Estado</TableCell>, render: (item) => <Chip size="small" label={item.estado_nombre || item.estado_valor || 'Sin estado'} color={colorEstado(item.estado_color)} variant="outlined" /> },
     { key: 'referencia', header: <TableCell key="referencia">Referencia</TableCell>, render: (item) => item.referencia || 'Sin referencia' },
   ];
 }
