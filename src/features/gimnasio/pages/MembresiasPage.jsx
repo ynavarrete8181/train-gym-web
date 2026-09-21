@@ -134,7 +134,7 @@ export function MembresiasPage() {
         });
         setEntrenadores(response.datos || []);
         setFormData((actual) => {
-          if (!actual.entrenador_id) return actual;
+          if (!actual.entrenador_id || actual.id) return actual;
           const existe = (response.datos || []).some((item) => String(item.id) === String(actual.entrenador_id));
           return existe ? actual : { ...actual, entrenador_id: '' };
         });
