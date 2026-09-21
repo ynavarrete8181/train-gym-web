@@ -11,6 +11,7 @@ export const ventaServicio = {
   cerrarTurnoCaja: async (id, payload) => (await api.post(`/base/ventas/turnos-caja/${id}/cerrar`, payload)).data,
 
   obtenerVentas: async (params = { page: 1 }) => (await api.get('/base/ventas/ventas', { params })).data,
+  obtenerDetalleVenta: async (id) => (await api.get(`/base/ventas/ventas/${id}/detalle`)).data,
   obtenerContextoPos: async () => (await api.get('/base/ventas/pos/contexto')).data,
   crearVentaPos: async (payload) => (await api.post('/base/ventas/pos', payload)).data,
   cobrarVentaPos: async (payload) => (await api.post('/base/ventas/pos/cobrar', payload)).data,
