@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
-import { Box, Button, IconButton, Paper, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
@@ -28,6 +28,8 @@ export function VentasPage() {
   const [filtrosColumna, setFiltrosColumna] = useState({});
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const [detalle, setDetalle] = useState(null);
+  const [cargandoDetalle, setCargandoDetalle] = useState(false);
 
   const cargar = async (params = filtros) => {
     setCargando(true);
@@ -56,6 +58,18 @@ export function VentasPage() {
     setFiltrosColumna(columnas);
     setFiltros(nuevos);
     cargar(nuevos);
+  };
+
+  const abrirDetalle = async (id) => {
+    setCargandoDetalle(true);
+    try {
+      const response = await ventaServicio.obtenerDetalleVenta(id);
+      setDetalle(response.datos || response);
+    } catch (error) {
+      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo cargar el detalle de la venta.', tipo: 'error' });
+    } finally {
+      setCargandoDetalle(false);
+    }
   };
 
   const columnas = useMemo(() => {
@@ -95,12 +109,90 @@ export function VentasPage() {
         >
           <TableHead><TableRow>{columnas.map((columna) => columna.header)}<TableCell align="right">Acciones</TableCell></TableRow></TableHead>
           <TableBody>
-            {items.map((item) => <TableRow key={item.id} hover>{columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}<TableCell align="right"><Tooltip title="Detalle disponible en la siguiente iteración"><span><IconButton size="small" disabled><EditOutlinedIcon fontSize="small" /></IconButton></span></Tooltip></TableCell></TableRow>)}
+            {items.map((item) => <TableRow key={item.id} hover>{columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}<TableCell align="right"><Tooltip title="Ver comprobante"><IconButton size="small" onClick={() => abrirDetalle(item.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton></Tooltip></TableCell></TableRow>)}
             {items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + 1} cargando={cargando} texto="No hay ventas para los filtros aplicados." /> : null}
           </TableBody>
         </TablaGestion>
       </Paper>
+      <Dialog open={Boolean(detalle) || cargandoDetalle} onClose={() => !cargandoDetalle && setDetalle(null)} fullWidth maxWidth="md">
+        <DialogTitle sx={{ fontWeight: 950, borderBottom: '1px solid #e5e7eb' }}>
+          {cargandoDetalle ? 'Cargando venta...' : `Comprobante · ${detalle?.comprobante?.numero || detalle?.numero || ''}`}
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2.2 }}>
+          {detalle ? (
+            <Stack spacing={2}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.2 }}>
+                <Dato label="N.º venta" valor={detalle.numero} />
+                <Dato label="Estado" valor={detalle.estado_nombre || detalle.estado} />
+                <Dato label="Sede" valor={detalle.sede_nombre || '—'} />
+                <Dato label="Caja" valor={detalle.caja_nombre || '—'} />
+                <Dato label="Cliente" valor={detalle.cliente_nombre || 'Consumidor final'} />
+                <Dato label="Fecha" valor={detalle.fecha_venta ? new Date(detalle.fecha_venta).toLocaleString('es-EC') : '—'} />
+                <Dato label="Comprobante" valor={detalle.comprobante?.numero || 'Pendiente'} />
+                <Dato label="Tipo" valor={detalle.comprobante?.tipo_comprobante || 'RECIBO'} />
+              </Box>
+
+              <Divider />
+              <Table size="small">
+                <TableHead><TableRow><TableCell>Detalle</TableCell><TableCell align="right">Cant.</TableCell><TableCell align="right">P. unitario</TableCell><TableCell align="right">Total</TableCell></TableRow></TableHead>
+                <TableBody>
+                  {(detalle.detalles || []).map((fila) => (
+                    <TableRow key={fila.id}>
+                      <TableCell><Typography variant="body2" fontWeight={800}>{fila.descripcion}</Typography><Typography variant="caption" color="text.secondary">{fila.tipo_item || 'ITEM'}</Typography></TableCell>
+                      <TableCell align="right">{Number(fila.cantidad || 0).toFixed(2)}</TableCell>
+                      <TableCell align="right">{dinero(fila.precio_unitario)}</TableCell>
+                      <TableCell align="right">{dinero(fila.total_linea)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <Box sx={{ ml: 'auto', width: { xs: '100%', sm: 320 } }}>
+                <Stack spacing={.5}>
+                  <Resumen label="Subtotal" valor={dinero(detalle.subtotal)} />
+                  <Resumen label="Descuento" valor={dinero(detalle.descuento)} />
+                  <Resumen label="Impuesto" valor={dinero(detalle.impuesto)} />
+                  <Divider />
+                  <Resumen label="TOTAL" valor={dinero(detalle.total)} fuerte />
+                </Stack>
+              </Box>
+
+              {(detalle.pagos || []).length ? (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={950} sx={{ mb: .7 }}>Pago</Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap">
+                    {(detalle.pagos || []).map((pago) => <Chip key={pago.id} label={`${pago.metodo_pago} · ${dinero(pago.monto)} · ${pago.estado_nombre || pago.estado}`} size="small" />)}
+                  </Stack>
+                </Box>
+              ) : null}
+
+              {(detalle.movimientos_inventario || []).length ? (
+                <Box sx={{ p: 1.2, border: '1px solid #e5e7eb', borderRadius: 1.5, bgcolor: '#f8fafc' }}>
+                  <Typography variant="subtitle2" fontWeight={950}>Inventario aplicado</Typography>
+                  {(detalle.movimientos_inventario || []).map((mov) => (
+                    <Typography key={mov.id} variant="caption" display="block" color="text.secondary">
+                      {mov.producto_nombre}: -{Number(mov.cantidad || 0)} · stock {Number(mov.stock_anterior || 0)} → {Number(mov.stock_nuevo || 0)}
+                    </Typography>
+                  ))}
+                </Box>
+              ) : null}
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 1.5, borderTop: '1px solid #e5e7eb' }}>
+          <Button onClick={() => setDetalle(null)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion((actual) => ({ ...actual, mensaje: '' }))} />
     </Box>
   );
+}
+
+
+function Dato({ label, valor }) {
+  return <Box><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={850}>{valor || '—'}</Typography></Box>;
+}
+
+function Resumen({ label, valor, fuerte = false }) {
+  return <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}><Typography variant={fuerte ? 'subtitle1' : 'body2'} fontWeight={fuerte ? 950 : 700}>{label}</Typography><Typography variant={fuerte ? 'subtitle1' : 'body2'} fontWeight={950}>{valor}</Typography></Box>;
 }
