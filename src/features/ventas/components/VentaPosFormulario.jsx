@@ -205,26 +205,29 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
     }
     setGuardando(true);
     try {
-      const response = await ventaServicio.crearVentaPos({
+      const payloadVenta = {
         cliente_id: cliente?.id || null,
         descuento: Number(descuento || 0),
         impuesto: Number(impuesto || 0),
         observaciones: observaciones || null,
         detalles: carrito.map(({ clave, ...item }) => item),
-      });
+      };
+
+      const response = cobrar
+        ? await ventaServicio.cobrarVentaPos({
+            ...payloadVenta,
+            metodo_pago: metodoPago,
+            referencia_pago: referencia || null,
+            observaciones_pago: metodoPago === 'EFECTIVO'
+              ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.`
+              : 'Cobro registrado desde POS.',
+          })
+        : await ventaServicio.crearVentaPos(payloadVenta);
+
       const venta = response.datos || response;
       if (cobrar) {
-        await ventaServicio.crearPago({
-          venta_id: Number(venta.id),
-          metodo_pago: metodoPago,
-          monto: Number(total.toFixed(2)),
-          estado: 'CONFIRMADO',
-          referencia: referencia || null,
-          observaciones: metodoPago === 'EFECTIVO'
-            ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.`
-            : 'Cobro registrado desde POS.',
-        });
-        avisar(`Venta ${venta.numero || ''} y pago registrados correctamente.`, 'success');
+        const comprobante = venta.comprobante?.numero ? ` · Recibo ${venta.comprobante.numero}` : '';
+        avisar(`Venta ${venta.numero || ''} pagada correctamente${comprobante}.`, 'success');
       } else {
         avisar(`Venta ${venta.numero || ''} guardada como pendiente de pago.`, 'success');
       }
