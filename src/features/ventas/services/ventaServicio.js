@@ -13,6 +13,7 @@ export const ventaServicio = {
   obtenerVentas: async (params = { page: 1 }) => (await api.get('/base/ventas/ventas', { params })).data,
   obtenerContextoPos: async () => (await api.get('/base/ventas/pos/contexto')).data,
   crearVentaPos: async (payload) => (await api.post('/base/ventas/pos', payload)).data,
+  cobrarVentaPos: async (payload) => (await api.post('/base/ventas/pos/cobrar', payload)).data,
   crearVenta: async (payload) => (await api.post('/base/ventas/ventas', payload)).data,
   actualizarVenta: async (id, payload) => (await api.put(`/base/ventas/ventas/${id}`, payload)).data,
   obtenerPagos: async (params = { page: 1 }) => (await api.get('/base/ventas/pagos', { params })).data,
