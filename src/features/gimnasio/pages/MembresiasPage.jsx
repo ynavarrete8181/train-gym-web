@@ -31,6 +31,7 @@ const formInicial = () => ({
   deportista_id: '',
   plan_id: '',
   sede_id: '',
+  entrenador_id: '',
   codigo_contrato: '',
   fecha_inicio: hoyISO(),
   fecha_fin: '',
@@ -70,6 +71,7 @@ export function MembresiasPage() {
   const [clientes, setClientes] = useState([]);
   const [planes, setPlanes] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [entrenadores, setEntrenadores] = useState([]);
   const [estadosMembresia, setEstadosMembresia] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
@@ -118,6 +120,34 @@ export function MembresiasPage() {
   }, [vista]);
 
   useEffect(() => {
+    const cargarEntrenadores = async () => {
+      if (!formData.sede_id) {
+        setEntrenadores([]);
+        return;
+      }
+
+      try {
+        const response = await gimnasioServicio.obtenerEntrenadores({
+          per_page: 100,
+          estado: 'ACTIVO',
+          sede_id: formData.sede_id,
+        });
+        setEntrenadores(response.datos || []);
+        setFormData((actual) => {
+          if (!actual.entrenador_id) return actual;
+          const existe = (response.datos || []).some((item) => String(item.id) === String(actual.entrenador_id));
+          return existe ? actual : { ...actual, entrenador_id: '' };
+        });
+      } catch {
+        setEntrenadores([]);
+        showNotificacion('No se pudieron cargar los entrenadores disponibles para la sede.', 'error');
+      }
+    };
+
+    cargarEntrenadores();
+  }, [formData.sede_id]);
+
+  useEffect(() => {
     if (formData.id || !formData.fecha_inicio || !formData.plan_id) return;
     const plan = planes.find((p) => String(p.id) === String(formData.plan_id));
     const nuevaFechaFin = calcularFechaFin(formData.fecha_inicio, plan);
@@ -158,6 +188,7 @@ export function MembresiasPage() {
     setFormData({
       ...membresia,
       sede_id: membresia.sede_id || '',
+      entrenador_id: membresia.entrenador_id || '',
       estado: normalizarEstado(membresia.estado_valor || membresia.estado),
       fecha_inicio: limpiarFecha(membresia.fecha_inicio),
       fecha_fin: limpiarFecha(membresia.fecha_fin),
@@ -185,6 +216,7 @@ export function MembresiasPage() {
       if (formData.id) {
         const payload = {
           sede_id: formData.sede_id || null,
+          entrenador_id: formData.entrenador_id || null,
           fecha_inicio: formData.fecha_inicio,
           estado: normalizarEstado(formData.estado),
           dias_gracia: Number(formData.dias_gracia || 0),
@@ -199,6 +231,7 @@ export function MembresiasPage() {
           deportista_id: formData.deportista_id,
           plan_id: formData.plan_id,
           sede_id: formData.sede_id,
+          entrenador_id: formData.entrenador_id || null,
           fecha_inicio: formData.fecha_inicio,
           dias_gracia: Number(formData.dias_gracia || 0),
           renovacion_automatica: Boolean(formData.renovacion_automatica),
@@ -260,9 +293,31 @@ export function MembresiasPage() {
                   {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
                 </TextField>
 
-                <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={handleChange} required size="small" disabled={esEdicion && !sedeHistoricaEditable} helperText={sedeHistoricaEditable ? 'Registro histórico sin sede. Selecciónala y guarda.' : (!esEdicion && formData.plan_id && formData.sede_id ? `Precio aplicado: $${precioAplicable(planSeleccionado, formData.sede_id).toFixed(2)}` : '')}>
+                <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={handleChange} required size="small" disabled={esEdicion && !sedeHistoricaEditable} helperText={sedeHistoricaEditable ? 'Registro histórico sin sede. Selecciónala y guarda.' : (!esEdicion && formData.plan_id && formData.sede_id ? `Precio aplicado: ${precioAplicable(planSeleccionado, formData.sede_id).toFixed(2)}` : '')}>
                   {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
                   {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
+                </TextField>
+
+                <TextField
+                  select
+                  label="Entrenador"
+                  name="entrenador_id"
+                  value={formData.entrenador_id || ''}
+                  onChange={handleChange}
+                  size="small"
+                  disabled={!formData.sede_id}
+                  helperText={formData.sede_id ? 'Opcional. Solo se muestran entrenadores activos con horario en la sede.' : 'Selecciona primero la sede.'}
+                >
+                  <MenuItem value="">Sin entrenador asignado</MenuItem>
+                  {entrenadores.map((entrenador) => (
+                    <MenuItem key={entrenador.id} value={entrenador.id}>
+                      {entrenador.name || [entrenador.nombres, entrenador.apellidos].filter(Boolean).join(' ') || 'Entrenador'}
+                      {entrenador.especialidad ? ` · ${entrenador.especialidad}` : ''}
+                    </MenuItem>
+                  ))}
+                  {esEdicion && formData.entrenador_id && !entrenadores.find((entrenador) => String(entrenador.id) === String(formData.entrenador_id)) ? (
+                    <MenuItem value={formData.entrenador_id}>{formData.entrenador_nombre || 'Entrenador asignado'}</MenuItem>
+                  ) : null}
                 </TextField>
 
                 <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
