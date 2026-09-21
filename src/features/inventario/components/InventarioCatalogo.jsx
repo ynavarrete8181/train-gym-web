@@ -165,14 +165,26 @@ export function InventarioCatalogo({ tipo }) {
     return (
       <Box className="page-wrapper">
         <PageHeader titulo={`${formData.id ? 'Editar' : 'Nuevo'} ${config.singular}`} descripcion={config.descripcion} icono={config.icono} acciones={<BotonVolver onClick={() => setVista('lista')} />} />
-        <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
-          <Box sx={{ bgcolor: '#f6f8fc', px: 2.5, py: 2.5 }}>
-            <Box sx={formStyles.seccion}>
+        <Paper
+          className="page-content-container"
+          elevation={0}
+          sx={{
+            mt: 2,
+            overflow: 'hidden',
+            bgcolor: '#fff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ px: { xs: 1.5, md: 2.25 }, py: { xs: 1.5, md: 2 }, bgcolor: '#fff' }}>
+            <Box sx={{ ...formStyles.seccion, bgcolor: '#fff', m: 0 }}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de {config.singular.toLowerCase()}</Typography>
               <Formulario tipo={tipo} formData={formData} catalogos={catalogos} onChange={handleChange} setFormData={setFormData} onNotificar={showNotificacion} />
             </Box>
           </Box>
-          <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
+          <Box sx={{ bgcolor: '#fff', borderTop: '1px solid #eef1f4' }}>
+            <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
+          </Box>
         </Paper>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
       </Box>
