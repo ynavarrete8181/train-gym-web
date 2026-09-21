@@ -4,6 +4,7 @@ import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
+import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
 import { Avatar, Box, Button, Chip, Divider, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
@@ -54,7 +55,7 @@ const configs = {
     obtener: 'obtenerProductos',
     crear: 'crearProducto',
     actualizar: 'actualizarProducto',
-    inicial: { id: null, categoria_id: '', proveedor_id: '', codigo: '', nombre: '', descripcion: '', marca: '', imagen_url: '', unidad_medida: 'UNIDAD', precio_costo: 0, precio_venta: 0, stock_actual: 0, stock_minimo: 0, controla_stock: true, maneja_lotes: false, activo: true, precios_sede: [], stocks_sede: [], lotes: [] },
+    inicial: { id: null, categoria_id: '', proveedor_id: '', codigo: '', nombre: '', descripcion: '', marca: '', imagen_url: '', imagen_path: '', unidad_medida: 'UNIDAD', precio_costo: 0, precio_venta: 0, stock_actual: 0, stock_minimo: 0, controla_stock: true, maneja_lotes: false, activo: true, precios_sede: [], stocks_sede: [], lotes: [] },
   },
   movimientos: {
     titulo: 'Movimientos / Kardex',
@@ -167,7 +168,7 @@ export function InventarioCatalogo({ tipo }) {
           <Box sx={{ bgcolor: '#f6f8fc', px: 2.5, py: 2.5 }}>
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de {config.singular.toLowerCase()}</Typography>
-              <Formulario tipo={tipo} formData={formData} catalogos={catalogos} onChange={handleChange} setFormData={setFormData} />
+              <Formulario tipo={tipo} formData={formData} catalogos={catalogos} onChange={handleChange} setFormData={setFormData} onNotificar={showNotificacion} />
             </Box>
           </Box>
           <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
@@ -189,8 +190,41 @@ export function InventarioCatalogo({ tipo }) {
   );
 }
 
-function Formulario({ tipo, formData, catalogos, onChange, setFormData }) {
+function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotificar }) {
+  const [subiendoImagen, setSubiendoImagen] = useState(false);
   const grid = { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 };
+
+  const cargarImagenProducto = async (evento) => {
+    const archivo = evento.target.files?.[0];
+    evento.target.value = '';
+    if (!archivo) return;
+
+    if (!archivo.type.startsWith('image/')) {
+      onNotificar?.('Selecciona un archivo de imagen válido.', 'warning');
+      return;
+    }
+
+    if (archivo.size > 5 * 1024 * 1024) {
+      onNotificar?.('La imagen no puede superar 5 MB.', 'warning');
+      return;
+    }
+
+    setSubiendoImagen(true);
+    try {
+      const response = await inventarioServicio.subirImagenProducto(archivo);
+      const datos = response.datos || response;
+      setFormData((actual) => ({
+        ...actual,
+        imagen_url: datos.imagen_url || '',
+        imagen_path: datos.imagen_path || '',
+      }));
+      onNotificar?.('Imagen cargada correctamente.', 'success');
+    } catch (error) {
+      onNotificar?.(error.response?.data?.mensaje || 'No se pudo cargar la imagen.', 'error');
+    } finally {
+      setSubiendoImagen(false);
+    }
+  };
 
   if (tipo === 'categorias') {
     return <Box sx={grid}><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} /><FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" /></Box>;
@@ -230,10 +264,55 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData }) {
           <TextField label="Costo referencial" name="precio_costo" type="number" value={formData.precio_costo || 0} onChange={onChange} required size="small" />
           <TextField label="Precio base" name="precio_venta" type="number" value={formData.precio_venta || 0} onChange={onChange} required size="small" helperText="Se usa como respaldo si una sede no tiene precio propio." />
           <TextField label="Stock mínimo base" name="stock_minimo" type="number" value={formData.stock_minimo || 0} onChange={onChange} required size="small" />
-          <TextField label="URL de imagen" name="imagen_url" value={formData.imagen_url || ''} onChange={onChange} size="small" sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {formData.imagen_url ? <Avatar variant="rounded" src={formData.imagen_url} sx={{ width: 52, height: 72, bgcolor: '#f5f5f5' }} /> : <Avatar variant="rounded" sx={{ width: 52, height: 72, bgcolor: '#f5f5f5' }}><Inventory2OutlinedIcon /></Avatar>}
-            <Typography variant="caption" color="text.secondary">Vista previa</Typography>
+          <Box sx={{ gridColumn: { xs: 'auto', md: 'span 3' }, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '170px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'stretch' }}>
+            <Box
+              sx={{
+                minHeight: 210,
+                border: '1px solid #dfe4ea',
+                borderRadius: 2,
+                bgcolor: '#f8fafc',
+                display: 'grid',
+                placeItems: 'center',
+                overflow: 'hidden',
+              }}
+            >
+              {formData.imagen_url ? (
+                <Box component="img" src={formData.imagen_url} alt={formData.nombre || 'Producto'} sx={{ width: '100%', height: 210, objectFit: 'cover' }} />
+              ) : (
+                <Stack alignItems="center" spacing={.6} sx={{ color: 'text.secondary' }}>
+                  <PhotoCameraOutlinedIcon sx={{ fontSize: 38 }} />
+                  <Typography variant="caption">Sin foto</Typography>
+                </Stack>
+              )}
+            </Box>
+
+            <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.5, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 1 }}>
+              <Typography variant="subtitle2" fontWeight={900}>Imagen del producto</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Selecciona una foto JPG, PNG o WEBP de hasta 5 MB. Puedes reemplazarla cuando necesites actualizar el producto.
+              </Typography>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                <Button
+                  component="label"
+                  variant="contained"
+                  disabled={subiendoImagen}
+                  startIcon={<PhotoCameraOutlinedIcon />}
+                  sx={{ ...dbanuStyles.addButtonRevive, textTransform: 'none' }}
+                >
+                  {subiendoImagen ? 'Cargando...' : formData.imagen_url ? 'Cambiar foto' : 'Seleccionar foto'}
+                  <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={cargarImagenProducto} />
+                </Button>
+                {formData.imagen_url ? (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => setFormData((actual) => ({ ...actual, imagen_url: '', imagen_path: '' }))}
+                  >
+                    Quitar foto
+                  </Button>
+                ) : null}
+              </Stack>
+            </Box>
           </Box>
           <FormControlLabel control={<Switch name="controla_stock" checked={Boolean(formData.controla_stock)} onChange={onChange} />} label="Controla stock" />
           <FormControlLabel control={<Switch name="maneja_lotes" checked={Boolean(formData.maneja_lotes)} onChange={onChange} />} label="Maneja lotes / vencimiento" />
@@ -366,7 +445,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro) {
 function prepararProductoSedes(base, sedes) {
   const preciosExistentes = base.precios_sede || [];
   const stocksExistentes = base.stocks_sede || [];
-  const stockDefecto = base.id ? 0 : 20;
+  const stockDefecto = 0;
 
   return {
     ...base,
@@ -393,7 +472,7 @@ function normalizar(tipo, data) {
   }
   if (tipo === 'productos') {
     if (!data.codigo || !data.nombre || !data.unidad_medida) return null;
-    return { categoria_id: data.categoria_id ? Number(data.categoria_id) : null, proveedor_id: data.proveedor_id ? Number(data.proveedor_id) : null, codigo: data.codigo, nombre: data.nombre, descripcion: data.descripcion || null, marca: data.marca || null, imagen_url: data.imagen_url || null, unidad_medida: data.unidad_medida, precio_costo: Number(data.precio_costo || 0), precio_venta: Number(data.precio_venta || 0), stock_actual: Number(data.stock_actual || 0), stock_minimo: Number(data.stock_minimo || 0), controla_stock: Boolean(data.controla_stock), maneja_lotes: Boolean(data.maneja_lotes), activo: Boolean(data.activo), precios_sede: (data.precios_sede || []).map((x) => ({ sede_id: Number(x.sede_id), precio: Number(x.precio || 0), activo: x.activo !== false })), stocks_sede: (data.stocks_sede || []).map((x) => ({ sede_id: Number(x.sede_id), stock_actual: Number(x.stock_actual || 0), stock_minimo: Number(x.stock_minimo || 0) })), lotes: data.maneja_lotes ? (data.lotes || []).filter((x) => x.sede_id && x.codigo_lote).map((x) => ({ id: x.id || null, sede_id: Number(x.sede_id), codigo_lote: x.codigo_lote, fecha_vencimiento: x.fecha_vencimiento || null, cantidad_inicial: Number(x.cantidad_inicial || 0), stock_actual: Number(x.stock_actual || 0), costo_unitario: x.costo_unitario === '' || x.costo_unitario == null ? null : Number(x.costo_unitario), activo: x.activo !== false })) : [] };
+    return { categoria_id: data.categoria_id ? Number(data.categoria_id) : null, proveedor_id: data.proveedor_id ? Number(data.proveedor_id) : null, codigo: data.codigo, nombre: data.nombre, descripcion: data.descripcion || null, marca: data.marca || null, imagen_url: data.imagen_url || null, imagen_path: data.imagen_path || null, unidad_medida: data.unidad_medida, precio_costo: Number(data.precio_costo || 0), precio_venta: Number(data.precio_venta || 0), stock_actual: Number(data.stock_actual || 0), stock_minimo: Number(data.stock_minimo || 0), controla_stock: Boolean(data.controla_stock), maneja_lotes: Boolean(data.maneja_lotes), activo: Boolean(data.activo), precios_sede: (data.precios_sede || []).map((x) => ({ sede_id: Number(x.sede_id), precio: Number(x.precio || 0), activo: x.activo !== false })), stocks_sede: (data.stocks_sede || []).map((x) => ({ sede_id: Number(x.sede_id), stock_actual: Number(x.stock_actual || 0), stock_minimo: Number(x.stock_minimo || 0) })), lotes: data.maneja_lotes ? (data.lotes || []).filter((x) => x.sede_id && x.codigo_lote).map((x) => ({ id: x.id || null, sede_id: Number(x.sede_id), codigo_lote: x.codigo_lote, fecha_vencimiento: x.fecha_vencimiento || null, cantidad_inicial: Number(x.cantidad_inicial || 0), stock_actual: Number(x.stock_actual || 0), costo_unitario: x.costo_unitario === '' || x.costo_unitario == null ? null : Number(x.costo_unitario), activo: x.activo !== false })) : [] };
   }
   if (!data.producto_id || !data.tipo_movimiento || !data.cantidad) return null;
   return { producto_id: Number(data.producto_id), sede_id: data.sede_id ? Number(data.sede_id) : null, lote_id: data.lote_id ? Number(data.lote_id) : null, tipo_movimiento: data.tipo_movimiento, cantidad: Number(data.cantidad), referencia: data.referencia || null, observaciones: data.observaciones || null };
