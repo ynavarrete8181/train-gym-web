@@ -20,7 +20,7 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { inventarioServicio } from '../services/inventarioServicio.js';
 
-const tiposMovimiento = ['ENTRADA', 'SALIDA', 'AJUSTE', 'BAJA'];
+const tiposMovimiento = ['AJUSTE_INICIAL', 'ENTRADA', 'SALIDA', 'AJUSTE', 'BAJA'];
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
@@ -337,7 +337,15 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotifi
                     <Typography variant="caption" color="text.secondary">Operación comercial e inventario</Typography>
                   </Box>
                   <TextField label="Precio venta" type="number" size="small" value={precio.precio ?? formData.precio_venta ?? 0} onChange={(e) => actualizarSede('precios_sede', sede.id, 'precio', e.target.value)} />
-                  <TextField label="Stock actual" type="number" size="small" value={stock.stock_actual ?? 0} onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_actual', e.target.value)} disabled={!formData.controla_stock} />
+                  <TextField
+                    label={stock.stock_inicial_editable === false ? 'Stock actual' : 'Stock inicial'}
+                    type="number"
+                    size="small"
+                    value={stock.stock_actual ?? 0}
+                    onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_actual', e.target.value)}
+                    disabled={!formData.controla_stock || stock.stock_inicial_editable === false}
+                    helperText={stock.stock_inicial_editable === false ? 'Bloqueado: ya existe Kardex posterior.' : 'Editable mientras no existan movimientos posteriores.'}
+                  />
                   <TextField label="Stock mínimo" type="number" size="small" value={stock.stock_minimo ?? formData.stock_minimo ?? 0} onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_minimo', e.target.value)} disabled={!formData.controla_stock} />
                 </Box>
               );
@@ -465,7 +473,7 @@ function prepararProductoSedes(base, sedes) {
     }),
     stocks_sede: sedes.map((sede) => {
       const actual = stocksExistentes.find((x) => Number(x.sede_id) === Number(sede.id));
-      return actual || { sede_id: sede.id, sede_nombre: sede.nombre, stock_actual: stockDefecto, stock_minimo: Number(base.stock_minimo || 0) };
+      return actual || { sede_id: sede.id, sede_nombre: sede.nombre, stock_actual: stockDefecto, stock_minimo: Number(base.stock_minimo || 0), stock_inicial_editable: true };
     }),
     lotes: base.lotes || [],
   };
