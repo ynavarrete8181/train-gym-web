@@ -127,6 +127,8 @@ export function VentasPage() {
                 <Dato label="Sede" valor={detalle.sede_nombre || '—'} />
                 <Dato label="Caja" valor={detalle.caja_nombre || '—'} />
                 <Dato label="Cliente" valor={detalle.cliente_nombre || 'Consumidor final'} />
+                {detalle.membresia_codigo ? <Dato label="Membresía" valor={detalle.membresia_codigo} /> : null}
+                {detalle.entrenador_nombre ? <Dato label="Entrenador" valor={detalle.entrenador_nombre} /> : null}
                 <Dato label="Fecha" valor={detalle.fecha_venta ? new Date(detalle.fecha_venta).toLocaleString('es-EC') : '—'} />
                 <Dato label="Comprobante" valor={detalle.comprobante?.numero || 'Pendiente'} />
                 <Dato label="Tipo" valor={detalle.comprobante?.tipo_comprobante || 'RECIBO'} />
