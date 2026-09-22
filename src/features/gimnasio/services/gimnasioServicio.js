@@ -125,6 +125,48 @@ export const gimnasioServicio = {
     return data;
   },
 
+  // --- Configuración de Agenda ---
+  obtenerJornadas: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/gimnasio/agenda/jornadas', { params });
+    return data;
+  },
+  crearJornada: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/agenda/jornadas', payload);
+    return data;
+  },
+  actualizarJornada: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/agenda/jornadas/${id}`, payload);
+    return data;
+  },
+  obtenerRecesos: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/gimnasio/agenda/recesos', { params });
+    return data;
+  },
+  crearReceso: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/agenda/recesos', payload);
+    return data;
+  },
+  actualizarReceso: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/agenda/recesos/${id}`, payload);
+    return data;
+  },
+  obtenerAsignacionesHorario: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/gimnasio/agenda/asignaciones-horario', { params });
+    return data;
+  },
+  obtenerCatalogosAsignacionHorario: async () => {
+    const { data } = await api.get('/base/gimnasio/agenda/asignaciones-horario/catalogos');
+    return data;
+  },
+  crearAsignacionHorario: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/agenda/asignaciones-horario', payload);
+    return data;
+  },
+  actualizarAsignacionHorario: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/agenda/asignaciones-horario/${id}`, payload);
+    return data;
+  },
+
   // --- Servicios y Agenda ---
   obtenerCategoriasServicio: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/gimnasio/categorias-servicio', { params });
