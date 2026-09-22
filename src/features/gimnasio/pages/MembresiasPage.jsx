@@ -1,7 +1,23 @@
 import { useEffect, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
-import { Box, Button, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import {
+  Box,
+  Button,
+  Checkbox,
+  Divider,
+  FormControlLabel,
+  IconButton,
+  ListItemText,
+  MenuItem,
+  Paper,
+  Stack,
+  Switch,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
@@ -31,7 +47,8 @@ const formInicial = () => ({
   deportista_id: '',
   plan_id: '',
   sede_id: '',
-  entrenador_id: '',
+  sedes_habilitadas: [],
+  asignaciones_entrenador: [],
   codigo_contrato: '',
   fecha_inicio: hoyISO(),
   fecha_fin: '',
@@ -71,7 +88,8 @@ export function MembresiasPage() {
   const [clientes, setClientes] = useState([]);
   const [planes, setPlanes] = useState([]);
   const [sedes, setSedes] = useState([]);
-  const [entrenadores, setEntrenadores] = useState([]);
+  const [entrenadoresPorSede, setEntrenadoresPorSede] = useState({});
+  const [horariosPorAsignacion, setHorariosPorAsignacion] = useState({});
   const [estadosMembresia, setEstadosMembresia] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
@@ -114,38 +132,41 @@ export function MembresiasPage() {
     }
   };
 
+  const cargarEntrenadoresSede = async (sedeId) => {
+    if (!sedeId) return [];
+    if (entrenadoresPorSede[sedeId]) return entrenadoresPorSede[sedeId];
+
+    try {
+      const response = await gimnasioServicio.obtenerEntrenadores({ per_page: 100, estado: 'ACTIVO', sede_id: sedeId });
+      const datos = response.datos || [];
+      setEntrenadoresPorSede((actual) => ({ ...actual, [sedeId]: datos }));
+      return datos;
+    } catch {
+      showNotificacion('No se pudieron cargar los entrenadores de la sede.', 'error');
+      return [];
+    }
+  };
+
+  const cargarHorarios = async (sedeId, entrenadorId) => {
+    if (!sedeId || !entrenadorId) return [];
+    const clave = `${sedeId}-${entrenadorId}`;
+    if (horariosPorAsignacion[clave]) return horariosPorAsignacion[clave];
+
+    try {
+      const response = await gimnasioServicio.obtenerTurnosEntrenador(entrenadorId, sedeId);
+      const datos = response.datos || [];
+      setHorariosPorAsignacion((actual) => ({ ...actual, [clave]: datos }));
+      return datos;
+    } catch {
+      showNotificacion('No se pudieron cargar los horarios del entrenador.', 'error');
+      return [];
+    }
+  };
+
   useEffect(() => {
     if (vista === 'lista') cargarMembresias();
     else cargarCatalogosFormulario();
   }, [vista]);
-
-  useEffect(() => {
-    const cargarEntrenadores = async () => {
-      if (!formData.sede_id) {
-        setEntrenadores([]);
-        return;
-      }
-
-      try {
-        const response = await gimnasioServicio.obtenerEntrenadores({
-          per_page: 100,
-          estado: 'ACTIVO',
-          sede_id: formData.sede_id,
-        });
-        setEntrenadores(response.datos || []);
-        setFormData((actual) => {
-          if (!actual.entrenador_id || actual.id) return actual;
-          const existe = (response.datos || []).some((item) => String(item.id) === String(actual.entrenador_id));
-          return existe ? actual : { ...actual, entrenador_id: '' };
-        });
-      } catch {
-        setEntrenadores([]);
-        showNotificacion('No se pudieron cargar los entrenadores disponibles para la sede.', 'error');
-      }
-    };
-
-    cargarEntrenadores();
-  }, [formData.sede_id]);
 
   useEffect(() => {
     if (formData.id || !formData.fecha_inicio || !formData.plan_id) return;
@@ -170,7 +191,9 @@ export function MembresiasPage() {
 
   const handleNuevo = () => {
     setSedeHistoricaEditable(false);
-    setFormData(formInicial());
+    setEntrenadoresPorSede({});
+    setHorariosPorAsignacion({});
+    setFormData({ ...formInicial(), deportista_id: deportistaContextoId });
     setVista('formulario');
   };
 
@@ -185,10 +208,19 @@ export function MembresiasPage() {
 
   const handleEditar = (membresia) => {
     setSedeHistoricaEditable(!membresia.sede_id);
+    const sedesIds = (membresia.sedes_habilitadas || []).map((item) => Number(item.sede_id));
+    const asignaciones = (membresia.asignaciones_entrenador || []).map((item) => ({
+      sede_id: Number(item.sede_id),
+      entrenador_id: Number(item.entrenador_id),
+      horario_bloque_id: Number(item.horario_bloque_id),
+    }));
+
     setFormData({
+      ...formInicial(),
       ...membresia,
       sede_id: membresia.sede_id || '',
-      entrenador_id: membresia.entrenador_id || '',
+      sedes_habilitadas: sedesIds.length ? sedesIds : (membresia.sede_id ? [Number(membresia.sede_id)] : []),
+      asignaciones_entrenador: asignaciones,
       estado: normalizarEstado(membresia.estado_valor || membresia.estado),
       fecha_inicio: limpiarFecha(membresia.fecha_inicio),
       fecha_fin: limpiarFecha(membresia.fecha_fin),
@@ -196,52 +228,150 @@ export function MembresiasPage() {
       fecha_congelacion_fin: limpiarFecha(membresia.fecha_congelacion_fin),
       renovacion_automatica: Boolean(membresia.renovacion_automatica),
     });
+
+    asignaciones.forEach((asignacion) => {
+      cargarEntrenadoresSede(asignacion.sede_id);
+      cargarHorarios(asignacion.sede_id, asignacion.entrenador_id);
+    });
+
     setVista('formulario');
   };
 
   const handleChange = (evento) => {
     const { name, value, checked, type } = evento.target;
-    setFormData((actual) => ({ ...actual, [name]: type === 'checkbox' ? checked : value }));
+
+    setFormData((actual) => {
+      const siguiente = { ...actual, [name]: type === 'checkbox' ? checked : value };
+
+      if (name === 'sede_id' && value) {
+        const sedeId = Number(value);
+        siguiente.sedes_habilitadas = Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), sedeId]));
+      }
+
+      if (name === 'plan_id') {
+        const plan = planes.find((item) => String(item.id) === String(value));
+        if (!plan?.requiere_entrenador) siguiente.asignaciones_entrenador = [];
+      }
+
+      return siguiente;
+    });
+  };
+
+  const handleSedesHabilitadas = (evento) => {
+    const valores = (evento.target.value || []).map(Number);
+    const principal = formData.sede_id ? Number(formData.sede_id) : null;
+    const siguientes = principal ? Array.from(new Set([...valores, principal])) : valores;
+
+    setFormData((actual) => ({
+      ...actual,
+      sedes_habilitadas: siguientes,
+      asignaciones_entrenador: (actual.asignaciones_entrenador || []).filter((a) => siguientes.includes(Number(a.sede_id))),
+    }));
+
+    siguientes.forEach((sedeId) => cargarEntrenadoresSede(sedeId));
+  };
+
+  const agregarAsignacion = () => {
+    const sedeId = Number((formData.sedes_habilitadas || [])[0] || formData.sede_id || 0);
+    if (!sedeId) {
+      showNotificacion('Selecciona primero una sede habilitada.', 'warning');
+      return;
+    }
+
+    cargarEntrenadoresSede(sedeId);
+    setFormData((actual) => ({
+      ...actual,
+      asignaciones_entrenador: [
+        ...(actual.asignaciones_entrenador || []),
+        { sede_id: sedeId, entrenador_id: '', horario_bloque_id: '' },
+      ],
+    }));
+  };
+
+  const actualizarAsignacion = async (indice, campo, valor) => {
+    const actuales = [...(formData.asignaciones_entrenador || [])];
+    const siguiente = { ...actuales[indice], [campo]: valor };
+
+    if (campo === 'sede_id') {
+      siguiente.entrenador_id = '';
+      siguiente.horario_bloque_id = '';
+      await cargarEntrenadoresSede(Number(valor));
+    }
+
+    if (campo === 'entrenador_id') {
+      siguiente.horario_bloque_id = '';
+      await cargarHorarios(Number(siguiente.sede_id), Number(valor));
+    }
+
+    actuales[indice] = siguiente;
+    setFormData((actual) => ({ ...actual, asignaciones_entrenador: actuales }));
+  };
+
+  const quitarAsignacion = (indice) => {
+    setFormData((actual) => ({
+      ...actual,
+      asignaciones_entrenador: (actual.asignaciones_entrenador || []).filter((_, i) => i !== indice),
+    }));
   };
 
   const handleGuardar = async (generarVenta = false) => {
     try {
-      if (!formData.deportista_id || !formData.plan_id || !formData.sede_id || !formData.fecha_inicio) {
-        showNotificacion('Complete los campos obligatorios', 'warning');
+      const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
+
+      if (!formData.deportista_id || !formData.plan_id || !formData.sede_id || !formData.fecha_inicio || !(formData.sedes_habilitadas || []).length) {
+        showNotificacion('Complete los campos obligatorios y selecciona al menos una sede habilitada.', 'warning');
         return;
+      }
+
+      if (planSeleccionado?.requiere_entrenador) {
+        if (!(formData.asignaciones_entrenador || []).length) {
+          showNotificacion('Este plan requiere al menos una asignación de entrenador.', 'warning');
+          return;
+        }
+        const incompleta = formData.asignaciones_entrenador.some((a) => !a.sede_id || !a.entrenador_id || !a.horario_bloque_id);
+        if (incompleta) {
+          showNotificacion('Completa sede, entrenador y horario en todas las asignaciones.', 'warning');
+          return;
+        }
       }
 
       setGuardando(true);
 
+      const comun = {
+        sede_id: formData.sede_id || null,
+        sedes_habilitadas: (formData.sedes_habilitadas || []).map(Number),
+        asignaciones_entrenador: planSeleccionado?.requiere_entrenador
+          ? (formData.asignaciones_entrenador || []).map((a) => ({
+              sede_id: Number(a.sede_id),
+              entrenador_id: Number(a.entrenador_id),
+              horario_bloque_id: Number(a.horario_bloque_id),
+            }))
+          : [],
+        fecha_inicio: formData.fecha_inicio,
+        dias_gracia: Number(formData.dias_gracia || 0),
+        renovacion_automatica: Boolean(formData.renovacion_automatica),
+      };
+
       if (formData.id) {
-        const payload = {
-          sede_id: formData.sede_id || null,
-          entrenador_id: formData.entrenador_id || null,
-          fecha_inicio: formData.fecha_inicio,
+        await gimnasioServicio.actualizarMembresia(formData.id, {
+          ...comun,
           estado: normalizarEstado(formData.estado),
-          dias_gracia: Number(formData.dias_gracia || 0),
-          renovacion_automatica: Boolean(formData.renovacion_automatica),
           fecha_congelacion_inicio: formData.fecha_congelacion_inicio || null,
           fecha_congelacion_fin: formData.fecha_congelacion_fin || null,
-        };
-        await gimnasioServicio.actualizarMembresia(formData.id, payload);
+        });
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
         const respuesta = await gimnasioServicio.crearMembresia({
+          ...comun,
           deportista_id: formData.deportista_id,
           plan_id: formData.plan_id,
-          sede_id: formData.sede_id,
-          entrenador_id: formData.entrenador_id || null,
-          fecha_inicio: formData.fecha_inicio,
-          dias_gracia: Number(formData.dias_gracia || 0),
-          renovacion_automatica: Boolean(formData.renovacion_automatica),
           generar_venta: Boolean(generarVenta),
         });
 
         const ventaNumero = respuesta.datos?.venta_numero;
         showNotificacion(
           ventaNumero ? `Membresía creada. Venta ${ventaNumero} generada y pendiente de pago.` : 'Membresía creada como pendiente de pago.',
-          'success'
+          'success',
         );
       }
 
@@ -253,7 +383,9 @@ export function MembresiasPage() {
       setVista('lista');
       cargarMembresias();
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar la membresía', 'error');
+      const errores = error.response?.data?.errors;
+      const primerError = errores ? Object.values(errores).flat()[0] : null;
+      showNotificacion(primerError || error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar la membresía', 'error');
     } finally {
       setGuardando(false);
     }
@@ -272,81 +404,154 @@ export function MembresiasPage() {
     const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
     const puedeGenerarVenta = Boolean(planSeleccionado?.generar_venta ?? true);
     const esRenovable = Boolean(planSeleccionado?.renovable ?? true);
+    const requiereEntrenador = Boolean(planSeleccionado?.requiere_entrenador);
     const estadoInicial = estadosMembresia.find((estado) => estado.es_inicial) || estadosMembresia.find((estado) => estado.valor_interno === 'PENDIENTE_PAGO');
 
     return (
       <Box className="page-wrapper">
-        <PageHeader titulo={esEdicion ? 'Editar Membresía' : 'Nueva Membresía'} descripcion={esEdicion ? 'Actualiza la vigencia y estado del contrato.' : 'Selecciona cliente, plan y sede. El código, la vigencia y el estado inicial se gestionan automáticamente.'} icono={<CardMembershipOutlinedIcon />} acciones={<BotonVolver onClick={handleCancelarFormulario} />} />
+        <PageHeader
+          titulo={esEdicion ? 'Editar Membresía' : 'Nueva Membresía'}
+          descripcion={esEdicion ? 'Actualiza la vigencia, sedes habilitadas y asignaciones del contrato.' : 'Define sede de contratación, sedes habilitadas y entrenamiento según el plan.'}
+          icono={<CardMembershipOutlinedIcon />}
+          acciones={<BotonVolver onClick={handleCancelarFormulario} />}
+        />
 
-        <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
-          <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
-            <Box sx={formStyles.seccion}>
-              <Typography sx={formStyles.modalSeccionTitulo}>Datos de la membresía</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-                <TextField select label="Cliente" name="deportista_id" value={formData.deportista_id || ''} onChange={handleChange} required size="small" disabled={esEdicion || clienteContextual} helperText={clienteContextual ? 'Cliente recibido desde su ficha.' : ''}>
-                  {clientes.map((cliente) => <MenuItem key={cliente.id} value={cliente.id}>{cliente.usuario_nombre || cliente.name || 'Cliente'} - {cliente.codigo_deportista}</MenuItem>)}
-                  {(esEdicion || clienteContextual) && !clientes.find((cliente) => String(cliente.id) === String(formData.deportista_id)) ? <MenuItem value={formData.deportista_id}>{formData.deportista_nombre || 'Cliente seleccionado'}</MenuItem> : null}
-                </TextField>
-
-                <TextField select label="Plan" name="plan_id" value={formData.plan_id || ''} onChange={handleChange} required size="small" disabled={esEdicion}>
-                  {planes.map((plan) => <MenuItem key={plan.id} value={plan.id}>{plan.nombre} - ${Number(plan.precio_base || 0).toFixed(2)}</MenuItem>)}
-                  {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
-                </TextField>
-
-                <TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={handleChange} required size="small" disabled={esEdicion && !sedeHistoricaEditable} helperText={sedeHistoricaEditable ? 'Registro histórico sin sede. Selecciónala y guarda.' : (!esEdicion && formData.plan_id && formData.sede_id ? `Precio aplicado: ${precioAplicable(planSeleccionado, formData.sede_id).toFixed(2)}` : '')}>
-                  {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                  {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
-                </TextField>
-
-                <TextField
-                  select
-                  label="Entrenador"
-                  name="entrenador_id"
-                  value={formData.entrenador_id || ''}
-                  onChange={handleChange}
-                  size="small"
-                  disabled={!formData.sede_id}
-                  helperText={formData.sede_id ? 'Opcional. Solo se muestran entrenadores activos con horario en la sede.' : 'Selecciona primero la sede.'}
-                >
-                  <MenuItem value="">Sin entrenador asignado</MenuItem>
-                  {entrenadores.map((entrenador) => (
-                    <MenuItem key={entrenador.id} value={entrenador.id}>
-                      {entrenador.name || [entrenador.nombres, entrenador.apellidos].filter(Boolean).join(' ') || 'Entrenador'}
-                      {entrenador.especialidad ? ` · ${entrenador.especialidad}` : ''}
-                    </MenuItem>
-                  ))}
-                  {esEdicion && formData.entrenador_id && !entrenadores.find((entrenador) => String(entrenador.id) === String(formData.entrenador_id)) ? (
-                    <MenuItem value={formData.entrenador_id}>{formData.entrenador_nombre || 'Entrenador asignado'}</MenuItem>
-                  ) : null}
-                </TextField>
-
-                <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
-                <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                <TextField label="Fecha fin" type="date" value={formData.fecha_fin || ''} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Calculada automáticamente según la duración del plan." />
-
-                {esEdicion ? (
-                  <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
-                    {estadosMembresia.map((estado) => <MenuItem key={estado.id} value={estado.valor_interno}>{estado.nombre}</MenuItem>)}
+        <Paper className="page-content-container" elevation={0} sx={{ mt: 2, overflow: 'hidden' }}>
+          <Box sx={{ bgcolor: '#fff', px: { xs: 1.5, md: 2.5 }, py: 2.5 }}>
+            <Stack spacing={2}>
+              <Box sx={formStyles.seccion}>
+                <Typography sx={formStyles.modalSeccionTitulo}>Datos de la membresía</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+                  <TextField select label="Cliente" name="deportista_id" value={formData.deportista_id || ''} onChange={handleChange} required size="small" disabled={esEdicion || clienteContextual} helperText={clienteContextual ? 'Cliente recibido desde su ficha.' : ''}>
+                    {clientes.map((cliente) => <MenuItem key={cliente.id} value={cliente.id}>{cliente.usuario_nombre || cliente.name || 'Cliente'} - {cliente.codigo_deportista}</MenuItem>)}
+                    {(esEdicion || clienteContextual) && !clientes.find((cliente) => String(cliente.id) === String(formData.deportista_id)) ? <MenuItem value={formData.deportista_id}>{formData.deportista_nombre || 'Cliente seleccionado'}</MenuItem> : null}
                   </TextField>
-                ) : (
-                  <TextField label="Estado inicial" value={estadoInicial?.nombre || 'Pendiente de pago'} size="small" disabled helperText="Se activa automáticamente cuando el pago queda confirmado." />
-                )}
 
-                <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" helperText="Acceso adicional después del vencimiento; no cambia la fecha contractual." />
-                <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
-              </Box>
-            </Box>
+                  <TextField select label="Plan" name="plan_id" value={formData.plan_id || ''} onChange={handleChange} required size="small" disabled={esEdicion}>
+                    {planes.map((plan) => <MenuItem key={plan.id} value={plan.id}>{plan.nombre} - $${Number(plan.precio_base || 0).toFixed(2)}</MenuItem>)}
+                    {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
+                  </TextField>
 
-            {esEdicion ? (
-              <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-                <Typography sx={formStyles.modalSeccionTitulo}>Congelación</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Usa estas fechas solo cuando el contrato deba pausarse temporalmente.</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
-                  <TextField label="Inicio congelación" name="fecha_congelacion_inicio" type="date" value={formData.fecha_congelacion_inicio || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField label="Fin congelación" name="fecha_congelacion_fin" type="date" value={formData.fecha_congelacion_fin || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField
+                    select
+                    label="Sede de contratación"
+                    name="sede_id"
+                    value={formData.sede_id || ''}
+                    onChange={handleChange}
+                    required
+                    size="small"
+                    disabled={esEdicion && !sedeHistoricaEditable}
+                    helperText={sedeHistoricaEditable ? 'Registro histórico sin sede. Selecciónala y guarda.' : (!esEdicion && formData.plan_id && formData.sede_id ? `Precio aplicado: $${precioAplicable(planSeleccionado, formData.sede_id).toFixed(2)}` : 'Define el precio y la sede comercial de origen.')}
+                  >
+                    {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
+                    {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
+                  </TextField>
+
+                  <TextField
+                    select
+                    SelectProps={{
+                      multiple: true,
+                      renderValue: (seleccionadas) => seleccionadas
+                        .map((id) => sedes.find((sede) => Number(sede.id_sede) === Number(id))?.nombre)
+                        .filter(Boolean)
+                        .join(', '),
+                    }}
+                    label="Sedes habilitadas"
+                    value={formData.sedes_habilitadas || []}
+                    onChange={handleSedesHabilitadas}
+                    required
+                    size="small"
+                    helperText="El cliente podrá usar esta membresía en todas las sedes seleccionadas."
+                  >
+                    {sedes.map((sede) => (
+                      <MenuItem key={sede.id_sede} value={sede.id_sede}>
+                        <Checkbox checked={(formData.sedes_habilitadas || []).map(Number).includes(Number(sede.id_sede))} />
+                        <ListItemText primary={sede.nombre} />
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
+                  <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                  <TextField label="Fecha fin" type="date" value={formData.fecha_fin || ''} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Calculada automáticamente según la duración del plan." />
+
+                  {esEdicion ? (
+                    <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
+                      {estadosMembresia.map((estado) => <MenuItem key={estado.id} value={estado.valor_interno}>{estado.nombre}</MenuItem>)}
+                    </TextField>
+                  ) : (
+                    <TextField label="Estado inicial" value={estadoInicial?.nombre || 'Pendiente de pago'} size="small" disabled helperText="Se activa automáticamente cuando el pago queda confirmado." />
+                  )}
+
+                  <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" helperText="Acceso adicional después del vencimiento; no cambia la fecha contractual." />
+                  <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
                 </Box>
               </Box>
-            ) : null}
+
+              {requiereEntrenador ? (
+                <Box sx={formStyles.seccion}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1} sx={{ mb: 1 }}>
+                    <Box>
+                      <Typography sx={formStyles.modalSeccionTitulo}>Asignaciones de entrenamiento</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Puedes asignar entrenadores distintos por sede y horario. Solo se muestran opciones válidas para las sedes habilitadas.
+                      </Typography>
+                    </Box>
+                    <Button startIcon={<AddOutlinedIcon />} onClick={agregarAsignacion} sx={dbanuStyles.addButtonRevive}>Añadir asignación</Button>
+                  </Stack>
+
+                  <Stack divider={<Divider flexItem />} spacing={0}>
+                    {(formData.asignaciones_entrenador || []).map((asignacion, indice) => {
+                      const entrenadores = entrenadoresPorSede[Number(asignacion.sede_id)] || [];
+                      const claveHorario = `${Number(asignacion.sede_id)}-${Number(asignacion.entrenador_id)}`;
+                      const horarios = horariosPorAsignacion[claveHorario] || [];
+
+                      return (
+                        <Box key={`${indice}-${asignacion.sede_id}-${asignacion.entrenador_id}`} sx={{ py: 1.25, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1.2fr 1.4fr auto' }, gap: 1.2, alignItems: 'center' }}>
+                          <TextField select label="Sede" size="small" value={asignacion.sede_id || ''} onChange={(e) => actualizarAsignacion(indice, 'sede_id', Number(e.target.value))}>
+                            {(formData.sedes_habilitadas || []).map((sedeId) => {
+                              const sede = sedes.find((item) => Number(item.id_sede) === Number(sedeId));
+                              return <MenuItem key={sedeId} value={sedeId}>{sede?.nombre || `Sede #${sedeId}`}</MenuItem>;
+                            })}
+                          </TextField>
+
+                          <TextField select label="Entrenador" size="small" value={asignacion.entrenador_id || ''} onOpen={() => cargarEntrenadoresSede(Number(asignacion.sede_id))} onChange={(e) => actualizarAsignacion(indice, 'entrenador_id', Number(e.target.value))}>
+                            <MenuItem value="">Seleccione entrenador</MenuItem>
+                            {entrenadores.map((entrenador) => <MenuItem key={entrenador.id} value={entrenador.id}>{entrenador.name || [entrenador.nombres, entrenador.apellidos].filter(Boolean).join(' ')}{entrenador.especialidad ? ` · ${entrenador.especialidad}` : ''}</MenuItem>)}
+                          </TextField>
+
+                          <TextField select label="Horario" size="small" value={asignacion.horario_bloque_id || ''} disabled={!asignacion.entrenador_id} onOpen={() => cargarHorarios(Number(asignacion.sede_id), Number(asignacion.entrenador_id))} onChange={(e) => actualizarAsignacion(indice, 'horario_bloque_id', Number(e.target.value))}>
+                            <MenuItem value="">Seleccione horario</MenuItem>
+                            {horarios.map((horario) => <MenuItem key={horario.id} value={horario.id}>{horario.servicio_nombre} · {horario.dia_semana || 'Días configurados'} · {String(horario.hora_inicio || '').slice(0, 5)}-{String(horario.hora_fin || '').slice(0, 5)}</MenuItem>)}
+                          </TextField>
+
+                          <Tooltip title="Quitar asignación">
+                            <IconButton color="error" onClick={() => quitarAsignacion(indice)}><DeleteOutlineOutlinedIcon /></IconButton>
+                          </Tooltip>
+                        </Box>
+                      );
+                    })}
+
+                    {(formData.asignaciones_entrenador || []).length === 0 ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ py: 1.5 }}>
+                        Este plan requiere entrenador. Añade al menos una asignación por sede/horario.
+                      </Typography>
+                    ) : null}
+                  </Stack>
+                </Box>
+              ) : null}
+
+              {esEdicion ? (
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Congelación</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Usa estas fechas solo cuando el contrato deba pausarse temporalmente.</Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                    <TextField label="Inicio congelación" name="fecha_congelacion_inicio" type="date" value={formData.fecha_congelacion_inicio || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                    <TextField label="Fin congelación" name="fecha_congelacion_fin" type="date" value={formData.fecha_congelacion_fin || ''} onChange={handleChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                  </Box>
+                </Box>
+              ) : null}
+            </Stack>
           </Box>
 
           {esEdicion ? (
@@ -366,7 +571,7 @@ export function MembresiasPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader titulo="Membresías" descripcion="Contratos asignados a clientes, con plan, sede, vigencia, cobro y estado." icono={<CardMembershipOutlinedIcon />} />
+      <PageHeader titulo="Membresías" descripcion="Contratos asignados a clientes, con plan, sedes habilitadas, vigencia, cobro y estado." icono={<CardMembershipOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || membresias.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
         <MembresiasTable membresias={membresias} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={aplicarFiltroColumna} onEditar={handleEditar} onCancelada={handleMembresiaCancelada} onErrorCancelar={handleErrorCancelarMembresia} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargarMembresias(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargarMembresias(nuevos); }} />
