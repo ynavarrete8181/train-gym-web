@@ -2,15 +2,13 @@ import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import CoffeeOutlinedIcon from '@mui/icons-material/CoffeeOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import SportsOutlinedIcon from '@mui/icons-material/SportsOutlined';
-import { Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Box, Chip, Paper, Stack, Typography } from '@mui/material';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
-import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
 const hora = (valor) => String(valor || '').slice(0, 5);
 const fecha = (valor) => String(valor || '').slice(0, 10);
@@ -43,21 +41,10 @@ export function EntrenadorConfiguracion({ datos, cargando = false, onVolver, onE
   return (
     <Box className="page-wrapper">
       <PageHeader
-        titulo={nombre}
-        descripcion="Configuración operativa del entrenador"
+        titulo="Configuración del entrenador"
+        descripcion="Consulta servicios, sedes, horarios y excepciones del entrenador."
         icono={<AccountCircleOutlinedIcon />}
-        acciones={
-          <Stack direction="row" spacing={1}>
-            <BotonVolver onClick={onVolver} />
-            <Button
-              startIcon={<EditOutlinedIcon />}
-              onClick={onEditar}
-              sx={dbanuStyles.addButtonRevive}
-            >
-              Editar
-            </Button>
-          </Stack>
-        }
+        acciones={<BotonVolver onClick={onVolver} />}
       />
 
       <Paper className="page-content-container" elevation={0}>
