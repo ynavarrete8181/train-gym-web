@@ -6,7 +6,7 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import CoffeeOutlinedIcon from '@mui/icons-material/CoffeeOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -41,6 +41,9 @@ export function AsignacionHorariosPage() {
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [form, setForm] = useState(inicial);
   const [catalogos, setCatalogos] = useState({ entrenadores: [], sedes: [], jornadas: [], recesos: [] });
+  const [opcionesEntrenador, setOpcionesEntrenador] = useState([]);
+  const [busquedaEntrenador, setBusquedaEntrenador] = useState('');
+  const [buscandoEntrenador, setBuscandoEntrenador] = useState(false);
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
@@ -59,8 +62,10 @@ export function AsignacionHorariosPage() {
 
   const cargarCatalogos = async () => {
     try {
-      const r = await gimnasioServicio.obtenerCatalogosAsignacionHorario();
-      setCatalogos(r.datos || {});
+      const r = await gimnasioServicio.obtenerCatalogosAsignacionHorario(form.entrenador_id ? { entrenador_id: form.entrenador_id } : {});
+      const datos = r.datos || {};
+      setCatalogos(datos);
+      setOpcionesEntrenador(datos.entrenadores || []);
     } catch (e) {
       setNotificacion({ mensaje: 'No se pudieron cargar los catálogos de asignación.', tipo: 'error' });
     }
@@ -71,6 +76,26 @@ export function AsignacionHorariosPage() {
   useEffect(() => {
     if (vista === 'formulario') cargarCatalogos();
   }, [vista]);
+
+  useEffect(() => {
+    if (vista !== 'formulario') return undefined;
+    const termino = busquedaEntrenador.trim();
+    if (termino.length < 2) return undefined;
+
+    const timer = window.setTimeout(async () => {
+      setBuscandoEntrenador(true);
+      try {
+        const r = await gimnasioServicio.buscarEntrenadoresAgenda({ q: termino });
+        setOpcionesEntrenador(r.datos || []);
+      } catch (e) {
+        setOpcionesEntrenador([]);
+      } finally {
+        setBuscandoEntrenador(false);
+      }
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [busquedaEntrenador, vista]);
 
   const guardar = async () => {
     if (!form.entrenador_id || !form.sede_id || !form.jornada_id || !form.fecha_inicio) {
@@ -134,12 +159,38 @@ export function AsignacionHorariosPage() {
         />
         <Paper className="page-content-container" elevation={0} sx={{ mt: 2 }}>
           <Box sx={formStyles.seccion}>
-            <Typography sx={formStyles.modalSeccionTitulo}>Asignación del entrenador</Typography>
-
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3,1fr)' }, gap: 1.5 }}>
-              <TextField select label="Entrenador" size="small" value={form.entrenador_id} onChange={(e) => setForm((a) => ({ ...a, entrenador_id: e.target.value }))} required>
-                {(catalogos.entrenadores || []).map((e) => <MenuItem key={e.id} value={e.id}>{e.name}{e.especialidad ? ` · ${e.especialidad}` : ''}</MenuItem>)}
-              </TextField>
+              <Autocomplete
+                options={opcionesEntrenador}
+                loading={buscandoEntrenador}
+                value={opcionesEntrenador.find((e) => String(e.id) === String(form.entrenador_id)) || null}
+                onInputChange={(_, value) => setBusquedaEntrenador(value)}
+                onChange={(_, value) => setForm((a) => ({ ...a, entrenador_id: value?.id || '' }))}
+                getOptionLabel={(e) => [e.nombres, e.apellidos].filter(Boolean).join(' ') || e.name || ''}
+                isOptionEqualToValue={(a, b) => String(a.id) === String(b.id)}
+                noOptionsText={busquedaEntrenador.trim().length < 2 ? 'Escribe al menos 2 caracteres' : 'No hay entrenadores'}
+                renderOption={(props, e) => (
+                  <li {...props} key={e.id}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={700}>
+                        {[e.nombres, e.apellidos].filter(Boolean).join(' ') || e.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {[e.tipo, e.especialidad, e.cedula].filter(Boolean).join(' · ')}
+                      </Typography>
+                    </Box>
+                  </li>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Entrenador"
+                    size="small"
+                    required
+                    helperText="Busca por nombre, cédula o correo"
+                  />
+                )}
+              />
 
               <TextField select label="Sede" size="small" value={form.sede_id} onChange={(e) => setForm((a) => ({ ...a, sede_id: e.target.value }))} required>
                 {(catalogos.sedes || []).map((s) => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
@@ -158,7 +209,7 @@ export function AsignacionHorariosPage() {
               <TextField label="Vigente hasta" type="date" size="small" value={form.fecha_fin} onChange={(e) => setForm((a) => ({ ...a, fecha_fin: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} helperText="Vacío = sin fecha final" />
 
               <TextField label="Observaciones" size="small" value={form.observaciones} onChange={(e) => setForm((a) => ({ ...a, observaciones: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
-              <FormControlLabel control={<Switch checked={Boolean(form.activo)} onChange={(e) => setForm((a) => ({ ...a, activo: e.target.checked }))} />} label="Asignación activa" />
+              <FormControlLabel control={<Switch checked={Boolean(form.activo)} onChange={(e) => setForm((a) => ({ ...a, activo: e.target.checked }))} />} label="Activo" />
             </Box>
 
             {jornada ? (
