@@ -218,6 +218,7 @@ export function MembresiasPage() {
       fecha_congelacion_inicio: limpiarFecha(membresia.fecha_congelacion_inicio),
       fecha_congelacion_fin: limpiarFecha(membresia.fecha_congelacion_fin),
       renovacion_automatica: Boolean(membresia.renovacion_automatica),
+      requiere_facturar: Boolean(membresia.requiere_facturar),
     });
 
     asignaciones.forEach((asignacion) => {
@@ -353,6 +354,7 @@ export function MembresiasPage() {
         await gimnasioServicio.actualizarMembresia(formData.id, {
           ...comun,
           estado: normalizarEstado(formData.estado),
+          generar_venta: Boolean(formData.requiere_facturar),
           fecha_congelacion_inicio: formData.fecha_congelacion_inicio || null,
           fecha_congelacion_fin: formData.fecha_congelacion_fin || null,
         });
@@ -566,7 +568,31 @@ export function MembresiasPage() {
           </Box>
 
           {esEdicion ? (
-            <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelarFormulario} guardando={guardando} />
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              sx={dbanuStyles.formActions}
+              spacing={1}
+              justifyContent="flex-end"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+            >
+              <FormControlLabel
+                sx={{ mr: { sm: 'auto' } }}
+                control={
+                  <Switch
+                    checked={Boolean(formData.requiere_facturar)}
+                    onChange={(e) => setFormData((actual) => ({ ...actual, requiere_facturar: e.target.checked }))}
+                    disabled={guardando || ['PARCIAL', 'PAGADA'].includes(String(formData.venta_estado || '').toUpperCase())}
+                  />
+                }
+                label={
+                  ['PARCIAL', 'PAGADA'].includes(String(formData.venta_estado || '').toUpperCase())
+                    ? 'Facturación registrada'
+                    : '¿Requiere facturar?'
+                }
+              />
+              <BotonCancelar onClick={handleCancelarFormulario} disabled={guardando} />
+              <BotonGuardar onClick={handleGuardar} guardando={guardando} />
+            </Stack>
           ) : (
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
