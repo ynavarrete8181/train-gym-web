@@ -138,20 +138,20 @@ export function VentasPage() {
                   <Box
                     key={venta.id}
                     sx={{
-                      border: '1px solid #e4e7eb',
+                      border: '1px solid #e5e7eb',
                       borderRadius: 2,
                       bgcolor: '#fff',
-                      p: 1.55,
-                      boxShadow: '0 8px 22px rgba(15,23,42,.055)',
+                      p: 1.7,
+                      boxShadow: '0 7px 20px rgba(15,23,42,.05)',
                       transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
                       '&:hover': {
                         transform: 'translateY(-2px)',
-                        borderColor: 'rgba(184,138,0,.32)',
-                        boxShadow: '0 14px 28px rgba(15,23,42,.09)',
+                        borderColor: 'rgba(184,138,0,.34)',
+                        boxShadow: '0 13px 28px rgba(15,23,42,.085)',
                       },
                     }}
                   >
-                    <Box sx={{ minHeight: 58 }}>
+                    <Box sx={{ minHeight: 54 }}
                       <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.08 }} title={nombre}>
                         {nombre}
                       </Typography>
@@ -162,20 +162,20 @@ export function VentasPage() {
 
                     <Stack spacing={0.85} sx={{ mt: 1.05 }}>
                       <Stack direction="row" spacing={0.75} alignItems="center">
-                        <LocationOnOutlinedIcon sx={{ fontSize: 18, color: '#161616' }} />
+                        <LocationOnOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
                         <Typography variant="body2" color="text.secondary" fontWeight={700} noWrap>
                           {venta.sede_nombre || 'Sede no asignada'}
                         </Typography>
                       </Stack>
                       <Stack direction="row" spacing={0.75} alignItems="center">
-                        <CalendarMonthOutlinedIcon sx={{ fontSize: 18, color: '#161616' }} />
+                        <CalendarMonthOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
                         <Typography variant="body2" color="text.secondary" fontWeight={700}>
                           {fecha(venta.fecha_venta)}
                         </Typography>
                       </Stack>
                     </Stack>
 
-                    <Divider sx={{ my: 1.25 }} />
+                    <Divider sx={{ my: 1.35, borderColor: '#e8ebef' }} />
 
                     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 1, alignItems: 'end' }}>
                       <Box>
@@ -192,9 +192,9 @@ export function VentasPage() {
                           px: .5,
                           fontWeight: 900,
                           color: estadoParcial ? '#b42318' : '#8a6500',
-                          bgcolor: estadoParcial ? '#fee4e2' : '#fff1c2',
+                          bgcolor: estadoParcial ? '#fee4e2' : '#fff3cf',
                           border: '1px solid',
-                          borderColor: estadoParcial ? '#fecdca' : '#f5d77b',
+                          borderColor: estadoParcial ? '#fecdca' : '#efd786',
                           '& .MuiChip-label': { px: .9 },
                         }}
                       />
@@ -210,7 +210,7 @@ export function VentasPage() {
                           minHeight: 38,
                           textTransform: 'none',
                           fontWeight: 950,
-                          borderRadius: 1.1,
+                          borderRadius: 0.5,
                         }}
                       >
                         Abrir cuenta
@@ -219,15 +219,7 @@ export function VentasPage() {
                         variant="outlined"
                         startIcon={<VisibilityOutlinedIcon />}
                         onClick={() => abrirDetalle(venta.id)}
-                        sx={{
-                          minHeight: 38,
-                          textTransform: 'none',
-                          fontWeight: 900,
-                          borderRadius: 1.1,
-                          color: '#111827',
-                          borderColor: '#d5dae1',
-                          '&:hover': { borderColor: '#b88a00', bgcolor: 'rgba(212,160,23,.06)' },
-                        }}
+                        sx={dbanuStyles.secondaryButtonRevive}
                       >
                         Ver detalle
                       </Button>
