@@ -151,7 +151,7 @@ export function VentasPage() {
                       },
                     }}
                   >
-                    <Box sx={{ minHeight: 54 }}
+                    <Box sx={{ minHeight: 54 }}>
                       <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.08 }} title={nombre}>
                         {nombre}
                       </Typography>
