@@ -19,6 +19,10 @@ export const gimnasioServicio = {
     const { data } = await api.get('/base/gimnasio/entrenadores', { params: parametros });
     return data;
   },
+  obtenerServiciosEntrenadorCatalogo: async () => {
+    const { data } = await api.get('/base/gimnasio/entrenadores/catalogos/servicios');
+    return data;
+  },
   obtenerTurnosEntrenador: async (entrenadorId, sedeId = null) => {
     const { data } = await api.get(`/base/gimnasio/entrenadores/${entrenadorId}/turnos`, { params: sedeId ? { sede_id: sedeId } : {} });
     return data;
@@ -174,6 +178,10 @@ export const gimnasioServicio = {
   // --- Operación de Agenda ---
   obtenerCatalogosAgenda: async () => {
     const { data } = await api.get('/base/gimnasio/agenda/catalogos-operacion');
+    return data;
+  },
+  obtenerServiciosDisponiblesAgenda: async (params) => {
+    const { data } = await api.get('/base/gimnasio/agenda/servicios-disponibles', { params });
     return data;
   },
   obtenerDisponibilidadAgenda: async (params) => {
