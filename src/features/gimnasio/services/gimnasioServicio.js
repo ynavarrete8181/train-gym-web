@@ -171,6 +171,32 @@ export const gimnasioServicio = {
     return data;
   },
 
+  // --- Operación de Agenda ---
+  obtenerCatalogosAgenda: async () => {
+    const { data } = await api.get('/base/gimnasio/agenda/catalogos-operacion');
+    return data;
+  },
+  obtenerDisponibilidadAgenda: async (params) => {
+    const { data } = await api.get('/base/gimnasio/agenda/disponibilidad', { params });
+    return data;
+  },
+  obtenerReservasAgenda: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/gimnasio/agenda/reservas', { params });
+    return data;
+  },
+  obtenerExcepcionesAgenda: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/gimnasio/agenda/excepciones', { params });
+    return data;
+  },
+  crearExcepcionAgenda: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/agenda/excepciones', payload);
+    return data;
+  },
+  actualizarExcepcionAgenda: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/agenda/excepciones/${id}`, payload);
+    return data;
+  },
+
   // --- Servicios y Agenda ---
   obtenerCategoriasServicio: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/gimnasio/categorias-servicio', { params });
