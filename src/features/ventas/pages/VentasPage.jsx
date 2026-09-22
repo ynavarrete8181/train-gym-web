@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
+import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
@@ -30,6 +31,10 @@ export function VentasPage() {
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const [detalle, setDetalle] = useState(null);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [cobro, setCobro] = useState(null);
+  const [guardandoCobro, setGuardandoCobro] = useState(false);
+  const [metodoPago, setMetodoPago] = useState('EFECTIVO');
+  const [referenciaPago, setReferenciaPago] = useState('');
 
   const cargar = async (params = filtros) => {
     setCargando(true);
@@ -72,6 +77,63 @@ export function VentasPage() {
     }
   };
 
+  const prepararCobro = async (venta) => {
+    try {
+      const [detalleResponse, turnoResponse] = await Promise.all([
+        ventaServicio.obtenerDetalleVenta(venta.id),
+        ventaServicio.obtenerTurnoCajaActual(),
+      ]);
+      const detalleVenta = detalleResponse.datos || detalleResponse;
+      const turno = turnoResponse.datos || turnoResponse;
+
+      if (!turno?.id) {
+        setNotificacion({ mensaje: 'Debes abrir un turno de caja antes de cobrar esta venta.', tipo: 'warning' });
+        return;
+      }
+
+      const pagado = (detalleVenta.pagos || [])
+        .filter((pago) => String(pago.estado || '').toUpperCase() === 'CONFIRMADO')
+        .reduce((total, pago) => total + Number(pago.monto || 0), 0);
+      const saldo = Math.max(0, Number(detalleVenta.total || 0) - pagado);
+
+      if (saldo <= 0) {
+        setNotificacion({ mensaje: 'Esta venta ya no tiene saldo pendiente.', tipo: 'info' });
+        cargar();
+        return;
+      }
+
+      setMetodoPago('EFECTIVO');
+      setReferenciaPago('');
+      setCobro({ venta: detalleVenta, turno, saldo });
+    } catch (error) {
+      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo preparar el cobro.', tipo: 'error' });
+    }
+  };
+
+  const confirmarCobro = async () => {
+    if (!cobro?.venta?.id || !cobro?.saldo) return;
+    setGuardandoCobro(true);
+    try {
+      await ventaServicio.crearPago({
+        venta_id: Number(cobro.venta.id),
+        metodo_pago: metodoPago,
+        monto: Number(cobro.saldo),
+        estado: 'CONFIRMADO',
+        referencia: referenciaPago || null,
+        observaciones: 'Cobro confirmado desde Ventas.',
+      });
+      setCobro(null);
+      setNotificacion({ mensaje: 'Pago confirmado. La venta quedó actualizada y el comprobante fue emitido.', tipo: 'success' });
+      cargar({ ...filtros, page: 1 });
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const primerError = errores ? Object.values(errores).flat()[0] : null;
+      setNotificacion({ mensaje: primerError || error.response?.data?.mensaje || 'No se pudo registrar el pago.', tipo: 'error' });
+    } finally {
+      setGuardandoCobro(false);
+    }
+  };
+
   const columnas = useMemo(() => {
     const filtro = (key, label, opts) => <FilterHeaderCell key={key} value={filtrosColumna[key]} onChange={(value) => aplicarFiltro(key, value)} options={opts}>{label}</FilterHeaderCell>;
     return [
@@ -109,11 +171,64 @@ export function VentasPage() {
         >
           <TableHead><TableRow>{columnas.map((columna) => columna.header)}<TableCell align="right">Acciones</TableCell></TableRow></TableHead>
           <TableBody>
-            {items.map((item) => <TableRow key={item.id} hover>{columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}<TableCell align="right"><Tooltip title="Ver comprobante"><IconButton size="small" onClick={() => abrirDetalle(item.id)}><VisibilityOutlinedIcon fontSize="small" /></IconButton></Tooltip></TableCell></TableRow>)}
+            {items.map((item) => (
+              <TableRow key={item.id} hover>
+                {columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}
+                <TableCell align="right">
+                  <Stack direction="row" spacing={0.4} justifyContent="flex-end">
+                    {['PENDIENTE', 'PARCIAL'].includes(String(item.estado || '').toUpperCase()) ? (
+                      <Tooltip title="Cobrar venta pendiente">
+                        <IconButton size="small" onClick={() => prepararCobro(item)}>
+                          <PointOfSaleOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+                    <Tooltip title="Ver comprobante">
+                      <IconButton size="small" onClick={() => abrirDetalle(item.id)}>
+                        <VisibilityOutlinedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
             {items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + 1} cargando={cargando} texto="No hay ventas para los filtros aplicados." /> : null}
           </TableBody>
         </TablaGestion>
       </Paper>
+      <Dialog open={Boolean(cobro)} onClose={() => !guardandoCobro && setCobro(null)} fullWidth maxWidth="xs">
+        <DialogTitle sx={{ fontWeight: 950, borderBottom: '1px solid #e5e7eb' }}>Cobrar venta pendiente</DialogTitle>
+        <DialogContent sx={{ pt: 2.2 }}>
+          {cobro ? (
+            <Stack spacing={1.5}>
+              <Box>
+                <Typography variant="body2" fontWeight={900}>{cobro.venta.concepto}</Typography>
+                <Typography variant="caption" color="text.secondary">{cobro.venta.numero} · {cobro.venta.cliente_nombre || 'Consumidor final'}</Typography>
+              </Box>
+              <Box sx={{ p: 1.2, border: '1px solid #e5e7eb', borderRadius: 1.5, bgcolor: '#f8fafc' }}>
+                <Typography variant="caption" color="text.secondary">Saldo por cobrar</Typography>
+                <Typography variant="h5" fontWeight={950}>{dinero(cobro.saldo)}</Typography>
+                <Typography variant="caption" color="text.secondary">{cobro.turno.caja_nombre} · {cobro.turno.sede_nombre}</Typography>
+              </Box>
+              <TextField select label="Método de pago" size="small" value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
+                <MenuItem value="EFECTIVO">Efectivo</MenuItem>
+                <MenuItem value="TARJETA">Tarjeta</MenuItem>
+                <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+                <MenuItem value="DEPOSITO">Depósito</MenuItem>
+                <MenuItem value="OTRO">Otro</MenuItem>
+              </TextField>
+              {metodoPago !== 'EFECTIVO' ? (
+                <TextField label="Referencia / comprobante" size="small" value={referenciaPago} onChange={(e) => setReferenciaPago(e.target.value)} />
+              ) : null}
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 1.5, borderTop: '1px solid #e5e7eb' }}>
+          <Button onClick={() => setCobro(null)} disabled={guardandoCobro}>Cancelar</Button>
+          <Button variant="contained" onClick={confirmarCobro} disabled={guardandoCobro}>Confirmar cobro</Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={Boolean(detalle) || cargandoDetalle} onClose={() => !cargandoDetalle && setDetalle(null)} fullWidth maxWidth="md">
         <DialogTitle sx={{ fontWeight: 950, borderBottom: '1px solid #e5e7eb' }}>
           {cargandoDetalle ? 'Cargando venta...' : `Comprobante · ${detalle?.comprobante?.numero || detalle?.numero || ''}`}
