@@ -1,5 +1,4 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -7,7 +6,7 @@ import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
-export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onVerHorarios, onPageChange, onRowsPerPageChange }) {
+export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onPageChange, onRowsPerPageChange }) {
   return (
     <TablaGestion
       total={meta.total || 0}
@@ -53,11 +52,6 @@ export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                <Tooltip title="Turnos del entrenador">
-                  <IconButton sx={dbanuStyles.actionEdit} onClick={() => onVerHorarios && onVerHorarios(entrenador)}>
-                    <CalendarMonthOutlinedIcon sx={{ fontSize: 17 }} />
-                  </IconButton>
-                </Tooltip>
                 <Tooltip title="Editar entrenador">
                   <IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(entrenador)}>
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
