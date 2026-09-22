@@ -1,6 +1,5 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { IconButton, Stack, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
-import { StatusChip } from '../../../components/common/StatusChip.jsx';
+import { Chip, IconButton, Stack, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -44,18 +43,19 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
               <Typography variant="caption" color="text.secondary">{membresia.codigo_deportista || membresia.deportista_email || 'Sin código'}</Typography>
             </TableCell>
             <TableCell>
-              <Typography variant="body2">{membresia.plan_nombre || 'Plan no asignado'}{membresia.precio_aplicado ? ` · $${Number(membresia.precio_aplicado).toFixed(2)}` : ''}</Typography>
-              <Typography variant="caption" color="text.secondary">{membresia.sede_nombre || 'Sede no asignada'}</Typography>
+              <Typography variant="body2">{membresia.plan_nombre || 'Plan no asignado'}{membresia.precio_aplicado ? ` · ${Number(membresia.precio_aplicado).toFixed(2)}` : ''}</Typography>
             </TableCell>
             <TableCell>
               <Typography variant="body2" fontWeight="500">
                 {(membresia.sedes_habilitadas || []).map((sede) => sede.sede_nombre).filter(Boolean).join(', ') || membresia.sede_nombre || 'Sin sedes'}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {(membresia.asignaciones_entrenador || []).length
-                  ? `${(membresia.asignaciones_entrenador || []).length} asignación(es) de entrenamiento`
-                  : (membresia.requiere_entrenador ? 'Entrenador pendiente' : 'Plan sin entrenador')}
-              </Typography>
+              {(membresia.asignaciones_entrenador || []).length ? (
+                <Typography variant="caption" color="text.secondary">
+                  {(membresia.asignaciones_entrenador || []).length} asignación(es) de entrenamiento
+                </Typography>
+              ) : (membresia.requiere_entrenador ? (
+                <Typography variant="caption" color="warning.main">Entrenador pendiente</Typography>
+              ) : null)}
             </TableCell>
             <TableCell>
               <Typography variant="body2">{fecha(membresia.fecha_inicio)} - {fecha(membresia.fecha_fin)}</Typography>
@@ -64,7 +64,12 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
               ) : null}
             </TableCell>
             <TableCell>
-              <StatusChip estado={String(membresia.estado || '').toLowerCase()} />
+              <Chip
+                label={membresia.estado_nombre || String(membresia.estado_valor || membresia.estado || '').replaceAll('_', ' ').toLowerCase().replace(/^./, (letra) => letra.toUpperCase())}
+                size="small"
+                variant="outlined"
+                sx={membresia.estado_color ? { color: membresia.estado_color, borderColor: membresia.estado_color } : undefined}
+              />
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
