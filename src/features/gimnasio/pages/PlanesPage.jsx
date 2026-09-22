@@ -114,6 +114,7 @@ export function PlanesPage() {
         siguiente.renovable = false;
         siguiente.tipo_duracion = 'DIAS';
         siguiente.duracion = 1;
+        siguiente.tarifa_inscripcion = 0;
       }
       return siguiente;
     });
@@ -121,22 +122,51 @@ export function PlanesPage() {
 
   const handleGuardar = async () => {
     try {
-      if (!formData.codigo || !formData.nombre || !formData.precio_base || !formData.duracion) {
-        showNotificacion('Complete los campos obligatorios', 'warning');
+      if (!String(formData.nombre || '').trim()) {
+        showNotificacion('Ingresa el nombre del plan.', 'warning');
+        return;
+      }
+
+      const precioBase = Number(formData.precio_base);
+      const duracion = Number(formData.duracion);
+
+      if (!Number.isFinite(precioBase) || precioBase < 0) {
+        showNotificacion('El precio base debe ser un valor válido mayor o igual a 0.', 'warning');
+        return;
+      }
+
+      if (!Number.isInteger(duracion) || duracion < 1) {
+        showNotificacion('La duración debe ser un número entero mayor o igual a 1.', 'warning');
         return;
       }
 
       const preciosSedeValidos = (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
       if (preciosSedeValidos.length !== (formData.precios_sede || []).length) {
-        showNotificacion('Completa la sede y el precio de cada fila, o quítala', 'warning');
+        showNotificacion('Completa la sede y el precio de cada fila, o quítala.', 'warning');
+        return;
+      }
+
+      const sedesSeleccionadas = preciosSedeValidos.map((fila) => String(fila.sede_id));
+      if (new Set(sedesSeleccionadas).size !== sedesSeleccionadas.length) {
+        showNotificacion('No puedes registrar dos precios para la misma sede.', 'warning');
+        return;
+      }
+
+      const precioSedeInvalido = preciosSedeValidos.some((fila) => {
+        const precio = Number(fila.precio);
+        return !Number.isFinite(precio) || precio < 0;
+      });
+      if (precioSedeInvalido) {
+        showNotificacion('Todos los precios por sede deben ser valores válidos mayores o iguales a 0.', 'warning');
         return;
       }
 
       const payload = {
         ...formData,
-        precio_base: parseFloat(formData.precio_base),
-        tarifa_inscripcion: parseFloat(formData.tarifa_inscripcion || 0),
-        duracion: parseInt(formData.duracion, 10),
+        codigo: formData.id ? formData.codigo : undefined,
+        precio_base: precioBase,
+        tarifa_inscripcion: formData.tipo_producto === 'PASE_DIARIO' ? 0 : Number(formData.tarifa_inscripcion || 0),
+        duracion: formData.tipo_producto === 'PASE_DIARIO' ? 1 : duracion,
         generar_venta: Boolean(formData.generar_venta),
         requiere_pago: Boolean(formData.requiere_pago),
         requiere_entrenador: Boolean(formData.requiere_entrenador),
@@ -167,7 +197,13 @@ export function PlanesPage() {
               <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Datos del plan</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 1.5 }}>
-                  <TextField label="Código Único" name="codigo" value={formData.codigo} onChange={handleChange} required size="small" helperText="Ej.: MUSC-001" />
+                  <TextField
+                    label="Código"
+                    value={formData.id ? formData.codigo || '' : 'Se genera al guardar'}
+                    size="small"
+                    disabled
+                    helperText="Identificador generado automáticamente por el sistema."
+                  />
                   <TextField label="Nombre del Plan" name="nombre" value={formData.nombre} onChange={handleChange} required size="small" />
                 </Box>
                 <TextField fullWidth label="Descripción / Beneficios" name="descripcion" value={formData.descripcion || ''} onChange={handleChange} multiline rows={2} size="small" sx={{ mt: 1.5 }} />
@@ -182,13 +218,13 @@ export function PlanesPage() {
                     <MenuItem value="PAQUETE_VISITAS">Paquete de visitas</MenuItem>
                     <MenuItem value="PAQUETE_SESIONES">Paquete de sesiones</MenuItem>
                   </TextField>
-                  <TextField select label="Tipo de cobro" name="tipo_cobro" value={formData.tipo_cobro || 'PAGO_UNICO'} onChange={handleChange} size="small">
+                  <TextField select label="Tipo de cobro" name="tipo_cobro" value={formData.tipo_cobro || 'PAGO_UNICO'} onChange={handleChange} size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'}>
                     <MenuItem value="PAGO_UNICO">Pago único</MenuItem>
                     <MenuItem value="RECURRENTE">Recurrente</MenuItem>
                   </TextField>
                 </Box>
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                  <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Permitir generar venta" />
+                  <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Generar cobro al contratar" />
                   <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
                   <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
@@ -199,10 +235,14 @@ export function PlanesPage() {
                 <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>La fecha fin del contrato se calcula automáticamente desde esta duración.</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-                  <TextField select label="Tipo de Duración" name="tipo_duracion" value={formData.tipo_duracion} onChange={handleChange} size="small"><MenuItem value="DIAS">Días</MenuItem><MenuItem value="MESES">Meses</MenuItem><MenuItem value="ANIOS">Años</MenuItem></TextField>
-                  <TextField label="Duración" name="duracion" type="number" value={formData.duracion} onChange={handleChange} required size="small" />
-                  <TextField label="Precio Base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" />
-                  <TextField label="Tarifa de Inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" helperText="Opcional" />
+                  <TextField select label="Tipo de Duración" name="tipo_duracion" value={formData.tipo_duracion} onChange={handleChange} size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'}><MenuItem value="DIAS">Días</MenuItem><MenuItem value="MESES">Meses</MenuItem><MenuItem value="ANIOS">Años</MenuItem></TextField>
+                  <TextField label="Duración" name="duracion" type="number" value={formData.duracion} onChange={handleChange} required size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'} />
+                  <TextField label="Precio Base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" inputProps={{ min: 0, step: '0.01' }} />
+                  {formData.tipo_producto !== 'PASE_DIARIO' ? (
+                    <TextField label="Tarifa de Inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" helperText="Opcional" inputProps={{ min: 0, step: '0.01' }} />
+                  ) : (
+                    <Box />
+                  )}
                 </Box>
               </Box>
 
