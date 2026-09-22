@@ -154,8 +154,12 @@ export const gimnasioServicio = {
     const { data } = await api.get('/base/gimnasio/agenda/asignaciones-horario', { params });
     return data;
   },
-  obtenerCatalogosAsignacionHorario: async () => {
-    const { data } = await api.get('/base/gimnasio/agenda/asignaciones-horario/catalogos');
+  obtenerCatalogosAsignacionHorario: async (params = {}) => {
+    const { data } = await api.get('/base/gimnasio/agenda/asignaciones-horario/catalogos', { params });
+    return data;
+  },
+  buscarEntrenadoresAgenda: async (params = {}) => {
+    const { data } = await api.get('/base/gimnasio/agenda/asignaciones-horario/entrenadores', { params });
     return data;
   },
   crearAsignacionHorario: async (payload) => {
