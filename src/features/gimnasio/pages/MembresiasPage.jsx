@@ -29,6 +29,7 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
+import { confirmarAccion } from '../../../utils/confirmacion.js';
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 const limpiarFecha = (valor) => (valor ? String(valor).slice(0, 10) : '');
@@ -389,6 +390,38 @@ export function MembresiasPage() {
     }
   };
 
+  const handleRenovar = async (membresia) => {
+    const confirmado = await confirmarAccion({
+      titulo: 'Renovar membresía',
+      texto: `Se generará el siguiente período para ${membresia.deportista_nombre || 'el cliente'} y, si corresponde, una nueva cuenta pendiente. ¿Deseas continuar?`,
+      textoConfirmar: 'Sí, renovar',
+      icono: 'question',
+    });
+
+    if (!confirmado) return;
+
+    try {
+      const respuesta = await gimnasioServicio.renovarMembresia(membresia.id);
+      const periodo = respuesta.datos?.periodo;
+      const ventaNumero = respuesta.datos?.venta_numero;
+
+      showNotificacion(
+        ventaNumero
+          ? `Renovación generada: período ${periodo?.numero_periodo || ''} y venta ${ventaNumero} pendiente de pago.`
+          : 'Membresía renovada correctamente.',
+        'success',
+      );
+      cargarMembresias();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const primerError = errores ? Object.values(errores).flat()[0] : null;
+      showNotificacion(
+        primerError || error.response?.data?.mensaje || error.response?.data?.message || 'No se pudo renovar la membresía.',
+        'error',
+      );
+    }
+  };
+
   const handleMembresiaCancelada = () => {
     showNotificacion('Membresía cancelada. El contrato se conserva en el historial.', 'success');
     cargarMembresias();
@@ -627,7 +660,7 @@ export function MembresiasPage() {
       <PageHeader titulo="Membresías" descripcion="Contratos asignados a clientes, con plan, sedes habilitadas, vigencia, cobro y estado." icono={<CardMembershipOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || membresias.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <MembresiasTable membresias={membresias} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={aplicarFiltroColumna} onEditar={handleEditar} onCancelada={handleMembresiaCancelada} onErrorCancelar={handleErrorCancelarMembresia} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargarMembresias(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargarMembresias(nuevos); }} />
+        <MembresiasTable membresias={membresias} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={aplicarFiltroColumna} onEditar={handleEditar} onRenovar={handleRenovar} onCancelada={handleMembresiaCancelada} onErrorCancelar={handleErrorCancelarMembresia} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargarMembresias(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargarMembresias(nuevos); }} />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
