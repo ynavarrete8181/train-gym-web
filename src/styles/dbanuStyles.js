@@ -149,6 +149,29 @@ export const dbanuStyles = {
       },
     },
   },
+  secondaryButtonRevive: {
+    minHeight: 38,
+    px: 1.35,
+    bgcolor: 'background.paper',
+    color: uiTokens.colores.textoFuerte,
+    border: `1px solid ${uiTokens.colores.borde}`,
+    borderRadius: 0.5,
+    textTransform: 'none',
+    fontWeight: 900,
+    boxShadow: 'none',
+    '& .MuiButton-startIcon': {
+      mr: 0.8,
+      color: uiTokens.colores.textoFuerte,
+    },
+    '& .MuiButton-startIcon > *:nth-of-type(1)': {
+      fontSize: 18,
+    },
+    '&:hover': {
+      bgcolor: uiTokens.colores.acentoSuave,
+      borderColor: uiTokens.colores.acento,
+      color: uiTokens.colores.acentoOscuro,
+    },
+  },
   backButton: {
     minHeight: 38,
     px: 1.7,
