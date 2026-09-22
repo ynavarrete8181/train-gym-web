@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
+import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
@@ -25,6 +27,7 @@ export function VentasPage() {
   const [detallePdfUrl, setDetallePdfUrl] = useState('');
   const [detallePdfNombre, setDetallePdfNombre] = useState('Comprobante');
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
+  const [detallePdfBlob, setDetallePdfBlob] = useState(null);
 
   const cargarCuentas = async () => {
     setCargandoCuentas(true);
@@ -57,6 +60,7 @@ export function VentasPage() {
   const cerrarDetalle = () => {
     if (detallePdfUrl) URL.revokeObjectURL(detallePdfUrl);
     setDetallePdfUrl('');
+    setDetallePdfBlob(null);
     setDetallePdfNombre('Comprobante');
   };
 
@@ -66,6 +70,7 @@ export function VentasPage() {
       if (detallePdfUrl) URL.revokeObjectURL(detallePdfUrl);
       const blob = await ventaServicio.obtenerComprobantePdf(venta.id);
       const url = URL.createObjectURL(blob);
+      setDetallePdfBlob(blob);
       setDetallePdfNombre(venta.numero || 'Comprobante');
       setDetallePdfUrl(url);
     } catch (error) {
@@ -73,6 +78,25 @@ export function VentasPage() {
     } finally {
       setCargandoDetalle(false);
     }
+  };
+
+  const descargarDetallePdf = () => {
+    if (!detallePdfBlob) return;
+    const url = URL.createObjectURL(detallePdfBlob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = `${detallePdfNombre || 'comprobante'}.pdf`;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const imprimirDetallePdf = () => {
+    if (!detallePdfUrl) return;
+    const iframe = document.querySelector('iframe[data-comprobante-pdf="true"]');
+    iframe?.contentWindow?.focus();
+    iframe?.contentWindow?.print();
   };
 
   if (vista === 'pos') {
@@ -281,12 +305,35 @@ export function VentasPage() {
         onClose={() => !cargandoDetalle && cerrarDetalle()}
         fullWidth
         maxWidth="lg"
-        PaperProps={{ sx: { height: { xs: '92vh', md: '88vh' }, overflow: 'hidden' } }}
+        PaperProps={{ sx: { height: { xs: '94vh', md: '90vh' }, overflow: 'hidden', borderRadius: 1.5 } }}
       >
-        <DialogTitle sx={{ fontWeight: 950, borderBottom: '1px solid #e5e7eb', py: 1.35 }}>
-          {cargandoDetalle ? 'Generando comprobante...' : `Comprobante · ${detallePdfNombre}`}
+        <DialogTitle
+          sx={{
+            px: 2.2,
+            py: 1.45,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            borderBottom: '1px solid #e5e7eb',
+            bgcolor: '#fff',
+          }}
+        >
+          <Box>
+            <Typography variant="subtitle1" fontWeight={950}>
+              {cargandoDetalle ? 'Generando comprobante...' : 'Comprobante'}
+            </Typography>
+            {!cargandoDetalle ? (
+              <Typography variant="caption" color="text.secondary">{detallePdfNombre}</Typography>
+            ) : null}
+          </Box>
+          <Chip
+            size="small"
+            label={cargandoDetalle ? 'Procesando' : 'PDF'}
+            sx={{ fontWeight: 900, bgcolor: 'rgba(212,160,23,.13)', color: '#8a6500', border: '1px solid rgba(212,160,23,.28)' }}
+          />
         </DialogTitle>
-        <DialogContent sx={{ p: 0, bgcolor: '#eef1f4', height: '100%' }}>
+        <DialogContent sx={{ p: 0, bgcolor: '#e9edf1', height: '100%', overflow: 'hidden' }}>
           {cargandoDetalle ? (
             <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
               <Typography variant="body2" color="text.secondary">Cargando PDF...</Typography>
@@ -294,14 +341,33 @@ export function VentasPage() {
           ) : detallePdfUrl ? (
             <Box
               component="iframe"
+              data-comprobante-pdf="true"
               title={`Comprobante ${detallePdfNombre}`}
               src={detallePdfUrl}
-              sx={{ width: '100%', height: '100%', minHeight: 620, border: 0, display: 'block', bgcolor: '#fff' }}
+              sx={{ width: '100%', height: '100%', minHeight: 640, border: 0, display: 'block', bgcolor: '#fff' }}
             />
           ) : null}
         </DialogContent>
-        <DialogActions sx={{ px: 2, py: 1.1, borderTop: '1px solid #e5e7eb' }}>
-          <Button onClick={cerrarDetalle} sx={dbanuStyles.backButton}>Cerrar</Button>
+        <DialogActions sx={{ px: 2.2, py: 1.2, borderTop: '1px solid #e5e7eb', bgcolor: '#fff', gap: 1 }}>
+          <Button onClick={cerrarDetalle} sx={dbanuStyles.secondaryButtonRevive}>
+            Cerrar
+          </Button>
+          <Button
+            startIcon={<DownloadOutlinedIcon />}
+            onClick={descargarDetallePdf}
+            disabled={!detallePdfBlob || cargandoDetalle}
+            sx={dbanuStyles.secondaryButtonRevive}
+          >
+            Descargar PDF
+          </Button>
+          <Button
+            startIcon={<PrintOutlinedIcon />}
+            onClick={imprimirDetallePdf}
+            disabled={!detallePdfUrl || cargandoDetalle}
+            sx={dbanuStyles.addButtonRevive}
+          >
+            Imprimir
+          </Button>
         </DialogActions>
       </Dialog>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion((actual) => ({ ...actual, mensaje: '' }))} />
