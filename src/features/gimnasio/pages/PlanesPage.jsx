@@ -28,6 +28,7 @@ const getInitialForm = () => ({
   tipo_cobro: 'RECURRENTE',
   generar_venta: true,
   requiere_pago: true,
+  requiere_entrenador: false,
   renovable: true,
   activo: true,
   precios_sede: [],
@@ -138,6 +139,7 @@ export function PlanesPage() {
         duracion: parseInt(formData.duracion, 10),
         generar_venta: Boolean(formData.generar_venta),
         requiere_pago: Boolean(formData.requiere_pago),
+        requiere_entrenador: Boolean(formData.requiere_entrenador),
         renovable: Boolean(formData.renovable),
         precios_sede: preciosSedeValidos.map((fila) => ({ sede_id: Number(fila.sede_id), precio: parseFloat(fila.precio) })),
       };
@@ -188,6 +190,7 @@ export function PlanesPage() {
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 1 }}>
                   <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Permitir generar venta" />
                   <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
+                  <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
                 </Stack>
               </Box>
