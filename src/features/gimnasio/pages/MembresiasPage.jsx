@@ -358,7 +358,7 @@ export function MembresiasPage() {
           ...comun,
           deportista_id: formData.deportista_id,
           plan_id: formData.plan_id,
-          generar_venta: Boolean(formData.requiere_facturar && puedeGenerarVenta),
+          generar_venta: Boolean(formData.requiere_facturar && (planSeleccionado?.generar_venta ?? true)),
         });
 
         const ventaNumero = respuesta.datos?.venta_numero;
