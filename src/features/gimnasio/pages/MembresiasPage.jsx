@@ -9,7 +9,6 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
-  ListItemText,
   MenuItem,
   Paper,
   Stack,
@@ -55,6 +54,7 @@ const formInicial = () => ({
   estado: 'PENDIENTE_PAGO',
   dias_gracia: 0,
   renovacion_automatica: false,
+  requiere_facturar: false,
   fecha_congelacion_inicio: '',
   fecha_congelacion_fin: '',
 });
@@ -251,24 +251,31 @@ export function MembresiasPage() {
       if (name === 'plan_id') {
         const plan = planes.find((item) => String(item.id) === String(value));
         if (!plan?.requiere_entrenador) siguiente.asignaciones_entrenador = [];
+        if (!(plan?.generar_venta ?? true)) siguiente.requiere_facturar = false;
       }
 
       return siguiente;
     });
   };
 
-  const handleSedesHabilitadas = (evento) => {
-    const valores = (evento.target.value || []).map(Number);
+  const handleSedeHabilitada = (sedeId, habilitada) => {
+    const id = Number(sedeId);
     const principal = formData.sede_id ? Number(formData.sede_id) : null;
-    const siguientes = principal ? Array.from(new Set([...valores, principal])) : valores;
 
-    setFormData((actual) => ({
-      ...actual,
-      sedes_habilitadas: siguientes,
-      asignaciones_entrenador: (actual.asignaciones_entrenador || []).filter((a) => siguientes.includes(Number(a.sede_id))),
-    }));
+    setFormData((actual) => {
+      const actuales = (actual.sedes_habilitadas || []).map(Number);
+      const siguientes = habilitada
+        ? Array.from(new Set([...actuales, id, ...(principal ? [principal] : [])]))
+        : actuales.filter((item) => item !== id || item === principal);
 
-    siguientes.forEach((sedeId) => cargarEntrenadoresSede(sedeId));
+      return {
+        ...actual,
+        sedes_habilitadas: siguientes,
+        asignaciones_entrenador: (actual.asignaciones_entrenador || []).filter((a) => siguientes.includes(Number(a.sede_id))),
+      };
+    });
+
+    if (habilitada) cargarEntrenadoresSede(id);
   };
 
   const agregarAsignacion = () => {
@@ -314,7 +321,7 @@ export function MembresiasPage() {
     }));
   };
 
-  const handleGuardar = async (generarVenta = false) => {
+  const handleGuardar = async () => {
     try {
       const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
 
@@ -365,7 +372,7 @@ export function MembresiasPage() {
           ...comun,
           deportista_id: formData.deportista_id,
           plan_id: formData.plan_id,
-          generar_venta: Boolean(generarVenta),
+          generar_venta: Boolean(formData.requiere_facturar && puedeGenerarVenta),
         });
 
         const ventaNumero = respuesta.datos?.venta_numero;
@@ -447,29 +454,60 @@ export function MembresiasPage() {
                     {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
                   </TextField>
 
-                  <TextField
-                    select
-                    SelectProps={{
-                      multiple: true,
-                      renderValue: (seleccionadas) => seleccionadas
-                        .map((id) => sedes.find((sede) => Number(sede.id_sede) === Number(id))?.nombre)
-                        .filter(Boolean)
-                        .join(', '),
-                    }}
-                    label="Sedes habilitadas"
-                    value={formData.sedes_habilitadas || []}
-                    onChange={handleSedesHabilitadas}
-                    required
-                    size="small"
-                    helperText="El cliente podrá usar esta membresía en todas las sedes seleccionadas."
-                  >
-                    {sedes.map((sede) => (
-                      <MenuItem key={sede.id_sede} value={sede.id_sede}>
-                        <Checkbox checked={(formData.sedes_habilitadas || []).map(Number).includes(Number(sede.id_sede))} />
-                        <ListItemText primary={sede.nombre} />
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  <Box sx={{ gridColumn: { xs: '1', md: 'span 2' } }}>
+                    <Typography variant="caption" sx={{ display: 'block', mb: 0.75, fontWeight: 600, color: 'text.secondary' }}>
+                      Sedes habilitadas *
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        p: 1.15,
+                        minHeight: 40,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        bgcolor: '#fff',
+                      }}
+                    >
+                      {sedes.map((sede) => {
+                        const sedeId = Number(sede.id_sede);
+                        const seleccionada = (formData.sedes_habilitadas || []).map(Number).includes(sedeId);
+                        const esPrincipal = Number(formData.sede_id) === sedeId;
+
+                        return (
+                          <FormControlLabel
+                            key={sede.id_sede}
+                            sx={{
+                              m: 0,
+                              pr: 1.25,
+                              border: '1px solid',
+                              borderColor: seleccionada ? 'primary.main' : 'divider',
+                              borderRadius: 1,
+                              bgcolor: seleccionada ? 'action.selected' : 'transparent',
+                            }}
+                            control={
+                              <Checkbox
+                                size="small"
+                                checked={seleccionada}
+                                disabled={esPrincipal}
+                                onChange={(e) => handleSedeHabilitada(sedeId, e.target.checked)}
+                              />
+                            }
+                            label={
+                              <Typography variant="body2">
+                                {sede.nombre}{esPrincipal ? ' · Contratación' : ''}
+                              </Typography>
+                            }
+                          />
+                        );
+                      })}
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                      Marca directamente las sedes donde el cliente podrá utilizar la membresía. La sede de contratación siempre queda incluida.
+                    </Typography>
+                  </Box>
 
                   <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
                   <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
@@ -555,12 +593,28 @@ export function MembresiasPage() {
           </Box>
 
           {esEdicion ? (
-            <AccionesFormulario onGuardar={() => handleGuardar(false)} onCancelar={handleCancelarFormulario} guardando={guardando} />
+            <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelarFormulario} guardando={guardando} />
           ) : (
-            <Stack direction="row" sx={dbanuStyles.formActions} spacing={1}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              sx={dbanuStyles.formActions}
+              spacing={1}
+              justifyContent="flex-end"
+              alignItems={{ xs: 'stretch', sm: 'center' }}
+            >
+              <FormControlLabel
+                sx={{ mr: { sm: 'auto' } }}
+                control={
+                  <Switch
+                    checked={Boolean(formData.requiere_facturar)}
+                    onChange={(e) => setFormData((actual) => ({ ...actual, requiere_facturar: e.target.checked }))}
+                    disabled={!puedeGenerarVenta || guardando}
+                  />
+                }
+                label={puedeGenerarVenta ? '¿Requiere facturar?' : 'Este plan no genera venta'}
+              />
               <BotonCancelar onClick={handleCancelarFormulario} disabled={guardando} />
-              <BotonGuardar onClick={() => handleGuardar(false)} texto="Guardar pendiente" guardando={guardando} />
-              {puedeGenerarVenta ? <BotonGuardar onClick={() => handleGuardar(true)} texto="Guardar y cobrar" guardando={guardando} /> : null}
+              <BotonGuardar onClick={handleGuardar} texto="Guardar membresía" guardando={guardando} />
             </Stack>
           )}
         </Paper>
