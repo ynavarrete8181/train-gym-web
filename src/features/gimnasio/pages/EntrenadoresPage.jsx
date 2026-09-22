@@ -408,7 +408,6 @@ export function EntrenadoresPage() {
           filtrosColumna={filtrosColumna}
           onFiltroColumna={aplicarFiltroColumna}
           onEditar={handleEditar}
-          onVerHorarios={handleVerHorarios}
           onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarEntrenadores(n); }}
           onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarEntrenadores(n); }}
         />
