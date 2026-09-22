@@ -128,7 +128,7 @@ export function VentasPage() {
                 <Dato label="Caja" valor={detalle.caja_nombre || '—'} />
                 <Dato label="Cliente" valor={detalle.cliente_nombre || 'Consumidor final'} />
                 {detalle.membresia_codigo ? <Dato label="Membresía" valor={detalle.membresia_codigo} /> : null}
-                {detalle.entrenador_nombre ? <Dato label="Entrenador" valor={detalle.entrenador_nombre} /> : null}
+                {(detalle.sedes_membresia || []).length ? <Dato label="Sedes habilitadas" valor={(detalle.sedes_membresia || []).map((s) => s.sede_nombre).join(', ')} /> : null}
                 <Dato label="Fecha" valor={detalle.fecha_venta ? new Date(detalle.fecha_venta).toLocaleString('es-EC') : '—'} />
                 <Dato label="Comprobante" valor={detalle.comprobante?.numero || 'Pendiente'} />
                 <Dato label="Tipo" valor={detalle.comprobante?.tipo_comprobante || 'RECIBO'} />
@@ -158,6 +158,19 @@ export function VentasPage() {
                   <Resumen label="TOTAL" valor={dinero(detalle.total)} fuerte />
                 </Stack>
               </Box>
+
+              {(detalle.entrenadores_membresia || []).length ? (
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={950} sx={{ mb: .7 }}>Entrenamiento asociado</Typography>
+                  <Stack spacing={.5}>
+                    {(detalle.entrenadores_membresia || []).map((asignacion, indice) => (
+                      <Typography key={`${asignacion.entrenador_id}-${asignacion.sede_id}-${asignacion.horario_bloque_id}-${indice}`} variant="caption" color="text.secondary">
+                        {asignacion.sede_nombre || 'Sede'} · {asignacion.entrenador_nombre || 'Entrenador'}{asignacion.horario_nombre ? ` · ${asignacion.horario_nombre}` : ''}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              ) : null}
 
               {(detalle.pagos || []).length ? (
                 <Box>
