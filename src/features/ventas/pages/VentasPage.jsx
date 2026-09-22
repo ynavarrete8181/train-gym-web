@@ -3,7 +3,7 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
@@ -24,6 +24,11 @@ const estadoTexto = (valor) => String(valor || '').toLowerCase().replace('pagada
 export function VentasPage() {
   const [vista, setVista] = useState('lista');
   const [items, setItems] = useState([]);
+  const [cuentasAbiertas, setCuentasAbiertas] = useState([]);
+  const [cargandoCuentas, setCargandoCuentas] = useState(true);
+  const [seccion, setSeccion] = useState('abiertas');
+  const [cuentaInicial, setCuentaInicial] = useState(null);
+  const [busquedaCuenta, setBusquedaCuenta] = useState('');
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({});
@@ -49,7 +54,33 @@ export function VentasPage() {
     }
   };
 
-  useEffect(() => { cargar(); }, []);
+  const cargarCuentas = async () => {
+    setCargandoCuentas(true);
+    try {
+      const response = await ventaServicio.obtenerVentas({
+        page: 1,
+        per_page: 50,
+        estado: ['PENDIENTE', 'PARCIAL'],
+      });
+      setCuentasAbiertas(response.datos || []);
+    } catch (error) {
+      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudieron cargar las cuentas abiertas.', tipo: 'error' });
+    } finally {
+      setCargandoCuentas(false);
+    }
+  };
+
+  const abrirCuenta = async (venta) => {
+    try {
+      const response = await ventaServicio.obtenerDetalleVenta(venta.id);
+      setCuentaInicial(response.datos || response);
+      setVista('pos');
+    } catch (error) {
+      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo abrir la cuenta.', tipo: 'error' });
+    }
+  };
+
+  useEffect(() => { cargar(); cargarCuentas(); }, []);
 
   const buscar = (params) => {
     const nuevos = { ...params, page: 1 };
@@ -147,54 +178,190 @@ export function VentasPage() {
   }, [meta, filtrosColumna]);
 
   if (vista === 'pos') {
-    return <VentaPosFormulario onVolver={() => setVista('lista')} onGuardado={() => { setVista('lista'); cargar({ ...filtros, page: 1 }); }} />;
+    return (
+      <VentaPosFormulario
+        ventaInicial={cuentaInicial}
+        onVolver={() => { setCuentaInicial(null); setVista('lista'); }}
+        onGuardado={() => {
+          setCuentaInicial(null);
+          setVista('lista');
+          setSeccion('abiertas');
+          cargar({ ...filtros, page: 1 });
+          cargarCuentas();
+        }}
+      />
+    );
   }
 
   return (
     <Box className="page-wrapper">
       <PageHeader titulo="Ventas" descripcion="Facturación y punto de venta de servicios, productos y operaciones comerciales." icono={<ShoppingCartOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
-        <GestionToolbar
-          total={meta.total || items.length}
-          busqueda={filtros.busqueda}
-          onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })}
-          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => setVista('pos')} sx={dbanuStyles.addButtonRevive}>Nueva venta</Button>}
-        />
-        <TablaGestion
-          total={meta.total || 0}
-          filtrados={meta.total || 0}
-          page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 5}
-          onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }}
-          onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
-          cargando={cargando}
-        >
-          <TableHead><TableRow>{columnas.map((columna) => columna.header)}<TableCell align="right">Acciones</TableCell></TableRow></TableHead>
-          <TableBody>
-            {items.map((item) => (
-              <TableRow key={item.id} hover>
-                {columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}
-                <TableCell align="right">
-                  <Stack direction="row" spacing={0.4} justifyContent="flex-end">
-                    {['PENDIENTE', 'PARCIAL'].includes(String(item.estado || '').toUpperCase()) ? (
-                      <Tooltip title="Cobrar venta pendiente">
-                        <IconButton size="small" onClick={() => prepararCobro(item)}>
-                          <PointOfSaleOutlinedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    ) : null}
-                    <Tooltip title="Ver comprobante">
-                      <IconButton size="small" onClick={() => abrirDetalle(item.id)}>
-                        <VisibilityOutlinedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Stack>
-                </TableCell>
-              </TableRow>
-            ))}
-            {items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + 1} cargando={cargando} texto="No hay ventas para los filtros aplicados." /> : null}
-          </TableBody>
-        </TablaGestion>
+        <Box sx={{ px: 2, pt: 1.5, borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap' }}>
+          <Tabs value={seccion} onChange={(_, value) => setSeccion(value)} sx={{ minHeight: 42 }}>
+            <Tab value="abiertas" label={`Cuentas abiertas (${cuentasAbiertas.length})`} sx={{ minHeight: 42, textTransform: 'none', fontWeight: 900 }} />
+            <Tab value="historial" label="Historial" sx={{ minHeight: 42, textTransform: 'none', fontWeight: 900 }} />
+          </Tabs>
+          <Button
+            startIcon={<AddOutlinedIcon />}
+            onClick={() => { setCuentaInicial(null); setVista('pos'); }}
+            sx={dbanuStyles.addButtonRevive}
+          >
+            Nueva venta
+          </Button>
+        </Box>
+
+        {seccion === 'abiertas' ? (
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1.5, mb: 1.6, flexWrap: 'wrap' }}>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={950}>Cuentas por cobrar</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Abre una cuenta para agregar consumos al mismo cliente y cobrar todo junto al finalizar.
+                </Typography>
+              </Box>
+              <TextField
+                size="small"
+                placeholder="Buscar cliente o concepto"
+                value={busquedaCuenta}
+                onChange={(e) => setBusquedaCuenta(e.target.value)}
+                sx={{ width: { xs: '100%', sm: 300 } }}
+              />
+            </Box>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' },
+                gap: 1.5,
+              }}
+            >
+              {cuentasAbiertas
+                .filter((venta) => {
+                  const texto = busquedaCuenta.trim().toLowerCase();
+                  if (!texto) return true;
+                  return `${venta.cliente_nombre || ''} ${venta.codigo_deportista || ''} ${venta.concepto || ''} ${venta.numero || ''}`
+                    .toLowerCase()
+                    .includes(texto);
+                })
+                .map((venta) => (
+                  <Box
+                    key={venta.id}
+                    sx={{
+                      border: '1px solid #e1e5ea',
+                      borderRadius: 2,
+                      bgcolor: '#fff',
+                      overflow: 'hidden',
+                      boxShadow: '0 8px 22px rgba(15,23,42,.05)',
+                    }}
+                  >
+                    <Box sx={{ px: 1.6, py: 1.35, display: 'flex', justifyContent: 'space-between', gap: 1, bgcolor: '#fafafa', borderBottom: '1px solid #eceff3' }}>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" fontWeight={950} noWrap title={venta.cliente_nombre || 'Consumidor final'}>
+                          {venta.cliente_nombre || 'Consumidor final'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {venta.codigo_deportista || venta.numero}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        size="small"
+                        label={String(venta.estado_nombre || venta.estado || 'Pendiente de pago').replaceAll('_', ' ')}
+                        variant="outlined"
+                      />
+                    </Box>
+
+                    <Box sx={{ p: 1.6 }}>
+                      <Typography variant="caption" color="text.secondary" display="block">Cuenta</Typography>
+                      <Typography variant="body2" fontWeight={850} sx={{ mt: .15 }}>
+                        {venta.concepto}
+                      </Typography>
+
+                      <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: '1fr auto', gap: 1, alignItems: 'end' }}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary" display="block">Sede</Typography>
+                          <Typography variant="body2" fontWeight={800}>{venta.sede_nombre || '—'}</Typography>
+                          <Typography variant="caption" color="text.secondary">{fecha(venta.fecha_venta)}</Typography>
+                        </Box>
+                        <Box sx={{ textAlign: 'right' }}>
+                          <Typography variant="caption" color="text.secondary" display="block">Pendiente</Typography>
+                          <Typography variant="h5" fontWeight={950}>{dinero(venta.total)}</Typography>
+                        </Box>
+                      </Box>
+
+                      <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<PointOfSaleOutlinedIcon />}
+                          onClick={() => abrirCuenta(venta)}
+                          sx={{ ...dbanuStyles.addButtonRevive, textTransform: 'none', fontWeight: 900 }}
+                        >
+                          Abrir cuenta
+                        </Button>
+                        <Tooltip title="Ver detalle">
+                          <IconButton size="small" onClick={() => abrirDetalle(venta.id)} sx={{ border: '1px solid #d8dee7', borderRadius: 1 }}>
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </Box>
+                  </Box>
+                ))}
+            </Box>
+
+            {!cargandoCuentas && cuentasAbiertas.length === 0 ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <ShoppingCartOutlinedIcon sx={{ fontSize: 38, opacity: .25 }} />
+                <Typography variant="body2" fontWeight={850} color="text.secondary" sx={{ mt: .5 }}>No hay cuentas abiertas.</Typography>
+                <Typography variant="caption" color="text.secondary">Las membresías, pases y ventas pendientes aparecerán aquí.</Typography>
+              </Box>
+            ) : null}
+          </Box>
+        ) : (
+          <>
+            <GestionToolbar
+              total={meta.total || items.length}
+              busqueda={filtros.busqueda}
+              onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })}
+            />
+            <TablaGestion
+              total={meta.total || 0}
+              filtrados={meta.total || 0}
+              page={meta.pagina_actual || 1}
+              rowsPerPage={meta.por_pagina || 5}
+              onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }}
+              onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
+              cargando={cargando}
+            >
+              <TableHead><TableRow>{columnas.map((columna) => columna.header)}<TableCell align="right">Acciones</TableCell></TableRow></TableHead>
+              <TableBody>
+                {items.map((item) => (
+                  <TableRow key={item.id} hover>
+                    {columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={0.4} justifyContent="flex-end">
+                        {['PENDIENTE', 'PARCIAL'].includes(String(item.estado || '').toUpperCase()) ? (
+                          <Tooltip title="Abrir cuenta">
+                            <IconButton size="small" onClick={() => abrirCuenta(item)}>
+                              <PointOfSaleOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        ) : null}
+                        <Tooltip title="Ver comprobante">
+                          <IconButton size="small" onClick={() => abrirDetalle(item.id)}>
+                            <VisibilityOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + 1} cargando={cargando} texto="No hay ventas para los filtros aplicados." /> : null}
+              </TableBody>
+            </TablaGestion>
+          </>
+        )}
       </Paper>
       <Dialog open={Boolean(cobro)} onClose={() => !guardandoCobro && setCobro(null)} fullWidth maxWidth="xs">
         <DialogTitle sx={{ fontWeight: 950, borderBottom: '1px solid #e5e7eb' }}>Cobrar venta pendiente</DialogTitle>
