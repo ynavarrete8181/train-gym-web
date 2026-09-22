@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography } from '@mui/material';
+import { Avatar, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
@@ -20,6 +27,18 @@ const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : '
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const opcionesEstados = (valores = []) => valores.map((item) => ({ value: String(item.valor_interno), label: String(item.nombre || item.valor_interno) }));
 const estadoTexto = (valor) => String(valor || '').toLowerCase().replace('pagada', 'activo').replace('emitido', 'activo');
+const iniciales = (nombre = '') => nombre.split(' ').filter(Boolean).slice(0, 2).map((parte) => parte[0]?.toUpperCase()).join('') || 'CF';
+const tipoCuenta = (venta) => {
+  const tipoPlan = String(venta.plan_tipo_producto || '').toUpperCase();
+  if (tipoPlan === 'PASE_DIARIO') return 'Pase diario';
+  if (tipoPlan === 'PAQUETE_VISITAS') return 'Paquete de visitas';
+  if (tipoPlan === 'PAQUETE_SESIONES') return 'Paquete de sesiones';
+  const tipoVenta = String(venta.tipo_venta || '').toUpperCase();
+  if (tipoVenta === 'MEMBRESIA') return 'Membresía';
+  if (tipoVenta === 'SERVICIO') return 'Servicio';
+  if (tipoVenta === 'PRODUCTO') return 'Producto';
+  return 'Venta';
+};
 
 export function VentasPage() {
   const [vista, setVista] = useState('lista');
@@ -244,70 +263,147 @@ export function VentasPage() {
                     .toLowerCase()
                     .includes(texto);
                 })
-                .map((venta) => (
-                  <Box
-                    key={venta.id}
-                    sx={{
-                      border: '1px solid #e1e5ea',
-                      borderRadius: 2,
-                      bgcolor: '#fff',
-                      overflow: 'hidden',
-                      boxShadow: '0 8px 22px rgba(15,23,42,.05)',
-                    }}
-                  >
-                    <Box sx={{ px: 1.6, py: 1.35, display: 'flex', justifyContent: 'space-between', gap: 1, bgcolor: '#fafafa', borderBottom: '1px solid #eceff3' }}>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight={950} noWrap title={venta.cliente_nombre || 'Consumidor final'}>
-                          {venta.cliente_nombre || 'Consumidor final'}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {venta.codigo_deportista || venta.numero}
-                        </Typography>
+                .map((venta) => {
+                  const saldo = Number(venta.saldo_pendiente ?? venta.total ?? 0);
+                  const nombre = venta.cliente_nombre || 'Consumidor final';
+                  return (
+                    <Box
+                      key={venta.id}
+                      sx={{
+                        border: '1px solid #e1e5ea',
+                        borderRadius: 2.2,
+                        bgcolor: '#fff',
+                        overflow: 'hidden',
+                        boxShadow: '0 10px 28px rgba(15,23,42,.065)',
+                        transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+                        '&:hover': {
+                          transform: 'translateY(-2px)',
+                          borderColor: 'rgba(184,138,0,.38)',
+                          boxShadow: '0 16px 34px rgba(15,23,42,.10)',
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          px: 1.65,
+                          py: 1.15,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          gap: 1,
+                          alignItems: 'center',
+                          bgcolor: '#fbfcfd',
+                          borderBottom: '1px solid #edf0f3',
+                        }}
+                      >
+                        <Stack direction="row" spacing={0.75} alignItems="center" minWidth={0}>
+                          <ReceiptLongOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
+                          <Box minWidth={0}>
+                            <Typography variant="caption" color="text.secondary" display="block">Venta</Typography>
+                            <Typography variant="body2" fontWeight={900} noWrap title={venta.numero}>{venta.numero}</Typography>
+                          </Box>
+                        </Stack>
+                        <Chip
+                          size="small"
+                          label={venta.estado_nombre || String(venta.estado || 'Pendiente').replaceAll('_', ' ')}
+                          variant="outlined"
+                          sx={{
+                            fontWeight: 850,
+                            textTransform: 'capitalize',
+                            color: venta.estado_color || '#8a6500',
+                            borderColor: venta.estado_color || 'rgba(184,138,0,.4)',
+                            bgcolor: venta.estado_color ? `${venta.estado_color}12` : 'rgba(212,160,23,.09)',
+                          }}
+                        />
                       </Box>
-                      <Chip
-                        size="small"
-                        label={String(venta.estado_nombre || venta.estado || 'Pendiente de pago').replaceAll('_', ' ')}
-                        variant="outlined"
-                      />
-                    </Box>
 
-                    <Box sx={{ p: 1.6 }}>
-                      <Typography variant="caption" color="text.secondary" display="block">Cuenta</Typography>
-                      <Typography variant="body2" fontWeight={850} sx={{ mt: .15 }}>
-                        {venta.concepto}
-                      </Typography>
+                      <Box sx={{ p: 1.65 }}>
+                        <Stack direction="row" spacing={1.15} alignItems="center">
+                          <Avatar
+                            sx={{
+                              width: 42,
+                              height: 42,
+                              fontSize: 13,
+                              fontWeight: 950,
+                              bgcolor: '#171717',
+                              border: '2px solid rgba(212,160,23,.38)',
+                            }}
+                          >
+                            {iniciales(nombre)}
+                          </Avatar>
+                          <Box minWidth={0}>
+                            <Typography variant="body2" fontWeight={950} noWrap title={nombre}>{nombre}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {venta.codigo_deportista || 'Cliente sin código'}
+                            </Typography>
+                          </Box>
+                        </Stack>
 
-                      <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: '1fr auto', gap: 1, alignItems: 'end' }}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary" display="block">Sede</Typography>
-                          <Typography variant="body2" fontWeight={800}>{venta.sede_nombre || '—'}</Typography>
-                          <Typography variant="caption" color="text.secondary">{fecha(venta.fecha_venta)}</Typography>
-                        </Box>
-                        <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="caption" color="text.secondary" display="block">Pendiente</Typography>
-                          <Typography variant="h5" fontWeight={950}>{dinero(venta.total)}</Typography>
-                        </Box>
-                      </Box>
-
-                      <Stack direction="row" spacing={1} sx={{ mt: 1.5 }}>
-                        <Button
-                          fullWidth
-                          variant="contained"
-                          startIcon={<PointOfSaleOutlinedIcon />}
-                          onClick={() => abrirCuenta(venta)}
-                          sx={{ ...dbanuStyles.addButtonRevive, textTransform: 'none', fontWeight: 900 }}
+                        <Box
+                          sx={{
+                            mt: 1.35,
+                            p: 1.15,
+                            borderRadius: 1.45,
+                            border: '1px solid #edf0f3',
+                            bgcolor: '#fafbfc',
+                          }}
                         >
-                          Abrir cuenta
-                        </Button>
-                        <Tooltip title="Ver detalle">
-                          <IconButton size="small" onClick={() => abrirDetalle(venta.id)} sx={{ border: '1px solid #d8dee7', borderRadius: 1 }}>
-                            <VisibilityOutlinedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
+                          <Stack direction="row" spacing={0.8} alignItems="flex-start">
+                            <AccountBalanceWalletOutlinedIcon sx={{ fontSize: 18, mt: .1, color: '#a47700' }} />
+                            <Box minWidth={0}>
+                              <Typography variant="caption" color="text.secondary" display="block">Concepto</Typography>
+                              <Typography variant="body2" fontWeight={900} sx={{ lineHeight: 1.35 }}>
+                                {venta.concepto}
+                              </Typography>
+                            </Box>
+                          </Stack>
+                        </Box>
+
+                        <Box sx={{ mt: 1.25, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: .8 }}>
+                          <DatoCard icono={<CategoryOutlinedIcon />} label="Tipo" valor={tipoCuenta(venta)} />
+                          <DatoCard icono={<LocationOnOutlinedIcon />} label="Sede" valor={venta.sede_nombre || '—'} />
+                          <DatoCard icono={<CalendarMonthOutlinedIcon />} label="Fecha" valor={fecha(venta.fecha_venta)} />
+                        </Box>
+
+                        <Box sx={{ mt: 1.45, pt: 1.2, borderTop: '1px solid #edf0f3', display: 'flex', justifyContent: 'space-between', gap: 1.5, alignItems: 'flex-end' }}>
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">Saldo pendiente</Typography>
+                            <Typography variant="h5" fontWeight={950} sx={{ lineHeight: 1.1 }}>
+                              {dinero(saldo)}
+                            </Typography>
+                            {saldo !== Number(venta.total || 0) ? (
+                              <Typography variant="caption" color="text.secondary">Total original {dinero(venta.total)}</Typography>
+                            ) : null}
+                          </Box>
+                          <Stack direction="row" spacing={.7}>
+                            <Tooltip title="Ver detalle">
+                              <IconButton
+                                size="small"
+                                onClick={() => abrirDetalle(venta.id)}
+                                sx={{ border: '1px solid #d8dee7', borderRadius: 1.15 }}
+                              >
+                                <VisibilityOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Button
+                              variant="contained"
+                              startIcon={<PointOfSaleOutlinedIcon />}
+                              onClick={() => abrirCuenta(venta)}
+                              sx={{
+                                ...dbanuStyles.addButtonRevive,
+                                textTransform: 'none',
+                                fontWeight: 950,
+                                minWidth: 132,
+                                borderRadius: 1.15,
+                              }}
+                            >
+                              Abrir cuenta
+                            </Button>
+                          </Stack>
+                        </Box>
+                      </Box>
                     </Box>
-                  </Box>
-                ))}
+                  );
+                })}
             </Box>
 
             {!cargandoCuentas && cuentasAbiertas.length === 0 ? (
@@ -485,6 +581,18 @@ export function VentasPage() {
   );
 }
 
+
+function DatoCard({ icono, label, valor }) {
+  return (
+    <Box sx={{ minWidth: 0, p: .8, borderRadius: 1.2, bgcolor: '#fff', border: '1px solid #edf0f3' }}>
+      <Stack direction="row" spacing={.55} alignItems="center">
+        <Box sx={{ color: '#9a7200', display: 'grid', placeItems: 'center', '& .MuiSvgIcon-root': { fontSize: 15 } }}>{icono}</Box>
+        <Typography variant="caption" color="text.secondary" noWrap>{label}</Typography>
+      </Stack>
+      <Typography variant="caption" fontWeight={900} display="block" noWrap title={valor} sx={{ mt: .25 }}>{valor || '—'}</Typography>
+    </Box>
+  );
+}
 
 function Dato({ label, valor }) {
   return <Box><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" fontWeight={850}>{valor || '—'}</Typography></Box>;
