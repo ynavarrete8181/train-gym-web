@@ -424,6 +424,8 @@ export function MembresiasPage() {
                     {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
                   </TextField>
 
+                  <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
+
                   <Box sx={{ gridColumn: '1 / -1' }}>
                     <Typography variant="caption" sx={{ display: 'block', mb: 0.75, fontWeight: 600, color: 'text.secondary' }}>
                       Sedes habilitadas *
@@ -477,7 +479,6 @@ export function MembresiasPage() {
                     </Typography>
                   </Box>
 
-                  <TextField label="Código contrato" value={esEdicion ? formData.codigo_contrato || '' : 'Se genera al guardar'} size="small" disabled helperText="Identificador único generado por el sistema." />
                   <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
                   <TextField label="Fecha fin" type="date" value={formData.fecha_fin || ''} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Calculada automáticamente según la duración del plan." />
 
@@ -582,7 +583,7 @@ export function MembresiasPage() {
                 label={puedeGenerarVenta ? '¿Requiere facturar?' : 'Este plan no genera venta'}
               />
               <BotonCancelar onClick={handleCancelarFormulario} disabled={guardando} />
-              <BotonGuardar onClick={handleGuardar} texto="Guardar membresía" guardando={guardando} />
+              <BotonGuardar onClick={handleGuardar} guardando={guardando} />
             </Stack>
           )}
         </Paper>
