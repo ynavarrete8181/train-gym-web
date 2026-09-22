@@ -77,6 +77,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [recibido, setRecibido] = useState('');
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
+  const tiposVisibles = esCuentaAbierta
+    ? tipos.filter((item) => ['SERVICIO', 'PRODUCTO', 'OTRO'].includes(item.value))
+    : tipos;
+
   const avisar = (mensaje, tipoAviso = 'info') => setNotificacion({ mensaje, tipo: tipoAviso });
 
   useEffect(() => {
@@ -335,7 +339,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 size="small"
                 sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .75, '& .MuiToggleButtonGroup-grouped': { minHeight: 38, border: '1px solid #e1e5ea !important', borderRadius: '9px !important', px: 1.5, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#f8fafc', transition: 'all .18s ease', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { background: `linear-gradient(135deg, ${DORADO_REVIVE} 0%, ${DORADO_REVIVE_OSCURO} 100%)`, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', boxShadow: '0 6px 14px rgba(184, 138, 0, .22)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
               >
-                {tipos.map((item) => (
+                {tiposVisibles.map((item) => (
                   <ToggleButton key={item.value} value={item.value}>{item.icono}<Typography variant="caption" sx={{ ml: .55, fontWeight: 900 }}>{item.label}</Typography></ToggleButton>
                 ))}
               </ToggleButtonGroup>
@@ -347,10 +351,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                     onChange={(e) => setBusqueda(e.target.value)}
                     size="small"
                     fullWidth
-                    placeholder={`Buscar ${tipos.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
+                    placeholder={`Buscar ${tiposVisibles.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
                     slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
                   />
-                  {(tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
+                  {!esCuentaAbierta && (tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
                   <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', mt: 1.65, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
                     {disponibles.map((item) => <CatalogoCard key={`${tipo}-${item.id}`} item={item} tipo={tipo} onAgregar={() => agregar(item)} />)}
                   </Box>
@@ -423,7 +427,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                             <Typography variant="body2" fontWeight={900}>{item.descripcion}</Typography>
                             <Stack direction="row" spacing={0.6} alignItems="center" flexWrap="wrap">
                               <Typography variant="caption" color="text.secondary">{dinero(item.precio_unitario)} unitario</Typography>
-                              {item.bloqueado ? <Chip size="small" label="Cargo de membresía" variant="outlined" sx={{ height: 20, fontSize: 10 }} /> : null}
+                              {item.bloqueado ? <Chip size="small" label="Cargo original" variant="outlined" sx={{ height: 20, fontSize: 10 }} /> : null}
                             </Stack>
                           </Box>
                           {!item.bloqueado ? (
