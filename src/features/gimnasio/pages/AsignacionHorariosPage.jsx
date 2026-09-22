@@ -196,8 +196,28 @@ export function AsignacionHorariosPage() {
                 {(catalogos.sedes || []).map((s) => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
               </TextField>
 
-              <TextField select label="Jornada" size="small" value={form.jornada_id} onChange={(e) => setForm((a) => ({ ...a, jornada_id: e.target.value }))} required>
-                {(catalogos.jornadas || []).map((j) => <MenuItem key={j.id} value={j.id}>{j.nombre}</MenuItem>)}
+              <TextField
+                select
+                label="Jornada"
+                size="small"
+                value={form.jornada_id}
+                onChange={(e) => setForm((a) => ({ ...a, jornada_id: e.target.value }))}
+                required
+              >
+                {(catalogos.jornadas || []).map((j) => (
+                  <MenuItem key={j.id} value={j.id} sx={{ py: .85, alignItems: 'flex-start' }}>
+                    <Box sx={{ minWidth: 0, width: '100%' }}>
+                      <Typography variant="body2" fontWeight={700} noWrap>
+                        {j.nombre}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap>
+                        {(j.dias_semana || []).map((d) => d.slice(0, 3)).join(' · ')}
+                        {'  |  '}
+                        {hora(j.hora_inicio)} - {hora(j.hora_fin)}
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                ))}
               </TextField>
 
               <TextField select label="Receso" size="small" value={form.receso_id} onChange={(e) => setForm((a) => ({ ...a, receso_id: e.target.value }))}>
