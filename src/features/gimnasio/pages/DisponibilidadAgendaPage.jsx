@@ -109,7 +109,15 @@ export function DisponibilidadAgendaPage() {
   return <Box className="page-wrapper">
     <PageHeader titulo="Disponibilidad de Agenda" descripcion="Simula los horarios disponibles sin generar turnos previamente." icono={<EventAvailableOutlinedIcon/>}/>
     <Paper className="page-content-container" elevation={0}>
-      <Box sx={{p:2,display:'grid',gridTemplateColumns:{xs:'1fr',md:'repeat(5,1fr)'},gap:1.2}}>
+      <Box
+        sx={{
+          p: 2,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(5,1fr)' },
+          gap: 1.2,
+          alignItems: 'start',
+        }}
+      >
         <TextField select size="small" label="Sede" value={form.sede_id} onChange={e=>setForm(a=>({...a,sede_id:e.target.value,servicio_id:''}))}>
           {(catalogos.sedes||[]).map(x=><MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
         </TextField>
@@ -142,7 +150,18 @@ export function DisponibilidadAgendaPage() {
           {serviciosDisponibles.map(x=><MenuItem key={x.id} value={x.id}>{x.nombre} · {x.duracion_minutos} min</MenuItem>)}
         </TextField>
         <TextField size="small" type="date" label="Fecha" value={form.fecha} onChange={e=>setForm(a=>({...a,fecha:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/>
-        <Button startIcon={<SearchOutlinedIcon/>} onClick={consultar} disabled={cargando} sx={dbanuStyles.addButtonRevive}>Consultar</Button>
+        <Button
+          startIcon={<SearchOutlinedIcon />}
+          onClick={consultar}
+          disabled={cargando}
+          sx={{
+            ...dbanuStyles.addButtonRevive,
+            height: 40,
+            alignSelf: 'start',
+          }}
+        >
+          Consultar
+        </Button>
       </Box>
 
       <Box sx={{px:2,pb:2}}>
