@@ -19,6 +19,7 @@ import { NotificacionSnackbar } from '../../../components/common/NotificacionSna
 import SportsIcon from '@mui/icons-material/Sports';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { EntrenadoresTable } from '../components/EntrenadoresTable.jsx';
+import { EntrenadorConfiguracion } from '../components/EntrenadorConfiguracion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
@@ -57,6 +58,8 @@ export function EntrenadoresPage() {
   const [cargandoTurnos, setCargandoTurnos] = useState(false);
   const [horariosDisponibles, setHorariosDisponibles] = useState([]);
   const [horarioSeleccionado, setHorarioSeleccionado] = useState('');
+  const [configuracionEntrenador, setConfiguracionEntrenador] = useState(null);
+  const [cargandoConfiguracion, setCargandoConfiguracion] = useState(false);
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -142,6 +145,33 @@ export function EntrenadoresPage() {
     cargarHorariosDisponibles(entrenador.id);
   };
 
+  const handleVerConfiguracion = async (entrenador) => {
+    setEntrenadorFicha(entrenador);
+    setConfiguracionEntrenador(null);
+    setCargandoConfiguracion(true);
+    setVista('configuracion');
+
+    try {
+      const response = await gimnasioServicio.obtenerConfiguracionEntrenador(entrenador.id);
+      setConfiguracionEntrenador(response.datos || null);
+    } catch (error) {
+      showNotificacion(error.response?.data?.mensaje || 'Error al cargar la configuración del entrenador', 'error');
+    } finally {
+      setCargandoConfiguracion(false);
+    }
+  };
+
+  const handleEditarDesdeConfiguracion = () => {
+    if (!configuracionEntrenador?.entrenador) return;
+
+    const entrenador = {
+      ...configuracionEntrenador.entrenador,
+      servicio_ids: (configuracionEntrenador.servicios || []).map((servicio) => Number(servicio.id)),
+    };
+
+    handleEditar(entrenador);
+  };
+
   const handleNuevo = () => { setFormData(getInitialForm()); setVista('formulario'); };
   const handleEditar = (ent) => {
     setFormData({
@@ -200,6 +230,28 @@ export function EntrenadoresPage() {
       showNotificacion(error.response?.data?.mensaje || 'Error al retirar el horario', 'error');
     }
   };
+
+  if (vista === 'configuracion' && entrenadorFicha) {
+    return (
+      <>
+        <EntrenadorConfiguracion
+          datos={configuracionEntrenador}
+          cargando={cargandoConfiguracion}
+          onVolver={() => {
+            setEntrenadorFicha(null);
+            setConfiguracionEntrenador(null);
+            setVista('lista');
+          }}
+          onEditar={handleEditarDesdeConfiguracion}
+        />
+        <NotificacionSnackbar
+          mensaje={notificacion.mensaje}
+          tipo={notificacion.tipo}
+          onClose={() => setNotificacion({ ...notificacion, mensaje: '' })}
+        />
+      </>
+    );
+  }
 
   if (vista === 'formulario') {
     return (
@@ -450,6 +502,7 @@ export function EntrenadoresPage() {
           filtrosColumna={filtrosColumna}
           onFiltroColumna={aplicarFiltroColumna}
           onEditar={handleEditar}
+          onVerConfiguracion={handleVerConfiguracion}
           onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarEntrenadores(n); }}
           onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarEntrenadores(n); }}
         />
