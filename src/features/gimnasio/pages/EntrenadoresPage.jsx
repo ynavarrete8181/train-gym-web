@@ -143,7 +143,13 @@ export function EntrenadoresPage() {
   };
 
   const handleNuevo = () => { setFormData(getInitialForm()); setVista('formulario'); };
-  const handleEditar = (ent) => { setFormData({ ...ent, servicio_ids: ent.servicio_ids || [] }); setVista('formulario'); };
+  const handleEditar = (ent) => {
+    setFormData({
+      ...ent,
+      servicio_ids: (ent.servicio_ids || []).map((id) => Number(id)),
+    });
+    setVista('formulario');
+  };
   const handleCancelar = () => { setVista('lista'); };
   const handleCancelarFicha = () => { setEntrenadorFicha(null); setVista('lista'); };
 
@@ -264,10 +270,12 @@ export function EntrenadoresPage() {
                   <Autocomplete
                     multiple
                     options={serviciosDisp}
-                    value={serviciosDisp.filter((s) => (formData.servicio_ids || []).includes(s.id))}
+                    value={serviciosDisp.filter((s) =>
+                      (formData.servicio_ids || []).some((id) => String(id) === String(s.id))
+                    )}
                     onChange={(_, values) => setFormData((prev) => ({
                       ...prev,
-                      servicio_ids: values.map((s) => s.id),
+                      servicio_ids: values.map((s) => Number(s.id)),
                     }))}
                     getOptionLabel={(s) => s.nombre || ''}
                     isOptionEqualToValue={(a, b) => String(a.id) === String(b.id)}
