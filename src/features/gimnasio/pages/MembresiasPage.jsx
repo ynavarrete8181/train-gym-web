@@ -74,11 +74,6 @@ const calcularFechaFin = (fechaInicioStr, plan) => {
   return fecha.toISOString().slice(0, 10);
 };
 
-const precioAplicable = (plan, sedeId) => {
-  if (!plan) return null;
-  const precioSede = (plan.precios_sede || []).find((p) => String(p.sede_id) === String(sedeId));
-  return precioSede ? Number(precioSede.precio) : Number(plan.precio_base || 0);
-};
 
 export function MembresiasPage() {
   const deportistaContextoId = obtenerDeportistaContexto();
@@ -97,7 +92,6 @@ export function MembresiasPage() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
-  const [sedeHistoricaEditable, setSedeHistoricaEditable] = useState(false);
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -190,7 +184,6 @@ export function MembresiasPage() {
   };
 
   const handleNuevo = () => {
-    setSedeHistoricaEditable(false);
     setEntrenadoresPorSede({});
     setHorariosPorAsignacion({});
     setFormData({ ...formInicial(), deportista_id: deportistaContextoId });
@@ -198,7 +191,6 @@ export function MembresiasPage() {
   };
 
   const handleCancelarFormulario = () => {
-    setSedeHistoricaEditable(false);
     if (deportistaContextoId && window.history.length > 1) {
       window.history.back();
       return;
@@ -207,7 +199,6 @@ export function MembresiasPage() {
   };
 
   const handleEditar = (membresia) => {
-    setSedeHistoricaEditable(!membresia.sede_id);
     const sedesIds = (membresia.sedes_habilitadas || []).map((item) => Number(item.sede_id));
     const asignaciones = (membresia.asignaciones_entrenador || []).map((item) => ({
       sede_id: Number(item.sede_id),
@@ -243,11 +234,6 @@ export function MembresiasPage() {
     setFormData((actual) => {
       const siguiente = { ...actual, [name]: type === 'checkbox' ? checked : value };
 
-      if (name === 'sede_id' && value) {
-        const sedeId = Number(value);
-        siguiente.sedes_habilitadas = Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), sedeId]));
-      }
-
       if (name === 'plan_id') {
         const plan = planes.find((item) => String(item.id) === String(value));
         if (!plan?.requiere_entrenador) siguiente.asignaciones_entrenador = [];
@@ -260,16 +246,16 @@ export function MembresiasPage() {
 
   const handleSedeHabilitada = (sedeId, habilitada) => {
     const id = Number(sedeId);
-    const principal = formData.sede_id ? Number(formData.sede_id) : null;
 
     setFormData((actual) => {
       const actuales = (actual.sedes_habilitadas || []).map(Number);
       const siguientes = habilitada
-        ? Array.from(new Set([...actuales, id, ...(principal ? [principal] : [])]))
-        : actuales.filter((item) => item !== id || item === principal);
+        ? Array.from(new Set([...actuales, id]))
+        : actuales.filter((item) => item !== id);
 
       return {
         ...actual,
+        sede_id: siguientes[0] || '',
         sedes_habilitadas: siguientes,
         asignaciones_entrenador: (actual.asignaciones_entrenador || []).filter((a) => siguientes.includes(Number(a.sede_id))),
       };
@@ -325,7 +311,7 @@ export function MembresiasPage() {
     try {
       const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
 
-      if (!formData.deportista_id || !formData.plan_id || !formData.sede_id || !formData.fecha_inicio || !(formData.sedes_habilitadas || []).length) {
+      if (!formData.deportista_id || !formData.plan_id || !formData.fecha_inicio || !(formData.sedes_habilitadas || []).length) {
         showNotificacion('Complete los campos obligatorios y selecciona al menos una sede habilitada.', 'warning');
         return;
       }
@@ -345,7 +331,7 @@ export function MembresiasPage() {
       setGuardando(true);
 
       const comun = {
-        sede_id: formData.sede_id || null,
+        sede_id: Number((formData.sedes_habilitadas || [])[0]) || null,
         sedes_habilitadas: (formData.sedes_habilitadas || []).map(Number),
         asignaciones_entrenador: planSeleccionado?.requiere_entrenador
           ? (formData.asignaciones_entrenador || []).map((a) => ({
@@ -382,7 +368,6 @@ export function MembresiasPage() {
         );
       }
 
-      setSedeHistoricaEditable(false);
       if (deportistaContextoId && !formData.id && window.history.length > 1) {
         window.history.back();
         return;
@@ -418,7 +403,7 @@ export function MembresiasPage() {
       <Box className="page-wrapper">
         <PageHeader
           titulo={esEdicion ? 'Editar Membresía' : 'Nueva Membresía'}
-          descripcion={esEdicion ? 'Actualiza la vigencia, sedes habilitadas y asignaciones del contrato.' : 'Define sede de contratación, sedes habilitadas y entrenamiento según el plan.'}
+          descripcion={esEdicion ? 'Actualiza la vigencia, sedes habilitadas y asignaciones del contrato.' : 'Selecciona las sedes habilitadas y configura el entrenamiento según el plan.'}
           icono={<CardMembershipOutlinedIcon />}
           acciones={<BotonVolver onClick={handleCancelarFormulario} />}
         />
@@ -439,22 +424,7 @@ export function MembresiasPage() {
                     {esEdicion && !planes.find((plan) => String(plan.id) === String(formData.plan_id)) ? <MenuItem value={formData.plan_id}>{formData.plan_nombre || 'Plan asignado'}</MenuItem> : null}
                   </TextField>
 
-                  <TextField
-                    select
-                    label="Sede de contratación"
-                    name="sede_id"
-                    value={formData.sede_id || ''}
-                    onChange={handleChange}
-                    required
-                    size="small"
-                    disabled={esEdicion && !sedeHistoricaEditable}
-                    helperText={sedeHistoricaEditable ? 'Registro histórico sin sede. Selecciónala y guarda.' : (!esEdicion && formData.plan_id && formData.sede_id ? `Precio aplicado: $${precioAplicable(planSeleccionado, formData.sede_id).toFixed(2)}` : 'Define el precio y la sede comercial de origen.')}
-                  >
-                    {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                    {esEdicion && formData.sede_id && !sedes.find((sede) => String(sede.id_sede) === String(formData.sede_id)) ? <MenuItem value={formData.sede_id}>{formData.sede_nombre || 'Sede asignada'}</MenuItem> : null}
-                  </TextField>
-
-                  <Box sx={{ gridColumn: { xs: '1', md: 'span 2' } }}>
+                  <Box sx={{ gridColumn: '1 / -1' }}>
                     <Typography variant="caption" sx={{ display: 'block', mb: 0.75, fontWeight: 600, color: 'text.secondary' }}>
                       Sedes habilitadas *
                     </Typography>
@@ -474,7 +444,6 @@ export function MembresiasPage() {
                       {sedes.map((sede) => {
                         const sedeId = Number(sede.id_sede);
                         const seleccionada = (formData.sedes_habilitadas || []).map(Number).includes(sedeId);
-                        const esPrincipal = Number(formData.sede_id) === sedeId;
 
                         return (
                           <FormControlLabel
@@ -491,13 +460,12 @@ export function MembresiasPage() {
                               <Checkbox
                                 size="small"
                                 checked={seleccionada}
-                                disabled={esPrincipal}
                                 onChange={(e) => handleSedeHabilitada(sedeId, e.target.checked)}
                               />
                             }
                             label={
                               <Typography variant="body2">
-                                {sede.nombre}{esPrincipal ? ' · Contratación' : ''}
+                                {sede.nombre}
                               </Typography>
                             }
                           />
@@ -505,7 +473,7 @@ export function MembresiasPage() {
                       })}
                     </Box>
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                      Marca directamente las sedes donde el cliente podrá utilizar la membresía. La sede de contratación siempre queda incluida.
+                      Selecciona una o varias sedes donde el cliente podrá utilizar la membresía.
                     </Typography>
                   </Box>
 
