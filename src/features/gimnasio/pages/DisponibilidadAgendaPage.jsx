@@ -150,22 +150,132 @@ export function DisponibilidadAgendaPage() {
           {resumen.dia} · {resumen.servicio?.nombre} · {resumen.servicio?.duracion_minutos} min
         </Typography>:null}
 
-        <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,1fr)',sm:'repeat(3,1fr)',md:'repeat(5,1fr)',lg:'repeat(6,1fr)'},gap:1}}>
-          {slotsVisuales.map((slot,i)=>{
-            const c=estadoSx(slot.estado);
-            return <Box key={i} sx={{border:'1px solid',borderColor:c.bd,bgcolor:c.bg,borderRadius:1.5,p:1.2}}>
-              <Typography variant="subtitle2" fontWeight={900}>{slot.hora_inicio} - {slot.hora_fin}</Typography>
-              <Chip size="small" label={slot.estado} sx={{mt:.7,height:24,fontWeight:800,bgcolor:'#fff',color:c.fg,border:'1px solid',borderColor:c.bd}}/>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{mt:.65}}>
-                {slot.estado==='DISPONIBLE' ? `${slot.cupos_disponibles} cupo(s) disponible(s)` : (slot.motivo||'')}
-              </Typography>
-            </Box>;
-          })}
-        </Box>
+        {slotsVisuales.length > 0 ? (
+          <Box
+            sx={{
+              border: '1px solid #e2e8f0',
+              borderRadius: 2,
+              overflow: 'hidden',
+              bgcolor: '#fff',
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1,
+                px: 1.6,
+                py: 1.05,
+                borderBottom: '1px solid #e2e8f0',
+                bgcolor: '#f8fafc',
+              }}
+            >
+              <Box>
+                <Typography variant="body2" fontWeight={900}>
+                  Jornada del día
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Los bloques se muestran según la duración real del servicio y de cada pausa.
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={1.2} sx={{ display: { xs: 'none', md: 'flex' } }}>
+                <Leyenda color="#16a34a" texto="Disponible" />
+                <Leyenda color="#d97706" texto="Receso" />
+                <Leyenda color="#dc2626" texto="Reservado" />
+                <Leyenda color="#64748b" texto="Excepción" />
+              </Stack>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'flex',
+                gap: .75,
+                p: 1.25,
+                overflowX: 'auto',
+                alignItems: 'stretch',
+                '&::-webkit-scrollbar': { height: 7 },
+                '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: 10 },
+              }}
+            >
+              {slotsVisuales.map((slot, i) => {
+                const estilo = estadoSx(slot.estado);
+                const [hi, mi] = String(slot.hora_inicio).split(':').map(Number);
+                const [hf, mf] = String(slot.hora_fin).split(':').map(Number);
+                const minutos = Math.max(15, ((hf * 60 + mf) - (hi * 60 + mi)));
+                const base = Math.max(30, Number(resumen?.servicio?.duracion_minutos || 30));
+                const ancho = Math.max(118, Math.round((minutos / base) * 138));
+
+                const etiqueta = slot.estado === 'DISPONIBLE'
+                  ? 'Disponible'
+                  : slot.estado === 'RECESO'
+                    ? 'Receso'
+                    : slot.estado === 'RESERVADO'
+                      ? 'Reservado'
+                      : 'Excepción';
+
+                return (
+                  <Box
+                    key={`${slot.hora_inicio}-${slot.hora_fin}-${i}`}
+                    sx={{
+                      flex: `0 0 ${ancho}px`,
+                      minHeight: 92,
+                      border: '1px solid',
+                      borderColor: estilo.bd,
+                      bgcolor: estilo.bg,
+                      borderRadius: 1.5,
+                      px: 1.15,
+                      py: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <Box>
+                      <Typography sx={{ fontSize: 13, fontWeight: 950, color: '#0f172a', lineHeight: 1.15 }}>
+                        {slot.hora_inicio} - {slot.hora_fin}
+                      </Typography>
+                      <Typography sx={{ fontSize: 11, fontWeight: 850, color: estilo.fg, mt: .55 }}>
+                        {etiqueta}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ mt: .8 }}>
+                      {slot.estado === 'DISPONIBLE' ? (
+                        <Typography variant="caption" color="text.secondary">
+                          {slot.cupos_disponibles} {Number(slot.cupos_disponibles) === 1 ? 'cupo' : 'cupos'}
+                        </Typography>
+                      ) : (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ display: 'block', lineHeight: 1.2 }}
+                        >
+                          {slot.motivo || 'Bloque no disponible'}
+                        </Typography>
+                      )}
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+          </Box>
+        ) : null}
 
         {!cargando && resumen && slots.length===0 ? <Typography variant="body2" color="text.secondary" sx={{py:4,textAlign:'center'}}>No existe jornada activa para los filtros seleccionados.</Typography>:null}
       </Box>
     </Paper>
     <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={()=>setNotificacion(a=>({...a,mensaje:''}))}/>
   </Box>;
+}
+
+function Leyenda({ color, texto }) {
+  return (
+    <Stack direction="row" spacing={.55} alignItems="center">
+      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
+      <Typography variant="caption" color="text.secondary" fontWeight={700}>
+        {texto}
+      </Typography>
+    </Stack>
+  );
 }
