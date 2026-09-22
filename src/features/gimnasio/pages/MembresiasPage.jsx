@@ -252,10 +252,14 @@ export function MembresiasPage() {
       const siguientes = habilitada
         ? Array.from(new Set([...actuales, id]))
         : actuales.filter((item) => item !== id);
+      const sedeActual = Number(actual.sede_id || 0);
+      const sedeOperativa = sedeActual && siguientes.includes(sedeActual)
+        ? sedeActual
+        : (siguientes[0] || '');
 
       return {
         ...actual,
-        sede_id: siguientes[0] || '',
+        sede_id: sedeOperativa,
         sedes_habilitadas: siguientes,
         asignaciones_entrenador: (actual.asignaciones_entrenador || []).filter((a) => siguientes.includes(Number(a.sede_id))),
       };
@@ -331,7 +335,7 @@ export function MembresiasPage() {
       setGuardando(true);
 
       const comun = {
-        sede_id: Number((formData.sedes_habilitadas || [])[0]) || null,
+        sede_id: Number(formData.sede_id || (formData.sedes_habilitadas || [])[0]) || null,
         sedes_habilitadas: (formData.sedes_habilitadas || []).map(Number),
         asignaciones_entrenador: planSeleccionado?.requiere_entrenador
           ? (formData.asignaciones_entrenador || []).map((a) => ({
