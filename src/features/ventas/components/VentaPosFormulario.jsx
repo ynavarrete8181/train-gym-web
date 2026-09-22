@@ -63,6 +63,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [errorContexto, setErrorContexto] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [tipo, setTipo] = useState('SERVICIO');
+  const [categoriaProducto, setCategoriaProducto] = useState('TODAS');
   const [cliente, setCliente] = useState(null);
   const [busqueda, setBusqueda] = useState('');
   const [carrito, setCarrito] = useState([]);
@@ -74,9 +75,14 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [recibido, setRecibido] = useState('');
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
-  const tiposVisibles = esCuentaAbierta
-    ? tipos.filter((item) => ['SERVICIO', 'PRODUCTO'].includes(item.value))
-    : tipos;
+  const tiposVisibles = esCuentaAbierta ? [] : tipos;
+
+  const categoriasProducto = useMemo(() => {
+    const nombres = (contexto.productos || [])
+      .map((item) => item.categoria)
+      .filter(Boolean);
+    return ['TODAS', ...Array.from(new Set(nombres)).sort((a, b) => a.localeCompare(b, 'es'))];
+  }, [contexto.productos]);
 
   const avisar = (mensaje, tipoAviso = 'info') => setNotificacion({ mensaje, tipo: tipoAviso });
 
@@ -142,20 +148,30 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const disponibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
     let items = [];
-    if (tipo === 'SERVICIO') items = contexto.servicios || [];
-    if (tipo === 'PRODUCTO') items = contexto.productos || [];
-    if (tipo === 'MEMBRESIA') items = (contexto.planes || []).filter((item) => item.tipo_producto !== 'PASE_DIARIO');
-    if (tipo === 'PASE_DIARIO') items = (contexto.planes || []).filter((item) => item.tipo_producto === 'PASE_DIARIO');
+
+    if (esCuentaAbierta) {
+      items = contexto.productos || [];
+      if (categoriaProducto !== 'TODAS') {
+        items = items.filter((item) => item.categoria === categoriaProducto);
+      }
+    } else {
+      if (tipo === 'SERVICIO') items = contexto.servicios || [];
+      if (tipo === 'PRODUCTO') items = contexto.productos || [];
+      if (tipo === 'MEMBRESIA') items = (contexto.planes || []).filter((item) => item.tipo_producto !== 'PASE_DIARIO');
+      if (tipo === 'PASE_DIARIO') items = (contexto.planes || []).filter((item) => item.tipo_producto === 'PASE_DIARIO');
+    }
+
     if (!texto) return items;
     return items.filter((item) =>
       `${item.nombre || ''} ${item.codigo || ''} ${item.categoria || ''} ${item.descripcion || ''}`
         .toLowerCase()
         .includes(texto),
     );
-  }, [tipo, contexto, busqueda]);
+  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto]);
 
   const agregar = (item) => {
-    if (tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') {
+    const tipoActual = esCuentaAbierta ? 'PRODUCTO' : tipo;
+    if (tipoActual === 'MEMBRESIA' || tipoActual === 'PASE_DIARIO') {
       avisar('La membresía o pase se asigna desde Membresías para crear correctamente su contrato y vigencia.', 'info');
       return;
     }
@@ -163,7 +179,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       avisar('Este ítem aún no tiene un precio comercial configurado para la sede.', 'warning');
       return;
     }
-    const clave = `${tipo}-${item.id}`;
+    const clave = `${tipoActual}-${item.id}`;
     setCarrito((actual) => {
       const existe = actual.find((fila) => fila.clave === clave);
       if (existe) {
@@ -175,9 +191,9 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       }
       return [...actual, {
         clave,
-        tipo,
+        tipo: tipoActual,
         referencia_id: item.id,
-        producto_id: tipo === 'PRODUCTO' ? item.id : null,
+        producto_id: tipoActual === 'PRODUCTO' ? item.id : null,
         descripcion: item.nombre,
         cantidad: 1,
         precio_unitario: Number(item.precio),
@@ -308,18 +324,40 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
               )}
             </SeccionPos>
 
-            <SeccionPos titulo={`Catálogo · ${turno?.sede_nombre || 'sede actual'}`} icono={<AppsOutlinedIcon />} descripcion="Servicios, productos y opciones disponibles para esta sede.">
-              <ToggleButtonGroup
-                value={tipo}
-                exclusive
-                onChange={(_, value) => { if (value) { setTipo(value); setBusqueda(''); } }}
-                size="small"
-                sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .75, '& .MuiToggleButtonGroup-grouped': { minHeight: 38, border: '1px solid #e1e5ea !important', borderRadius: '9px !important', px: 1.5, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#f8fafc', transition: 'all .18s ease', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { background: `linear-gradient(135deg, ${DORADO_REVIVE} 0%, ${DORADO_REVIVE_OSCURO} 100%)`, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', boxShadow: '0 6px 14px rgba(184, 138, 0, .22)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
-              >
-                {tiposVisibles.map((item) => (
-                  <ToggleButton key={item.value} value={item.value}>{item.icono}<Typography variant="caption" sx={{ ml: .55, fontWeight: 900 }}>{item.label}</Typography></ToggleButton>
-                ))}
-              </ToggleButtonGroup>
+            <SeccionPos
+              titulo={esCuentaAbierta ? `Productos · ${turno?.sede_nombre || 'sede actual'}` : `Catálogo · ${turno?.sede_nombre || 'sede actual'}`}
+              icono={<AppsOutlinedIcon />}
+              descripcion={esCuentaAbierta ? 'Productos disponibles del inventario de esta sede.' : 'Servicios, productos y opciones disponibles para esta sede.'}
+            >
+              {esCuentaAbierta ? (
+                <ToggleButtonGroup
+                  value={categoriaProducto}
+                  exclusive
+                  onChange={(_, value) => { if (value) { setCategoriaProducto(value); setBusqueda(''); } }}
+                  size="small"
+                  sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .75, '& .MuiToggleButtonGroup-grouped': { minHeight: 38, border: '1px solid #e1e5ea !important', borderRadius: '9px !important', px: 1.5, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#f8fafc', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { background: `linear-gradient(135deg, ${DORADO_REVIVE} 0%, ${DORADO_REVIVE_OSCURO} 100%)`, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
+                >
+                  {categoriasProducto.map((categoria) => (
+                    <ToggleButton key={categoria} value={categoria}>
+                      <Typography variant="caption" sx={{ fontWeight: 900 }}>
+                        {categoria === 'TODAS' ? 'Todos' : categoria}
+                      </Typography>
+                    </ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              ) : (
+                <ToggleButtonGroup
+                  value={tipo}
+                  exclusive
+                  onChange={(_, value) => { if (value) { setTipo(value); setBusqueda(''); } }}
+                  size="small"
+                  sx={{ mb: 1.4, display: 'flex', flexWrap: 'wrap', gap: .75, '& .MuiToggleButtonGroup-grouped': { minHeight: 38, border: '1px solid #e1e5ea !important', borderRadius: '9px !important', px: 1.5, py: .7, textTransform: 'none', fontWeight: 900, color: '#4b5563', bgcolor: '#f8fafc', transition: 'all .18s ease', '&:hover': { borderColor: `${DORADO_REVIVE} !important`, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO }, '&.Mui-selected': { background: `linear-gradient(135deg, ${DORADO_REVIVE} 0%, ${DORADO_REVIVE_OSCURO} 100%)`, borderColor: `${DORADO_REVIVE} !important`, color: '#fff', boxShadow: '0 6px 14px rgba(184, 138, 0, .22)', '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' } } } }}
+                >
+                  {tiposVisibles.map((item) => (
+                    <ToggleButton key={item.value} value={item.value}>{item.icono}<Typography variant="caption" sx={{ ml: .55, fontWeight: 900 }}>{item.label}</Typography></ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              )}
 
               <>
                 <TextField
@@ -327,12 +365,12 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   onChange={(e) => setBusqueda(e.target.value)}
                   size="small"
                   fullWidth
-                  placeholder={`Buscar ${tiposVisibles.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
+                  placeholder={esCuentaAbierta ? 'Buscar producto...' : `Buscar ${tiposVisibles.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
                   slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
                 />
                 {!esCuentaAbierta && (tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
                 <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
-                  {disponibles.map((item) => <CatalogoCard key={`${tipo}-${item.id}`} item={item} tipo={tipo} onAgregar={() => agregar(item)} />)}
+                  {disponibles.map((item) => <CatalogoCard key={`${esCuentaAbierta ? 'PRODUCTO' : tipo}-${item.id}`} item={item} tipo={esCuentaAbierta ? 'PRODUCTO' : tipo} onAgregar={() => agregar(item)} />)}
                 </Box>
                 {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
               </>
