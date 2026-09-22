@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { Autocomplete, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -8,6 +8,29 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 
 const hoy = new Date().toISOString().slice(0,10);
+
+const agruparBloqueos = (slots = []) => {
+  const resultado = [];
+
+  for (const slot of slots) {
+    const anterior = resultado[resultado.length - 1];
+    const esBloqueo = ['RECESO', 'EXCEPCION'].includes(slot.estado);
+    const puedeAgrupar = esBloqueo
+      && anterior
+      && anterior.estado === slot.estado
+      && anterior.motivo === slot.motivo
+      && anterior.hora_fin === slot.hora_inicio;
+
+    if (puedeAgrupar) {
+      anterior.hora_fin = slot.hora_fin;
+      continue;
+    }
+
+    resultado.push({ ...slot });
+  }
+
+  return resultado;
+};
 
 export function DisponibilidadAgendaPage() {
   const [catalogos,setCatalogos]=useState({sedes:[]});
@@ -21,6 +44,8 @@ export function DisponibilidadAgendaPage() {
   const [buscando,setBuscando]=useState(false);
   const [cargando,setCargando]=useState(false);
   const [notificacion,setNotificacion]=useState({mensaje:'',tipo:'info'});
+
+  const slotsVisuales = useMemo(() => agruparBloqueos(slots), [slots]);
 
   useEffect(()=>{ gimnasioServicio.obtenerCatalogosAgenda().then(r=>setCatalogos(r.datos||{})).catch(()=>{}); },[]);
 
@@ -126,7 +151,7 @@ export function DisponibilidadAgendaPage() {
         </Typography>:null}
 
         <Box sx={{display:'grid',gridTemplateColumns:{xs:'repeat(2,1fr)',sm:'repeat(3,1fr)',md:'repeat(5,1fr)',lg:'repeat(6,1fr)'},gap:1}}>
-          {slots.map((slot,i)=>{
+          {slotsVisuales.map((slot,i)=>{
             const c=estadoSx(slot.estado);
             return <Box key={i} sx={{border:'1px solid',borderColor:c.bd,bgcolor:c.bg,borderRadius:1.5,p:1.2}}>
               <Typography variant="subtitle2" fontWeight={900}>{slot.hora_inicio} - {slot.hora_fin}</Typography>
