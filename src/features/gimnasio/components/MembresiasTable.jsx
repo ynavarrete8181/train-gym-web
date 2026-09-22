@@ -26,7 +26,7 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
           <FilterHeaderCell value={filtrosColumna.codigo} onChange={(v) => onFiltroColumna('codigo', v)} options={opciones(meta.opciones_filtro?.codigo)}>Contrato</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.cliente} onChange={(v) => onFiltroColumna('cliente', v)} options={opciones(meta.opciones_filtro?.cliente)}>Cliente</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.plan} onChange={(v) => onFiltroColumna('plan', v)} options={opciones(meta.opciones_filtro?.plan)}>Plan</FilterHeaderCell>
-          <TableCell>Entrenador</TableCell>
+          <TableCell>Sedes / entrenamiento</TableCell>
           <TableCell>Vigencia</TableCell>
           <FilterHeaderCell value={filtrosColumna.estado} onChange={(v) => onFiltroColumna('estado', v)} options={[{ value: 'PENDIENTE_PAGO', label: 'Pendiente pago' }, { value: 'ACTIVA', label: 'Activa' }, { value: 'VENCIDA', label: 'Vencida' }, { value: 'CONGELADA', label: 'Congelada' }, { value: 'CANCELADA', label: 'Cancelada' }]}>Estado</FilterHeaderCell>
           <TableCell align="right">Acciones</TableCell>
@@ -48,8 +48,14 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
               <Typography variant="caption" color="text.secondary">{membresia.sede_nombre || 'Sede no asignada'}</Typography>
             </TableCell>
             <TableCell>
-              <Typography variant="body2" fontWeight="500">{membresia.entrenador_nombre || 'Sin entrenador'}</Typography>
-              <Typography variant="caption" color="text.secondary">{membresia.entrenador_id ? 'Asignado a la membresía' : 'No requerido / pendiente'}</Typography>
+              <Typography variant="body2" fontWeight="500">
+                {(membresia.sedes_habilitadas || []).map((sede) => sede.sede_nombre).filter(Boolean).join(', ') || membresia.sede_nombre || 'Sin sedes'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {(membresia.asignaciones_entrenador || []).length
+                  ? `${(membresia.asignaciones_entrenador || []).length} asignación(es) de entrenamiento`
+                  : (membresia.requiere_entrenador ? 'Entrenador pendiente' : 'Plan sin entrenador')}
+              </Typography>
             </TableCell>
             <TableCell>
               <Typography variant="body2">{fecha(membresia.fecha_inicio)} - {fecha(membresia.fecha_fin)}</Typography>
