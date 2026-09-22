@@ -11,7 +11,6 @@ import LocalActivityOutlinedIcon from '@mui/icons-material/LocalActivityOutlined
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import AppsOutlinedIcon from '@mui/icons-material/AppsOutlined';
-import MoreHorizOutlinedIcon from '@mui/icons-material/MoreHorizOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import RemoveOutlinedIcon from '@mui/icons-material/RemoveOutlined';
@@ -48,7 +47,6 @@ const tipos = [
   { value: 'PRODUCTO', label: 'Productos', icono: <Inventory2OutlinedIcon fontSize="small" /> },
   { value: 'MEMBRESIA', label: 'Membresías', icono: <BadgeOutlinedIcon fontSize="small" /> },
   { value: 'PASE_DIARIO', label: 'Pase diario', icono: <LocalActivityOutlinedIcon fontSize="small" /> },
-  { value: 'OTRO', label: 'Otros', icono: <MoreHorizOutlinedIcon fontSize="small" /> },
 ];
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -71,14 +69,13 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [descuento, setDescuento] = useState(0);
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
-  const [otro, setOtro] = useState({ descripcion: '', precio: '', cantidad: 1 });
   const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   const [referencia, setReferencia] = useState('');
   const [recibido, setRecibido] = useState('');
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const tiposVisibles = esCuentaAbierta
-    ? tipos.filter((item) => ['SERVICIO', 'PRODUCTO', 'OTRO'].includes(item.value))
+    ? tipos.filter((item) => ['SERVICIO', 'PRODUCTO'].includes(item.value))
     : tipos;
 
   const avisar = (mensaje, tipoAviso = 'info') => setNotificacion({ mensaje, tipo: tipoAviso });
@@ -187,26 +184,6 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         total_linea: Number(item.precio),
       }];
     });
-  };
-
-  const agregarOtro = () => {
-    const precio = Number(otro.precio || 0);
-    const cantidad = Number(otro.cantidad || 1);
-    if (!otro.descripcion.trim() || precio <= 0 || cantidad <= 0) {
-      avisar('Completa descripción, precio y cantidad.', 'warning');
-      return;
-    }
-    setCarrito((actual) => [...actual, {
-      clave: `OTRO-${Date.now()}`,
-      tipo: 'OTRO',
-      referencia_id: null,
-      producto_id: null,
-      descripcion: otro.descripcion.trim(),
-      cantidad,
-      precio_unitario: precio,
-      total_linea: precio * cantidad,
-    }]);
-    setOtro({ descripcion: '', precio: '', cantidad: 1 });
   };
 
   const cambiarCantidad = (clave, cantidad) => {
@@ -344,30 +321,21 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 ))}
               </ToggleButtonGroup>
 
-              {tipo !== 'OTRO' ? (
-                <>
-                  <TextField
-                    value={busqueda}
-                    onChange={(e) => setBusqueda(e.target.value)}
-                    size="small"
-                    fullWidth
-                    placeholder={`Buscar ${tiposVisibles.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
-                    slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
-                  />
-                  {!esCuentaAbierta && (tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
-                  <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', mt: 1.65, maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
-                    {disponibles.map((item) => <CatalogoCard key={`${tipo}-${item.id}`} item={item} tipo={tipo} onAgregar={() => agregar(item)} />)}
-                  </Box>
-                  {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
-                </>
-              ) : (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr auto' }, gap: 1, alignItems: 'end' }}>
-                  <TextField label="Descripción" size="small" value={otro.descripcion} onChange={(e) => setOtro((a) => ({ ...a, descripcion: e.target.value }))} />
-                  <TextField label="Precio unitario" type="number" size="small" value={otro.precio} onChange={(e) => setOtro((a) => ({ ...a, precio: e.target.value }))} />
-                  <TextField label="Cantidad" type="number" size="small" value={otro.cantidad} onChange={(e) => setOtro((a) => ({ ...a, cantidad: e.target.value }))} />
-                  <Button startIcon={<AddShoppingCartOutlinedIcon />} variant="outlined" onClick={agregarOtro}>Agregar</Button>
+              <>
+                <TextField
+                  value={busqueda}
+                  onChange={(e) => setBusqueda(e.target.value)}
+                  size="small"
+                  fullWidth
+                  placeholder={`Buscar ${tiposVisibles.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
+                  slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
+                />
+                {!esCuentaAbierta && (tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
+                <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
+                  {disponibles.map((item) => <CatalogoCard key={`${tipo}-${item.id}`} item={item} tipo={tipo} onAgregar={() => agregar(item)} />)}
                 </Box>
-              )}
+                {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
+              </>
             </SeccionPos>
           </Stack>
 
