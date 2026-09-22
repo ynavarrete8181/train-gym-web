@@ -58,7 +58,8 @@ const DORADO_REVIVE_OSCURO = uiTokens.colores.acentoOscuro;
 const NEGRO_REVIVE = uiTokens.colores.textoFuerte;
 const DORADO_SUAVE = uiTokens.colores.acentoSuave;
 
-export function VentaPosFormulario({ onVolver, onGuardado }) {
+export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }) {
+  const esCuentaAbierta = Boolean(ventaInicial?.id);
   const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], productos: [] });
   const [cargando, setCargando] = useState(true);
   const [errorContexto, setErrorContexto] = useState('');
@@ -84,7 +85,38 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
       setErrorContexto('');
       try {
         const response = await ventaServicio.obtenerContextoPos();
-        setContexto(response.datos || response || {});
+        const datosContexto = response.datos || response || {};
+        setContexto(datosContexto);
+
+        if (ventaInicial?.id) {
+          const clienteCuenta = (datosContexto.clientes || []).find((item) => Number(item.id) === Number(ventaInicial.cliente_id));
+          setCliente(clienteCuenta || (ventaInicial.cliente_id ? {
+            id: ventaInicial.cliente_id,
+            nombre: ventaInicial.cliente_nombre || 'Cliente',
+            codigo: ventaInicial.codigo_deportista || '',
+          } : null));
+          setDescuento(Number(ventaInicial.descuento || 0));
+          setImpuesto(Number(ventaInicial.impuesto || 0));
+          setObservaciones(ventaInicial.observaciones || '');
+          setCarrito((ventaInicial.detalles || []).map((fila, indice) => {
+            const contractual = Boolean(ventaInicial.membresia_id) && (
+              String(fila.tipo_item || '').toUpperCase() === 'MEMBRESIA'
+              || (!fila.tipo_item && indice === 0)
+            );
+            const tipoItem = String(fila.tipo_item || (contractual ? 'MEMBRESIA' : 'OTRO')).toUpperCase();
+            return {
+              clave: `CUENTA-${fila.id || indice}`,
+              tipo: tipoItem,
+              referencia_id: fila.referencia_id || (contractual ? ventaInicial.membresia_plan_id : null),
+              producto_id: fila.producto_id || null,
+              descripcion: fila.descripcion,
+              cantidad: Number(fila.cantidad || 1),
+              precio_unitario: Number(fila.precio_unitario || 0),
+              total_linea: Number(fila.total_linea || 0),
+              bloqueado: contractual,
+            };
+          }));
+        }
       } catch (error) {
         const mensaje = error.response?.data?.mensaje || 'No se pudo cargar el contexto de venta.';
         setErrorContexto(mensaje);
@@ -94,7 +126,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
       }
     };
     cargar();
-  }, []);
+  }, [ventaInicial?.id]);
 
   const subtotal = useMemo(
     () => carrito.reduce((acumulado, item) => acumulado + Number(item.total_linea || 0), 0),
@@ -210,26 +242,32 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
         descuento: Number(descuento || 0),
         impuesto: Number(impuesto || 0),
         observaciones: observaciones || null,
-        detalles: carrito.map(({ clave, ...item }) => item),
+        detalles: carrito.map(({ clave, bloqueado, ...item }) => item),
       };
 
-      const response = cobrar
-        ? await ventaServicio.cobrarVentaPos({
-            ...payloadVenta,
-            metodo_pago: metodoPago,
-            referencia_pago: referencia || null,
-            observaciones_pago: metodoPago === 'EFECTIVO'
-              ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.`
-              : 'Cobro registrado desde POS.',
-          })
-        : await ventaServicio.crearVentaPos(payloadVenta);
+      const payloadCobro = {
+        ...payloadVenta,
+        metodo_pago: metodoPago,
+        referencia_pago: referencia || null,
+        observaciones_pago: metodoPago === 'EFECTIVO'
+          ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.`
+          : 'Cobro registrado desde POS.',
+      };
+
+      const response = esCuentaAbierta
+        ? (cobrar
+            ? await ventaServicio.cobrarCuentaPos(ventaInicial.id, payloadCobro)
+            : await ventaServicio.actualizarCuentaPos(ventaInicial.id, payloadVenta))
+        : (cobrar
+            ? await ventaServicio.cobrarVentaPos(payloadCobro)
+            : await ventaServicio.crearVentaPos(payloadVenta));
 
       const venta = response.datos || response;
       if (cobrar) {
         const comprobante = venta.comprobante?.numero ? ` · Recibo ${venta.comprobante.numero}` : '';
-        avisar(`Venta ${venta.numero || ''} pagada correctamente${comprobante}.`, 'success');
+        avisar(`${esCuentaAbierta ? 'Cuenta' : 'Venta'} ${venta.numero || ''} pagada correctamente${comprobante}.`, 'success');
       } else {
-        avisar(`Venta ${venta.numero || ''} guardada como pendiente de pago.`, 'success');
+        avisar(`${esCuentaAbierta ? 'Cuenta' : 'Venta'} ${venta.numero || ''} guardada como pendiente de pago.`, 'success');
       }
       setTimeout(() => onGuardado?.(), 500);
     } catch (error) {
@@ -246,8 +284,8 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
   return (
     <Box className="page-wrapper">
       <PageHeader
-        titulo="Nueva venta"
-        descripcion="Registra servicios, productos y cobros asociados al turno de caja activo."
+        titulo={esCuentaAbierta ? `Cuenta abierta · ${ventaInicial.numero || ''}` : 'Nueva venta'}
+        descripcion={esCuentaAbierta ? 'Agrega consumos a la cuenta del cliente y cobra todo en una sola operación.' : 'Registra servicios, productos y cobros asociados al turno de caja activo.'}
         icono={<PointOfSaleOutlinedIcon />}
         acciones={<BotonVolver onClick={onVolver} />}
       />
@@ -267,6 +305,7 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                 options={contexto.clientes || []}
                 value={cliente}
                 onChange={(_, value) => setCliente(value)}
+                disabled={esCuentaAbierta}
                 getOptionLabel={(item) => `${item.nombre || ''}${item.codigo ? ` · ${item.codigo}` : ''}`}
                 isOptionEqualToValue={(a, b) => a.id === b.id}
                 renderInput={(params) => <TextField {...params} size="small" placeholder="Buscar por nombre, código, cédula o teléfono" />}
@@ -380,11 +419,21 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
                     {carrito.map((item) => (
                       <Box key={item.clave} sx={{ p: 1, border: '1px solid #e4eaf1', borderRadius: 1.5 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'flex-start' }}>
-                          <Box sx={{ minWidth: 0 }}><Typography variant="body2" fontWeight={900}>{item.descripcion}</Typography><Typography variant="caption" color="text.secondary">{dinero(item.precio_unitario)} unitario</Typography></Box>
-                          <Tooltip title="Quitar"><IconButton size="small" color="error" onClick={() => setCarrito((actual) => actual.filter((fila) => fila.clave !== item.clave))}><DeleteOutlineOutlinedIcon fontSize="small" /></IconButton></Tooltip>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="body2" fontWeight={900}>{item.descripcion}</Typography>
+                            <Stack direction="row" spacing={0.6} alignItems="center" flexWrap="wrap">
+                              <Typography variant="caption" color="text.secondary">{dinero(item.precio_unitario)} unitario</Typography>
+                              {item.bloqueado ? <Chip size="small" label="Cargo de membresía" variant="outlined" sx={{ height: 20, fontSize: 10 }} /> : null}
+                            </Stack>
+                          </Box>
+                          {!item.bloqueado ? (
+                            <Tooltip title="Quitar"><IconButton size="small" color="error" onClick={() => setCarrito((actual) => actual.filter((fila) => fila.clave !== item.clave))}><DeleteOutlineOutlinedIcon fontSize="small" /></IconButton></Tooltip>
+                          ) : null}
                         </Box>
                         <Box sx={{ mt: .8, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 1, alignItems: 'center' }}>
-                          <CantidadControl cantidad={item.cantidad} onMenos={() => ajustarCantidad(item.clave, -1)} onMas={() => ajustarCantidad(item.clave, 1)} onChange={(valor) => cambiarCantidad(item.clave, valor)} />
+                          {item.bloqueado
+                            ? <Typography variant="caption" color="text.secondary">1 unidad</Typography>
+                            : <CantidadControl cantidad={item.cantidad} onMenos={() => ajustarCantidad(item.clave, -1)} onMas={() => ajustarCantidad(item.clave, 1)} onChange={(valor) => cambiarCantidad(item.clave, valor)} />}
                           <Box sx={{ textAlign: 'right' }}><Typography variant="caption" color="text.secondary" display="block">{item.cantidad} × {dinero(item.precio_unitario)}</Typography><Typography variant="body1" fontWeight={900}>{dinero(item.total_linea)}</Typography></Box>
                         </Box>
                       </Box>
@@ -415,8 +464,8 @@ export function VentaPosFormulario({ onVolver, onGuardado }) {
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
-                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, minHeight: 46, borderRadius: 1.2, textTransform: 'none', color: '#111827', fontWeight: 950, fontSize: 13, boxShadow: '0 8px 18px rgba(184,138,0,.18)' }} startIcon={<ReceiptLongOutlinedIcon />}>Proceder al cobro · {dinero(total)}</Button>
-                  <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)} sx={{ borderColor: '#c8cdd3', color: NEGRO_REVIVE, fontWeight: 900, '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO } }}>Guardar pendiente</Button>
+                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, minHeight: 46, borderRadius: 1.2, textTransform: 'none', color: '#111827', fontWeight: 950, fontSize: 13, boxShadow: '0 8px 18px rgba(184,138,0,.18)' }} startIcon={<ReceiptLongOutlinedIcon />}>{esCuentaAbierta ? 'Cobrar ahora' : 'Proceder al cobro'} · {dinero(total)}</Button>
+                  <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)} sx={{ borderColor: '#c8cdd3', color: NEGRO_REVIVE, fontWeight: 900, '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO } }}>{esCuentaAbierta ? 'Guardar cuenta' : 'Guardar pendiente'}</Button>
                 </Stack>
               </Box>
             </Box>
