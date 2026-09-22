@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { Box, Button, IconButton, MenuItem, TextField, Typography, Stack, Paper, Chip, Tooltip, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Autocomplete, Box, Button, IconButton, MenuItem, TextField, Typography, Stack, Paper, Chip, Tooltip, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
@@ -27,7 +27,8 @@ const getInitialForm = () => ({
   usuario_id: '',
   especialidad: '',
   tipo: 'COACH',
-  estado: 'ACTIVO'
+  estado: 'ACTIVO',
+  servicio_ids: []
 });
 
 const abreviarDias = (dias = '') => String(dias)
@@ -45,6 +46,7 @@ export function EntrenadoresPage() {
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const [entrenadores, setEntrenadores] = useState([]);
   const [usuariosDisp, setUsuariosDisp] = useState([]);
+  const [serviciosDisp, setServiciosDisp] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({ persona: '', tipo: '', especialidad: '', usuario: '', estado: '' });
@@ -80,9 +82,21 @@ export function EntrenadoresPage() {
     }
   };
 
+  const cargarServicios = async () => {
+    try {
+      const response = await gimnasioServicio.obtenerServiciosEntrenadorCatalogo();
+      setServiciosDisp(response.datos || []);
+    } catch (error) {
+      showNotificacion('Error al cargar servicios disponibles', 'error');
+    }
+  };
+
   useEffect(() => {
     if (vista === 'lista') cargarEntrenadores();
-    else if (vista === 'formulario') cargarUsuarios();
+    else if (vista === 'formulario') {
+      cargarUsuarios();
+      cargarServicios();
+    }
   }, [vista]);
 
   const buscar = (parametros) => {
@@ -129,7 +143,7 @@ export function EntrenadoresPage() {
   };
 
   const handleNuevo = () => { setFormData(getInitialForm()); setVista('formulario'); };
-  const handleEditar = (ent) => { setFormData({ ...ent }); setVista('formulario'); };
+  const handleEditar = (ent) => { setFormData({ ...ent, servicio_ids: ent.servicio_ids || [] }); setVista('formulario'); };
   const handleCancelar = () => { setVista('lista'); };
   const handleCancelarFicha = () => { setEntrenadorFicha(null); setVista('lista'); };
 
@@ -247,6 +261,26 @@ export function EntrenadoresPage() {
                     <MenuItem value="ACTIVO">Activo</MenuItem>
                     <MenuItem value="INACTIVO">Inactivo</MenuItem>
                   </TextField>
+                  <Autocomplete
+                    multiple
+                    options={serviciosDisp}
+                    value={serviciosDisp.filter((s) => (formData.servicio_ids || []).includes(s.id))}
+                    onChange={(_, values) => setFormData((prev) => ({
+                      ...prev,
+                      servicio_ids: values.map((s) => s.id),
+                    }))}
+                    getOptionLabel={(s) => s.nombre || ''}
+                    isOptionEqualToValue={(a, b) => String(a.id) === String(b.id)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Servicios habilitados"
+                        size="small"
+                        helperText="Servicios que este entrenador puede atender en Agenda."
+                      />
+                    )}
+                    sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
+                  />
                 </Box>
               </Box>
             </Stack>
