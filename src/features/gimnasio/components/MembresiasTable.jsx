@@ -1,4 +1,5 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import { Chip, IconButton, Stack, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
@@ -9,7 +10,7 @@ import { CancelarMembresiaButton } from './CancelarMembresiaButton.jsx';
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC') : 'Sin fecha';
 
-export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onCancelada, onErrorCancelar, onPageChange, onRowsPerPageChange }) {
+export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onRenovar, onCancelada, onErrorCancelar, onPageChange, onRowsPerPageChange }) {
   return (
     <TablaGestion
       total={meta.total || 0}
@@ -73,6 +74,13 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                {membresia.renovable && String(membresia.estado || '').toUpperCase() !== 'CANCELADA' ? (
+                  <Tooltip title="Renovar membresía">
+                    <IconButton sx={dbanuStyles.actionView} onClick={() => onRenovar(membresia)}>
+                      <AutorenewOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
                 <Tooltip title="Editar membresía">
                   <IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(membresia)}>
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
