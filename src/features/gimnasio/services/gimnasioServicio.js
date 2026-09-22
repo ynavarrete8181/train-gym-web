@@ -128,6 +128,10 @@ export const gimnasioServicio = {
     const { data } = await api.put(`/base/gimnasio/membresias/${id}`, payload);
     return data;
   },
+  renovarMembresia: async (id) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/renovar`);
+    return data;
+  },
   eliminarMembresia: async (id) => {
     const { data } = await api.delete(`/base/gimnasio/membresias/${id}`);
     return data;
