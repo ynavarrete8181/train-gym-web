@@ -32,11 +32,7 @@ export function VentasPage() {
   const cargarCuentas = async () => {
     setCargandoCuentas(true);
     try {
-      const response = await ventaServicio.obtenerVentas({
-        page: 1,
-        per_page: 50,
-        estado: ['PENDIENTE', 'PARCIAL'],
-      });
+      const response = await ventaServicio.obtenerCuentasAbiertasPos();
       setCuentasAbiertas(response.datos || []);
     } catch (error) {
       setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudieron cargar las cuentas abiertas.', tipo: 'error' });
