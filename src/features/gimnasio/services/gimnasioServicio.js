@@ -84,6 +84,10 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/planes/${id}`);
     return data;
   },
+  obtenerServiciosPlanCatalogo: async () => {
+    const { data } = await api.get('/base/gimnasio/planes/catalogos/servicios');
+    return data;
+  },
   crearPlan: async (payload) => {
     const { data } = await api.post('/base/gimnasio/planes', payload);
     return data;
