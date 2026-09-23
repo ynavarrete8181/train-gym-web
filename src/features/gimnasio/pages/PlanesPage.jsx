@@ -3,7 +3,7 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Chip, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from "../../../components/common/AccionesFormulario.jsx";
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -32,6 +32,7 @@ const getInitialForm = () => ({
   renovable: true,
   activo: true,
   precios_sede: [],
+  servicio_ids: [],
 });
 
 export function PlanesPage() {
@@ -44,6 +45,7 @@ export function PlanesPage() {
   const [filtrosColumna, setFiltrosColumna] = useState({ codigo: [], nombre: [], estado: [] });
   const [cargando, setCargando] = useState(true);
   const [sedes, setSedes] = useState([]);
+  const [serviciosPlan, setServiciosPlan] = useState([]);
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -66,6 +68,15 @@ export function PlanesPage() {
     gimnasioServicio.obtenerEstructuraOperativa()
       .then((resp) => setSedes(resp.datos?.sedes || []))
       .catch(() => setSedes([]));
+  }, []);
+
+  useEffect(() => {
+    gimnasioServicio.obtenerServiciosPlanCatalogo()
+      .then((resp) => setServiciosPlan(resp.datos || []))
+      .catch(() => {
+        setServiciosPlan([]);
+        showNotificacion('No se pudieron cargar los servicios disponibles para los planes.', 'error');
+      });
   }, []);
 
   const buscar = (parametros) => {
@@ -101,7 +112,12 @@ export function PlanesPage() {
   };
 
   const handleEditar = (plan) => {
-    setFormData({ ...getInitialForm(), ...plan, precios_sede: plan.precios_sede || [] });
+    setFormData({
+      ...getInitialForm(),
+      ...plan,
+      precios_sede: plan.precios_sede || [],
+      servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
+    });
     setVista('formulario');
   };
 
@@ -115,6 +131,9 @@ export function PlanesPage() {
         siguiente.tipo_duracion = 'DIAS';
         siguiente.duracion = 1;
         siguiente.tarifa_inscripcion = 0;
+      }
+      if (name === 'requiere_entrenador' && !checked) {
+        siguiente.servicio_ids = [];
       }
       return siguiente;
     });
@@ -137,6 +156,11 @@ export function PlanesPage() {
 
       if (!Number.isInteger(duracion) || duracion < 1) {
         showNotificacion('La duración debe ser un número entero mayor o igual a 1.', 'warning');
+        return;
+      }
+
+      if (formData.requiere_entrenador && !(formData.servicio_ids || []).length) {
+        showNotificacion('Selecciona al menos un servicio incluido para el plan que requiere entrenador.', 'warning');
         return;
       }
 
@@ -171,6 +195,9 @@ export function PlanesPage() {
         requiere_pago: Boolean(formData.requiere_pago),
         requiere_entrenador: Boolean(formData.requiere_entrenador),
         renovable: Boolean(formData.renovable),
+        servicio_ids: formData.requiere_entrenador
+          ? (formData.servicio_ids || []).map(Number)
+          : [],
         precios_sede: preciosSedeValidos.map((fila) => ({ sede_id: Number(fila.sede_id), precio: parseFloat(fila.precio) })),
       };
 
@@ -230,6 +257,51 @@ export function PlanesPage() {
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
                 </Stack>
               </Box>
+
+              {formData.requiere_entrenador ? (
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Servicios incluidos</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
+                    Define los servicios que el cliente podrá reservar con este plan. Luego el sistema cruzará estos servicios con los habilitados para cada entrenador.
+                  </Typography>
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={serviciosPlan}
+                    value={serviciosPlan.filter((servicio) => (formData.servicio_ids || []).map(Number).includes(Number(servicio.id)))}
+                    onChange={(_, seleccionados) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        servicio_ids: seleccionados.map((servicio) => Number(servicio.id)),
+                      }));
+                    }}
+                    isOptionEqualToValue={(opcion, valor) => Number(opcion.id) === Number(valor.id)}
+                    getOptionLabel={(opcion) => `${opcion.nombre}${opcion.duracion_minutos ? ` · ${opcion.duracion_minutos} min` : ''}`}
+                    groupBy={(opcion) => opcion.categoria || 'Sin categoría'}
+                    renderTags={(seleccionados, getTagProps) =>
+                      seleccionados.map((opcion, index) => (
+                        <Chip
+                          {...getTagProps({ index })}
+                          key={opcion.id}
+                          size="small"
+                          label={`${opcion.nombre}${opcion.duracion_minutos ? ` · ${opcion.duracion_minutos} min` : ''}`}
+                          sx={{ fontWeight: 700 }}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        required
+                        size="small"
+                        label="Servicios incluidos"
+                        placeholder="Buscar y seleccionar servicios"
+                        helperText="Selecciona uno o varios servicios incluidos en esta membresía."
+                      />
+                    )}
+                  />
+                </Box>
+              ) : null}
 
               <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
