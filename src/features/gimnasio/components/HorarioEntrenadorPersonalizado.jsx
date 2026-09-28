@@ -427,27 +427,62 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           </Typography>
 
           <Box sx={{ border: '1px solid #dbe5f0', borderRadius: 1.5, p: 2 }}>
-            <Stack direction="row" spacing={0.7} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-              {DIAS.map((dia) => {
-                const seleccionado = bloque.dias.includes(dia.id);
-                return (
-                  <Button
-                    key={dia.id}
-                    size="small"
-                    variant={seleccionado ? 'contained' : 'outlined'}
-                    onClick={() => toggleDia(dia.id)}
-                    sx={seleccionado ? dbanuStyles.addButtonRevive : { minWidth: 62 }}
-                  >
-                    {dia.corto}
-                  </Button>
-                );
-              })}
-            </Stack>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 1.5,
+                flexWrap: 'wrap',
+                mb: 2,
+              }}
+            >
+              <Stack direction="row" spacing={0.7} flexWrap="wrap" useFlexGap>
+                {DIAS.map((dia) => {
+                  const seleccionado = bloque.dias.includes(dia.id);
+                  return (
+                    <Button
+                      key={dia.id}
+                      size="small"
+                      variant={seleccionado ? 'contained' : 'outlined'}
+                      onClick={() => toggleDia(dia.id)}
+                      sx={seleccionado ? dbanuStyles.addButtonRevive : { minWidth: 62 }}
+                    >
+                      {dia.corto}
+                    </Button>
+                  );
+                })}
+              </Stack>
+
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={bloque.lunch}
+                    onChange={(event) => setBloque((prev) => ({
+                      ...prev,
+                      lunch: event.target.checked,
+                      lunch_inicio: event.target.checked ? prev.lunch_inicio : '',
+                      lunch_fin: event.target.checked ? prev.lunch_fin : '',
+                    }))}
+                  />
+                }
+                label="Lunch"
+                sx={{
+                  m: 0,
+                  px: 1.25,
+                  height: 40,
+                  border: '1px solid #dbe5f0',
+                  borderRadius: 1,
+                  bgcolor: '#fff',
+                  '& .MuiFormControlLabel-label': { fontWeight: 700, fontSize: 13 },
+                }}
+              />
+            </Box>
 
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: { xs: '1fr', lg: '1.2fr .8fr .8fr auto .8fr .8fr auto' },
+                gridTemplateColumns: { xs: '1fr', lg: '1.2fr .8fr .8fr .8fr .8fr auto' },
                 gap: 1,
                 alignItems: 'center',
               }}
@@ -480,29 +515,6 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
                 value={bloque.hora_fin}
                 onChange={(event) => setBloque((prev) => ({ ...prev, hora_fin: event.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }}
-              />
-
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={bloque.lunch}
-                    onChange={(event) => setBloque((prev) => ({
-                      ...prev,
-                      lunch: event.target.checked,
-                      lunch_inicio: event.target.checked ? prev.lunch_inicio : '',
-                      lunch_fin: event.target.checked ? prev.lunch_fin : '',
-                    }))}
-                  />
-                }
-                label="Lunch"
-                sx={{
-                  m: 0,
-                  px: 1,
-                  height: 40,
-                  border: '1px solid #dbe5f0',
-                  borderRadius: 1,
-                  '& .MuiFormControlLabel-label': { fontWeight: 700, fontSize: 13 },
-                }}
               />
 
               <TextField
