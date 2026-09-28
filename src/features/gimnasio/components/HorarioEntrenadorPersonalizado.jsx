@@ -39,7 +39,7 @@ const DIAS = [
 
 const inicial = {
   id: null,
-  tipo_horario: 'INSTITUCIONAL',
+  tipo_horario: '',
   jornada_id: '',
   fecha_inicio: '',
   fecha_fin: '',
@@ -65,6 +65,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
   const [form, setForm] = useState(inicial);
   const [catalogos, setCatalogos] = useState({ sedes: [], jornadas: [], tipos_receso: [] });
   const [bloque, setBloque] = useState(bloqueInicial);
+  const [sedeInstitucional, setSedeInstitucional] = useState('');
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
@@ -73,7 +74,9 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
     || entrenador?.name
     || 'Entrenador';
 
+  const horarioSeleccionado = Boolean(form.tipo_horario);
   const esPersonalizado = form.tipo_horario === 'PERSONALIZADO';
+  const esInstitucional = form.tipo_horario === 'INSTITUCIONAL';
 
   const cargar = async () => {
     setCargando(true);
@@ -98,6 +101,12 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
 
       const actual = (horariosRes.datos || [])[0];
       if (actual) {
+        const franjasActuales = (actual.franjas || []).map((item) => ({
+          ...item,
+          hora_inicio: hora(item.hora_inicio),
+          hora_fin: hora(item.hora_fin),
+        }));
+
         setForm({
           ...inicial,
           ...actual,
@@ -105,17 +114,17 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           jornada_id: actual.jornada_id || '',
           fecha_inicio: actual.fecha_inicio ? String(actual.fecha_inicio).slice(0, 10) : '',
           fecha_fin: actual.fecha_fin ? String(actual.fecha_fin).slice(0, 10) : '',
-          franjas: (actual.franjas || []).map((item) => ({
-            ...item,
-            hora_inicio: hora(item.hora_inicio),
-            hora_fin: hora(item.hora_fin),
-          })),
+          franjas: franjasActuales,
           recesos: (actual.recesos || []).map((item) => ({
             ...item,
             hora_inicio: hora(item.hora_inicio),
             hora_fin: hora(item.hora_fin),
           })),
         });
+
+        if ((actual.tipo_horario || '') === 'INSTITUCIONAL') {
+          setSedeInstitucional(franjasActuales[0]?.sede_id || '');
+        }
       }
     } catch (error) {
       const errores = error.response?.data?.errores;
@@ -151,6 +160,21 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
   );
 
   const seleccionarHorarioInstitucional = (value) => {
+    if (!value) {
+      setForm((prev) => ({
+        ...prev,
+        tipo_horario: '',
+        jornada_id: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        franjas: [],
+        recesos: [],
+      }));
+      setSedeInstitucional('');
+      setBloque(bloqueInicial);
+      return;
+    }
+
     if (value === 'PERSONALIZADO') {
       setForm((prev) => ({
         ...prev,
@@ -161,16 +185,10 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         franjas: [],
         recesos: [],
       }));
+      setSedeInstitucional('');
       setBloque(bloqueInicial);
       return;
     }
-
-    const jornada = (catalogos.jornadas || []).find((item) => String(item.id) === String(value));
-    const detalles = jornada?.detalles || jornada?.dias || [];
-    const dias = detalles
-      .map((item) => String(item.dia_semana || '').toUpperCase())
-      .filter(Boolean);
-    const primero = detalles[0];
 
     setForm((prev) => ({
       ...prev,
@@ -181,16 +199,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
       franjas: [],
       recesos: [],
     }));
-
-    setBloque({
-      dias: dias.length ? dias : ['LUNES'],
-      sede_id: '',
-      hora_inicio: hora(primero?.hora_inicio) || '08:00',
-      hora_fin: hora(primero?.hora_fin) || '17:00',
-      lunch: false,
-      lunch_inicio: '',
-      lunch_fin: '',
-    });
+    setSedeInstitucional('');
   };
 
   const toggleDia = (dia) => {
@@ -288,27 +297,66 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
   };
 
   const guardar = async () => {
+    if (!form.tipo_horario) {
+      setNotificacion({ mensaje: 'Seleccione una jornada global o un horario personalizado.', tipo: 'warning' });
+      return;
+    }
+
+    if (esPersonalizado && (!form.fecha_inicio || !form.fecha_fin)) {
+      setNotificacion({ mensaje: 'El horario personalizado requiere Vigente desde y Vigente hasta.', tipo: 'warning' });
+      return;
+    }
+
+    if (esPersonalizado && !form.franjas.length) {
+      setNotificacion({ mensaje: 'Agregue al menos un bloque al horario semanal personalizado.', tipo: 'warning' });
+      return;
+    }
+
+    if (esInstitucional && !sedeInstitucional) {
+      setNotificacion({ mensaje: 'Seleccione la sede donde se aplicará la jornada institucional.', tipo: 'warning' });
+      return;
+    }
+
+    const detalles = jornadaSeleccionada?.detalles || jornadaSeleccionada?.dias || [];
+    const franjasInstitucionales = esInstitucional
+      ? detalles.map((detalle) => ({
+          dia_semana: String(detalle.dia_semana || '').toUpperCase(),
+          sede_id: Number(sedeInstitucional),
+          hora_inicio: hora(detalle.hora_inicio),
+          hora_fin: hora(detalle.hora_fin),
+        }))
+      : [];
+
+    if (esInstitucional && !franjasInstitucionales.length) {
+      setNotificacion({ mensaje: 'La jornada seleccionada no tiene días y horas configurados.', tipo: 'warning' });
+      return;
+    }
+
     try {
       const payload = {
         tipo_horario: form.tipo_horario,
-        jornada_id: form.tipo_horario === 'INSTITUCIONAL' ? Number(form.jornada_id) : null,
-        fecha_inicio: esPersonalizado ? (form.fecha_inicio || null) : null,
-        fecha_fin: esPersonalizado ? (form.fecha_fin || null) : null,
+        jornada_id: esInstitucional ? Number(form.jornada_id) : null,
+        fecha_inicio: esPersonalizado ? form.fecha_inicio : null,
+        fecha_fin: esPersonalizado ? form.fecha_fin : null,
         activo: Boolean(form.activo),
         observaciones: form.observaciones || null,
-        franjas: form.franjas.map(({ dia_semana, sede_id, hora_inicio, hora_fin }) => ({
-          dia_semana,
-          sede_id: Number(sede_id),
-          hora_inicio,
-          hora_fin,
-        })),
-        recesos: form.recesos.map(({ dia_semana, tipo, descripcion, hora_inicio, hora_fin }) => ({
-          dia_semana,
-          tipo,
-          descripcion: descripcion || null,
-          hora_inicio,
-          hora_fin,
-        })),
+        franjas: esInstitucional
+          ? franjasInstitucionales
+          : form.franjas.map(({ dia_semana, sede_id, hora_inicio, hora_fin }) => ({
+              dia_semana,
+              sede_id: Number(sede_id),
+              hora_inicio,
+              hora_fin,
+            })),
+        recesos: esPersonalizado
+          ? form.recesos.map(({ dia_semana, tipo, descripcion, hora_inicio, hora_fin }) => ({
+              dia_semana,
+              tipo,
+              descripcion: descripcion || null,
+              hora_inicio,
+              hora_fin,
+            }))
+          : [],
       };
 
       if (form.id) {
@@ -358,6 +406,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               onChange={(event) => seleccionarHorarioInstitucional(event.target.value)}
               helperText="Seleccione una jornada global o configure un horario personalizado."
             >
+              <MenuItem value="">Seleccione...</MenuItem>
               {(catalogos.jornadas || []).map((jornada) => (
                 <MenuItem key={jornada.id} value={jornada.id}>
                   {jornada.nombre}
@@ -413,13 +462,51 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
             </Box>
           </Box>
 
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            {esPersonalizado
-              ? 'El horario personalizado requiere Vigente desde y Vigente hasta.'
-              : 'La jornada institucional toma sus días y horas desde el catálogo global de Jornadas.'}
-          </Typography>
+          {horarioSeleccionado ? (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              {esPersonalizado
+                ? 'El horario personalizado requiere Vigente desde y Vigente hasta.'
+                : 'La jornada institucional utiliza los días y horas definidos globalmente. La vigencia por fechas queda deshabilitada.'}
+            </Typography>
+          ) : null}
         </Box>
 
+        {esInstitucional ? (
+          <Box sx={{ ...formStyles.seccion, mt: 2 }}>
+            <Typography sx={formStyles.modalSeccionTitulo}>Jornada institucional</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Esta jornada se administra globalmente en Servicios y Agenda → Jornadas. Aquí solo seleccione la sede donde se aplicará al entrenador.
+            </Typography>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 1.5, alignItems: 'start' }}>
+              <TextField
+                select
+                size="small"
+                label="Sede"
+                value={sedeInstitucional}
+                onChange={(event) => setSedeInstitucional(event.target.value)}
+              >
+                {(catalogos.sedes || []).map((sede) => (
+                  <MenuItem key={sede.id} value={sede.id}>{sede.nombre}</MenuItem>
+                ))}
+              </TextField>
+
+              <Box sx={{ border: '1px solid #dbe5f0', borderRadius: 1.25, p: 1.25, bgcolor: '#fbfdff' }}>
+                <Typography variant="body2" fontWeight={900}>
+                  {jornadaSeleccionada?.nombre || 'Jornada institucional'}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {(jornadaSeleccionada?.detalles || jornadaSeleccionada?.dias || []).map((detalle) =>
+                    `${String(detalle.dia_semana || '').slice(0, 3)} ${hora(detalle.hora_inicio)}-${hora(detalle.hora_fin)}`
+                  ).join(' · ') || 'Sin detalle configurado'}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        ) : null}
+
+        {esPersonalizado ? (
+          <>
         <Box sx={{ ...formStyles.seccion, mt: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>Horario semanal personalizado</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
@@ -656,8 +743,10 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
             ))}
           </Box>
         </Box>
+          </>
+        ) : null}
 
-        <AccionesFormulario onGuardar={guardar} onCancelar={onVolver} disabled={cargando} />
+        <AccionesFormulario onGuardar={guardar} onCancelar={onVolver} disabled={cargando || !horarioSeleccionado} />
       </Paper>
 
       <NotificacionSnackbar
