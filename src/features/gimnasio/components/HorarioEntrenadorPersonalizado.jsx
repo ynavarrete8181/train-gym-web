@@ -7,6 +7,7 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import CoffeeOutlinedIcon from '@mui/icons-material/CoffeeOutlined';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
