@@ -18,6 +18,7 @@ import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
@@ -65,6 +66,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
   const [catalogos, setCatalogos] = useState({ sedes: [], jornadas: [], tipos_receso: [] });
   const [bloque, setBloque] = useState(bloqueInicial);
   const [sedeInstitucional, setSedeInstitucional] = useState('');
+  const [versiones, setVersiones] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
@@ -165,7 +167,9 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         tipos_receso: catalogosData.tipos_receso || ['DESAYUNO', 'ALMUERZO', 'MERIENDA', 'PAUSA', 'OTRO'],
       });
 
-      const actual = (horariosRes.datos || [])[0];
+      const versionesData = horariosRes.datos || [];
+      setVersiones(versionesData);
+      const actual = versionesData[0];
       if (actual) {
         const franjasActuales = (actual.franjas || []).map((item) => ({
           ...item,
@@ -788,6 +792,75 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               </Box>
             </Box>
           </>
+        ) : null}
+
+        {versiones.length > 0 ? (
+          <Box sx={{ ...formStyles.seccion, mt: 1.5 }}>
+            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+              <HistoryOutlinedIcon sx={{ fontSize: 19 }} />
+              <Typography sx={formStyles.modalSeccionTitulo}>Historial de versiones</Typography>
+            </Stack>
+
+            <Stack spacing={0.8}>
+              {versiones.map((version) => (
+                <Box
+                  key={version.id}
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: '90px 1.4fr 1fr 120px' },
+                    gap: 1,
+                    alignItems: 'center',
+                    px: 1.25,
+                    py: 1,
+                    border: '1px solid #dbe5f0',
+                    borderRadius: 1,
+                    bgcolor: version.es_vigente ? '#fbfdff' : '#f8fafc',
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={900}>
+                    v{version.version || 1}
+                  </Typography>
+
+                  <Box>
+                    <Typography variant="body2" fontWeight={800}>
+                      {version.tipo_horario === 'INSTITUCIONAL'
+                        ? (version.jornada_nombre || 'Jornada institucional')
+                        : 'Horario personalizado'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {(version.franjas || []).length} franja(s) · {(version.recesos || []).length} receso(s)
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      Vigencia
+                    </Typography>
+                    <Typography variant="body2">
+                      {String(version.fecha_inicio || '').slice(0, 10) || '—'}
+                      {' '}
+                      {version.fecha_fin ? `→ ${String(version.fecha_fin).slice(0, 10)}` : '→ Actual'}
+                    </Typography>
+                  </Box>
+
+                  <Typography
+                    variant="caption"
+                    fontWeight={900}
+                    sx={{
+                      justifySelf: { xs: 'start', md: 'end' },
+                      px: 1,
+                      py: 0.4,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: version.es_vigente ? '#7cc28a' : '#cbd5e1',
+                    }}
+                  >
+                    {version.es_vigente ? 'VIGENTE' : 'FINALIZADA'}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
         ) : null}
 
         <AccionesFormulario
