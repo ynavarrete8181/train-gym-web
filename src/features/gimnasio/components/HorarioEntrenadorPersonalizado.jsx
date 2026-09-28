@@ -54,8 +54,8 @@ const bloqueInicial = {
   hora_inicio: '08:00',
   hora_fin: '17:00',
   lunch: false,
-  lunch_inicio: '',
-  lunch_fin: '',
+  lunch_inicio: '13:00',
+  lunch_fin: '14:00',
 };
 
 const hora = (value) => String(value || '').slice(0, 5);
@@ -98,7 +98,17 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
     }));
   }, [esInstitucional, detallesJornada, sedeInstitucional, form.franjas]);
 
-  const recesosVista = esInstitucional ? [] : form.recesos;
+  const recesosVista = esInstitucional
+    ? (bloque.lunch
+        ? franjasVista.map((franja) => ({
+            dia_semana: franja.dia_semana,
+            tipo: 'ALMUERZO',
+            descripcion: 'LUNCH',
+            hora_inicio: bloque.lunch_inicio,
+            hora_fin: bloque.lunch_fin,
+          }))
+        : [])
+    : form.recesos;
 
   const resumenDias = useMemo(
     () => DIAS.map((dia) => ({
@@ -246,8 +256,8 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
       hora_inicio: hora(primero?.hora_inicio) || '',
       hora_fin: hora(primero?.hora_fin) || '',
       lunch: false,
-      lunch_inicio: '',
-      lunch_fin: '',
+      lunch_inicio: '13:00',
+      lunch_fin: '14:00',
     });
   };
 
@@ -390,7 +400,15 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               hora_inicio,
               hora_fin,
             }))
-          : [],
+          : (bloque.lunch
+              ? franjasInstitucionales.map((franja) => ({
+                  dia_semana: franja.dia_semana,
+                  tipo: 'ALMUERZO',
+                  descripcion: 'LUNCH',
+                  hora_inicio: bloque.lunch_inicio,
+                  hora_fin: bloque.lunch_fin,
+                }))
+              : []),
       };
 
       if (form.id) {
@@ -456,7 +474,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               disabled={!esPersonalizado}
               required={esPersonalizado}
               onChange={(event) => setForm((prev) => ({ ...prev, fecha_inicio: event.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
             />
 
             <TextField
@@ -467,7 +485,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               disabled={!esPersonalizado}
               required={esPersonalizado}
               onChange={(event) => setForm((prev) => ({ ...prev, fecha_fin: event.target.value }))}
-              slotProps={{ inputLabel: { shrink: true } }}
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
             />
 
             <Box
@@ -552,8 +570,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
                   <FormControlLabel
                     control={
                       <Checkbox
-                        checked={esInstitucional ? false : bloque.lunch}
-                        disabled={esInstitucional}
+                        checked={bloque.lunch}
                         onChange={(event) => setBloque((prev) => ({
                           ...prev,
                           lunch: event.target.checked,
@@ -603,42 +620,50 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
 
                   <TextField
                     size="small"
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
                     label="Inicio jornada"
                     value={esInstitucional ? hora(detallesJornada[0]?.hora_inicio) : bloque.hora_inicio}
                     disabled={esInstitucional}
                     onChange={(event) => setBloque((prev) => ({ ...prev, hora_inicio: event.target.value }))}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
                   />
 
                   <TextField
                     size="small"
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
                     label="Fin jornada"
                     value={esInstitucional ? hora(detallesJornada[0]?.hora_fin) : bloque.hora_fin}
                     disabled={esInstitucional}
                     onChange={(event) => setBloque((prev) => ({ ...prev, hora_fin: event.target.value }))}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
                   />
 
                   <TextField
                     size="small"
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
                     label="Inicio receso"
-                    value={esInstitucional ? '' : bloque.lunch_inicio}
-                    disabled={esInstitucional || !bloque.lunch}
+                    value={bloque.lunch_inicio}
+                    disabled={!bloque.lunch}
                     onChange={(event) => setBloque((prev) => ({ ...prev, lunch_inicio: event.target.value }))}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
                   />
 
                   <TextField
                     size="small"
-                    type="time"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="HH:mm"
                     label="Fin receso"
-                    value={esInstitucional ? '' : bloque.lunch_fin}
-                    disabled={esInstitucional || !bloque.lunch}
+                    value={bloque.lunch_fin}
+                    disabled={!bloque.lunch}
                     onChange={(event) => setBloque((prev) => ({ ...prev, lunch_fin: event.target.value }))}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
                   />
 
                   <Button
