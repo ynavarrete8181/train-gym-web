@@ -1,23 +1,14 @@
 import { useState, useEffect } from 'react';
 
-import { Autocomplete, Box, Button, IconButton, MenuItem, TextField, Typography, Stack, Paper, Chip, Tooltip, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
+import { Autocomplete, Box, Button, MenuItem, TextField, Typography, Stack, Paper } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
-import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
-import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { AccionesFormulario } from "../../../components/common/AccionesFormulario.jsx";
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import SportsIcon from '@mui/icons-material/Sports';
-import ScheduleIcon from '@mui/icons-material/Schedule';
 import { EntrenadoresTable } from '../components/EntrenadoresTable.jsx';
 import { EntrenadorConfiguracion } from '../components/EntrenadorConfiguracion.jsx';
 import { HorarioEntrenadorPersonalizado } from '../components/HorarioEntrenadorPersonalizado.jsx';
@@ -34,14 +25,6 @@ const getInitialForm = () => ({
   servicio_ids: []
 });
 
-const abreviarDias = (dias = '') => String(dias)
-  .split(',')
-  .map((dia) => dia.trim().slice(0, 3))
-  .filter(Boolean)
-  .join(', ');
-
-const horaCorta = (valor) => String(valor || '').slice(0, 5);
-
 export function EntrenadoresPage() {
 
   const [vista, setVista] = useState('lista');
@@ -56,10 +39,6 @@ export function EntrenadoresPage() {
   const [cargando, setCargando] = useState(true);
 
   const [entrenadorFicha, setEntrenadorFicha] = useState(null);
-  const [turnos, setTurnos] = useState([]);
-  const [cargandoTurnos, setCargandoTurnos] = useState(false);
-  const [horariosDisponibles, setHorariosDisponibles] = useState([]);
-  const [horarioSeleccionado, setHorarioSeleccionado] = useState('');
   const [configuracionEntrenador, setConfiguracionEntrenador] = useState(null);
   const [cargandoConfiguracion, setCargandoConfiguracion] = useState(false);
 
@@ -118,27 +97,6 @@ export function EntrenadoresPage() {
     cargarEntrenadores(nuevosFiltros);
   };
 
-  const cargarTurnos = async (entrenadorId) => {
-    setCargandoTurnos(true);
-    try {
-      const response = await gimnasioServicio.obtenerTurnosEntrenador(entrenadorId);
-      setTurnos(response.datos || []);
-    } catch (error) {
-      showNotificacion('Error al cargar los turnos', 'error');
-    } finally {
-      setCargandoTurnos(false);
-    }
-  };
-
-  const cargarHorariosDisponibles = async (entrenadorId) => {
-    try {
-      const response = await gimnasioServicio.obtenerHorariosDisponiblesEntrenador(entrenadorId);
-      setHorariosDisponibles(response.datos || []);
-    } catch (error) {
-      showNotificacion('Error al cargar los horarios disponibles', 'error');
-    }
-  };
-
   const handleVerHorarios = (entrenador) => {
     setEntrenadorFicha(entrenador);
     setVista('horarios');
@@ -185,7 +143,6 @@ export function EntrenadoresPage() {
     setVista('formulario');
   };
   const handleCancelar = () => { setVista('lista'); };
-  const handleCancelarFicha = () => { setEntrenadorFicha(null); setVista('lista'); };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -202,36 +159,6 @@ export function EntrenadoresPage() {
       setVista('lista');
     } catch (error) {
       showNotificacion(error.response?.data?.mensaje || 'Error al guardar', 'error');
-    }
-  };
-
-  const handleAsignarHorario = async () => {
-    if (!horarioSeleccionado) {
-      showNotificacion('Selecciona un horario configurado para asignar', 'warning');
-      return;
-    }
-    try {
-      await gimnasioServicio.asignarHorarioEntrenador(entrenadorFicha.id, Number(horarioSeleccionado));
-      showNotificacion('Horario asignado correctamente', 'success');
-      setHorarioSeleccionado('');
-      cargarTurnos(entrenadorFicha.id);
-      cargarHorariosDisponibles(entrenadorFicha.id);
-    } catch (error) {
-      const mensaje = error.response?.data?.errores
-        ? Object.values(error.response.data.errores).flat().join(' ')
-        : (error.response?.data?.mensaje || 'Error al asignar el horario');
-      showNotificacion(mensaje, 'error');
-    }
-  };
-
-  const handleEliminarTurno = async (turno) => {
-    try {
-      await gimnasioServicio.eliminarTurnoEntrenador(entrenadorFicha.id, turno.id);
-      showNotificacion('Horario retirado del entrenador', 'success');
-      cargarTurnos(entrenadorFicha.id);
-      cargarHorariosDisponibles(entrenadorFicha.id);
-    } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al retirar el horario', 'error');
     }
   };
 
@@ -374,134 +301,6 @@ export function EntrenadoresPage() {
     );
   }
 
-  if (vista === 'ficha' && entrenadorFicha) {
-    const nombreEntrenador = `${entrenadorFicha.nombres || ''} ${entrenadorFicha.apellidos || ''}`.trim() || entrenadorFicha.name;
-    const horarioDetalle = horariosDisponibles.find((item) => String(item.id) === String(horarioSeleccionado));
-
-    return (
-      <Box className="page-wrapper">
-        <PageHeader
-          titulo={`Turnos de ${nombreEntrenador}`}
-          descripcion="Asigna bloques configurados en Servicios y Agenda. El sistema valida automáticamente cruces de día y hora entre sedes."
-          icono={<ScheduleIcon />}
-          acciones={<BotonVolver onClick={handleCancelarFicha} />}
-        />
-        <Paper className="page-content-container" elevation={0} sx={{ mt: 2 }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2, alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}>
-            <Chip
-              variant="outlined"
-              label={`${turnos.length} ${turnos.length === 1 ? 'HORARIO ASIGNADO' : 'HORARIOS ASIGNADOS'}`}
-              sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, alignSelf: { xs: 'flex-start', sm: 'center' } }}
-            />
-          </Stack>
-
-          <Box sx={{ border: '1px solid #dbe5f0', borderRadius: 2, p: 2, mb: 2, bgcolor: '#f8fafc' }}>
-            <Typography sx={formStyles.modalSeccionTitulo}>Asignar horario al entrenador</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25, mb: 1.5 }}>
-              Selecciona un bloque previamente creado en Servicios y Agenda → Horarios. Cada bloque pertenece a una sola sede.
-            </Typography>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' }, gap: 1.5, alignItems: 'flex-start' }}>
-              <TextField
-                select
-                fullWidth
-                label="Horario disponible"
-                value={horarioSeleccionado}
-                onChange={(e) => setHorarioSeleccionado(e.target.value)}
-                size="small"
-                disabled={horariosDisponibles.length === 0}
-                helperText={horariosDisponibles.length === 0
-                  ? 'No hay horarios disponibles. Configúralos primero en Servicios y Agenda → Horarios.'
-                  : 'Al asignar, el sistema impedirá cualquier cruce con los horarios activos del entrenador.'}
-              >
-                {horariosDisponibles.map((horario) => (
-                  <MenuItem key={horario.id} value={horario.id} sx={{ py: 1 }}>
-                    <Box>
-                      <Typography variant="body2" fontWeight={800}>
-                        {horario.nombre || 'Horario sin nombre'}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {horario.servicio_nombre} · {horario.sede_nombre || 'Sin sede'} · {abreviarDias(horario.dia_semana || 'Sin días')} · {horaCorta(horario.hora_inicio)}-{horaCorta(horario.hora_fin)} · Cupo {horario.capacidad || 0}
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                ))}
-              </TextField>
-              <Button
-                variant="contained"
-                onClick={handleAsignarHorario}
-                disabled={!horarioSeleccionado || horariosDisponibles.length === 0}
-                sx={{ ...dbanuStyles.addButtonRevive, height: 40, minWidth: 115 }}
-              >
-                Asignar
-              </Button>
-            </Box>
-
-            {horarioDetalle ? (
-              <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #e2e8f0', borderRadius: 1.5, bgcolor: '#fff' }}>
-                <Typography variant="body2" fontWeight={900} sx={{ mb: 1 }}>
-                  {horarioDetalle.nombre || 'Horario seleccionado'}
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1.25 }}>
-                  <ResumenHorario icono={<LocationOnOutlinedIcon />} etiqueta="Sede" valor={horarioDetalle.sede_nombre || 'Sin sede'} />
-                  <ResumenHorario icono={<EventAvailableOutlinedIcon />} etiqueta="Días" valor={abreviarDias(horarioDetalle.dia_semana || 'Sin días')} />
-                  <ResumenHorario icono={<AccessTimeOutlinedIcon />} etiqueta="Horario" valor={`${horaCorta(horarioDetalle.hora_inicio)} - ${horaCorta(horarioDetalle.hora_fin)}`} />
-                  <ResumenHorario icono={<GroupsOutlinedIcon />} etiqueta="Cupo" valor={horarioDetalle.capacidad || 0} />
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                  Servicio: {horarioDetalle.servicio_nombre}
-                </Typography>
-              </Box>
-            ) : null}
-          </Box>
-
-          <TablaGestion
-            total={turnos.length}
-            filtrados={turnos.length}
-            textoResumen={`${turnos.length} ${turnos.length === 1 ? 'horario asignado' : 'horarios asignados'}`}
-            cargando={cargandoTurnos}
-          >
-            <TableHead>
-              <TableRow>
-                <TableCell>Horario</TableCell>
-                <TableCell>Servicio</TableCell>
-                <TableCell>Sede</TableCell>
-                <TableCell>Días</TableCell>
-                <TableCell>Hora</TableCell>
-                <TableCell>Cupo</TableCell>
-                <TableCell>Estado</TableCell>
-                <TableCell align="right">Acciones</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {turnos.map((turno) => (
-                <TableRow key={turno.id} hover>
-                  <TableCell><Typography variant="body2" fontWeight="700">{turno.nombre || 'Sin nombre'}</Typography></TableCell>
-                  <TableCell>{turno.servicio_nombre}</TableCell>
-                  <TableCell>{turno.sede_nombre || 'Sin sede'}</TableCell>
-                  <TableCell>{abreviarDias(turno.dia_semana || 'Sin días')}</TableCell>
-                  <TableCell>{horaCorta(turno.hora_inicio)} - {horaCorta(turno.hora_fin)}</TableCell>
-                  <TableCell>{turno.capacidad}</TableCell>
-                  <TableCell><StatusChip estado={turno.activo ? 'activo' : 'cerrado'} /></TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Retirar horario">
-                      <IconButton sx={dbanuStyles.actionDelete} size="small" onClick={() => handleEliminarTurno(turno)}>
-                        <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {turnos.length === 0 ? (
-                <TablaEstadoFila colSpan={8} cargando={cargandoTurnos} texto="Este entrenador todavía no tiene horarios asignados." />
-              ) : null}
-            </TableBody>
-          </TablaGestion>
-        </Paper>
-        <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: "" })} />
-      </Box>
-    );
-  }
 
   return (
     <Box className="page-wrapper">
@@ -533,21 +332,5 @@ export function EntrenadoresPage() {
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: "" })} />
     </Box>
-  );
-}
-
-function ResumenHorario({ icono, etiqueta, valor }) {
-  return (
-    <Stack direction="row" spacing={0.8} alignItems="center">
-      <Box sx={{ display: 'flex', color: '#004985', '& svg': { fontSize: 18 } }}>{icono}</Box>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.1 }}>
-          {etiqueta}
-        </Typography>
-        <Typography variant="body2" fontWeight={700} noWrap>
-          {valor}
-        </Typography>
-      </Box>
-    </Stack>
   );
 }
