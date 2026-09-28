@@ -3,6 +3,7 @@ import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlin
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import { Autocomplete, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
@@ -32,24 +33,33 @@ const agruparBloqueos = (slots = []) => {
   return resultado;
 };
 
-export function DisponibilidadAgendaPage() {
+export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = null }) {
   const [catalogos,setCatalogos]=useState({sedes:[]});
   const [serviciosDisponibles,setServiciosDisponibles]=useState([]);
   const [cargandoServicios,setCargandoServicios]=useState(false);
-  const [form,setForm]=useState({sede_id:'',entrenador_id:'',servicio_id:'',fecha:hoy});
+  const [form,setForm]=useState({
+    sede_id:'',
+    entrenador_id: entrenadorInicial?.id || '',
+    servicio_id:'',
+    fecha:hoy
+  });
   const [slots,setSlots]=useState([]);
   const [resumen,setResumen]=useState(null);
-  const [opcionesEntrenador,setOpcionesEntrenador]=useState([]);
+  const [opcionesEntrenador,setOpcionesEntrenador]=useState(entrenadorInicial ? [entrenadorInicial] : []);
   const [busquedaEntrenador,setBusquedaEntrenador]=useState('');
   const [buscando,setBuscando]=useState(false);
   const [cargando,setCargando]=useState(false);
   const [notificacion,setNotificacion]=useState({mensaje:'',tipo:'info'});
 
   const slotsVisuales = useMemo(() => agruparBloqueos(slots), [slots]);
+  const nombreEntrenador = entrenadorInicial
+    ? ([entrenadorInicial.nombres, entrenadorInicial.apellidos].filter(Boolean).join(' ') || entrenadorInicial.name || 'Entrenador')
+    : '';
 
   useEffect(()=>{ gimnasioServicio.obtenerCatalogosAgenda().then(r=>setCatalogos(r.datos||{})).catch(()=>{}); },[]);
 
   useEffect(()=>{
+    if (entrenadorInicial) return undefined;
     const q=busquedaEntrenador.trim();
     if(q.length<2) return undefined;
     const t=window.setTimeout(async()=>{
@@ -60,7 +70,7 @@ export function DisponibilidadAgendaPage() {
       }finally{setBuscando(false);}
     },300);
     return ()=>window.clearTimeout(t);
-  },[busquedaEntrenador]);
+  },[busquedaEntrenador, entrenadorInicial]);
 
   useEffect(()=>{
     setForm((a)=>({...a,servicio_id:''}));
@@ -107,7 +117,14 @@ export function DisponibilidadAgendaPage() {
   }[estado]||{bg:'#f8fafc',fg:'#475467',bd:'#e4e7ec'});
 
   return <Box className="page-wrapper">
-    <PageHeader titulo="Disponibilidad de Agenda" descripcion="Simula los horarios disponibles sin generar turnos previamente." icono={<EventAvailableOutlinedIcon/>}/>
+    <PageHeader
+      titulo={entrenadorInicial ? `Disponibilidad de ${nombreEntrenador}` : 'Disponibilidad de Agenda'}
+      descripcion={entrenadorInicial
+        ? 'Consulta los turnos disponibles del entrenador según sede, servicio, horario vigente, recesos, reservas y excepciones.'
+        : 'Simula los horarios disponibles sin generar turnos previamente.'}
+      icono={<EventAvailableOutlinedIcon/>}
+      acciones={onVolver ? <BotonVolver onClick={onVolver} /> : null}
+    />
     <Paper className="page-content-container" elevation={0}>
       <Box
         sx={{
@@ -121,17 +138,27 @@ export function DisponibilidadAgendaPage() {
         <TextField select size="small" label="Sede" value={form.sede_id} onChange={e=>setForm(a=>({...a,sede_id:e.target.value,servicio_id:''}))}>
           {(catalogos.sedes||[]).map(x=><MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
         </TextField>
-        <Autocomplete
-          options={opcionesEntrenador}
-          loading={buscando}
-          value={opcionesEntrenador.find(x=>String(x.id)===String(form.entrenador_id))||null}
-          onInputChange={(_,v)=>setBusquedaEntrenador(v)}
-          onChange={(_,v)=>setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}))}
-          getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
-          isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
-          noOptionsText={busquedaEntrenador.trim().length<2?'Escribe al menos 2 caracteres':'Sin resultados'}
-          renderInput={params=><TextField {...params} size="small" label="Entrenador"/>}
-        />
+        {entrenadorInicial ? (
+          <TextField
+            size="small"
+            label="Entrenador"
+            value={nombreEntrenador}
+            disabled
+          />
+        ) : (
+                  <Autocomplete
+                    options={opcionesEntrenador}
+                    loading={buscando}
+                    value={opcionesEntrenador.find(x=>String(x.id)===String(form.entrenador_id))||null}
+                    onInputChange={(_,v)=>setBusquedaEntrenador(v)}
+                    onChange={(_,v)=>setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}))}
+                    getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
+                    isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
+                    noOptionsText={busquedaEntrenador.trim().length<2?'Escribe al menos 2 caracteres':'Sin resultados'}
+                    renderInput={params=><TextField {...params} size="small" label="Entrenador"/>}
+                  />
+          
+        )}
         <TextField
           select
           size="small"
