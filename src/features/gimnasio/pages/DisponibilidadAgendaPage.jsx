@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
-import { Autocomplete, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -124,14 +124,15 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
         : 'Simula los horarios disponibles sin generar turnos previamente.'}
       icono={<EventAvailableOutlinedIcon/>}
       acciones={onVolver ? <BotonVolver onClick={onVolver} /> : null}
+      compact
     />
     <Paper className="page-content-container" elevation={0}>
       <Box
         sx={{
-          p: 2,
+          p: 1.5,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'repeat(5,1fr)' },
-          gap: 1.2,
+          gridTemplateColumns: { xs: '1fr', md: '1.05fr 1.05fr 1.05fr .95fr auto' },
+          gap: 1,
           alignItems: 'start',
         }}
       >
@@ -191,7 +192,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
         </Button>
       </Box>
 
-      <Box sx={{px:2,pb:2}}>
+      <Box sx={{ px: 1.5, pb: 1.5 }}>
         {resumen ? <Typography variant="body2" color="text.secondary" sx={{mb:1.2}}>
           {resumen.dia} · {resumen.servicio?.nombre} · {resumen.servicio?.duracion_minutos} min
         </Typography>:null}
@@ -211,8 +212,8 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 1,
-                px: 1.6,
-                py: 1.05,
+                px: 1.25,
+                py: .85,
                 borderBottom: '1px solid #e2e8f0',
                 bgcolor: '#f8fafc',
               }}
@@ -235,23 +236,20 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
 
             <Box
               sx={{
-                display: 'flex',
+                display: 'grid',
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2, minmax(0, 1fr))',
+                  md: 'repeat(4, minmax(0, 1fr))',
+                  lg: 'repeat(5, minmax(0, 1fr))',
+                },
                 gap: .75,
-                p: 1.25,
-                overflowX: 'auto',
+                p: 1,
                 alignItems: 'stretch',
-                '&::-webkit-scrollbar': { height: 7 },
-                '&::-webkit-scrollbar-thumb': { bgcolor: '#cbd5e1', borderRadius: 10 },
               }}
             >
               {slotsVisuales.map((slot, i) => {
                 const estilo = estadoSx(slot.estado);
-                const [hi, mi] = String(slot.hora_inicio).split(':').map(Number);
-                const [hf, mf] = String(slot.hora_fin).split(':').map(Number);
-                const minutos = Math.max(15, ((hf * 60 + mf) - (hi * 60 + mi)));
-                const base = Math.max(30, Number(resumen?.servicio?.duracion_minutos || 30));
-                const ancho = Math.max(118, Math.round((minutos / base) * 138));
-
                 const etiqueta = slot.estado === 'DISPONIBLE'
                   ? 'Disponible'
                   : slot.estado === 'RECESO'
@@ -264,29 +262,28 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                   <Box
                     key={`${slot.hora_inicio}-${slot.hora_fin}-${i}`}
                     sx={{
-                      flex: `0 0 ${ancho}px`,
-                      minHeight: 92,
+                      minHeight: 76,
                       border: '1px solid',
                       borderColor: estilo.bd,
                       bgcolor: estilo.bg,
-                      borderRadius: 1.5,
-                      px: 1.15,
-                      py: 1,
+                      borderRadius: 1.25,
+                      px: 1,
+                      py: .8,
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
                     }}
                   >
                     <Box>
-                      <Typography sx={{ fontSize: 13, fontWeight: 950, color: '#0f172a', lineHeight: 1.15 }}>
+                      <Typography sx={{ fontSize: 12.5, fontWeight: 950, color: '#0f172a', lineHeight: 1.15 }}>
                         {slot.hora_inicio} - {slot.hora_fin}
                       </Typography>
-                      <Typography sx={{ fontSize: 11, fontWeight: 850, color: estilo.fg, mt: .55 }}>
+                      <Typography sx={{ fontSize: 10.5, fontWeight: 850, color: estilo.fg, mt: .35 }}>
                         {etiqueta}
                       </Typography>
                     </Box>
 
-                    <Box sx={{ mt: .8 }}>
+                    <Box sx={{ mt: .55 }}>
                       {slot.estado === 'DISPONIBLE' ? (
                         <Typography variant="caption" color="text.secondary">
                           {slot.cupos_disponibles} {Number(slot.cupos_disponibles) === 1 ? 'cupo' : 'cupos'}
