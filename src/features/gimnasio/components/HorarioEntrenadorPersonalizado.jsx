@@ -435,7 +435,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
       }
 
       setNotificacion({ mensaje: 'Horario del entrenador guardado correctamente.', tipo: 'success' });
-      await cargar();
+      onVolver?.();
     } catch (error) {
       const errores = error.response?.data?.errores;
       const mensaje = errores
