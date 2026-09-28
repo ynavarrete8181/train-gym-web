@@ -51,6 +51,22 @@ export const gimnasioServicio = {
     const { data } = await api.get('/base/gimnasio/mi-entrenamiento/agenda');
     return data;
   },
+  obtenerCatalogosHorarioEntrenador: async () => {
+    const { data } = await api.get('/base/gimnasio/entrenadores/horarios/catalogos');
+    return data;
+  },
+  obtenerHorariosPersonalizadosEntrenador: async (entrenadorId) => {
+    const { data } = await api.get(`/base/gimnasio/entrenadores/${entrenadorId}/horarios`);
+    return data;
+  },
+  crearHorarioPersonalizadoEntrenador: async (entrenadorId, payload) => {
+    const { data } = await api.post(`/base/gimnasio/entrenadores/${entrenadorId}/horarios`, payload);
+    return data;
+  },
+  actualizarHorarioPersonalizadoEntrenador: async (entrenadorId, horarioId, payload) => {
+    const { data } = await api.put(`/base/gimnasio/entrenadores/${entrenadorId}/horarios/${horarioId}`, payload);
+    return data;
+  },
 
   // --- Asignaciones entrenador - cliente ---
   obtenerAsignacionesEntrenador: async (params) => {
