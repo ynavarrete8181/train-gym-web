@@ -21,6 +21,7 @@ import ScheduleIcon from '@mui/icons-material/Schedule';
 import { EntrenadoresTable } from '../components/EntrenadoresTable.jsx';
 import { EntrenadorConfiguracion } from '../components/EntrenadorConfiguracion.jsx';
 import { HorarioEntrenadorPersonalizado } from '../components/HorarioEntrenadorPersonalizado.jsx';
+import { DisponibilidadAgendaPage } from './DisponibilidadAgendaPage.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
@@ -143,6 +144,11 @@ export function EntrenadoresPage() {
     setVista('horarios');
   };
 
+  const handleVerDisponibilidad = (entrenador) => {
+    setEntrenadorFicha(entrenador);
+    setVista('disponibilidad');
+  };
+
   const handleVerConfiguracion = async (entrenador) => {
     setEntrenadorFicha(entrenador);
     setConfiguracionEntrenador(null);
@@ -233,6 +239,15 @@ export function EntrenadoresPage() {
     return (
       <HorarioEntrenadorPersonalizado
         entrenador={entrenadorFicha}
+        onVolver={() => { setEntrenadorFicha(null); setVista('lista'); }}
+      />
+    );
+  }
+
+  if (vista === 'disponibilidad' && entrenadorFicha) {
+    return (
+      <DisponibilidadAgendaPage
+        entrenadorInicial={entrenadorFicha}
         onVolver={() => { setEntrenadorFicha(null); setVista('lista'); }}
       />
     );
@@ -511,6 +526,7 @@ export function EntrenadoresPage() {
           onEditar={handleEditar}
           onVerConfiguracion={handleVerConfiguracion}
           onVerHorarios={handleVerHorarios}
+          onVerDisponibilidad={handleVerDisponibilidad}
           onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarEntrenadores(n); }}
           onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarEntrenadores(n); }}
         />
