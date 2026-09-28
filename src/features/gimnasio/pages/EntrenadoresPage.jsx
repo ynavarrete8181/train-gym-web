@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { Autocomplete, Box, Button, MenuItem, TextField, Typography, Stack, Paper } from '@mui/material';
+import { Autocomplete, Box, Button, MenuItem, TextField, Typography, Stack, Paper, FormControlLabel, Switch } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
@@ -258,17 +258,43 @@ export function EntrenadoresPage() {
                     <MenuItem value="MASTER">Master Coach</MenuItem>
                     <MenuItem value="ASISTENTE">Asistente</MenuItem>
                   </TextField>
-                  <TextField
-                    label="Estado"
-                    name="estado"
-                    value="Activo"
-                    size="small"
-                    slotProps={{
-                      input: {
-                        readOnly: true,
-                      },
+                  <Box
+                    sx={{
+                      minHeight: 40,
+                      px: 1.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      border: '1px solid #dbe5f0',
+                      borderRadius: 1.5,
+                      bgcolor: '#f8fafc',
                     }}
-                  />
+                  >
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked
+                          disabled
+                          size="small"
+                        />
+                      }
+                      label="Activo"
+                      sx={{
+                        m: 0,
+                        '& .MuiFormControlLabel-label': {
+                          fontWeight: 800,
+                          fontSize: 14,
+                          color: '#0f2747',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-disabled': {
+                          color: '#0b5c9e',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-disabled + .MuiSwitch-track': {
+                          opacity: 0.45,
+                          backgroundColor: '#0b5c9e',
+                        },
+                      }}
+                    />
+                  </Box>
                   <Autocomplete
                     multiple
                     options={serviciosDisp}
