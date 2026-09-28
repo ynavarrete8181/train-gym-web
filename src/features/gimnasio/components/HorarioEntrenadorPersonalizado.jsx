@@ -124,9 +124,30 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
       ]);
 
       const catalogosData = catalogosRes.datos || {};
-      const jornadas = (catalogosData.jornadas || []).length
+      const jornadasBase = (catalogosData.jornadas || []).length
         ? catalogosData.jornadas
         : (jornadasRes.datos || []);
+
+      const jornadas = jornadasBase.map((jornada) => {
+        const detallesExistentes = Array.isArray(jornada.detalles) && jornada.detalles.length
+          ? jornada.detalles
+          : (Array.isArray(jornada.dias) && jornada.dias.length ? jornada.dias : null);
+
+        const detalles = detallesExistentes || (jornada.dias_semana || []).map((dia) => ({
+          dia_semana: dia,
+          hora_inicio: jornada.hora_inicio,
+          hora_fin: jornada.hora_fin,
+        }));
+
+        return {
+          ...jornada,
+          detalles: detalles.map((detalle) => ({
+            dia_semana: String(detalle.dia_semana || '').toUpperCase(),
+            hora_inicio: hora(detalle.hora_inicio),
+            hora_fin: hora(detalle.hora_fin),
+          })),
+        };
+      });
 
       setCatalogos({
         sedes: catalogosData.sedes || [],
