@@ -263,7 +263,11 @@ export function EntrenadoresPage() {
                     name="estado"
                     value="Activo"
                     size="small"
-                    disabled
+                    slotProps={{
+                      input: {
+                        readOnly: true,
+                      },
+                    }}
                   />
                   <Autocomplete
                     multiple
