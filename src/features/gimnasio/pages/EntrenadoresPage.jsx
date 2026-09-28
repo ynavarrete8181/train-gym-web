@@ -138,6 +138,7 @@ export function EntrenadoresPage() {
   const handleEditar = (ent) => {
     setFormData({
       ...ent,
+      estado: 'ACTIVO',
       servicio_ids: (ent.servicio_ids || []).map((id) => Number(id)),
     });
     setVista('formulario');
@@ -258,16 +259,12 @@ export function EntrenadoresPage() {
                     <MenuItem value="ASISTENTE">Asistente</MenuItem>
                   </TextField>
                   <TextField
-                    select
                     label="Estado"
                     name="estado"
-                    value={formData.estado || 'ACTIVO'}
-                    onChange={handleChange}
+                    value="Activo"
                     size="small"
-                  >
-                    <MenuItem value="ACTIVO">Activo</MenuItem>
-                    <MenuItem value="INACTIVO">Inactivo</MenuItem>
-                  </TextField>
+                    disabled
+                  />
                   <Autocomplete
                     multiple
                     options={serviciosDisp}
