@@ -151,7 +151,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           </Stack>
         </Box>
 
-        <AccionesFormulario onGuardar={guardar} onCancelar={onVolver} guardarDisabled={cargando} />
+        <AccionesFormulario onGuardar={guardar} onCancelar={onVolver} disabled={cargando} />
       </Paper>
 
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={()=>setNotificacion((a)=>({...a,mensaje:''}))} />
