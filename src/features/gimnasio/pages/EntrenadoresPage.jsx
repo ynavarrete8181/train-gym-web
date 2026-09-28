@@ -20,6 +20,7 @@ import SportsIcon from '@mui/icons-material/Sports';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { EntrenadoresTable } from '../components/EntrenadoresTable.jsx';
 import { EntrenadorConfiguracion } from '../components/EntrenadorConfiguracion.jsx';
+import { HorarioEntrenadorPersonalizado } from '../components/HorarioEntrenadorPersonalizado.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
@@ -139,10 +140,7 @@ export function EntrenadoresPage() {
 
   const handleVerHorarios = (entrenador) => {
     setEntrenadorFicha(entrenador);
-    setHorarioSeleccionado('');
-    setVista('ficha');
-    cargarTurnos(entrenador.id);
-    cargarHorariosDisponibles(entrenador.id);
+    setVista('horarios');
   };
 
   const handleVerConfiguracion = async (entrenador) => {
@@ -230,6 +228,15 @@ export function EntrenadoresPage() {
       showNotificacion(error.response?.data?.mensaje || 'Error al retirar el horario', 'error');
     }
   };
+
+  if (vista === 'horarios' && entrenadorFicha) {
+    return (
+      <HorarioEntrenadorPersonalizado
+        entrenador={entrenadorFicha}
+        onVolver={() => { setEntrenadorFicha(null); setVista('lista'); }}
+      />
+    );
+  }
 
   if (vista === 'configuracion' && entrenadorFicha) {
     return (
@@ -503,6 +510,7 @@ export function EntrenadoresPage() {
           onFiltroColumna={aplicarFiltroColumna}
           onEditar={handleEditar}
           onVerConfiguracion={handleVerConfiguracion}
+          onVerHorarios={handleVerHorarios}
           onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarEntrenadores(n); }}
           onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarEntrenadores(n); }}
         />
