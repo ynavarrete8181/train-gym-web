@@ -177,6 +177,12 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           hora_fin: hora(item.hora_fin),
         }));
 
+        const recesosActuales = (actual.recesos || []).map((item) => ({
+          ...item,
+          hora_inicio: hora(item.hora_inicio),
+          hora_fin: hora(item.hora_fin),
+        }));
+
         setForm({
           ...inicial,
           ...actual,
@@ -185,15 +191,22 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           fecha_inicio: actual.fecha_inicio ? String(actual.fecha_inicio).slice(0, 10) : '',
           fecha_fin: actual.fecha_fin ? String(actual.fecha_fin).slice(0, 10) : '',
           franjas: franjasActuales,
-          recesos: (actual.recesos || []).map((item) => ({
-            ...item,
-            hora_inicio: hora(item.hora_inicio),
-            hora_fin: hora(item.hora_fin),
-          })),
+          recesos: recesosActuales,
         });
 
         if ((actual.tipo_horario || '') === 'INSTITUCIONAL') {
+          const primerReceso = recesosActuales[0];
           setSedeInstitucional(franjasActuales[0]?.sede_id || '');
+          setBloque((prev) => ({
+            ...prev,
+            dias: franjasActuales.map((item) => item.dia_semana),
+            sede_id: franjasActuales[0]?.sede_id || '',
+            hora_inicio: hora(franjasActuales[0]?.hora_inicio) || prev.hora_inicio,
+            hora_fin: hora(franjasActuales[0]?.hora_fin) || prev.hora_fin,
+            lunch: recesosActuales.length > 0,
+            lunch_inicio: hora(primerReceso?.hora_inicio) || '13:00',
+            lunch_fin: hora(primerReceso?.hora_fin) || '14:00',
+          }));
         }
       }
     } catch (error) {
