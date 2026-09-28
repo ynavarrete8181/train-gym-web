@@ -404,7 +404,6 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               label="Horario institucional"
               value={esPersonalizado ? 'PERSONALIZADO' : (form.jornada_id || '')}
               onChange={(event) => seleccionarHorarioInstitucional(event.target.value)}
-              helperText="Seleccione una jornada global o configure un horario personalizado."
             >
               <MenuItem value="">Seleccione...</MenuItem>
               {(catalogos.jornadas || []).map((jornada) => (
