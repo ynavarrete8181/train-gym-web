@@ -1,13 +1,24 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Button, Checkbox, FormControlLabel, IconButton, MenuItem, Paper,
-  Stack, TextField, Tooltip, Typography
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  IconButton,
+  MenuItem,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
 } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import CoffeeOutlinedIcon from '@mui/icons-material/CoffeeOutlined';
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
@@ -16,7 +27,16 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
-const DIAS = ['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'];
+const DIAS = [
+  { id: 'LUNES', corto: 'Lun', nombre: 'Lunes' },
+  { id: 'MARTES', corto: 'Mar', nombre: 'Martes' },
+  { id: 'MIERCOLES', corto: 'Mié', nombre: 'Miércoles' },
+  { id: 'JUEVES', corto: 'Jue', nombre: 'Jueves' },
+  { id: 'VIERNES', corto: 'Vie', nombre: 'Viernes' },
+  { id: 'SABADO', corto: 'Sáb', nombre: 'Sábado' },
+  { id: 'DOMINGO', corto: 'Dom', nombre: 'Domingo' },
+];
+
 const inicial = {
   id: null,
   tipo_horario: 'INSTITUCIONAL',
@@ -29,16 +49,27 @@ const inicial = {
   recesos: [],
 };
 
-const hora = (v) => String(v || '').slice(0, 5);
+const bloqueInicial = {
+  dias: ['LUNES'],
+  sede_id: '',
+  hora_inicio: '08:00',
+  hora_fin: '17:00',
+  lunch: false,
+  lunch_inicio: '',
+  lunch_fin: '',
+};
+
+const hora = (value) => String(value || '').slice(0, 5);
 
 export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
   const [form, setForm] = useState(inicial);
   const [catalogos, setCatalogos] = useState({ sedes: [], jornadas: [], tipos_receso: [] });
-  const [diaActivo, setDiaActivo] = useState('LUNES');
+  const [bloque, setBloque] = useState(bloqueInicial);
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
-  const nombre = [entrenador?.nombres, entrenador?.apellidos].filter(Boolean).join(' ')
+  const nombre =
+    [entrenador?.nombres, entrenador?.apellidos].filter(Boolean).join(' ')
     || entrenador?.name
     || 'Entrenador';
 
@@ -47,13 +78,23 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
   const cargar = async () => {
     setCargando(true);
     try {
-      const [horariosRes, catalogosRes] = await Promise.all([
+      const [horariosRes, catalogosRes, jornadasRes] = await Promise.all([
         gimnasioServicio.obtenerHorariosPersonalizadosEntrenador(entrenador.id),
         gimnasioServicio.obtenerCatalogosHorarioEntrenador(),
+        gimnasioServicio.obtenerJornadas({ page: 1, per_page: 100, estado: true })
+          .catch(() => ({ datos: [] })),
       ]);
 
-      const catalogosData = catalogosRes.datos || { sedes: [], jornadas: [], tipos_receso: [] };
-      setCatalogos(catalogosData);
+      const catalogosData = catalogosRes.datos || {};
+      const jornadas = (catalogosData.jornadas || []).length
+        ? catalogosData.jornadas
+        : (jornadasRes.datos || []);
+
+      setCatalogos({
+        sedes: catalogosData.sedes || [],
+        jornadas,
+        tipos_receso: catalogosData.tipos_receso || ['DESAYUNO', 'ALMUERZO', 'MERIENDA', 'PAUSA', 'OTRO'],
+      });
 
       const actual = (horariosRes.datos || [])[0];
       if (actual) {
@@ -64,15 +105,15 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           jornada_id: actual.jornada_id || '',
           fecha_inicio: actual.fecha_inicio ? String(actual.fecha_inicio).slice(0, 10) : '',
           fecha_fin: actual.fecha_fin ? String(actual.fecha_fin).slice(0, 10) : '',
-          franjas: (actual.franjas || []).map((x) => ({
-            ...x,
-            hora_inicio: hora(x.hora_inicio),
-            hora_fin: hora(x.hora_fin),
+          franjas: (actual.franjas || []).map((item) => ({
+            ...item,
+            hora_inicio: hora(item.hora_inicio),
+            hora_fin: hora(item.hora_fin),
           })),
-          recesos: (actual.recesos || []).map((x) => ({
-            ...x,
-            hora_inicio: hora(x.hora_inicio),
-            hora_fin: hora(x.hora_fin),
+          recesos: (actual.recesos || []).map((item) => ({
+            ...item,
+            hora_inicio: hora(item.hora_inicio),
+            hora_fin: hora(item.hora_fin),
           })),
         });
       }
@@ -87,16 +128,26 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
     }
   };
 
-  useEffect(() => { cargar(); }, [entrenador.id]);
+  useEffect(() => {
+    cargar();
+  }, [entrenador.id]);
 
-  const franjasDia = useMemo(
-    () => form.franjas.map((x, index) => ({ ...x, index })).filter((x) => x.dia_semana === diaActivo),
-    [form.franjas, diaActivo]
+  const resumenDias = useMemo(
+    () => DIAS.map((dia) => ({
+      ...dia,
+      franjas: form.franjas
+        .map((franja, index) => ({ ...franja, index }))
+        .filter((franja) => franja.dia_semana === dia.id),
+      recesos: form.recesos
+        .map((receso, index) => ({ ...receso, index }))
+        .filter((receso) => receso.dia_semana === dia.id),
+    })),
+    [form.franjas, form.recesos],
   );
 
-  const recesosDia = useMemo(
-    () => form.recesos.map((x, index) => ({ ...x, index })).filter((x) => x.dia_semana === diaActivo),
-    [form.recesos, diaActivo]
+  const jornadaSeleccionada = useMemo(
+    () => (catalogos.jornadas || []).find((item) => String(item.id) === String(form.jornada_id)),
+    [catalogos.jornadas, form.jornada_id],
   );
 
   const seleccionarHorarioInstitucional = (value) => {
@@ -110,61 +161,131 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         franjas: [],
         recesos: [],
       }));
+      setBloque(bloqueInicial);
       return;
     }
 
     const jornada = (catalogos.jornadas || []).find((item) => String(item.id) === String(value));
+    const detalles = jornada?.detalles || jornada?.dias || [];
+    const dias = detalles
+      .map((item) => String(item.dia_semana || '').toUpperCase())
+      .filter(Boolean);
+    const primero = detalles[0];
+
     setForm((prev) => ({
       ...prev,
       tipo_horario: 'INSTITUCIONAL',
       jornada_id: value,
       fecha_inicio: '',
       fecha_fin: '',
+      franjas: [],
       recesos: [],
-      franjas: (jornada?.detalles || []).map((detalle) => ({
-        dia_semana: detalle.dia_semana,
-        sede_id: '',
-        hora_inicio: hora(detalle.hora_inicio),
-        hora_fin: hora(detalle.hora_fin),
-      })),
     }));
+
+    setBloque({
+      dias: dias.length ? dias : ['LUNES'],
+      sede_id: '',
+      hora_inicio: hora(primero?.hora_inicio) || '08:00',
+      hora_fin: hora(primero?.hora_fin) || '17:00',
+      lunch: false,
+      lunch_inicio: '',
+      lunch_fin: '',
+    });
   };
 
-  const agregarFranja = () => setForm((prev) => ({
-    ...prev,
-    franjas: [...prev.franjas, { dia_semana: diaActivo, sede_id: '', hora_inicio: '', hora_fin: '' }],
-  }));
+  const toggleDia = (dia) => {
+    setBloque((prev) => {
+      const seleccionado = prev.dias.includes(dia);
 
-  const editarFranja = (index, key, value) => setForm((prev) => ({
-    ...prev,
-    franjas: prev.franjas.map((x, i) => (i === index ? { ...x, [key]: value } : x)),
-  }));
+      if (seleccionado && prev.dias.length === 1) {
+        return prev;
+      }
 
-  const eliminarFranja = (index) => setForm((prev) => ({
-    ...prev,
-    franjas: prev.franjas.filter((_, i) => i !== index),
-  }));
+      return {
+        ...prev,
+        dias: seleccionado
+          ? prev.dias.filter((item) => item !== dia)
+          : [...prev.dias, dia],
+      };
+    });
+  };
 
-  const agregarReceso = () => setForm((prev) => ({
-    ...prev,
-    recesos: [...prev.recesos, {
-      dia_semana: diaActivo,
-      tipo: 'ALMUERZO',
-      descripcion: '',
-      hora_inicio: '',
-      hora_fin: '',
-    }],
-  }));
+  const agregarBloque = () => {
+    if (!bloque.dias.length) {
+      setNotificacion({ mensaje: 'Seleccione al menos un día.', tipo: 'warning' });
+      return;
+    }
 
-  const editarReceso = (index, key, value) => setForm((prev) => ({
-    ...prev,
-    recesos: prev.recesos.map((x, i) => (i === index ? { ...x, [key]: value } : x)),
-  }));
+    if (!bloque.sede_id) {
+      setNotificacion({ mensaje: 'Seleccione la sede del horario.', tipo: 'warning' });
+      return;
+    }
 
-  const eliminarReceso = (index) => setForm((prev) => ({
-    ...prev,
-    recesos: prev.recesos.filter((_, i) => i !== index),
-  }));
+    if (!bloque.hora_inicio || !bloque.hora_fin || bloque.hora_inicio >= bloque.hora_fin) {
+      setNotificacion({ mensaje: 'Ingrese una hora de inicio y fin válidas.', tipo: 'warning' });
+      return;
+    }
+
+    if (
+      bloque.lunch
+      && (!bloque.lunch_inicio || !bloque.lunch_fin || bloque.lunch_inicio >= bloque.lunch_fin)
+    ) {
+      setNotificacion({ mensaje: 'Complete correctamente el horario de Lunch.', tipo: 'warning' });
+      return;
+    }
+
+    if (
+      bloque.lunch
+      && (bloque.lunch_inicio < bloque.hora_inicio || bloque.lunch_fin > bloque.hora_fin)
+    ) {
+      setNotificacion({ mensaje: 'El Lunch debe estar contenido dentro del horario del bloque.', tipo: 'warning' });
+      return;
+    }
+
+    const nuevasFranjas = bloque.dias.map((dia) => ({
+      dia_semana: dia,
+      sede_id: Number(bloque.sede_id),
+      hora_inicio: bloque.hora_inicio,
+      hora_fin: bloque.hora_fin,
+    }));
+
+    const nuevosRecesos = bloque.lunch
+      ? bloque.dias.map((dia) => ({
+          dia_semana: dia,
+          tipo: 'ALMUERZO',
+          descripcion: 'LUNCH',
+          hora_inicio: bloque.lunch_inicio,
+          hora_fin: bloque.lunch_fin,
+        }))
+      : [];
+
+    setForm((prev) => ({
+      ...prev,
+      franjas: [...prev.franjas, ...nuevasFranjas],
+      recesos: [...prev.recesos, ...nuevosRecesos],
+    }));
+
+    setNotificacion({
+      mensaje: `Horario agregado a ${bloque.dias.length} día(s).`,
+      tipo: 'success',
+    });
+  };
+
+  const eliminarFranja = (index) => {
+    const franja = form.franjas[index];
+
+    setForm((prev) => ({
+      ...prev,
+      franjas: prev.franjas.filter((_, i) => i !== index),
+      recesos: prev.recesos.filter(
+        (receso) => !(
+          receso.dia_semana === franja.dia_semana
+          && receso.hora_inicio >= franja.hora_inicio
+          && receso.hora_fin <= franja.hora_fin
+        ),
+      ),
+    }));
+  };
 
   const guardar = async () => {
     try {
@@ -220,18 +341,27 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         <Box sx={formStyles.seccion}>
           <Typography sx={formStyles.modalSeccionTitulo}>Vigencia del horario</Typography>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 1fr .8fr' }, gap: 1.5, alignItems: 'start' }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 1fr .8fr' },
+              gap: 1.5,
+              alignItems: 'start',
+            }}
+          >
             <TextField
               select
               fullWidth
               size="small"
               label="Horario institucional"
               value={esPersonalizado ? 'PERSONALIZADO' : (form.jornada_id || '')}
-              onChange={(e) => seleccionarHorarioInstitucional(e.target.value)}
+              onChange={(event) => seleccionarHorarioInstitucional(event.target.value)}
               helperText="Seleccione una jornada global o configure un horario personalizado."
             >
               {(catalogos.jornadas || []).map((jornada) => (
-                <MenuItem key={jornada.id} value={jornada.id}>{jornada.nombre}</MenuItem>
+                <MenuItem key={jornada.id} value={jornada.id}>
+                  {jornada.nombre}
+                </MenuItem>
               ))}
               <MenuItem value="PERSONALIZADO">Horario personalizado</MenuItem>
             </TextField>
@@ -243,7 +373,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               value={form.fecha_inicio || ''}
               disabled={!esPersonalizado}
               required={esPersonalizado}
-              onChange={(e) => setForm((prev) => ({ ...prev, fecha_inicio: e.target.value }))}
+              onChange={(event) => setForm((prev) => ({ ...prev, fecha_inicio: event.target.value }))}
               slotProps={{ inputLabel: { shrink: true } }}
             />
 
@@ -254,24 +384,26 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               value={form.fecha_fin || ''}
               disabled={!esPersonalizado}
               required={esPersonalizado}
-              onChange={(e) => setForm((prev) => ({ ...prev, fecha_fin: e.target.value }))}
+              onChange={(event) => setForm((prev) => ({ ...prev, fecha_fin: event.target.value }))}
               slotProps={{ inputLabel: { shrink: true } }}
             />
 
-            <Box sx={{
-              minHeight: 40,
-              px: 1.5,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              bgcolor: '#f8fafc',
-            }}>
+            <Box
+              sx={{
+                minHeight: 40,
+                px: 1.5,
+                border: '1px solid #dbe5f0',
+                borderRadius: 1,
+                display: 'flex',
+                alignItems: 'center',
+                bgcolor: '#f8fafc',
+              }}
+            >
               <FormControlLabel
                 control={
                   <Checkbox
                     checked={Boolean(form.activo)}
-                    onChange={(e) => setForm((prev) => ({ ...prev, activo: e.target.checked }))}
+                    onChange={(event) => setForm((prev) => ({ ...prev, activo: event.target.checked }))}
                     size="small"
                   />
                 }
@@ -284,175 +416,232 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
             {esPersonalizado
               ? 'El horario personalizado requiere Vigente desde y Vigente hasta.'
-              : 'La jornada institucional utiliza su configuración global; la vigencia por fechas no se aplica.'}
+              : 'La jornada institucional toma sus días y horas desde el catálogo global de Jornadas.'}
           </Typography>
         </Box>
 
         <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-          <Typography sx={formStyles.modalSeccionTitulo}>Horario semanal</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Puede usar la jornada institucional como plantilla y definir la sede correspondiente para cada franja.
+          <Typography sx={formStyles.modalSeccionTitulo}>Horario semanal personalizado</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontWeight: 600 }}>
+            Configure un bloque a la vez. Seleccione uno o varios días, sede, horario y active Lunch si corresponde.
           </Typography>
 
-          <Stack direction="row" spacing={0.7} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-            {DIAS.map((dia) => {
-              const cantidad = form.franjas.filter((x) => x.dia_semana === dia).length;
-              return (
-                <Button
-                  key={dia}
-                  size="small"
-                  variant={diaActivo === dia ? 'contained' : 'outlined'}
-                  onClick={() => setDiaActivo(dia)}
-                  sx={diaActivo === dia ? dbanuStyles.addButtonRevive : { minWidth: 76 }}
-                >
-                  {dia.slice(0, 3)}{cantidad ? ` · ${cantidad}` : ''}
-                </Button>
-              );
-            })}
-          </Stack>
+          <Box sx={{ border: '1px solid #dbe5f0', borderRadius: 1.5, p: 2 }}>
+            <Stack direction="row" spacing={0.7} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
+              {DIAS.map((dia) => {
+                const seleccionado = bloque.dias.includes(dia.id);
+                return (
+                  <Button
+                    key={dia.id}
+                    size="small"
+                    variant={seleccionado ? 'contained' : 'outlined'}
+                    onClick={() => toggleDia(dia.id)}
+                    sx={seleccionado ? dbanuStyles.addButtonRevive : { minWidth: 62 }}
+                  >
+                    {dia.corto}
+                  </Button>
+                );
+              })}
+            </Stack>
 
-          <Typography variant="subtitle2" fontWeight={900} sx={{ mb: 1 }}>{diaActivo}</Typography>
-
-          <Stack spacing={1}>
-            {franjasDia.map((franja) => (
-              <Box
-                key={franja.index}
-                sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.3fr 1fr 1fr auto' }, gap: 1, alignItems: 'start' }}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', lg: '1.2fr .8fr .8fr auto .8fr .8fr auto' },
+                gap: 1,
+                alignItems: 'center',
+              }}
+            >
+              <TextField
+                select
+                size="small"
+                label="Sede"
+                value={bloque.sede_id}
+                onChange={(event) => setBloque((prev) => ({ ...prev, sede_id: event.target.value }))}
               >
-                <TextField
-                  select
-                  size="small"
-                  label="Sede"
-                  value={franja.sede_id || ''}
-                  onChange={(e) => editarFranja(franja.index, 'sede_id', e.target.value)}
-                >
-                  {(catalogos.sedes || []).map((sede) => (
-                    <MenuItem key={sede.id} value={sede.id}>{sede.nombre}</MenuItem>
-                  ))}
-                </TextField>
+                {(catalogos.sedes || []).map((sede) => (
+                  <MenuItem key={sede.id} value={sede.id}>{sede.nombre}</MenuItem>
+                ))}
+              </TextField>
 
-                <TextField
-                  size="small"
-                  type="time"
-                  label="Desde"
-                  value={hora(franja.hora_inicio)}
-                  onChange={(e) => editarFranja(franja.index, 'hora_inicio', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
+              <TextField
+                size="small"
+                type="time"
+                label="Inicio jornada"
+                value={bloque.hora_inicio}
+                onChange={(event) => setBloque((prev) => ({ ...prev, hora_inicio: event.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
 
-                <TextField
-                  size="small"
-                  type="time"
-                  label="Hasta"
-                  value={hora(franja.hora_fin)}
-                  onChange={(e) => editarFranja(franja.index, 'hora_fin', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
+              <TextField
+                size="small"
+                type="time"
+                label="Fin jornada"
+                value={bloque.hora_fin}
+                onChange={(event) => setBloque((prev) => ({ ...prev, hora_fin: event.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
 
-                <Tooltip title="Eliminar horario">
-                  <IconButton sx={dbanuStyles.actionDelete} onClick={() => eliminarFranja(franja.index)}>
-                    <DeleteOutlineOutlinedIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            ))}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={bloque.lunch}
+                    onChange={(event) => setBloque((prev) => ({
+                      ...prev,
+                      lunch: event.target.checked,
+                      lunch_inicio: event.target.checked ? prev.lunch_inicio : '',
+                      lunch_fin: event.target.checked ? prev.lunch_fin : '',
+                    }))}
+                  />
+                }
+                label="Lunch"
+                sx={{
+                  m: 0,
+                  px: 1,
+                  height: 40,
+                  border: '1px solid #dbe5f0',
+                  borderRadius: 1,
+                  '& .MuiFormControlLabel-label': { fontWeight: 700, fontSize: 13 },
+                }}
+              />
 
-            <Box>
-              <Button startIcon={<AddOutlinedIcon />} onClick={agregarFranja} sx={dbanuStyles.addButtonRevive}>
+              <TextField
+                size="small"
+                type="time"
+                label="Inicio receso"
+                value={bloque.lunch_inicio}
+                disabled={!bloque.lunch}
+                onChange={(event) => setBloque((prev) => ({ ...prev, lunch_inicio: event.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+
+              <TextField
+                size="small"
+                type="time"
+                label="Fin receso"
+                value={bloque.lunch_fin}
+                disabled={!bloque.lunch}
+                onChange={(event) => setBloque((prev) => ({ ...prev, lunch_fin: event.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+
+              <Button
+                variant="outlined"
+                startIcon={<AddOutlinedIcon />}
+                onClick={agregarBloque}
+                sx={{ height: 40, whiteSpace: 'nowrap' }}
+              >
                 Horario
               </Button>
             </Box>
-          </Stack>
+
+            {jornadaSeleccionada && !esPersonalizado ? (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
+                Plantilla seleccionada: {jornadaSeleccionada.nombre}. Puede ajustar los días y horas antes de agregar el bloque.
+              </Typography>
+            ) : null}
+          </Box>
         </Box>
 
         <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
-            <CoffeeOutlinedIcon fontSize="small" />
-            <Typography sx={formStyles.modalSeccionTitulo}>Recesos</Typography>
-          </Stack>
+          <Typography sx={formStyles.modalSeccionTitulo}>Resumen de configuración</Typography>
 
-          <Stack spacing={1}>
-            {recesosDia.map((receso) => (
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+              gap: 1,
+              mb: 1.5,
+            }}
+          >
+            <ResumenDato
+              icono={<LocationOnOutlinedIcon />}
+              etiqueta="Sedes"
+              valor={new Set(form.franjas.map((item) => item.sede_id)).size || 0}
+            />
+            <ResumenDato
+              icono={<EventAvailableOutlinedIcon />}
+              etiqueta="Franjas semanales"
+              valor={form.franjas.length}
+            />
+            <ResumenDato
+              icono={<AccessTimeOutlinedIcon />}
+              etiqueta="Recesos configurados"
+              valor={form.recesos.length}
+            />
+          </Box>
+
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(7, 1fr)' },
+              gap: 1,
+            }}
+          >
+            {resumenDias.map((dia) => (
               <Box
-                key={receso.index}
-                sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1.2fr 1fr 1fr auto' }, gap: 1, alignItems: 'start' }}
+                key={dia.id}
+                sx={{
+                  minHeight: 118,
+                  border: '1px solid #dbe5f0',
+                  borderRadius: 1.25,
+                  p: 1.25,
+                  bgcolor: '#fbfdff',
+                }}
               >
-                <TextField
-                  select
-                  size="small"
-                  label="Tipo"
-                  value={receso.tipo || 'PAUSA'}
-                  onChange={(e) => editarReceso(receso.index, 'tipo', e.target.value)}
-                >
-                  {(catalogos.tipos_receso || ['ALMUERZO','PAUSA','OTRO']).map((tipo) => (
-                    <MenuItem key={tipo} value={tipo}>{tipo}</MenuItem>
-                  ))}
-                </TextField>
+                <Typography variant="body2" fontWeight={900} textAlign="center" sx={{ mb: 1 }}>
+                  {dia.nombre}
+                </Typography>
 
-                <TextField
-                  size="small"
-                  label="Descripción"
-                  value={receso.descripcion || ''}
-                  onChange={(e) => editarReceso(receso.index, 'descripcion', e.target.value)}
-                />
+                {dia.franjas.length === 0 ? (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
+                    Sin horario
+                  </Typography>
+                ) : (
+                  <Stack spacing={0.75}>
+                    {dia.franjas.map((franja) => {
+                      const sede = (catalogos.sedes || []).find((item) => String(item.id) === String(franja.sede_id));
+                      const receso = dia.recesos.find(
+                        (item) => item.hora_inicio >= franja.hora_inicio && item.hora_fin <= franja.hora_fin,
+                      );
 
-                <TextField
-                  size="small"
-                  type="time"
-                  label="Desde"
-                  value={hora(receso.hora_inicio)}
-                  onChange={(e) => editarReceso(receso.index, 'hora_inicio', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-
-                <TextField
-                  size="small"
-                  type="time"
-                  label="Hasta"
-                  value={hora(receso.hora_fin)}
-                  onChange={(e) => editarReceso(receso.index, 'hora_fin', e.target.value)}
-                  slotProps={{ inputLabel: { shrink: true } }}
-                />
-
-                <Tooltip title="Eliminar receso">
-                  <IconButton sx={dbanuStyles.actionDelete} onClick={() => eliminarReceso(receso.index)}>
-                    <DeleteOutlineOutlinedIcon />
-                  </IconButton>
-                </Tooltip>
+                      return (
+                        <Box
+                          key={franja.index}
+                          sx={{
+                            position: 'relative',
+                            borderTop: '1px solid #edf2f7',
+                            pt: 0.75,
+                            pr: 2.5,
+                          }}
+                        >
+                          <Typography variant="caption" fontWeight={800} sx={{ display: 'block' }}>
+                            {hora(franja.hora_inicio)} - {hora(franja.hora_fin)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            {sede?.nombre || 'Sede'}
+                          </Typography>
+                          {receso ? (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                              Lunch {hora(receso.hora_inicio)}-{hora(receso.hora_fin)}
+                            </Typography>
+                          ) : null}
+                          <Tooltip title="Eliminar bloque">
+                            <IconButton
+                              size="small"
+                              onClick={() => eliminarFranja(franja.index)}
+                              sx={{ position: 'absolute', top: 2, right: -6, ...dbanuStyles.actionDelete }}
+                            >
+                              <DeleteOutlineOutlinedIcon sx={{ fontSize: 14 }} />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      );
+                    })}
+                  </Stack>
+                )}
               </Box>
             ))}
-
-            <Box>
-              <Button startIcon={<AddOutlinedIcon />} onClick={agregarReceso} variant="outlined">
-                Receso
-              </Button>
-            </Box>
-          </Stack>
-        </Box>
-
-        <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-          <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
-            <EventAvailableOutlinedIcon fontSize="small" />
-            <Typography sx={formStyles.modalSeccionTitulo}>Resumen de configuración</Typography>
-          </Stack>
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1 }}>
-            <Box sx={{ p: 1.25, border: '1px solid #dbe5f0', borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">HORARIO</Typography>
-              <Typography variant="body2" fontWeight={800}>
-                {esPersonalizado
-                  ? 'Horario personalizado'
-                  : ((catalogos.jornadas || []).find((j) => String(j.id) === String(form.jornada_id))?.nombre || 'Sin seleccionar')}
-              </Typography>
-            </Box>
-            <Box sx={{ p: 1.25, border: '1px solid #dbe5f0', borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">FRANJAS SEMANALES</Typography>
-              <Typography variant="body2" fontWeight={800}>{form.franjas.length}</Typography>
-            </Box>
-            <Box sx={{ p: 1.25, border: '1px solid #dbe5f0', borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">RECESOS CONFIGURADOS</Typography>
-              <Typography variant="body2" fontWeight={800}>{form.recesos.length}</Typography>
-            </Box>
           </Box>
         </Box>
 
@@ -465,5 +654,24 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         onClose={() => setNotificacion((prev) => ({ ...prev, mensaje: '' }))}
       />
     </Box>
+  );
+}
+
+function ResumenDato({ icono, etiqueta, valor }) {
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      alignItems="center"
+      sx={{ p: 1.25, border: '1px solid #dbe5f0', borderRadius: 1.25, bgcolor: '#fbfdff' }}
+    >
+      <Box sx={{ display: 'flex', color: '#004985', '& svg': { fontSize: 18 } }}>{icono}</Box>
+      <Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontWeight: 700 }}>
+          {etiqueta}
+        </Typography>
+        <Typography variant="body2" fontWeight={900}>{valor}</Typography>
+      </Box>
+    </Stack>
   );
 }
