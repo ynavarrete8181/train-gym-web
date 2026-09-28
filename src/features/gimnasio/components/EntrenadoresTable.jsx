@@ -1,6 +1,7 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -8,7 +9,7 @@ import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
-export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onVerConfiguracion, onVerHorarios, onPageChange, onRowsPerPageChange }) {
+export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onVerConfiguracion, onVerHorarios, onVerDisponibilidad, onPageChange, onRowsPerPageChange }) {
   return (
     <TablaGestion
       total={meta.total || 0}
@@ -62,6 +63,11 @@ export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna
                 <Tooltip title="Configurar horarios">
                   <IconButton sx={dbanuStyles.actionView} onClick={() => onVerHorarios(entrenador)}>
                     <ScheduleOutlinedIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Ver disponibilidad">
+                  <IconButton sx={dbanuStyles.actionView} onClick={() => onVerDisponibilidad(entrenador)}>
+                    <EventAvailableOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Editar entrenador">
