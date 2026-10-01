@@ -938,6 +938,13 @@ export function DeportistasPage() {
     (turno) => String(turno.id) === String(asignacionForm.entrenador_horario_id),
   ) || (turnosEntrenador.length === 1 ? turnosEntrenador[0] : null);
 
+  const capacidadHorarioSeleccionado = Number(horarioAsignacionSeleccionado?.capacidad ?? 15);
+  const asignadosHorarioSeleccionado = Number(horarioAsignacionSeleccionado?.asignados ?? 0);
+  const disponiblesHorarioSeleccionado = Number(
+    horarioAsignacionSeleccionado?.disponibles
+      ?? Math.max(0, capacidadHorarioSeleccionado - asignadosHorarioSeleccionado),
+  );
+
   const recesoResumenAsignacion = horarioAsignacionSeleccionado?.recesos?.length
     ? horarioAsignacionSeleccionado.recesos
         .map((receso) => `${String(receso.hora_inicio).slice(0, 5)}-${String(receso.hora_fin).slice(0, 5)}`)
@@ -978,7 +985,7 @@ export function DeportistasPage() {
           >
             {turnosEntrenador.map((turno) => (
               <MenuItem key={turno.id} value={turno.id}>
-                {turno.nombre ? `${turno.nombre} · ` : ''}{turno.dia_semana} · {String(turno.hora_inicio).slice(0, 5)}-{String(turno.hora_fin).slice(0, 5)} · {turno.sede_nombre} · {turno.disponibles} de {turno.capacidad} cupos
+                {turno.nombre ? `${turno.nombre} · ` : ''}{turno.dia_semana} · {String(turno.hora_inicio).slice(0, 5)}-{String(turno.hora_fin).slice(0, 5)} · {turno.sede_nombre} · {Number(turno.disponibles ?? Math.max(0, Number(turno.capacidad ?? 15) - Number(turno.asignados ?? 0)))} de {Number(turno.capacidad ?? 15)} cupos
               </MenuItem>
             ))}
           </TextField>
@@ -1026,9 +1033,9 @@ export function DeportistasPage() {
               <Typography
                 variant="body2"
                 fontWeight={900}
-                color={Number(horarioAsignacionSeleccionado.disponibles) > 0 ? 'success.main' : 'error.main'}
+                color={disponiblesHorarioSeleccionado > 0 ? 'success.main' : 'error.main'}
               >
-                {horarioAsignacionSeleccionado.disponibles} de {horarioAsignacionSeleccionado.capacidad} disponibles
+                {disponiblesHorarioSeleccionado} de {capacidadHorarioSeleccionado} disponibles
               </Typography>
             </Box>
           </Box>
@@ -1038,7 +1045,7 @@ export function DeportistasPage() {
           <BotonGuardar
             texto="Asignar"
             onClick={handleGuardarAsignacion}
-            disabled={Boolean(horarioAsignacionSeleccionado && Number(horarioAsignacionSeleccionado.disponibles) <= 0)}
+            disabled={Boolean(horarioAsignacionSeleccionado && disponiblesHorarioSeleccionado <= 0)}
           />
         </Stack>
       </Box>
