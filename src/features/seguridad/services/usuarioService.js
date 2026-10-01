@@ -10,6 +10,11 @@ export async function listarUsuarios(parametros = {}) {
   return data
 }
 
+export async function listarClientesDisponiblesParaUsuario() {
+  const { data } = await apiClient.get('/base/seguridad/usuarios/clientes-disponibles')
+  return data.datos || []
+}
+
 export async function crearUsuario(payload) {
   const { data } = await apiClient.post('/base/seguridad/usuarios', payload)
   return data.datos
