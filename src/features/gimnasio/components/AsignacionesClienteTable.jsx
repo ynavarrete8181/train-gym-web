@@ -1,4 +1,3 @@
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import {
   Chip,
@@ -13,6 +12,7 @@ import {
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.jsx';
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 const CORTO = {
@@ -60,7 +60,7 @@ export function AsignacionesClienteTable({
   asignaciones = [],
   cargando = false,
   onEditar,
-  onFinalizar,
+  onInactivar,
 }) {
   const ordenadas = [...asignaciones].sort((a, b) => {
     const aActivo = String(a.estado || '').toUpperCase() === 'ACTIVO' ? 1 : 0;
@@ -142,16 +142,18 @@ export function AsignacionesClienteTable({
                         </IconButton>
                       </Tooltip>
                     ) : null}
-                    {onFinalizar ? (
-                      <Tooltip title="Finalizar asignación">
-                        <IconButton
-                          sx={dbanuStyles.actionDelete}
-                          size="small"
-                          onClick={() => onFinalizar(item)}
-                        >
-                          <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                        </IconButton>
-                      </Tooltip>
+                    {onInactivar ? (
+                      <EstadoToggleCell
+                        activo
+                        onToggle={() => onInactivar(item)}
+                        tituloActivo="Inactivar asignación"
+                        confirmacion={{
+                          titulo: 'Inactivar asignación',
+                          texto: 'La asignación dejará de estar vigente, pero conservará su ID y quedará en el historial.',
+                          textoConfirmar: 'Sí, inactivar',
+                          icono: 'question',
+                        }}
+                      />
                     ) : null}
                   </span>
                 ) : (
