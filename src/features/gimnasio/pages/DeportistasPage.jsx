@@ -257,7 +257,6 @@ export function DeportistasPage() {
   const [entrenadoresDisp, setEntrenadoresDisp] = useState([]);
   const [turnosEntrenador, setTurnosEntrenador] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
-  const [asignacionesHistorial, setAsignacionesHistorial] = useState([]);
   const [asignacionForm, setAsignacionForm] = useState(getInitialAsignacion());
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
@@ -445,8 +444,7 @@ export function DeportistasPage() {
       ]);
       const todas = asignacionesResp.datos || [];
       setEntrenadoresDisp(entrenadoresResp.datos || []);
-      setAsignaciones(todas.filter((item) => item.estado === 'ACTIVO'));
-      setAsignacionesHistorial(todas.filter((item) => item.estado !== 'ACTIVO'));
+      setAsignaciones(todas);
     } catch (error) {
       showNotificacion('Error al cargar entrenador y horario', 'error');
     }
@@ -531,7 +529,6 @@ export function DeportistasPage() {
     setRutinaForm(getInitialRutina());
     setRmForm(getInitialRm());
     setTurnosEntrenador([]);
-    setAsignacionesHistorial([]);
     setVista('ficha');
     cargarFicha(deportista);
   };
@@ -1116,25 +1113,14 @@ export function DeportistasPage() {
       </Box>
 
       <Box sx={formStyles.seccion}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Asignaciones activas</Typography>
+        <Typography sx={formStyles.modalSeccionTitulo}>Asignaciones e historial</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          La asignación vigente se muestra primero; debajo se conserva el historial de entrenadores y horarios anteriores.
+        </Typography>
         <AsignacionesClienteTable
-          titulo="Asignaciones activas"
           asignaciones={asignaciones}
           cargando={cargandoFicha}
           onFinalizar={handleFinalizarAsignacion}
-        />
-      </Box>
-
-      <Box sx={formStyles.seccion}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Historial de horarios</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Consulta los entrenadores y horarios que este cliente tuvo anteriormente.
-        </Typography>
-        <AsignacionesClienteTable
-          titulo="Historial de horarios"
-          asignaciones={asignacionesHistorial}
-          cargando={cargandoFicha}
-          historial
         />
       </Box>
     </Stack>
