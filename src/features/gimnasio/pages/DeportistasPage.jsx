@@ -640,9 +640,14 @@ export function DeportistasPage() {
       setTurnosEntrenador([]);
       cargarAsignacionesYEntrenadores(formData.id);
     } catch (error) {
-      const mensaje = error.response?.data?.errores
-        ? Object.values(error.response.data.errores).flat().join(' ')
-        : (error.response?.data?.mensaje || 'Error al asignar el entrenador');
+      const errores = error.response?.data?.errors || error.response?.data?.errores;
+      const mensaje = errores
+        ? Object.values(errores).flat().join(' ')
+        : (
+            error.response?.data?.message
+            || error.response?.data?.mensaje
+            || 'Error al asignar el entrenador'
+          );
       showNotificacion(mensaje, 'error');
     }
   };
