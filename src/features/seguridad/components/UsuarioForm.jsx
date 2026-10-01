@@ -25,6 +25,7 @@ import { claveEsSegura } from "../../../utils/claveSegura.js";
 import { CampoClave } from "../../../components/common/CampoClave.jsx";
 
 const inicial = {
+  persona_id: "",
   nombres: "",
   apellidos: "",
   cedula: "",
@@ -41,6 +42,7 @@ const ROLES_APP_SIN_PERMISOS_WEB = ["DEPORTISTA", "RESPONSABLE"];
 
 export function UsuarioForm({
   usuario,
+  clientesDisponibles = [],
   roles,
   estructura,
   gruposFunciones,
@@ -71,6 +73,7 @@ export function UsuarioForm({
     setErrores({});
     onDirtyChange(false);
     const valoresIniciales = {
+      persona_id: usuario?.persona_id || "",
       nombres: usuario?.nombres || "",
       apellidos: usuario?.apellidos || "",
       cedula: usuario?.cedula || "",
@@ -110,20 +113,35 @@ export function UsuarioForm({
     if (campo === "usr_tipo") onRolChange(Number(valor));
   };
 
+  const seleccionarPersona = (personaId) => {
+    const cliente = clientesDisponibles.find(
+      (item) => String(item.persona_id) === String(personaId),
+    );
+
+    setFormulario((actual) => {
+      const siguiente = {
+        ...actual,
+        persona_id: personaId,
+        nombres: cliente?.nombres || cliente?.nombre_completo || "",
+        apellidos: cliente?.apellidos || "",
+        cedula: cliente?.identificacion || "",
+        email: cliente?.email || actual.email || "",
+      };
+      onDirtyChange(
+        JSON.stringify(normalizarFormulario(siguiente)) !==
+          JSON.stringify(normalizarFormulario(formularioInicialRef.current)),
+      );
+      return siguiente;
+    });
+    setErrores((actual) => ({ ...actual, persona_id: "" }));
+  };
+
   const validarEtapa = () => {
     const nuevosErrores = {};
 
     if (etapa === 0) {
-      if (!formulario.nombres.trim()) {
-        nuevosErrores.nombres = "Ingresa los nombres del usuario.";
-      }
-
-      if (!formulario.apellidos.trim()) {
-        nuevosErrores.apellidos = "Ingresa los apellidos del usuario.";
-      }
-
-      if (!formulario.cedula.trim()) {
-        nuevosErrores.cedula = "Ingresa la cédula del usuario.";
+      if (!usuario && !formulario.persona_id) {
+        nuevosErrores.persona_id = "Selecciona el cliente o persona.";
       }
 
       if (!formulario.email.trim()) {
@@ -212,31 +230,28 @@ export function UsuarioForm({
                     gap: 1.5,
                   }}
                 >
-                  <TextField
-                    label="Nombres"
-                    value={formulario.nombres}
-                    onChange={(evento) => cambiar("nombres", evento.target.value)}
-                    required
-                    error={Boolean(errores.nombres)}
-                    helperText={errores.nombres}
-                    autoFocus
-                  />
-                  <TextField
-                    label="Apellidos"
-                    value={formulario.apellidos}
-                    onChange={(evento) => cambiar("apellidos", evento.target.value)}
-                    required
-                    error={Boolean(errores.apellidos)}
-                    helperText={errores.apellidos}
-                  />
-                  <TextField
-                    label="Cédula"
-                    value={formulario.cedula}
-                    onChange={(evento) => cambiar("cedula", evento.target.value)}
-                    required
-                    error={Boolean(errores.cedula)}
-                    helperText={errores.cedula}
-                  />
+                  {!usuario ? (
+                    <TextField
+                      select
+                      label="Cliente / Persona"
+                      value={formulario.persona_id || ""}
+                      onChange={(evento) => seleccionarPersona(evento.target.value)}
+                      required
+                      error={Boolean(errores.persona_id)}
+                      helperText={errores.persona_id || "Selecciona una persona ya registrada como cliente."}
+                      sx={{ gridColumn: { xs: "auto", md: "1 / -1" } }}
+                    >
+                      {clientesDisponibles.map((cliente) => (
+                        <MenuItem key={cliente.persona_id} value={cliente.persona_id}>
+                          {cliente.nombre_completo} · {cliente.codigo_deportista}
+                          {cliente.identificacion ? ` · ${cliente.identificacion}` : ""}
+                        </MenuItem>
+                      ))}
+                    </TextField>
+                  ) : null}
+                  <TextField label="Nombres" value={formulario.nombres} disabled />
+                  <TextField label="Apellidos" value={formulario.apellidos} disabled />
+                  <TextField label="Identificación" value={formulario.cedula} disabled />
                 </Box>
               </Box>
 
