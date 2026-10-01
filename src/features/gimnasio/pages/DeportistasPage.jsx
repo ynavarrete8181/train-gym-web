@@ -73,6 +73,34 @@ const TABS_FICHA = [
 const booleanoBackend = (valor) =>
   valor === true || valor === 1 || valor === '1' || valor === 'true' || valor === 't';
 
+const resumirDiasHorario = (diasTexto = '') => {
+  const dias = String(diasTexto)
+    .split(',')
+    .map((dia) => dia.trim().toUpperCase())
+    .filter(Boolean);
+
+  const orden = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
+  const corto = {
+    LUNES: 'Lun',
+    MARTES: 'Mar',
+    MIERCOLES: 'Mié',
+    JUEVES: 'Jue',
+    VIERNES: 'Vie',
+    SABADO: 'Sáb',
+    DOMINGO: 'Dom',
+  };
+
+  const posiciones = dias.map((dia) => orden.indexOf(dia)).filter((i) => i >= 0);
+  const consecutivos = posiciones.length > 1
+    && posiciones.every((valor, indice) => indice === 0 || valor === posiciones[indice - 1] + 1);
+
+  if (consecutivos) {
+    return `${corto[dias[0]]}–${corto[dias[dias.length - 1]]}`;
+  }
+
+  return dias.map((dia) => corto[dia] || dia).join(', ');
+};
+
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 
 const getInitialMembresia = () => ({
@@ -1003,40 +1031,72 @@ export function DeportistasPage() {
           <Box
             sx={{
               mt: 1.5,
-              px: 1.5,
-              py: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1.5,
-              bgcolor: '#fbfdff',
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1fr .9fr' },
-              gap: 1.25,
-              alignItems: 'center',
+              bgcolor: '#fff',
+              overflow: 'hidden',
             }}
           >
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>Disponibilidad vigente</Typography>
-              <Typography variant="body2" fontWeight={800}>
-                {horarioAsignacionSeleccionado.dia_semana} · {String(horarioAsignacionSeleccionado.hora_inicio).slice(0, 5)}-{String(horarioAsignacionSeleccionado.hora_fin).slice(0, 5)}
-              </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr 1fr', md: '1.35fr 1fr .9fr .9fr' },
+                bgcolor: '#f8fafc',
+                borderBottom: '1px solid #dbe5f0',
+              }}
+            >
+              {['Disponibilidad', 'Sede', 'Receso', 'Cupos'].map((titulo, indice) => (
+                <Box
+                  key={titulo}
+                  sx={{
+                    px: 1.5,
+                    py: 0.75,
+                    borderRight: {
+                      xs: indice % 2 === 0 ? '1px solid #dbe5f0' : 'none',
+                      md: indice < 3 ? '1px solid #dbe5f0' : 'none',
+                    },
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary" fontWeight={800}>
+                    {titulo}
+                  </Typography>
+                </Box>
+              ))}
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>Sede</Typography>
-              <Typography variant="body2" fontWeight={800}>{horarioAsignacionSeleccionado.sede_nombre || 'Sin sede'}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>Receso</Typography>
-              <Typography variant="body2" fontWeight={800}>{recesoResumenAsignacion}</Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>Cupos</Typography>
-              <Typography
-                variant="body2"
-                fontWeight={900}
-                color={disponiblesHorarioSeleccionado > 0 ? 'success.main' : 'error.main'}
-              >
-                {disponiblesHorarioSeleccionado} de {capacidadHorarioSeleccionado} disponibles
-              </Typography>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr 1fr', md: '1.35fr 1fr .9fr .9fr' },
+              }}
+            >
+              <Box sx={{ px: 1.5, py: 1, borderRight: '1px solid #dbe5f0', minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={800} noWrap>
+                  {resumirDiasHorario(horarioAsignacionSeleccionado.dia_semana)}
+                  {' · '}
+                  {String(horarioAsignacionSeleccionado.hora_inicio).slice(0, 5)}
+                  -
+                  {String(horarioAsignacionSeleccionado.hora_fin).slice(0, 5)}
+                </Typography>
+              </Box>
+              <Box sx={{ px: 1.5, py: 1, borderRight: { xs: 'none', md: '1px solid #dbe5f0' }, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={800} noWrap>
+                  {horarioAsignacionSeleccionado.sede_nombre || 'Sin sede'}
+                </Typography>
+              </Box>
+              <Box sx={{ px: 1.5, py: 1, borderRight: '1px solid #dbe5f0', minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={800} noWrap>{recesoResumenAsignacion}</Typography>
+              </Box>
+              <Box sx={{ px: 1.5, py: 1, minWidth: 0 }}>
+                <Typography
+                  variant="body2"
+                  fontWeight={900}
+                  color={disponiblesHorarioSeleccionado > 0 ? 'success.main' : 'error.main'}
+                  noWrap
+                >
+                  {disponiblesHorarioSeleccionado} de {capacidadHorarioSeleccionado} disponibles
+                </Typography>
+              </Box>
             </Box>
           </Box>
         ) : null}
