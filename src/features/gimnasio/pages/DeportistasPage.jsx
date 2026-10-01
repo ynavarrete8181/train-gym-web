@@ -113,6 +113,9 @@ const getInitialMembresia = () => ({
   fecha_fin: '',
   estado: 'PENDIENTE_PAGO',
   dias_gracia: 0,
+  dia_pago: '',
+  generar_venta_automatica: false,
+  proxima_fecha_cobro: '',
   renovacion_automatica: false,
   congelar_membresia: false,
   fecha_congelacion_inicio: '',
@@ -143,6 +146,29 @@ const calcularFechaFinMembresia = (fechaInicioStr, plan) => {
       return '';
   }
   return fecha.toISOString().slice(0, 10);
+};
+
+const calcularProximaFechaCobroPreview = (fechaInicioStr, diaPagoValor) => {
+  if (!fechaInicioStr || !diaPagoValor) return '';
+
+  const inicio = new Date(`${fechaInicioStr}T00:00:00`);
+  const diaPago = Math.max(1, Math.min(31, Number(diaPagoValor)));
+
+  const construirFecha = (anio, mes) => {
+    const ultimoDia = new Date(anio, mes + 1, 0).getDate();
+    return new Date(anio, mes, Math.min(diaPago, ultimoDia));
+  };
+
+  let candidata = construirFecha(inicio.getFullYear(), inicio.getMonth());
+  if (candidata < inicio) {
+    const siguiente = new Date(inicio.getFullYear(), inicio.getMonth() + 1, 1);
+    candidata = construirFecha(siguiente.getFullYear(), siguiente.getMonth());
+  }
+
+  const anio = candidata.getFullYear();
+  const mes = String(candidata.getMonth() + 1).padStart(2, '0');
+  const dia = String(candidata.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
 };
 
 const precioAplicableMembresia = (plan, sedeId) => {
@@ -709,6 +735,9 @@ export function DeportistasPage() {
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
       fecha_congelacion_fin: limpiarFechaMembresia(m.fecha_congelacion_fin),
       renovacion_automatica: Boolean(m.renovacion_automatica),
+      generar_venta_automatica: Boolean(m.generar_venta_automatica),
+      dia_pago: m.dia_pago ?? '',
+      proxima_fecha_cobro: limpiarFechaMembresia(m.proxima_fecha_cobro),
       congelar_membresia: Boolean(m.fecha_congelacion_inicio || m.fecha_congelacion_fin),
     });
   };
@@ -717,6 +746,11 @@ export function DeportistasPage() {
     try {
       if (!membresiaForm.plan_id || !membresiaForm.sede_id || !membresiaForm.fecha_inicio || !membresiaForm.fecha_fin) {
         showNotificacion('Completa los campos obligatorios de la membresía', 'warning');
+        return;
+      }
+
+      if (membresiaForm.generar_venta_automatica && !membresiaForm.dia_pago) {
+        showNotificacion('Selecciona el día habitual de pago para generar la venta automáticamente', 'warning');
         return;
       }
 
@@ -739,6 +773,9 @@ export function DeportistasPage() {
           : null,
         deportista_id: formData.id,
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
+        dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
+        generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
+        proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
@@ -1182,6 +1219,13 @@ export function DeportistasPage() {
     }
   };
 
+  const planMembresiaSeleccionado = planes.find(
+    (plan) => String(plan.id) === String(membresiaForm.plan_id),
+  );
+  const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable);
+  const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
+    || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
+
   const renderMembresia = () => (
     <Stack spacing={2}>
       <Box sx={formStyles.seccion}>
@@ -1327,6 +1371,77 @@ export function DeportistasPage() {
             />
           </Box>
         </Box>
+
+        {permiteCobroProgramado ? (
+          <Box
+            sx={{
+              mt: 1.5,
+              p: 1.5,
+              border: '1px solid #dbe5f0',
+              borderRadius: 1.5,
+              bgcolor: '#fbfdff',
+            }}
+          >
+            <Typography variant="body2" fontWeight={800}>
+              Configuración de cobro
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
+              Define el día habitual de pago. Si activas la venta automática, el sistema dejará una venta pendiente cuando llegue esa fecha.
+            </Typography>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.15fr' }, gap: 1.5 }}>
+              <TextField
+                label="Día de pago"
+                name="dia_pago"
+                type="number"
+                value={membresiaForm.dia_pago ?? ''}
+                onChange={handleMembresiaChange}
+                size="small"
+                slotProps={{ htmlInput: { min: 1, max: 31 } }}
+                helperText="Día habitual del mes: 1 al 31."
+              />
+
+              <TextField
+                label="Próximo cobro"
+                value={proximoCobroPreview || 'Se calculará al guardar'}
+                size="small"
+                disabled
+                helperText="Calculado automáticamente."
+              />
+
+              <Box
+                sx={{
+                  minHeight: 40,
+                  px: 1.25,
+                  border: '1px solid #dbe5f0',
+                  borderRadius: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  bgcolor: '#f8fafc',
+                }}
+              >
+                <FormControlLabel
+                  control={
+                    <Switch
+                      name="generar_venta_automatica"
+                      checked={Boolean(membresiaForm.generar_venta_automatica)}
+                      onChange={handleMembresiaChange}
+                      size="small"
+                    />
+                  }
+                  label="Generar venta automáticamente"
+                  sx={{ m: 0 }}
+                />
+              </Box>
+            </Box>
+          </Box>
+        ) : (
+          membresiaForm.plan_id ? (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
+              Este plan no es renovable; su cobro se gestiona de forma inmediata o manual desde Ventas.
+            </Typography>
+          ) : null
+        )}
 
         {membresiaForm.congelar_membresia ? (
           <Box
