@@ -577,7 +577,12 @@ export function DeportistasPage() {
     if (!entrenadorId) { setTurnosEntrenador([]); return; }
     try {
       const response = await gimnasioServicio.obtenerTurnosEntrenador(entrenadorId);
-      setTurnosEntrenador(response.datos || []);
+      const horarios = response.datos || [];
+      setTurnosEntrenador(horarios);
+      setAsignacionForm((prev) => ({
+        ...prev,
+        entrenador_horario_id: horarios.length === 1 ? horarios[0].id : '',
+      }));
     } catch (error) {
       showNotificacion('Error al cargar los turnos del entrenador', 'error');
     }
@@ -929,6 +934,17 @@ export function DeportistasPage() {
     </Stack>
   );
 
+  const horarioAsignacionSeleccionado = turnosEntrenador.find(
+    (turno) => String(turno.id) === String(asignacionForm.entrenador_horario_id),
+  ) || (turnosEntrenador.length === 1 ? turnosEntrenador[0] : null);
+
+  const recesoResumenAsignacion = horarioAsignacionSeleccionado?.recesos?.length
+    ? horarioAsignacionSeleccionado.recesos
+        .map((receso) => `${String(receso.hora_inicio).slice(0, 5)}-${String(receso.hora_fin).slice(0, 5)}`)
+        .filter((valor, indice, lista) => lista.indexOf(valor) === indice)
+        .join(', ')
+    : 'Sin recesos';
+
   const renderEntrenadorYHorario = () => (
     <Stack spacing={2}>
       <Box sx={formStyles.seccion}>
@@ -951,7 +967,7 @@ export function DeportistasPage() {
           </TextField>
           <TextField
             select
-            label="Horario"
+            label="Disponibilidad vigente"
             name="entrenador_horario_id"
             value={asignacionForm.entrenador_horario_id}
             onChange={handleAsignacionChange}
@@ -962,7 +978,7 @@ export function DeportistasPage() {
           >
             {turnosEntrenador.map((turno) => (
               <MenuItem key={turno.id} value={turno.id}>
-                {turno.nombre ? `${turno.nombre} · ` : ''}{turno.dia_semana} {String(turno.hora_inicio).slice(0, 5)}-{String(turno.hora_fin).slice(0, 5)} · {turno.sede_nombre}
+                {turno.nombre ? `${turno.nombre} · ` : ''}{turno.dia_semana} · {String(turno.hora_inicio).slice(0, 5)}-{String(turno.hora_fin).slice(0, 5)} · {turno.sede_nombre} · {turno.disponibles} de {turno.capacidad} cupos
               </MenuItem>
             ))}
           </TextField>
@@ -975,8 +991,55 @@ export function DeportistasPage() {
             size="small"
           />
         </Box>
+
+        {horarioAsignacionSeleccionado ? (
+          <Box
+            sx={{
+              mt: 1.5,
+              px: 1.5,
+              py: 1.25,
+              border: '1px solid #dbe5f0',
+              borderRadius: 1.5,
+              bgcolor: '#fbfdff',
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1.4fr 1fr 1fr .9fr' },
+              gap: 1.25,
+              alignItems: 'center',
+            }}
+          >
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>Disponibilidad vigente</Typography>
+              <Typography variant="body2" fontWeight={800}>
+                {horarioAsignacionSeleccionado.dia_semana} · {String(horarioAsignacionSeleccionado.hora_inicio).slice(0, 5)}-{String(horarioAsignacionSeleccionado.hora_fin).slice(0, 5)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>Sede</Typography>
+              <Typography variant="body2" fontWeight={800}>{horarioAsignacionSeleccionado.sede_nombre || 'Sin sede'}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>Receso</Typography>
+              <Typography variant="body2" fontWeight={800}>{recesoResumenAsignacion}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" fontWeight={700}>Cupos</Typography>
+              <Typography
+                variant="body2"
+                fontWeight={900}
+                color={Number(horarioAsignacionSeleccionado.disponibles) > 0 ? 'success.main' : 'error.main'}
+              >
+                {horarioAsignacionSeleccionado.disponibles} de {horarioAsignacionSeleccionado.capacidad} disponibles
+              </Typography>
+            </Box>
+          </Box>
+        ) : null}
+
         <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
-          <BotonGuardar texto="Asignar" onClick={handleGuardarAsignacion} />
+          <BotonGuardar
+            texto="Asignar"
+            onClick={handleGuardarAsignacion}
+            disabled={Boolean(horarioAsignacionSeleccionado && Number(horarioAsignacionSeleccionado.disponibles) <= 0)}
+          />
         </Stack>
       </Box>
 
