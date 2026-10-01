@@ -58,7 +58,7 @@ const DORADO_SUAVE = uiTokens.colores.acentoSuave;
 
 export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }) {
   const esCuentaAbierta = Boolean(ventaInicial?.id);
-  const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], productos: [] });
+  const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], membresias: [], productos: [] });
   const [cargando, setCargando] = useState(true);
   const [errorContexto, setErrorContexto] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -157,7 +157,11 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     } else {
       if (tipo === 'SERVICIO') items = contexto.servicios || [];
       if (tipo === 'PRODUCTO') items = contexto.productos || [];
-      if (tipo === 'MEMBRESIA') items = (contexto.planes || []).filter((item) => item.tipo_producto !== 'PASE_DIARIO');
+      if (tipo === 'MEMBRESIA') {
+        items = cliente
+          ? (contexto.membresias || []).filter((item) => Number(item.cliente_id) === Number(cliente.id))
+          : [];
+      }
       if (tipo === 'PASE_DIARIO') items = (contexto.planes || []).filter((item) => item.tipo_producto === 'PASE_DIARIO');
     }
 
@@ -167,14 +171,21 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         .toLowerCase()
         .includes(texto),
     );
-  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto]);
+  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto, cliente]);
 
   const agregar = (item) => {
     const tipoActual = esCuentaAbierta ? 'PRODUCTO' : tipo;
-    if (tipoActual === 'MEMBRESIA' || tipoActual === 'PASE_DIARIO') {
-      avisar('La membresía o pase se asigna desde Membresías para crear correctamente su contrato y vigencia.', 'info');
+
+    if (tipoActual === 'PASE_DIARIO') {
+      avisar('El pase diario debe asignarse primero desde Membresías para crear correctamente su vigencia.', 'info');
       return;
     }
+
+    if (tipoActual === 'MEMBRESIA' && !cliente) {
+      avisar('Selecciona primero al cliente para consultar sus membresías.', 'warning');
+      return;
+    }
+
     if (item.precio === null || item.precio === undefined || Number(item.precio) <= 0) {
       avisar('Este ítem aún no tiene un precio comercial configurado para la sede.', 'warning');
       return;
@@ -192,12 +203,16 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       return [...actual, {
         clave,
         tipo: tipoActual,
-        referencia_id: item.id,
+        referencia_id: tipoActual === 'MEMBRESIA' ? item.plan_id : item.id,
+        membresia_id: tipoActual === 'MEMBRESIA' ? item.id : null,
         producto_id: tipoActual === 'PRODUCTO' ? item.id : null,
-        descripcion: item.nombre,
+        descripcion: tipoActual === 'MEMBRESIA'
+          ? `${item.nombre} · ${item.codigo || 'Membresía'}`
+          : item.nombre,
         cantidad: 1,
         precio_unitario: Number(item.precio),
         total_linea: Number(item.precio),
+        bloqueado: tipoActual === 'MEMBRESIA',
       }];
     });
   };
@@ -234,8 +249,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     }
     setGuardando(true);
     try {
+      const membresiaCarrito = carrito.find((item) => item.tipo === 'MEMBRESIA' && item.membresia_id);
       const payloadVenta = {
         cliente_id: cliente?.id || null,
+        membresia_id: membresiaCarrito?.membresia_id || null,
         descuento: Number(descuento || 0),
         impuesto: Number(impuesto || 0),
         observaciones: observaciones || null,
@@ -301,9 +318,16 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
               <Autocomplete
                 options={contexto.clientes || []}
                 value={cliente}
-                onChange={(_, value) => setCliente(value)}
+                onChange={(_, value) => {
+                  setCliente(value);
+                  setCarrito((actual) => actual.filter((item) => item.tipo !== 'MEMBRESIA'));
+                }}
                 disabled={esCuentaAbierta}
-                getOptionLabel={(item) => `${item.nombre || ''}${item.codigo ? ` · ${item.codigo}` : ''}`}
+                getOptionLabel={(item) => [
+                  item.nombre,
+                  item.codigo,
+                  item.identificacion,
+                ].filter(Boolean).join(' · ')}
                 isOptionEqualToValue={(a, b) => a.id === b.id}
                 renderInput={(params) => <TextField {...params} size="small" placeholder="Buscar por nombre, código, cédula o teléfono" />}
               />
@@ -312,7 +336,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   <Box>
                     <Typography variant="body2" fontWeight={900}>{cliente.nombre}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {cliente.codigo || 'Sin código'} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
+                      {cliente.codigo || 'Sin código'}{cliente.identificacion ? ` · ${cliente.identificacion}` : ''} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
                     </Typography>
                   </Box>
                   <Chip size="small" label="Cliente activo" color="success" variant="outlined" />
@@ -368,7 +392,18 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   placeholder={esCuentaAbierta ? 'Buscar producto...' : `Buscar ${tiposVisibles.find((item) => item.value === tipo)?.label?.toLowerCase() || 'ítem'}...`}
                   slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon fontSize="small" sx={{ color: DORADO_REVIVE }} /></InputAdornment> } }}
                 />
-                {!esCuentaAbierta && (tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO') ? <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>Se muestran como referencia. La asignación contractual se realiza desde Membresías.</Alert> : null}
+                {!esCuentaAbierta && tipo === 'MEMBRESIA' ? (
+                  <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
+                    {cliente
+                      ? 'Se muestran las membresías vigentes del cliente que todavía no tienen una venta pendiente.'
+                      : 'Selecciona un cliente para consultar sus membresías vigentes.'}
+                  </Alert>
+                ) : null}
+                {!esCuentaAbierta && tipo === 'PASE_DIARIO' ? (
+                  <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
+                    El pase diario debe asignarse primero desde Membresías.
+                  </Alert>
+                ) : null}
                 <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
                   {disponibles.map((item) => <CatalogoCard key={`${esCuentaAbierta ? 'PRODUCTO' : tipo}-${item.id}`} item={item} tipo={esCuentaAbierta ? 'PRODUCTO' : tipo} onAgregar={() => agregar(item)} />)}
                 </Box>
@@ -543,7 +578,7 @@ function SeccionInterna({ titulo, children, sx = {} }) {
 
 function CatalogoCard({ item, tipo, onAgregar }) {
   const sinPrecio = item.precio === null || item.precio === undefined || Number(item.precio) <= 0;
-  const contractual = tipo === 'MEMBRESIA' || tipo === 'PASE_DIARIO';
+  const contractual = tipo === 'PASE_DIARIO';
   const imagen = item.imagen_url || item.imagen || null;
   const icono = tipo === 'PRODUCTO'
     ? <Inventory2OutlinedIcon />
