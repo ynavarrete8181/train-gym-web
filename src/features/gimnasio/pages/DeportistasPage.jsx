@@ -457,11 +457,20 @@ export function DeportistasPage() {
 
   const handleGuardarDatosFicha = async () => {
     try {
-      if (!formData.codigo_deportista || !formData.usuario_id) {
-        showNotificacion('Faltan campos obligatorios', 'warning');
+      if (!formData.codigo_deportista) {
+        showNotificacion('El código del cliente es obligatorio', 'warning');
         return;
       }
-      await gimnasioServicio.actualizarDeportista(formData.id, formData);
+      await gimnasioServicio.actualizarDeportista(formData.id, {
+        ...formData,
+        requiere_representante_legal: Boolean(formData.requiere_representante_legal),
+        representante_legal: formData.requiere_representante_legal
+          ? {
+              ...formData.representante_legal,
+              responsable_pago: Boolean(formData.representante_legal?.responsable_pago),
+            }
+          : null,
+      });
       showNotificacion('Datos del cliente actualizados', 'success');
       cargarDeportistas();
     } catch (error) {
