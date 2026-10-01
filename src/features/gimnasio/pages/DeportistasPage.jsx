@@ -296,7 +296,15 @@ export function DeportistasPage() {
   };
 
   const handleNuevo = () => {
-    setFormData(getInitialForm());
+    const inicial = getInitialForm();
+    setFormData({
+      ...inicial,
+      requiere_representante_legal: false,
+      representante_legal: {
+        ...inicial.representante_legal,
+        responsable_pago: false,
+      },
+    });
     setVista('formulario');
   };
 
