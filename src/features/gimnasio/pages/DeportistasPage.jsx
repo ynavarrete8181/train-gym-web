@@ -20,6 +20,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
+import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
@@ -256,6 +257,7 @@ export function DeportistasPage() {
   const [entrenadoresDisp, setEntrenadoresDisp] = useState([]);
   const [turnosEntrenador, setTurnosEntrenador] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
+  const [asignacionesHistorial, setAsignacionesHistorial] = useState([]);
   const [asignacionForm, setAsignacionForm] = useState(getInitialAsignacion());
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
@@ -439,10 +441,12 @@ export function DeportistasPage() {
     try {
       const [entrenadoresResp, asignacionesResp] = await Promise.all([
         gimnasioServicio.obtenerEntrenadores({ per_page: 100, estado: 'ACTIVO' }),
-        gimnasioServicio.obtenerAsignacionesEntrenador({ deportista_id: deportistaId }),
+        gimnasioServicio.obtenerAsignacionesEntrenador({ deportista_id: deportistaId, estado: 'TODOS' }),
       ]);
+      const todas = asignacionesResp.datos || [];
       setEntrenadoresDisp(entrenadoresResp.datos || []);
-      setAsignaciones(asignacionesResp.datos || []);
+      setAsignaciones(todas.filter((item) => item.estado === 'ACTIVO'));
+      setAsignacionesHistorial(todas.filter((item) => item.estado !== 'ACTIVO'));
     } catch (error) {
       showNotificacion('Error al cargar entrenador y horario', 'error');
     }
@@ -527,6 +531,7 @@ export function DeportistasPage() {
     setRutinaForm(getInitialRutina());
     setRmForm(getInitialRm());
     setTurnosEntrenador([]);
+    setAsignacionesHistorial([]);
     setVista('ficha');
     cargarFicha(deportista);
   };
@@ -1112,33 +1117,25 @@ export function DeportistasPage() {
 
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Asignaciones activas</Typography>
-        {cargandoFicha ? (
-          <Typography variant="body2" color="text.secondary">Cargando...</Typography>
-        ) : asignaciones.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">Este cliente no tiene entrenador ni horario asignado todavía.</Typography>
-        ) : (
-          <Stack spacing={1}>
-            {asignaciones.map((a) => (
-              <Stack key={a.id} direction="row" alignItems="center" justifyContent="space-between"
-                sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-                  <Chip label={`${a.entrenador_nombres || ''} ${a.entrenador_apellidos || ''}`.trim() || a.entrenador_nombre} size="small" color="default" />
-                  {a.dia_semana && (
-                    <Typography variant="body2" fontWeight="500">
-                      {a.dia_semana} {String(a.hora_inicio).slice(0, 5)}-{String(a.hora_fin).slice(0, 5)}
-                    </Typography>
-                  )}
-                  <Typography variant="body2" color="text.secondary">{a.sede_nombre}</Typography>
-                </Stack>
-                <Tooltip title="Finalizar asignación">
-                  <IconButton sx={dbanuStyles.actionDelete} size="small" onClick={() => handleFinalizarAsignacion(a)}>
-                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            ))}
-          </Stack>
-        )}
+        <AsignacionesClienteTable
+          titulo="Asignaciones activas"
+          asignaciones={asignaciones}
+          cargando={cargandoFicha}
+          onFinalizar={handleFinalizarAsignacion}
+        />
+      </Box>
+
+      <Box sx={formStyles.seccion}>
+        <Typography sx={formStyles.modalSeccionTitulo}>Historial de horarios</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+          Consulta los entrenadores y horarios que este cliente tuvo anteriormente.
+        </Typography>
+        <AsignacionesClienteTable
+          titulo="Historial de horarios"
+          asignaciones={asignacionesHistorial}
+          cargando={cargandoFicha}
+          historial
+        />
       </Box>
     </Stack>
   );
