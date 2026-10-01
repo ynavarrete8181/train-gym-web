@@ -35,7 +35,19 @@ const getInitialForm = () => ({
   contacto_emergencia_telefono: '',
   observaciones_medicas: '',
   sede_principal_id: '',
-  estado: 'PROSPECTO'
+  estado: 'PROSPECTO',
+  requiere_representante_legal: false,
+  representante_legal: {
+    tipo_identificacion: 'CEDULA',
+    identificacion: '',
+    nombres: '',
+    apellidos: '',
+    telefono: '',
+    email: '',
+    direccion: '',
+    tipo_relacion: 'REPRESENTANTE_LEGAL',
+    responsable_pago: false,
+  }
 });
 
 const getInitialAsignacion = () => ({
@@ -293,10 +305,36 @@ export function DeportistasPage() {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, checked, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value,
+      ...(name === 'requiere_representante_legal' && !checked
+        ? {
+            representante_legal: {
+              tipo_identificacion: 'CEDULA',
+              identificacion: '',
+              nombres: '',
+              apellidos: '',
+              telefono: '',
+              email: '',
+              direccion: '',
+              tipo_relacion: 'REPRESENTANTE_LEGAL',
+              responsable_pago: false,
+            },
+          }
+        : {}),
+    }));
+  };
+
+  const handleRepresentanteChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      representante_legal: {
+        ...(prev.representante_legal || {}),
+        [name]: type === 'checkbox' ? checked : value,
+      },
     }));
   };
 
@@ -307,7 +345,24 @@ export function DeportistasPage() {
         return;
       }
 
-      const payload = { ...formData };
+      if (formData.requiere_representante_legal) {
+        const representante = formData.representante_legal || {};
+        if (!String(representante.nombres || '').trim() && !String(representante.apellidos || '').trim()) {
+          showNotificacion('Ingresa los datos del representante legal.', 'warning');
+          return;
+        }
+      }
+
+      const payload = {
+        ...formData,
+        requiere_representante_legal: Boolean(formData.requiere_representante_legal),
+        representante_legal: formData.requiere_representante_legal
+          ? {
+              ...formData.representante_legal,
+              responsable_pago: Boolean(formData.representante_legal?.responsable_pago),
+            }
+          : null,
+      };
 
       if (formData.id) {
         await gimnasioServicio.actualizarDeportista(formData.id, payload);
@@ -628,6 +683,114 @@ export function DeportistasPage() {
           </TextField>
         </Box>
       </Box>
+      <Box sx={formStyles.seccion}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
+          <Box>
+            <Typography sx={formStyles.modalSeccionTitulo}>Representante legal</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Actívalo cuando el cliente necesite un representante legal o responsable de pago.
+            </Typography>
+          </Box>
+          <FormControlLabel
+            control={
+              <Switch
+                name="requiere_representante_legal"
+                checked={Boolean(formData.requiere_representante_legal)}
+                onChange={handleChange}
+              />
+            }
+            label="Requiere representante legal"
+          />
+        </Stack>
+
+        {formData.requiere_representante_legal ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+            <TextField
+              select
+              label="Tipo de identificación"
+              name="tipo_identificacion"
+              value={formData.representante_legal?.tipo_identificacion || 'CEDULA'}
+              onChange={handleRepresentanteChange}
+              size="small"
+            >
+              <MenuItem value="CEDULA">Cédula</MenuItem>
+              <MenuItem value="PASAPORTE">Pasaporte</MenuItem>
+              <MenuItem value="RUC">RUC</MenuItem>
+              <MenuItem value="OTRO">Otro</MenuItem>
+            </TextField>
+            <TextField
+              label="Identificación"
+              name="identificacion"
+              value={formData.representante_legal?.identificacion || ''}
+              onChange={handleRepresentanteChange}
+              size="small"
+            />
+            <TextField
+              select
+              label="Relación"
+              name="tipo_relacion"
+              value={formData.representante_legal?.tipo_relacion || 'REPRESENTANTE_LEGAL'}
+              onChange={handleRepresentanteChange}
+              size="small"
+            >
+              <MenuItem value="REPRESENTANTE_LEGAL">Representante legal</MenuItem>
+              <MenuItem value="MADRE">Madre</MenuItem>
+              <MenuItem value="PADRE">Padre</MenuItem>
+              <MenuItem value="TUTOR">Tutor</MenuItem>
+              <MenuItem value="OTRO">Otro</MenuItem>
+            </TextField>
+            <TextField
+              label="Nombres"
+              name="nombres"
+              value={formData.representante_legal?.nombres || ''}
+              onChange={handleRepresentanteChange}
+              required
+              size="small"
+            />
+            <TextField
+              label="Apellidos"
+              name="apellidos"
+              value={formData.representante_legal?.apellidos || ''}
+              onChange={handleRepresentanteChange}
+              size="small"
+            />
+            <TextField
+              label="Teléfono"
+              name="telefono"
+              value={formData.representante_legal?.telefono || ''}
+              onChange={handleRepresentanteChange}
+              size="small"
+            />
+            <TextField
+              label="Correo"
+              name="email"
+              type="email"
+              value={formData.representante_legal?.email || ''}
+              onChange={handleRepresentanteChange}
+              size="small"
+            />
+            <TextField
+              label="Dirección"
+              name="direccion"
+              value={formData.representante_legal?.direccion || ''}
+              onChange={handleRepresentanteChange}
+              size="small"
+              sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  name="responsable_pago"
+                  checked={Boolean(formData.representante_legal?.responsable_pago)}
+                  onChange={handleRepresentanteChange}
+                />
+              }
+              label="Responsable de pago"
+            />
+          </Box>
+        ) : null}
+      </Box>
+
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>
           Contacto y observaciones
