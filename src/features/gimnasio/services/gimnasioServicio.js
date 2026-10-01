@@ -77,6 +77,10 @@ export const gimnasioServicio = {
     const { data } = await api.post('/base/gimnasio/asignaciones-entrenador', datos);
     return data;
   },
+  actualizarObservacionesAsignacionEntrenador: async (id, observaciones) => {
+    const { data } = await api.patch(`/base/gimnasio/asignaciones-entrenador/${id}/observaciones`, { observaciones });
+    return data;
+  },
   finalizarAsignacionEntrenador: async (id) => {
     const { data } = await api.patch(`/base/gimnasio/asignaciones-entrenador/${id}/finalizar`);
     return data;
