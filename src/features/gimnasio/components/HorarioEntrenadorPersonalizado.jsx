@@ -44,6 +44,7 @@ const inicial = {
   fecha_inicio: '',
   fecha_fin: '',
   activo: true,
+  capacidad: 15,
   observaciones: '',
   franjas: [],
   recesos: [],
@@ -463,7 +464,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 1fr .8fr' },
+              gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 1fr .7fr .8fr' },
               gap: 1.25,
               alignItems: 'start',
             }}
@@ -503,6 +504,16 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
               required={esPersonalizado}
               onChange={(event) => setForm((prev) => ({ ...prev, fecha_fin: event.target.value }))}
               slotProps={{ inputLabel: { shrink: true }, htmlInput: { maxLength: 5, pattern: '[0-2][0-9]:[0-5][0-9]' } }}
+            />
+
+            <TextField
+              label="Cupo"
+              type="number"
+              size="small"
+              value={form.capacidad ?? 15}
+              onChange={(event) => setForm((prev) => ({ ...prev, capacidad: Number(event.target.value || 1) }))}
+              slotProps={{ htmlInput: { min: 1, max: 500 } }}
+              helperText="Máximo de clientes asignados"
             />
 
             <Box
