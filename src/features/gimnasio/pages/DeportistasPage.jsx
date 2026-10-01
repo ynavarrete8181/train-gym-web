@@ -59,7 +59,6 @@ const getInitialForm = () => ({
 const getInitialAsignacion = () => ({
   entrenador_id: '',
   horario_bloque_id: '',
-  membresia_id: '',
   observaciones: '',
 });
 
@@ -599,7 +598,6 @@ export function DeportistasPage() {
         entrenador_id: Number(asignacionForm.entrenador_id),
         deportista_id: formData.id,
         horario_bloque_id: Number(asignacionForm.horario_bloque_id),
-        membresia_id: asignacionForm.membresia_id ? Number(asignacionForm.membresia_id) : null,
         observaciones: asignacionForm.observaciones || null,
       });
       showNotificacion('Cliente asignado correctamente', 'success');
@@ -968,20 +966,7 @@ export function DeportistasPage() {
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            select
-            label="Membresía"
-            name="membresia_id"
-            value={asignacionForm.membresia_id}
-            onChange={handleAsignacionChange}
-            size="small"
-            helperText={membresiasCliente.length === 0 ? 'El cliente no tiene membresías registradas' : ''}
-          >
-            <MenuItem value="">Sin membresía asociada</MenuItem>
-            {membresiasCliente.map((m) => (
-              <MenuItem key={m.id} value={m.id}>{m.plan_nombre}</MenuItem>
-            ))}
-          </TextField>
+          
           <TextField
             label="Observaciones"
             name="observaciones"
