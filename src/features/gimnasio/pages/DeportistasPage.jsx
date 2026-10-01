@@ -973,7 +973,6 @@ export function DeportistasPage() {
             value={asignacionForm.observaciones}
             onChange={handleAsignacionChange}
             size="small"
-            sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}
           />
         </Box>
         <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
