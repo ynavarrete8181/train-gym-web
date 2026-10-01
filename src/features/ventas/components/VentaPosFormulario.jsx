@@ -194,6 +194,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     setCarrito((actual) => {
       const existe = actual.find((fila) => fila.clave === clave);
       if (existe) {
+        if (tipoActual === 'MEMBRESIA') {
+          avisar('Esta membresía ya está agregada al carrito.', 'info');
+          return actual;
+        }
         return actual.map((fila) => {
           if (fila.clave !== clave) return fila;
           const cantidad = Number(fila.cantidad || 0) + 1;
@@ -221,14 +225,16 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     const valor = Math.max(1, Number(cantidad || 1));
     setCarrito((actual) => actual.map((item) =>
       item.clave === clave
-        ? { ...item, cantidad: valor, total_linea: valor * Number(item.precio_unitario || 0) }
+        ? (item.bloqueado
+            ? item
+            : { ...item, cantidad: valor, total_linea: valor * Number(item.precio_unitario || 0) })
         : item,
     ));
   };
 
   const ajustarCantidad = (clave, delta) => {
     setCarrito((actual) => actual.map((item) => {
-      if (item.clave !== clave) return item;
+      if (item.clave !== clave || item.bloqueado) return item;
       const cantidad = Math.max(1, Number(item.cantidad || 1) + delta);
       return { ...item, cantidad, total_linea: cantidad * Number(item.precio_unitario || 0) };
     }));
