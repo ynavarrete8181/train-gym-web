@@ -647,13 +647,13 @@ export function DeportistasPage() {
     }
   };
 
-  const handleFinalizarAsignacion = async (asignacion) => {
+  const handleInactivarAsignacion = async (asignacion) => {
     try {
-      await gimnasioServicio.finalizarAsignacionEntrenador(asignacion.id);
-      showNotificacion('Asignación finalizada', 'success');
+      await gimnasioServicio.inactivarAsignacionEntrenador(asignacion.id);
+      showNotificacion('Asignación inactivada. El historial se conserva.', 'success');
       cargarAsignacionesYEntrenadores(formData.id);
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al finalizar la asignación', 'error');
+      showNotificacion(error.response?.data?.mensaje || 'Error al inactivar la asignación', 'error');
     }
   };
 
@@ -1120,7 +1120,7 @@ export function DeportistasPage() {
         <AsignacionesClienteTable
           asignaciones={asignaciones}
           cargando={cargandoFicha}
-          onFinalizar={handleFinalizarAsignacion}
+          onInactivar={handleInactivarAsignacion}
         />
       </Box>
     </Stack>
