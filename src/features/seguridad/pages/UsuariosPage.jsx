@@ -23,6 +23,7 @@ import {
   listarFuncionesUsuario,
   listarRoles,
   listarUsuarios,
+  listarClientesDisponiblesParaUsuario,
   obtenerUsuario,
 } from "../services/usuarioService.js";
 import { listarEstructura } from "../../institucional/services/estructuraInstitucionalService.js";
@@ -53,6 +54,7 @@ function obtenerMensajeError(error, fallback) {
 
 export function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
+  const [clientesDisponibles, setClientesDisponibles] = useState([]);
   const [roles, setRoles] = useState([]);
   const [estructura, setEstructura] = useState({
     sedes: [],
@@ -132,7 +134,11 @@ export function UsuariosPage() {
     setPermisosModificados(false);
     setCargando(true);
     try {
-      await cargarFuncionesNuevo(roles[0]?.id_userrole);
+      const [clientes] = await Promise.all([
+        listarClientesDisponiblesParaUsuario(),
+        cargarFuncionesNuevo(roles[0]?.id_userrole),
+      ]);
+      setClientesDisponibles(clientes || []);
       setDialogoUsuario({ abierto: true, usuario: null });
     } catch (error) {
       setMensaje(obtenerMensajeError(error, "No se pudieron cargar los permisos disponibles."));
@@ -373,6 +379,7 @@ export function UsuariosPage() {
 
         <UsuarioForm
           usuario={dialogoUsuario.usuario}
+          clientesDisponibles={clientesDisponibles}
           roles={roles}
           estructura={estructura}
           gruposFunciones={gruposFunciones}
