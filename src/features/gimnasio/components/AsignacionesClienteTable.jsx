@@ -2,7 +2,6 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import {
   Chip,
   IconButton,
-  Stack,
   TableBody,
   TableCell,
   TableHead,
@@ -42,10 +41,7 @@ const resumirDias = (valor = '') => {
   return dias.map((dia) => CORTO[dia] || dia).join(', ');
 };
 
-const fecha = (valor) => {
-  if (!valor) return '—';
-  return String(valor).slice(0, 10);
-};
+const fecha = (valor) => (valor ? String(valor).slice(0, 10) : null);
 
 const nombreEntrenador = (item) =>
   [item.entrenador_nombres, item.entrenador_apellidos].filter(Boolean).join(' ')
@@ -60,108 +56,100 @@ const disponibilidad = (item) => {
 };
 
 export function AsignacionesClienteTable({
-  titulo,
   asignaciones = [],
   cargando = false,
-  historial = false,
   onFinalizar,
 }) {
-  const columnas = historial ? 6 : 5;
+  const ordenadas = [...asignaciones].sort((a, b) => {
+    const aActivo = String(a.estado || '').toUpperCase() === 'ACTIVO' ? 1 : 0;
+    const bActivo = String(b.estado || '').toUpperCase() === 'ACTIVO' ? 1 : 0;
+
+    if (aActivo !== bActivo) return bActivo - aActivo;
+
+    const aFecha = String(a.fecha_inicio || '');
+    const bFecha = String(b.fecha_inicio || '');
+    return bFecha.localeCompare(aFecha);
+  });
 
   return (
     <TablaGestion
-      total={asignaciones.length}
-      filtrados={asignaciones.length}
+      total={ordenadas.length}
+      filtrados={ordenadas.length}
       cargando={cargando}
-      textoResumen={
-        historial
-          ? `${asignaciones.length} asignación(es) histórica(s)`
-          : `${asignaciones.length} asignación(es) activa(s)`
-      }
+      textoResumen={`${ordenadas.length} asignación(es) registrada(s)`}
     >
       <TableHead>
         <TableRow>
           <TableCell>Entrenador</TableCell>
           <TableCell>Disponibilidad</TableCell>
           <TableCell>Sede</TableCell>
-          <TableCell>{historial ? 'Vigencia' : 'Desde'}</TableCell>
-          {historial ? <TableCell>Estado</TableCell> : null}
+          <TableCell>Vigencia</TableCell>
+          <TableCell>Estado</TableCell>
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>
 
       <TableBody>
-        {asignaciones.map((item) => (
-          <TableRow key={item.id} hover>
-            <TableCell>
-              <Typography variant="body2" fontWeight={600}>
-                {nombreEntrenador(item)}
-              </Typography>
-            </TableCell>
+        {ordenadas.map((item) => {
+          const activa = String(item.estado || '').toUpperCase() === 'ACTIVO';
+          const desde = fecha(item.fecha_inicio);
+          const hasta = activa ? 'Actual' : (fecha(item.fecha_fin) || '—');
 
-            <TableCell>
-              <Typography variant="body2">{disponibilidad(item)}</Typography>
-            </TableCell>
+          return (
+            <TableRow key={item.id} hover>
+              <TableCell>
+                <Typography variant="body2" fontWeight={600}>
+                  {nombreEntrenador(item)}
+                </Typography>
+              </TableCell>
 
-            <TableCell>
-              <Typography variant="body2">{item.sede_nombre || 'Sin sede'}</Typography>
-            </TableCell>
+              <TableCell>
+                <Typography variant="body2">{disponibilidad(item)}</Typography>
+              </TableCell>
 
-            <TableCell>
-              {historial ? (
-                <Stack spacing={0.2}>
-                  <Typography variant="body2">
-                    {fecha(item.fecha_inicio)} → {fecha(item.fecha_fin)}
-                  </Typography>
-                  {item.observaciones ? (
-                    <Typography variant="caption" color="text.secondary">
-                      {item.observaciones}
-                    </Typography>
-                  ) : null}
-                </Stack>
-              ) : (
-                <Typography variant="body2">{fecha(item.fecha_inicio)}</Typography>
-              )}
-            </TableCell>
+              <TableCell>
+                <Typography variant="body2">{item.sede_nombre || 'Sin sede'}</Typography>
+              </TableCell>
 
-            {historial ? (
+              <TableCell>
+                <Typography variant="body2">
+                  {desde || '—'} → {hasta}
+                </Typography>
+              </TableCell>
+
               <TableCell>
                 <Chip
-                  label={item.estado || 'FINALIZADO'}
+                  label={activa ? 'VIGENTE' : (item.estado || 'FINALIZADO')}
                   size="small"
                   variant="outlined"
                   sx={{ fontWeight: 800, height: 24 }}
                 />
               </TableCell>
-            ) : null}
 
-            <TableCell align="right">
-              {!historial && onFinalizar ? (
-                <Tooltip title="Finalizar asignación">
-                  <IconButton
-                    sx={dbanuStyles.actionDelete}
-                    size="small"
-                    onClick={() => onFinalizar(item)}
-                  >
-                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                  </IconButton>
-                </Tooltip>
-              ) : (
-                <Typography variant="caption" color="text.secondary">—</Typography>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
+              <TableCell align="right">
+                {activa && onFinalizar ? (
+                  <Tooltip title="Finalizar asignación">
+                    <IconButton
+                      sx={dbanuStyles.actionDelete}
+                      size="small"
+                      onClick={() => onFinalizar(item)}
+                    >
+                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Typography variant="caption" color="text.secondary">—</Typography>
+                )}
+              </TableCell>
+            </TableRow>
+          );
+        })}
 
-        {asignaciones.length === 0 ? (
+        {ordenadas.length === 0 ? (
           <TablaEstadoFila
-            colSpan={columnas}
+            colSpan={6}
             cargando={cargando}
-            texto={
-              historial
-                ? 'Este cliente todavía no tiene asignaciones finalizadas.'
-                : 'Este cliente no tiene entrenador ni horario asignado todavía.'
-            }
+            texto="Este cliente todavía no tiene asignaciones registradas."
           />
         ) : null}
       </TableBody>
