@@ -71,6 +71,9 @@ const TABS_FICHA = [
   { value: 'entrenamiento', label: 'Entrenamiento', icon: <FitnessCenterOutlinedIcon sx={{ fontSize: 17 }} /> },
 ];
 
+const booleanoBackend = (valor) =>
+  valor === true || valor === 1 || valor === '1' || valor === 'true' || valor === 't';
+
 const hoyISO = () => new Date().toISOString().slice(0, 10);
 
 const getInitialMembresia = () => ({
@@ -452,13 +455,14 @@ export function DeportistasPage() {
         ...datos,
         tipo_identificacion: datos.tipo_identificacion || 'CEDULA',
         identificacion: datos.identificacion || '',
-        nombres: datos.nombres || '',
+        nombres: datos.nombres || datos.nombre_completo || '',
         apellidos: datos.apellidos || '',
         fecha_nacimiento: datos.persona_fecha_nacimiento || datos.fecha_nacimiento || '',
         genero: datos.persona_genero || datos.genero || '',
         telefono: datos.persona_telefono || datos.telefono || '',
         email: datos.persona_email || '',
         direccion: datos.persona_direccion || '',
+        requiere_representante_legal: booleanoBackend(datos.requiere_representante_legal),
         representante_legal: datos.representante_legal
           ? {
               tipo_identificacion: datos.representante_legal.tipo_identificacion || 'CEDULA',
@@ -469,7 +473,7 @@ export function DeportistasPage() {
               email: datos.representante_legal.email || '',
               direccion: datos.representante_legal.direccion || '',
               tipo_relacion: datos.representante_legal.tipo_relacion || 'REPRESENTANTE_LEGAL',
-              responsable_pago: Boolean(datos.representante_legal.responsable_pago),
+              responsable_pago: booleanoBackend(datos.representante_legal.responsable_pago),
             }
           : getInitialForm().representante_legal,
       });
@@ -531,10 +535,40 @@ export function DeportistasPage() {
             }
           : null,
       });
+      const actualizado = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
+      const datosActualizados = actualizado.datos || {};
+      setFormData((actual) => ({
+        ...actual,
+        ...datosActualizados,
+        nombres: datosActualizados.nombres || datosActualizados.nombre_completo || actual.nombres,
+        apellidos: datosActualizados.apellidos || '',
+        identificacion: datosActualizados.identificacion || '',
+        fecha_nacimiento: datosActualizados.persona_fecha_nacimiento || datosActualizados.fecha_nacimiento || '',
+        genero: datosActualizados.persona_genero || datosActualizados.genero || '',
+        telefono: datosActualizados.persona_telefono || datosActualizados.telefono || '',
+        email: datosActualizados.persona_email || '',
+        direccion: datosActualizados.persona_direccion || '',
+        requiere_representante_legal: booleanoBackend(datosActualizados.requiere_representante_legal),
+        representante_legal: datosActualizados.representante_legal
+          ? {
+              tipo_identificacion: datosActualizados.representante_legal.tipo_identificacion || 'CEDULA',
+              identificacion: datosActualizados.representante_legal.identificacion || '',
+              nombres: datosActualizados.representante_legal.nombres || datosActualizados.representante_legal.nombre_completo || '',
+              apellidos: datosActualizados.representante_legal.apellidos || '',
+              telefono: datosActualizados.representante_legal.telefono || '',
+              email: datosActualizados.representante_legal.email || '',
+              direccion: datosActualizados.representante_legal.direccion || '',
+              tipo_relacion: datosActualizados.representante_legal.tipo_relacion || 'REPRESENTANTE_LEGAL',
+              responsable_pago: booleanoBackend(datosActualizados.representante_legal.responsable_pago),
+            }
+          : getInitialForm().representante_legal,
+      }));
       showNotificacion('Datos del cliente actualizados', 'success');
       cargarDeportistas();
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al guardar el cliente', 'error');
+      const errores = error.response?.data?.errors || error.response?.data?.errores;
+      const detalle = errores ? Object.values(errores).flat().join(' ') : null;
+      showNotificacion(detalle || error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar el cliente', 'error');
     }
   };
 
