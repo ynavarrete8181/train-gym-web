@@ -26,7 +26,13 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
 const getInitialForm = () => ({
   id: null,
-  usuario_id: '',
+  persona_id: null,
+  tipo_identificacion: 'CEDULA',
+  identificacion: '',
+  nombres: '',
+  apellidos: '',
+  email: '',
+  direccion: '',
   codigo_deportista: '',
   fecha_nacimiento: '',
   genero: '',
@@ -208,7 +214,6 @@ export function DeportistasPage() {
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const [deportistas, setDeportistas] = useState([]);
-  const [usuariosDisp, setUsuariosDisp] = useState([]);
   const [sedes, setSedes] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
@@ -256,13 +261,11 @@ export function DeportistasPage() {
 
   const cargarCatalogosFormulario = async () => {
     try {
-      const [usuariosResponse, estructuraResponse, planesResponse, ejerciciosResponse] = await Promise.all([
-        gimnasioServicio.obtenerUsuarios({ per_page: 100, rol: 'DEPORTISTA' }),
+      const [estructuraResponse, planesResponse, ejerciciosResponse] = await Promise.all([
         gimnasioServicio.obtenerEstructuraOperativa(),
         gimnasioServicio.obtenerPlanes({ per_page: 100 }),
         entrenamientoServicio.obtenerEjercicios({ per_page: 100 }),
       ]);
-      setUsuariosDisp(usuariosResponse.datos || []);
       setSedes(estructuraResponse.datos?.sedes || []);
       setPlanes(planesResponse.datos || []);
       setEjerciciosDisp(ejerciciosResponse.datos || []);
@@ -348,8 +351,8 @@ export function DeportistasPage() {
 
   const handleGuardar = async () => {
     try {
-      if (!formData.codigo_deportista || !formData.usuario_id) {
-        showNotificacion('Faltan campos obligatorios', 'warning');
+      if (!formData.codigo_deportista || !String(formData.nombres || '').trim()) {
+        showNotificacion('Ingresa al menos los nombres de la persona y el código del cliente.', 'warning');
         return;
       }
 
@@ -363,6 +366,18 @@ export function DeportistasPage() {
 
       const payload = {
         ...formData,
+        usuario_id: formData.usuario_id || null,
+        persona: {
+          tipo_identificacion: formData.tipo_identificacion || null,
+          identificacion: formData.identificacion || null,
+          nombres: formData.nombres || '',
+          apellidos: formData.apellidos || '',
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          genero: formData.genero || null,
+          telefono: formData.telefono || null,
+          email: formData.email || null,
+          direccion: formData.direccion || null,
+        },
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
@@ -431,7 +446,33 @@ export function DeportistasPage() {
     setCargandoFicha(true);
     try {
       const detalle = await gimnasioServicio.obtenerDeportistaPorId(deportista.id);
-      setFormData({ ...detalle.datos });
+      const datos = detalle.datos || {};
+      setFormData({
+        ...getInitialForm(),
+        ...datos,
+        tipo_identificacion: datos.tipo_identificacion || 'CEDULA',
+        identificacion: datos.identificacion || '',
+        nombres: datos.nombres || '',
+        apellidos: datos.apellidos || '',
+        fecha_nacimiento: datos.persona_fecha_nacimiento || datos.fecha_nacimiento || '',
+        genero: datos.persona_genero || datos.genero || '',
+        telefono: datos.persona_telefono || datos.telefono || '',
+        email: datos.persona_email || '',
+        direccion: datos.persona_direccion || '',
+        representante_legal: datos.representante_legal
+          ? {
+              tipo_identificacion: datos.representante_legal.tipo_identificacion || 'CEDULA',
+              identificacion: datos.representante_legal.identificacion || '',
+              nombres: datos.representante_legal.nombres || '',
+              apellidos: datos.representante_legal.apellidos || '',
+              telefono: datos.representante_legal.telefono || '',
+              email: datos.representante_legal.email || '',
+              direccion: datos.representante_legal.direccion || '',
+              tipo_relacion: datos.representante_legal.tipo_relacion || 'REPRESENTANTE_LEGAL',
+              responsable_pago: Boolean(datos.representante_legal.responsable_pago),
+            }
+          : getInitialForm().representante_legal,
+      });
       setMembresiasCliente(detalle.datos?.membresias || []);
       await cargarAsignacionesYEntrenadores(deportista.id);
       await cargarProgresoCliente(deportista.id);
@@ -471,6 +512,17 @@ export function DeportistasPage() {
       }
       await gimnasioServicio.actualizarDeportista(formData.id, {
         ...formData,
+        persona: {
+          tipo_identificacion: formData.tipo_identificacion || null,
+          identificacion: formData.identificacion || null,
+          nombres: formData.nombres || '',
+          apellidos: formData.apellidos || '',
+          fecha_nacimiento: formData.fecha_nacimiento || null,
+          genero: formData.genero || null,
+          telefono: formData.telefono || null,
+          email: formData.email || null,
+          direccion: formData.direccion || null,
+        },
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
@@ -611,51 +663,27 @@ export function DeportistasPage() {
     <Stack spacing={2}>
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>
-          Información principal
+          Datos de la persona
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField
             select
-            fullWidth
-            label="Usuario"
-            name="usuario_id"
-            value={formData.usuario_id || ''}
-            onChange={handleChange}
-            required
-            size="small"
-            disabled={!!formData.id}
-            helperText={!formData.id && usuariosDisp.length === 0 ? 'No hay usuarios con rol Deportista disponibles. Créalo primero en Seguridad > Usuarios.' : 'Solo se listan usuarios con rol Deportista.'}
-          >
-            {usuariosDisp.map((usuario) => (
-              <MenuItem key={usuario.id} value={usuario.id}>
-                {usuario.name || `${usuario.nombres || ''} ${usuario.apellidos || ''}`.trim()} - {usuario.email}
-              </MenuItem>
-            ))}
-            {formData.id && !usuariosDisp.find((usuario) => String(usuario.id) === String(formData.usuario_id)) ? (
-              <MenuItem value={formData.usuario_id}>{formData.usuario_nombre || formData.name || 'Usuario asignado'}</MenuItem>
-            ) : null}
-          </TextField>
-          <TextField
-            label="Código Cliente"
-            name="codigo_deportista"
-            value={formData.codigo_deportista}
-            onChange={handleChange}
-            required
-            size="small"
-          />
-          <TextField
-            select
-            label="Sede principal"
-            name="sede_principal_id"
-            value={formData.sede_principal_id || ''}
+            label="Tipo de identificación"
+            name="tipo_identificacion"
+            value={formData.tipo_identificacion || 'CEDULA'}
             onChange={handleChange}
             size="small"
           >
-            <MenuItem value="">No asignada</MenuItem>
-            {sedes.map((sede) => (
-              <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
-            ))}
+            <MenuItem value="CEDULA">Cédula</MenuItem>
+            <MenuItem value="PASAPORTE">Pasaporte</MenuItem>
+            <MenuItem value="RUC">RUC</MenuItem>
+            <MenuItem value="OTRO">Otro</MenuItem>
           </TextField>
+          <TextField label="Identificación" name="identificacion" value={formData.identificacion || ''} onChange={handleChange} size="small" />
+          <TextField label="Nombres" name="nombres" value={formData.nombres || ''} onChange={handleChange} required size="small" />
+          <TextField label="Apellidos" name="apellidos" value={formData.apellidos || ''} onChange={handleChange} size="small" />
+          <TextField label="Correo" name="email" type="email" value={formData.email || ''} onChange={handleChange} size="small" />
+          <TextField label="Dirección" name="direccion" value={formData.direccion || ''} onChange={handleChange} size="small" />
           <TextField
             label="Teléfono"
             name="telefono"
@@ -663,19 +691,6 @@ export function DeportistasPage() {
             onChange={handleChange}
             size="small"
           />
-          <TextField
-            select
-            label="Estado"
-            name="estado"
-            value={formData.estado || 'PROSPECTO'}
-            onChange={handleChange}
-            size="small"
-          >
-            <MenuItem value="PROSPECTO">Prospecto</MenuItem>
-            <MenuItem value="ACTIVO">Activo</MenuItem>
-            <MenuItem value="INACTIVO">Inactivo</MenuItem>
-            <MenuItem value="SUSPENDIDO">Suspendido</MenuItem>
-          </TextField>
           <TextField
             label="Fecha de nacimiento"
             name="fecha_nacimiento"
@@ -700,6 +715,46 @@ export function DeportistasPage() {
           </TextField>
         </Box>
       </Box>
+      <Box sx={formStyles.seccion}>
+        <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+          <TextField
+            label="Código Cliente"
+            name="codigo_deportista"
+            value={formData.codigo_deportista}
+            onChange={handleChange}
+            required
+            size="small"
+          />
+          <TextField
+            select
+            label="Sede principal"
+            name="sede_principal_id"
+            value={formData.sede_principal_id || ''}
+            onChange={handleChange}
+            size="small"
+          >
+            <MenuItem value="">No asignada</MenuItem>
+            {sedes.map((sede) => (
+              <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Estado"
+            name="estado"
+            value={formData.estado || 'PROSPECTO'}
+            onChange={handleChange}
+            size="small"
+          >
+            <MenuItem value="PROSPECTO">Prospecto</MenuItem>
+            <MenuItem value="ACTIVO">Activo</MenuItem>
+            <MenuItem value="INACTIVO">Inactivo</MenuItem>
+            <MenuItem value="SUSPENDIDO">Suspendido</MenuItem>
+          </TextField>
+        </Box>
+      </Box>
+
       <Box sx={formStyles.seccion}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
           <Box>
