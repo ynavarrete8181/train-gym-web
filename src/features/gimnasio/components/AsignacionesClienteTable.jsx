@@ -1,4 +1,5 @@
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import {
   Chip,
   IconButton,
@@ -58,6 +59,7 @@ const disponibilidad = (item) => {
 export function AsignacionesClienteTable({
   asignaciones = [],
   cargando = false,
+  onEditar,
   onFinalizar,
 }) {
   const ordenadas = [...asignaciones].sort((a, b) => {
@@ -127,16 +129,31 @@ export function AsignacionesClienteTable({
               </TableCell>
 
               <TableCell align="right">
-                {activa && onFinalizar ? (
-                  <Tooltip title="Finalizar asignación">
-                    <IconButton
-                      sx={dbanuStyles.actionDelete}
-                      size="small"
-                      onClick={() => onFinalizar(item)}
-                    >
-                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
+                {activa ? (
+                  <span>
+                    {onEditar ? (
+                      <Tooltip title="Editar observación">
+                        <IconButton
+                          sx={dbanuStyles.actionEdit}
+                          size="small"
+                          onClick={() => onEditar(item)}
+                        >
+                          <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+                    {onFinalizar ? (
+                      <Tooltip title="Finalizar asignación">
+                        <IconButton
+                          sx={dbanuStyles.actionDelete}
+                          size="small"
+                          onClick={() => onFinalizar(item)}
+                        >
+                          <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+                  </span>
                 ) : (
                   <Typography variant="caption" color="text.secondary">—</Typography>
                 )}
