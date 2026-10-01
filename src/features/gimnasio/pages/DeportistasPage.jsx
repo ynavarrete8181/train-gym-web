@@ -114,6 +114,7 @@ const getInitialMembresia = () => ({
   estado: 'PENDIENTE_PAGO',
   dias_gracia: 0,
   renovacion_automatica: false,
+  congelar_membresia: false,
   fecha_congelacion_inicio: '',
   fecha_congelacion_fin: '',
 });
@@ -679,7 +680,21 @@ export function DeportistasPage() {
 
   const handleMembresiaChange = (e) => {
     const { name, value, checked, type } = e.target;
-    setMembresiaForm((actual) => ({ ...actual, [name]: type === 'checkbox' ? checked : value }));
+
+    setMembresiaForm((actual) => {
+      const nuevoValor = type === 'checkbox' ? checked : value;
+
+      if (name === 'congelar_membresia') {
+        return {
+          ...actual,
+          congelar_membresia: checked,
+          fecha_congelacion_inicio: checked ? actual.fecha_congelacion_inicio : '',
+          fecha_congelacion_fin: checked ? actual.fecha_congelacion_fin : '',
+        };
+      }
+
+      return { ...actual, [name]: nuevoValor };
+    });
   };
 
   const handleNuevaMembresia = () => {
@@ -694,6 +709,7 @@ export function DeportistasPage() {
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
       fecha_congelacion_fin: limpiarFechaMembresia(m.fecha_congelacion_fin),
       renovacion_automatica: Boolean(m.renovacion_automatica),
+      congelar_membresia: Boolean(m.fecha_congelacion_inicio || m.fecha_congelacion_fin),
     });
   };
 
@@ -704,8 +720,23 @@ export function DeportistasPage() {
         return;
       }
 
+      if (
+        membresiaForm.congelar_membresia
+        && (!membresiaForm.fecha_congelacion_inicio || !membresiaForm.fecha_congelacion_fin)
+      ) {
+        showNotificacion('Completa el período de congelación de la membresía', 'warning');
+        return;
+      }
+
       const payload = {
         ...membresiaForm,
+        congelar_membresia: undefined,
+        fecha_congelacion_inicio: membresiaForm.congelar_membresia
+          ? (membresiaForm.fecha_congelacion_inicio || null)
+          : null,
+        fecha_congelacion_fin: membresiaForm.congelar_membresia
+          ? (membresiaForm.fecha_congelacion_fin || null)
+          : null,
         deportista_id: formData.id,
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
@@ -1207,13 +1238,108 @@ export function DeportistasPage() {
             <MenuItem value="CONGELADA">Congelada</MenuItem>
             <MenuItem value="CANCELADA">Cancelada</MenuItem>
           </TextField>
-          <TextField label="Días de gracia" name="dias_gracia" type="number" value={membresiaForm.dias_gracia || 0} onChange={handleMembresiaChange} size="small" />
-          <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(membresiaForm.renovacion_automatica)} onChange={handleMembresiaChange} />} label="Renovación automática" />
+          <TextField
+            label="Días de gracia"
+            name="dias_gracia"
+            type="number"
+            value={membresiaForm.dias_gracia ?? 0}
+            onChange={handleMembresiaChange}
+            size="small"
+            helperText="Tolerancia adicional después de la fecha de vencimiento."
+            slotProps={{ htmlInput: { min: 0, max: 365 } }}
+          />
+
+          <Box
+            sx={{
+              minHeight: 40,
+              px: 1.25,
+              border: '1px solid #dbe5f0',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#f8fafc',
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  name="renovacion_automatica"
+                  checked={Boolean(membresiaForm.renovacion_automatica)}
+                  onChange={handleMembresiaChange}
+                  size="small"
+                />
+              }
+              label="Renovación automática"
+              sx={{ m: 0 }}
+            />
+          </Box>
+
+          <Box
+            sx={{
+              minHeight: 40,
+              px: 1.25,
+              border: '1px solid #dbe5f0',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              bgcolor: '#f8fafc',
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Switch
+                  name="congelar_membresia"
+                  checked={Boolean(membresiaForm.congelar_membresia)}
+                  onChange={handleMembresiaChange}
+                  size="small"
+                />
+              }
+              label="Congelar membresía"
+              sx={{ m: 0 }}
+            />
+          </Box>
         </Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5, mt: 1.5 }}>
-          <TextField label="Inicio congelación" name="fecha_congelacion_inicio" type="date" value={membresiaForm.fecha_congelacion_inicio || ''} onChange={handleMembresiaChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
-          <TextField label="Fin congelación" name="fecha_congelacion_fin" type="date" value={membresiaForm.fecha_congelacion_fin || ''} onChange={handleMembresiaChange} size="small" slotProps={{ inputLabel: { shrink: true } }} />
-        </Box>
+
+        {membresiaForm.congelar_membresia ? (
+          <Box
+            sx={{
+              mt: 1.5,
+              p: 1.5,
+              border: '1px solid #dbe5f0',
+              borderRadius: 1.5,
+              bgcolor: '#fbfdff',
+            }}
+          >
+            <Typography variant="body2" fontWeight={800} sx={{ mb: 1 }}>
+              Período de congelación
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+              <TextField
+                label="Desde"
+                name="fecha_congelacion_inicio"
+                type="date"
+                value={membresiaForm.fecha_congelacion_inicio || ''}
+                onChange={handleMembresiaChange}
+                required
+                size="small"
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label="Hasta"
+                name="fecha_congelacion_fin"
+                type="date"
+                value={membresiaForm.fecha_congelacion_fin || ''}
+                onChange={handleMembresiaChange}
+                required
+                size="small"
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+              La congelación pausa temporalmente la membresía; no equivale a días de gracia ni a cancelación.
+            </Typography>
+          </Box>
+        ) : null}
         <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
           <BotonGuardar texto={membresiaForm.id ? 'Guardar cambios' : 'Guardar membresía'} onClick={handleGuardarMembresia} />
         </Stack>
