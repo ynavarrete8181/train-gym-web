@@ -58,7 +58,7 @@ const getInitialForm = () => ({
 
 const getInitialAsignacion = () => ({
   entrenador_id: '',
-  horario_bloque_id: '',
+  entrenador_horario_id: '',
   observaciones: '',
 });
 
@@ -573,7 +573,7 @@ export function DeportistasPage() {
 
   const handleAsignacionEntrenadorChange = async (e) => {
     const entrenadorId = e.target.value;
-    setAsignacionForm(prev => ({ ...prev, entrenador_id: entrenadorId, horario_bloque_id: '' }));
+    setAsignacionForm(prev => ({ ...prev, entrenador_id: entrenadorId, entrenador_horario_id: '' }));
     if (!entrenadorId) { setTurnosEntrenador([]); return; }
     try {
       const response = await gimnasioServicio.obtenerTurnosEntrenador(entrenadorId);
@@ -589,7 +589,7 @@ export function DeportistasPage() {
   };
 
   const handleGuardarAsignacion = async () => {
-    if (!asignacionForm.entrenador_id || !asignacionForm.horario_bloque_id) {
+    if (!asignacionForm.entrenador_id || !asignacionForm.entrenador_horario_id) {
       showNotificacion('Selecciona un entrenador y un turno', 'warning');
       return;
     }
@@ -597,7 +597,7 @@ export function DeportistasPage() {
       await gimnasioServicio.crearAsignacionEntrenador({
         entrenador_id: Number(asignacionForm.entrenador_id),
         deportista_id: formData.id,
-        horario_bloque_id: Number(asignacionForm.horario_bloque_id),
+        entrenador_horario_id: Number(asignacionForm.entrenador_horario_id),
         observaciones: asignacionForm.observaciones || null,
       });
       showNotificacion('Cliente asignado correctamente', 'success');
@@ -952,13 +952,13 @@ export function DeportistasPage() {
           <TextField
             select
             label="Horario"
-            name="horario_bloque_id"
-            value={asignacionForm.horario_bloque_id}
+            name="entrenador_horario_id"
+            value={asignacionForm.entrenador_horario_id}
             onChange={handleAsignacionChange}
             size="small"
             required
             disabled={!asignacionForm.entrenador_id}
-            helperText={asignacionForm.entrenador_id && turnosEntrenador.length === 0 ? 'Este entrenador no tiene horarios asignados' : ''}
+            helperText={asignacionForm.entrenador_id && turnosEntrenador.length === 0 ? 'Este entrenador no tiene un horario activo y vigente configurado' : ''}
           >
             {turnosEntrenador.map((turno) => (
               <MenuItem key={turno.id} value={turno.id}>
