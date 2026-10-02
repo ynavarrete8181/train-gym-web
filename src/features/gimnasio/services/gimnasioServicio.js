@@ -124,6 +124,22 @@ export const gimnasioServicio = {
     const { data } = await api.put(`/base/gimnasio/planes/${id}`, payload);
     return data;
   },
+  obtenerModalidadesPlan: async (planId) => {
+    const { data } = await api.get(`/base/gimnasio/planes/${planId}/modalidades`);
+    return data;
+  },
+  crearModalidadPlan: async (planId, payload) => {
+    const { data } = await api.post(`/base/gimnasio/planes/${planId}/modalidades`, payload);
+    return data;
+  },
+  actualizarModalidadPlan: async (planId, modalidadId, payload) => {
+    const { data } = await api.put(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}`, payload);
+    return data;
+  },
+  eliminarModalidadPlan: async (planId, modalidadId) => {
+    const { data } = await api.delete(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}`);
+    return data;
+  },
 
   // --- Deportistas ---
   obtenerDeportistas: async (params = { page: 1 }) => {
