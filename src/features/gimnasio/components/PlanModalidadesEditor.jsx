@@ -244,11 +244,6 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       </Box>
 
       <Box sx={{ mt: 1 }}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Modalidades configuradas</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          {modalidades.length} modalidad(es) preparadas para guardar con este plan.
-        </Typography>
-
         <TablaGestion total={modalidades.length} filtrados={modalidades.length} textoResumen={modalidades.length + ' modalidad(es)'}>
           <TableHead>
             <TableRow>
