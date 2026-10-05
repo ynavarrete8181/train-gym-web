@@ -218,59 +218,6 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </Stack>
       </Box>
 
-      <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
-          <Box sx={{ flex: 1 }}>
-            <FormControlLabel
-              control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
-              label="Precio diferente por sede"
-              sx={{ m: 0, '& .MuiFormControlLabel-label': { fontWeight: 800, fontSize: 13 } }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
-              Si está apagado, todas las sedes usan el precio base de la modalidad.
-            </Typography>
-          </Box>
-
-          {form.precio_por_sede ? (
-            <Button startIcon={<AddOutlinedIcon />} onClick={agregarPrecio} sx={dbanuStyles.addButtonRevive}>
-              Añadir
-            </Button>
-          ) : null}
-        </Stack>
-
-        {form.precio_por_sede && (form.precios_sede || []).length ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
-            {(form.precios_sede || []).map((fila, index) => (
-              <Stack key={index} direction="row" spacing={1} alignItems="center">
-                <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => cambiarPrecio(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
-                  {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                </TextField>
-                <TextField label="Precio ($)" type="number" size="small" value={fila.precio ?? ''} onChange={(e) => cambiarPrecio(index, 'precio', e.target.value)} sx={{ width: 130 }} />
-                <Tooltip title="Quitar">
-                  <IconButton size="small" onClick={() => quitarPrecio(index)} sx={dbanuStyles.actionDelete}>
-                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            ))}
-          </Box>
-        ) : null}
-
-        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
-          {indiceEdicion !== null ? (
-            <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-          ) : null}
-          <Button
-            onClick={agregarOActualizar}
-            variant="outlined"
-            startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
-            sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
-          >
-            {indiceEdicion !== null ? 'Modificar' : 'Añadir modalidad'}
-          </Button>
-        </Stack>
-      </Box>
-
       <Box sx={{ mt: 1.5 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades configuradas</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -327,6 +274,60 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
           </TableBody>
         </TablaGestion>
       </Box>
+
+      <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
+          <Box sx={{ flex: 1 }}>
+            <FormControlLabel
+              control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
+              label="Precio diferente por sede"
+              sx={{ m: 0, '& .MuiFormControlLabel-label': { fontWeight: 800, fontSize: 13 } }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
+              Si está apagado, todas las sedes usan el precio base de la modalidad.
+            </Typography>
+          </Box>
+
+          {form.precio_por_sede ? (
+            <Button startIcon={<AddOutlinedIcon />} onClick={agregarPrecio} sx={dbanuStyles.addButtonRevive}>
+              Añadir
+            </Button>
+          ) : null}
+        </Stack>
+
+        {form.precio_por_sede && (form.precios_sede || []).length ? (
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
+            {(form.precios_sede || []).map((fila, index) => (
+              <Stack key={index} direction="row" spacing={1} alignItems="center">
+                <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => cambiarPrecio(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
+                  {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
+                </TextField>
+                <TextField label="Precio ($)" type="number" size="small" value={fila.precio ?? ''} onChange={(e) => cambiarPrecio(index, 'precio', e.target.value)} sx={{ width: 130 }} />
+                <Tooltip title="Quitar">
+                  <IconButton size="small" onClick={() => quitarPrecio(index)} sx={dbanuStyles.actionDelete}>
+                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            ))}
+          </Box>
+        ) : null}
+
+        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
+          {indiceEdicion !== null ? (
+            <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
+          ) : null}
+          <Button
+            onClick={agregarOActualizar}
+            variant="outlined"
+            startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
+            sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
+          >
+            {indiceEdicion !== null ? 'Modificar' : 'Añadir modalidad'}
+          </Button>
+        </Stack>
+      </Box>
+
     </Box>
   );
 }
