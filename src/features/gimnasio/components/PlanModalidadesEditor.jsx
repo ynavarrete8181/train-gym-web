@@ -2,7 +2,6 @@ import { useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import {
   Box,
   Button,
@@ -234,13 +233,23 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
           <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         </Box>
 
-        <Button
-          onClick={agregarOActualizar}
-          startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
-          sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
-        >
-          {indiceEdicion !== null ? 'Modificar' : 'Añadir'}
-        </Button>
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
+          {indiceEdicion !== null ? (
+            <Chip
+              size="small"
+              label="Editando modalidad"
+              variant="outlined"
+              sx={{ fontWeight: 800 }}
+            />
+          ) : null}
+          <Button
+            onClick={agregarOActualizar}
+            startIcon={<AddOutlinedIcon />}
+            sx={dbanuStyles.addButtonRevive}
+          >
+            Añadir
+          </Button>
+        </Stack>
       </Box>
 
       <Box sx={{ mt: 1 }}>
