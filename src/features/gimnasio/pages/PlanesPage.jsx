@@ -350,22 +350,10 @@ export function PlanesPage() {
 
               {formData.requiere_modalidades ? (
                 <Box sx={formStyles.seccion}>
-                  <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
-                    La duración, frecuencia de uso y tarifas se configuran en cada modalidad.
+                  <Typography sx={formStyles.modalSeccionTitulo}>Configuración por modalidades</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Este plan administra duración, frecuencia de uso y tarifas desde la opción Configurar de la columna Modalidades en el listado de planes.
                   </Typography>
-                  {formData.id ? (
-                    <PlanModalidadesView
-                      embedded
-                      plan={formData}
-                      sedes={sedes}
-                      onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
-                    />
-                  ) : (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .75 }}>
-                      Guarda primero el plan para poder agregar sus modalidades.
-                    </Typography>
-                  )}
                 </Box>
               ) : (
                 <>
