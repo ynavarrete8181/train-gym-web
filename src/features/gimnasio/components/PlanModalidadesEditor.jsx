@@ -207,14 +207,8 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </TextField>
       </Box>
 
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={1}
-        alignItems={{ xs: 'stretch', md: 'center' }}
-        justifyContent="space-between"
-        sx={{ mt: 1 }}
-      >
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
+        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
           <FormControlLabel control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
           <FormControlLabel control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
           <FormControlLabel control={<Switch size="small" name="extension_automatica" checked={Boolean(form.extension_automatica)} onChange={cambiar} disabled={!form.permite_extension} />} label="Extensión automática" />
@@ -222,14 +216,16 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
           <FormControlLabel control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         </Stack>
 
-        <Button
-          onClick={agregarOActualizar}
-          startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
-          sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
-        >
-          {indiceEdicion !== null ? 'Modificar' : 'Añadir'}
-        </Button>
-      </Stack>
+        <Box sx={{ ml: 'auto', flexShrink: 0 }}>
+          <Button
+            onClick={agregarOActualizar}
+            startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
+            sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
+          >
+            {indiceEdicion !== null ? 'Modificar' : 'Añadir'}
+          </Button>
+        </Box>
+      </Box>
 
       <Box sx={{ mt: 1.5 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades configuradas</Typography>
