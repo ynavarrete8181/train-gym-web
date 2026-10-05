@@ -235,7 +235,18 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
           titulo={'Modalidades · ' + (plan?.nombre || 'Plan')}
           descripcion="Configura frecuencia, duración, precio y reglas comerciales de cada modalidad."
           icono={<ListAltOutlinedIcon />}
-          acciones={<BotonVolver onClick={onVolver} />}
+          acciones={
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Button
+                startIcon={<AddOutlinedIcon />}
+                onClick={nueva}
+                sx={dbanuStyles.addButtonRevive}
+              >
+                Añadir
+              </Button>
+              <BotonVolver onClick={onVolver} />
+            </Stack>
+          }
         />
       ) : null}
 
@@ -248,11 +259,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                 Define los derechos de uso y las condiciones comerciales de esta variante del plan.
               </Typography>
             </Box>
-            {form.id ? (
-              <Button size="small" startIcon={<AddOutlinedIcon />} onClick={nueva}>
-                Nueva modalidad
-              </Button>
-            ) : null}
+
           </Stack>
 
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.4fr .72fr .72fr .78fr .68fr .8fr .9fr .9fr' }, gap: 1, alignItems: 'start' }}>
@@ -345,10 +352,10 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
             ) : null}
             <Button
               onClick={guardar}
-              startIcon={<AddOutlinedIcon />}
-              sx={dbanuStyles.addButtonRevive}
+              variant="outlined"
+              sx={dbanuStyles.saveButton}
             >
-              {form.id ? 'Guardar cambios' : 'Añadir'}
+              Guardar
             </Button>
           </Stack>
         </Box>
