@@ -15,6 +15,7 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { PlanesTable } from '../components/PlanesTable.jsx';
 import { PlanModalidadesView } from '../components/PlanModalidadesView.jsx';
+import { PlanModalidadesEditor } from '../components/PlanModalidadesEditor.jsx';
 
 const getInitialForm = () => ({
   id: null,
@@ -35,6 +36,7 @@ const getInitialForm = () => ({
   activo: true,
   precios_sede: [],
   servicio_ids: [],
+  modalidades: [],
 });
 
 export function PlanesPage() {
@@ -122,6 +124,7 @@ export function PlanesPage() {
       ...plan,
       precios_sede: plan.precios_sede || [],
       servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
+      modalidades: plan.modalidades || [],
     });
     setVista('modalidades');
   };
@@ -184,6 +187,11 @@ export function PlanesPage() {
         return;
       }
 
+      if (formData.requiere_modalidades && !(formData.modalidades || []).length) {
+        showNotificacion('Agrega al menos una modalidad antes de guardar este plan.', 'warning');
+        return;
+      }
+
       const preciosSedeValidos = formData.requiere_modalidades
         ? []
         : (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
@@ -222,6 +230,17 @@ export function PlanesPage() {
           ? (formData.servicio_ids || []).map(Number)
           : [],
         precios_sede: preciosSedeValidos.map((fila) => ({ sede_id: Number(fila.sede_id), precio: parseFloat(fila.precio) })),
+        modalidades: formData.requiere_modalidades
+          ? (formData.modalidades || []).map(({ precio_por_sede, ...modalidad }) => ({
+              ...modalidad,
+              id: modalidad.id || undefined,
+              codigo: modalidad.codigo || undefined,
+              precios_sede: (modalidad.precios_sede || []).map((fila) => ({
+                sede_id: Number(fila.sede_id),
+                precio: Number(fila.precio),
+              })),
+            }))
+          : [],
       };
 
       if (formData.id) await gimnasioServicio.actualizarPlan(formData.id, payload);
@@ -348,7 +367,14 @@ export function PlanesPage() {
                 </Box>
               ) : null}
 
-              {formData.requiere_modalidades ? null : (
+              {formData.requiere_modalidades ? (
+                <PlanModalidadesEditor
+                  modalidades={formData.modalidades || []}
+                  sedes={sedes}
+                  onChange={(modalidades) => setFormData((prev) => ({ ...prev, modalidades }))}
+                  onAvisar={showNotificacion}
+                />
+              ) : (
                 <>
                   <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
