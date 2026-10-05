@@ -348,14 +348,7 @@ export function PlanesPage() {
                 </Box>
               ) : null}
 
-              {formData.requiere_modalidades ? (
-                <Box sx={formStyles.seccion}>
-                  <Typography sx={formStyles.modalSeccionTitulo}>Configuración por modalidades</Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Este plan administra duración, frecuencia de uso y tarifas desde la opción Configurar de la columna Modalidades en el listado de planes.
-                  </Typography>
-                </Box>
-              ) : (
+              {formData.requiere_modalidades ? null : (
                 <>
                   <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
