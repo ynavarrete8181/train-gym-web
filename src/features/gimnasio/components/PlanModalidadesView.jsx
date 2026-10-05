@@ -49,6 +49,7 @@ const initialModalidad = () => ({
   extension_automatica: false,
   permite_rollover: false,
   activo: true,
+  precio_por_sede: false,
   precios_sede: [],
 });
 
@@ -103,6 +104,10 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
         siguiente.extension_automatica = false;
       }
 
+      if (name === 'precio_por_sede' && !checked) {
+        siguiente.precios_sede = [];
+      }
+
       return siguiente;
     });
   };
@@ -118,6 +123,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
       ...modalidad,
       dias_por_semana: modalidad.dias_por_semana ?? '',
       usos_por_semana: modalidad.usos_por_semana ?? '',
+      precio_por_sede: Boolean((modalidad.precios_sede || []).length),
       precios_sede: modalidad.precios_sede || [],
     });
     setEditando(true);
@@ -153,14 +159,19 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
         return;
       }
 
-      const precios = (form.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
-      if (precios.length !== (form.precios_sede || []).length) {
+      const precios = form.precio_por_sede
+        ? (form.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '')
+        : [];
+
+      if (form.precio_por_sede && precios.length !== (form.precios_sede || []).length) {
         avisar('Completa o elimina las filas incompletas de precios por sede.', 'warning');
         return;
       }
 
+      const { precio_por_sede, ...datosModalidad } = form;
+
       const payload = {
-        ...form,
+        ...datosModalidad,
         codigo: form.id ? form.codigo : undefined,
         dias_por_semana: form.uso_ilimitado ? null : Number(form.dias_por_semana),
         usos_por_semana: form.uso_ilimitado ? null : Number(form.usos_por_semana),
@@ -287,13 +298,29 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
           <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
             <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
               <Box>
-                <Typography variant="body2" fontWeight={800}>Precios por sede</Typography>
-                <Typography variant="caption" color="text.secondary">Opcional. Si no hay precio específico, se usa el precio base.</Typography>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      size="small"
+                      name="precio_por_sede"
+                      checked={Boolean(form.precio_por_sede)}
+                      onChange={cambiar}
+                    />
+                  }
+                  label="Precio diferente por sede"
+                  sx={{ m: 0, '& .MuiFormControlLabel-label': { fontWeight: 800, fontSize: 13 } }}
+                />
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
+                  Si está apagado, todas las sedes usan el precio base de la modalidad.
+                </Typography>
               </Box>
-              <Button size="small" startIcon={<AddOutlinedIcon />} onClick={agregarPrecio}>Agregar precio</Button>
+
+              {form.precio_por_sede ? (
+                <Button size="small" startIcon={<AddOutlinedIcon />} onClick={agregarPrecio}>Agregar precio</Button>
+              ) : null}
             </Stack>
 
-            {(form.precios_sede || []).length ? (
+            {form.precio_por_sede && (form.precios_sede || []).length ? (
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
                 {(form.precios_sede || []).map((fila, index) => (
                   <Stack key={index} direction="row" spacing={1} alignItems="center">
