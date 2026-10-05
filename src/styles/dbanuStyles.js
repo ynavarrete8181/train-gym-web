@@ -112,9 +112,9 @@ export const dbanuStyles = {
     '&:hover': { bgcolor: uiTokens.colores.primarioOscuro },
   },
   addButtonRevive: {
+    height: 38,
     minHeight: 38,
-    minWidth: 118,
-    px: 1.8,
+    px: 1.45,
     bgcolor: uiTokens.colores.acento,
     color: '#111827',
     border: `1px solid ${uiTokens.colores.acento}`,
@@ -123,8 +123,8 @@ export const dbanuStyles = {
     fontWeight: 900,
     boxShadow: 'none',
     '& .MuiButton-startIcon': {
-      width: 24,
-      height: 24,
+      width: 22,
+      height: 22,
       mr: 1,
       ml: 0,
       display: 'grid',
@@ -200,8 +200,8 @@ export const dbanuStyles = {
     },
   },
   saveButton: {
+    height: 38,
     minHeight: 38,
-    minWidth: 118,
     px: 1.8,
     borderRadius: 0.5,
     textTransform: 'none',
