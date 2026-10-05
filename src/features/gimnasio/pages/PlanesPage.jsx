@@ -48,7 +48,6 @@ export function PlanesPage() {
   const [cargando, setCargando] = useState(true);
   const [sedes, setSedes] = useState([]);
   const [serviciosPlan, setServiciosPlan] = useState([]);
-  const [mostrarModalidades, setMostrarModalidades] = useState(false);
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -90,7 +89,6 @@ export function PlanesPage() {
 
   const handleNuevo = () => {
     setFormData(getInitialForm());
-    setMostrarModalidades(false);
     setVista('formulario');
   };
 
@@ -335,29 +333,18 @@ export function PlanesPage() {
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
                     La duración, frecuencia de uso y tarifas se configuran en cada modalidad.
                   </Typography>
-                  <Button
-                    variant="outlined"
-                    startIcon={<ListAltOutlinedIcon />}
-                    disabled={!formData.id}
-                    onClick={() => setMostrarModalidades((actual) => !actual)}
-                    sx={dbanuStyles.secondaryButtonRevive}
-                  >
-                    {mostrarModalidades ? 'Ocultar modalidades' : 'Gestionar modalidades'}
-                  </Button>
-                  {!formData.id ? (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .75 }}>
-                      Guarda primero el plan para poder agregar sus modalidades.
-                    </Typography>
-                  ) : null}
-
-                  {formData.id && mostrarModalidades ? (
+                  {formData.id ? (
                     <PlanModalidadesView
                       embedded
                       plan={formData}
                       sedes={sedes}
                       onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
                     />
-                  ) : null}
+                  ) : (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .75 }}>
+                      Guarda primero el plan para poder agregar sus modalidades.
+                    </Typography>
+                  )}
                 </Box>
               ) : (
                 <>
