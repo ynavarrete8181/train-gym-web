@@ -302,15 +302,30 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                 </Typography>
               </Box>
 
-              {form.precio_por_sede ? (
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                {form.precio_por_sede ? (
+                  <Button
+                    startIcon={<AddOutlinedIcon />}
+                    onClick={agregarPrecio}
+                    sx={dbanuStyles.addButtonRevive}
+                  >
+                    Añadir
+                  </Button>
+                ) : null}
+
+                {form.id ? (
+                  <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
+                ) : null}
+
                 <Button
-                  startIcon={<AddOutlinedIcon />}
-                  onClick={agregarPrecio}
-                  sx={dbanuStyles.addButtonRevive}
+                  onClick={guardar}
+                  variant="outlined"
+                  startIcon={<SaveOutlinedIcon />}
+                  sx={dbanuStyles.saveButton}
                 >
-                  Añadir
+                  {form.id ? 'Modificar' : 'Guardar'}
                 </Button>
-              ) : null}
+              </Stack>
             </Stack>
 
             {form.precio_por_sede && (form.precios_sede || []).length ? (
@@ -330,20 +345,6 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                 ))}
               </Box>
             ) : null}
-
-            <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25, width: '100%' }}>
-              {form.id ? (
-                <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-              ) : null}
-              <Button
-                onClick={guardar}
-                variant="outlined"
-                startIcon={<SaveOutlinedIcon />}
-                sx={dbanuStyles.saveButton}
-              >
-                {form.id ? 'Modificar' : 'Guardar'}
-              </Button>
-            </Stack>
           </Box>
         </Box>
 
