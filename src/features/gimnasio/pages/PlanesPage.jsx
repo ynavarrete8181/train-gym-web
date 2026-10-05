@@ -116,6 +116,16 @@ export function PlanesPage() {
     setFormData({ ...formData, precios_sede: nuevos });
   };
 
+  const handleModalidadesPlan = (plan) => {
+    setFormData({
+      ...getInitialForm(),
+      ...plan,
+      precios_sede: plan.precios_sede || [],
+      servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
+    });
+    setVista('modalidades');
+  };
+
   const handleEditar = (plan) => {
     setFormData({
       ...getInitialForm(),
@@ -226,6 +236,17 @@ export function PlanesPage() {
       showNotificacion(error.response?.data?.mensaje || primerError || error.response?.data?.message || 'Error al guardar el plan', 'error');
     }
   };
+
+  if (vista === 'modalidades') {
+    return (
+      <PlanModalidadesView
+        plan={formData}
+        sedes={sedes}
+        onVolver={() => setVista('lista')}
+        onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
+      />
+    );
+  }
 
   if (vista === 'formulario') {
     return (
@@ -394,7 +415,7 @@ export function PlanesPage() {
       <PageHeader titulo="Planes de membresía" descripcion="Administra los productos comerciales, vigencias y formas de cobro de Revive." icono={<ListAltOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || planes.length} busqueda={filtros.busqueda} onBusqueda={(v) => buscar({ ...filtros, busqueda: v })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onEliminar={handleEliminar} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
+        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onModalidades={handleModalidadesPlan} onEliminar={handleEliminar} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
