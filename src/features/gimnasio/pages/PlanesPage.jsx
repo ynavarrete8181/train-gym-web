@@ -14,6 +14,7 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { PlanesTable } from '../components/PlanesTable.jsx';
+import { PlanModalidadesView } from '../components/PlanModalidadesView.jsx';
 
 const getInitialForm = () => ({
   id: null,
@@ -223,6 +224,17 @@ export function PlanesPage() {
     }
   };
 
+  if (vista === 'modalidades') {
+    return (
+      <PlanModalidadesView
+        plan={formData}
+        sedes={sedes}
+        onVolver={() => setVista('formulario')}
+        onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
+      />
+    );
+  }
+
   if (vista === 'formulario') {
     return (
       <Box className="page-wrapper">
@@ -333,12 +345,7 @@ export function PlanesPage() {
                     variant="outlined"
                     startIcon={<ListAltOutlinedIcon />}
                     disabled={!formData.id}
-                    onClick={() => showNotificacion(
-                      (formData.modalidades || []).length
-                        ? `Este plan tiene ${formData.modalidades.length} modalidad(es) configurada(s). La gestión detallada se habilitará en este mismo apartado.`
-                        : 'Este plan todavía no tiene modalidades configuradas.',
-                      'info',
-                    )}
+                    onClick={() => setVista('modalidades')}
                     sx={dbanuStyles.secondaryButtonRevive}
                   >
                     Gestionar modalidades
