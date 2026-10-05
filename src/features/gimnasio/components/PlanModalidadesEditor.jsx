@@ -207,8 +207,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </TextField>
       </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.6fr auto' }, gap: 1, mt: 1 }}>
-        <TextField label="Descripción" name="descripcion" value={form.descripcion || ''} onChange={cambiar} size="small" />
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={1}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
+        sx={{ mt: 1 }}
+      >
         <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
           <FormControlLabel control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
           <FormControlLabel control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
@@ -216,7 +221,15 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
           <FormControlLabel control={<Switch size="small" name="permite_rollover" checked={Boolean(form.permite_rollover)} onChange={cambiar} />} label="Rollover" />
           <FormControlLabel control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         </Stack>
-      </Box>
+
+        <Button
+          onClick={agregarOActualizar}
+          startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
+          sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
+        >
+          {indiceEdicion !== null ? 'Modificar' : 'Añadir'}
+        </Button>
+      </Stack>
 
       <Box sx={{ mt: 1.5 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades configuradas</Typography>
@@ -313,19 +326,11 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
           </Box>
         ) : null}
 
-        <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
-          {indiceEdicion !== null ? (
+        {indiceEdicion !== null ? (
+          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
             <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-          ) : null}
-          <Button
-            onClick={agregarOActualizar}
-            variant="outlined"
-            startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
-            sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
-          >
-            {indiceEdicion !== null ? 'Modificar' : 'Añadir modalidad'}
-          </Button>
-        </Stack>
+          </Stack>
+        ) : null}
       </Box>
 
     </Box>
