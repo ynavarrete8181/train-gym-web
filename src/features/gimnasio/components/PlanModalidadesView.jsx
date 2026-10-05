@@ -3,6 +3,7 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import {
   Box,
   Button,
@@ -235,33 +236,12 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
           titulo={'Modalidades · ' + (plan?.nombre || 'Plan')}
           descripcion="Configura frecuencia, duración, precio y reglas comerciales de cada modalidad."
           icono={<ListAltOutlinedIcon />}
-          acciones={
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Button
-                startIcon={<AddOutlinedIcon />}
-                onClick={nueva}
-                sx={dbanuStyles.addButtonRevive}
-              >
-                Añadir
-              </Button>
-              <BotonVolver onClick={onVolver} />
-            </Stack>
-          }
+          acciones={<BotonVolver onClick={onVolver} />}
         />
       ) : null}
 
       <Paper elevation={0} sx={{ mt: embedded ? 1.25 : 2, p: { xs: 1.25, md: 1.5 }, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: embedded ? '#fbfdff' : '#fff' }}>
         <Box sx={formStyles.seccion}>
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1} sx={{ mb: 1.2 }}>
-            <Box>
-              <Typography sx={formStyles.modalSeccionTitulo}>{form.id ? 'Editar modalidad' : 'Nueva modalidad'}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                Define los derechos de uso y las condiciones comerciales de esta variante del plan.
-              </Typography>
-            </Box>
-
-          </Stack>
-
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.4fr .72fr .72fr .78fr .68fr .8fr .9fr .9fr' }, gap: 1, alignItems: 'start' }}>
             <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
             <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
@@ -353,9 +333,10 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
             <Button
               onClick={guardar}
               variant="outlined"
+              startIcon={<SaveOutlinedIcon />}
               sx={dbanuStyles.saveButton}
             >
-              Guardar
+              {form.id ? 'Modificar' : 'Guardar'}
             </Button>
           </Stack>
         </Box>
