@@ -207,27 +207,43 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </TextField>
       </Box>
 
-      <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', width: '100%', gap: 1 }}>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center" sx={{ flex: 1, minWidth: 0 }}>
-          <FormControlLabel control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
-          <FormControlLabel control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
-          <FormControlLabel control={<Switch size="small" name="extension_automatica" checked={Boolean(form.extension_automatica)} onChange={cambiar} disabled={!form.permite_extension} />} label="Extensión automática" />
-          <FormControlLabel control={<Switch size="small" name="permite_rollover" checked={Boolean(form.permite_rollover)} onChange={cambiar} />} label="Rollover" />
-          <FormControlLabel control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
-        </Stack>
-
-        <Box sx={{ ml: 'auto', flexShrink: 0 }}>
-          <Button
-            onClick={agregarOActualizar}
-            startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
-            sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
-          >
-            {indiceEdicion !== null ? 'Modificar' : 'Añadir'}
-          </Button>
+      <Box
+        sx={{
+          mt: .75,
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' },
+          alignItems: 'center',
+          width: '100%',
+          columnGap: 1.5,
+          rowGap: 1,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, minmax(0, 1fr))' },
+            alignItems: 'center',
+            gap: .5,
+            minWidth: 0,
+          }}
+        >
+          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
+          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
+          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="extension_automatica" checked={Boolean(form.extension_automatica)} onChange={cambiar} disabled={!form.permite_extension} />} label="Extensión automática" />
+          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="permite_rollover" checked={Boolean(form.permite_rollover)} onChange={cambiar} />} label="Rollover" />
+          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         </Box>
+
+        <Button
+          onClick={agregarOActualizar}
+          startIcon={indiceEdicion !== null ? <SaveOutlinedIcon /> : <AddOutlinedIcon />}
+          sx={indiceEdicion !== null ? dbanuStyles.saveButton : dbanuStyles.addButtonRevive}
+        >
+          {indiceEdicion !== null ? 'Modificar' : 'Añadir'}
+        </Button>
       </Box>
 
-      <Box sx={{ mt: 1.5 }}>
+      <Box sx={{ mt: 1 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades configuradas</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {modalidades.length} modalidad(es) preparadas para guardar con este plan.
