@@ -1,5 +1,6 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
 import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -7,7 +8,7 @@ import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.js
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
-export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onEliminar, onCambiarEstado, onPageChange, onRowsPerPageChange }) {
+export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onModalidades, onEliminar, onCambiarEstado, onPageChange, onRowsPerPageChange }) {
   const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
   
   return (
@@ -41,21 +42,36 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
               <Typography variant="caption" color="text.secondary">{plan.descripcion}</Typography>
             </TableCell>
             <TableCell>
-              {plan.duracion} {String(plan.tipo_duracion || '').toLowerCase()}
+              {plan.requiere_modalidades ? (
+                <Typography variant="body2" color="text.secondary" fontWeight={700}>Por modalidad</Typography>
+              ) : (
+                <>{plan.duracion} {String(plan.tipo_duracion || '').toLowerCase()}</>
+              )}
             </TableCell>
             <TableCell>
-              <Typography variant="body2" color="primary.main" fontWeight="bold">
-                ${Number(plan.precio_base).toFixed(2)}
-              </Typography>
-              {plan.tarifa_inscripcion > 0 && (
-                <Typography variant="caption" display="block" color="text.secondary">
-                  + ${Number(plan.tarifa_inscripcion).toFixed(2)} inscrip.
-                </Typography>
-              )}
-              {(plan.precios_sede || []).length > 0 && (
-                <Typography variant="caption" display="block" color="text.secondary">
-                  {plan.precios_sede.length} precio(s) por sede
-                </Typography>
+              {plan.requiere_modalidades ? (
+                <>
+                  <Typography variant="body2" color="primary.main" fontWeight="bold">Por modalidad</Typography>
+                  <Typography variant="caption" display="block" color="text.secondary">
+                    {(plan.modalidades || []).length} modalidad(es)
+                  </Typography>
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" color="primary.main" fontWeight="bold">
+                    ${Number(plan.precio_base).toFixed(2)}
+                  </Typography>
+                  {plan.tarifa_inscripcion > 0 && (
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      + ${Number(plan.tarifa_inscripcion).toFixed(2)} inscrip.
+                    </Typography>
+                  )}
+                  {(plan.precios_sede || []).length > 0 && (
+                    <Typography variant="caption" display="block" color="text.secondary">
+                      {plan.precios_sede.length} precio(s) por sede
+                    </Typography>
+                  )}
+                </>
               )}
             </TableCell>
             <TableCell>
@@ -74,6 +90,13 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                {plan.requiere_modalidades && onModalidades ? (
+                  <Tooltip title="Gestionar modalidades">
+                    <IconButton sx={dbanuStyles.actionEdit} onClick={() => onModalidades(plan)}>
+                      <TuneOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                ) : null}
                 <Tooltip title="Editar plan">
                   <IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(plan)}>
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
