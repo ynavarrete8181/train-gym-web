@@ -333,7 +333,12 @@ export function PlanesPage() {
                     variant="outlined"
                     startIcon={<ListAltOutlinedIcon />}
                     disabled={!formData.id}
-                    onClick={() => setVista('modalidades')}
+                    onClick={() => showNotificacion(
+                      (formData.modalidades || []).length
+                        ? `Este plan tiene ${formData.modalidades.length} modalidad(es) configurada(s). La gestión detallada se habilitará en este mismo apartado.`
+                        : 'Este plan todavía no tiene modalidades configuradas.',
+                      'info',
+                    )}
                     sx={dbanuStyles.secondaryButtonRevive}
                   >
                     Gestionar modalidades
@@ -360,8 +365,6 @@ export function PlanesPage() {
                   )}
                 </Box>
               </Box>
-
-                  </Box>
 
               <Box sx={formStyles.seccion}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
