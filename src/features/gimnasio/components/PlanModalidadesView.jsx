@@ -284,7 +284,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
 
           <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
             <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
-              <Box>
+              <Box sx={{ flex: 1 }}>
                 <FormControlLabel
                   control={
                     <Switch
@@ -302,9 +302,22 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                 </Typography>
               </Box>
 
-              {form.precio_por_sede ? (
-                <Button size="small" startIcon={<AddOutlinedIcon />} onClick={agregarPrecio}>Agregar precio</Button>
-              ) : null}
+              <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                {form.precio_por_sede ? (
+                  <Button size="small" startIcon={<AddOutlinedIcon />} onClick={agregarPrecio}>Agregar precio</Button>
+                ) : null}
+                {form.id ? (
+                  <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
+                ) : null}
+                <Button
+                  onClick={guardar}
+                  variant="outlined"
+                  startIcon={<SaveOutlinedIcon />}
+                  sx={dbanuStyles.saveButton}
+                >
+                  {form.id ? 'Modificar' : 'Guardar'}
+                </Button>
+              </Stack>
             </Stack>
 
             {form.precio_por_sede && (form.precios_sede || []).length ? (
@@ -325,20 +338,6 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
               </Box>
             ) : null}
           </Box>
-
-          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25, width: '100%' }}>
-            {form.id ? (
-              <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-            ) : null}
-            <Button
-              onClick={guardar}
-              variant="outlined"
-              startIcon={<SaveOutlinedIcon />}
-              sx={dbanuStyles.saveButton}
-            >
-              {form.id ? 'Modificar' : 'Guardar'}
-            </Button>
-          </Stack>
         </Box>
 
         <Box sx={{ mt: 1.5 }}>
