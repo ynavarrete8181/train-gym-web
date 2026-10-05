@@ -343,8 +343,12 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
             {form.id ? (
               <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
             ) : null}
-            <Button onClick={guardar} sx={dbanuStyles.addButtonRevive}>
-              {form.id ? 'Actualizar modalidad' : 'Agregar modalidad'}
+            <Button
+              onClick={guardar}
+              startIcon={<AddOutlinedIcon />}
+              sx={dbanuStyles.addButtonRevive}
+            >
+              {form.id ? 'Guardar cambios' : 'Añadir'}
             </Button>
           </Stack>
         </Box>
