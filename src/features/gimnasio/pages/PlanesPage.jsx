@@ -135,6 +135,7 @@ export function PlanesPage() {
       ...plan,
       precios_sede: plan.precios_sede || [],
       servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
+      modalidades: plan.modalidades || [],
     });
     setVista('formulario');
   };
@@ -195,7 +196,7 @@ export function PlanesPage() {
       const preciosSedeValidos = formData.requiere_modalidades
         ? []
         : (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
-      if (preciosSedeValidos.length !== (formData.precios_sede || []).length) {
+      if (!formData.requiere_modalidades && preciosSedeValidos.length !== (formData.precios_sede || []).length) {
         showNotificacion('Completa la sede y el precio de cada fila, o quítala.', 'warning');
         return;
       }
