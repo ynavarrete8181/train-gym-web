@@ -339,7 +339,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
             ) : null}
           </Box>
 
-          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
+          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25, width: '100%' }}>
             {form.id ? (
               <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
             ) : null}
