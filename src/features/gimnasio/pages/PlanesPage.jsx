@@ -48,6 +48,7 @@ export function PlanesPage() {
   const [cargando, setCargando] = useState(true);
   const [sedes, setSedes] = useState([]);
   const [serviciosPlan, setServiciosPlan] = useState([]);
+  const [mostrarModalidades, setMostrarModalidades] = useState(false);
 
   const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -87,7 +88,11 @@ export function PlanesPage() {
     cargarPlanes(nuevos);
   };
 
-  const handleNuevo = () => { setFormData(getInitialForm()); setVista('formulario'); };
+  const handleNuevo = () => {
+    setFormData(getInitialForm());
+    setMostrarModalidades(false);
+    setVista('formulario');
+  };
 
   const handleEliminar = async (plan) => {
     const confirmado = await confirmarAccion({ titulo: 'Eliminar plan', texto: `¿Estás seguro que deseas eliminar el plan "${plan.nombre}"?`, textoConfirmar: 'Sí, eliminar', icono: 'warning' });
@@ -224,17 +229,6 @@ export function PlanesPage() {
     }
   };
 
-  if (vista === 'modalidades') {
-    return (
-      <PlanModalidadesView
-        plan={formData}
-        sedes={sedes}
-        onVolver={() => setVista('formulario')}
-        onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
-      />
-    );
-  }
-
   if (vista === 'formulario') {
     return (
       <Box className="page-wrapper">
@@ -345,15 +339,24 @@ export function PlanesPage() {
                     variant="outlined"
                     startIcon={<ListAltOutlinedIcon />}
                     disabled={!formData.id}
-                    onClick={() => setVista('modalidades')}
+                    onClick={() => setMostrarModalidades((actual) => !actual)}
                     sx={dbanuStyles.secondaryButtonRevive}
                   >
-                    Gestionar modalidades
+                    {mostrarModalidades ? 'Ocultar modalidades' : 'Gestionar modalidades'}
                   </Button>
                   {!formData.id ? (
                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .75 }}>
                       Guarda primero el plan para poder agregar sus modalidades.
                     </Typography>
+                  ) : null}
+
+                  {formData.id && mostrarModalidades ? (
+                    <PlanModalidadesView
+                      embedded
+                      plan={formData}
+                      sedes={sedes}
+                      onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
+                    />
                   ) : null}
                 </Box>
               ) : (
