@@ -30,6 +30,7 @@ const getInitialForm = () => ({
   requiere_pago: true,
   requiere_entrenador: false,
   renovable: true,
+  requiere_modalidades: false,
   activo: true,
   precios_sede: [],
   servicio_ids: [],
@@ -135,6 +136,9 @@ export function PlanesPage() {
       if (name === 'requiere_entrenador' && !checked) {
         siguiente.servicio_ids = [];
       }
+      if (name === 'requiere_modalidades' && checked) {
+        siguiente.precios_sede = [];
+      }
       return siguiente;
     });
   };
@@ -149,14 +153,16 @@ export function PlanesPage() {
       const precioBase = Number(formData.precio_base);
       const duracion = Number(formData.duracion);
 
-      if (!Number.isFinite(precioBase) || precioBase < 0) {
-        showNotificacion('El precio base debe ser un valor válido mayor o igual a 0.', 'warning');
-        return;
-      }
+      if (!formData.requiere_modalidades) {
+        if (!Number.isFinite(precioBase) || precioBase < 0) {
+          showNotificacion('El precio base debe ser un valor válido mayor o igual a 0.', 'warning');
+          return;
+        }
 
-      if (!Number.isInteger(duracion) || duracion < 1) {
-        showNotificacion('La duración debe ser un número entero mayor o igual a 1.', 'warning');
-        return;
+        if (!Number.isInteger(duracion) || duracion < 1) {
+          showNotificacion('La duración debe ser un número entero mayor o igual a 1.', 'warning');
+          return;
+        }
       }
 
       if (formData.requiere_entrenador && !(formData.servicio_ids || []).length) {
@@ -164,7 +170,9 @@ export function PlanesPage() {
         return;
       }
 
-      const preciosSedeValidos = (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
+      const preciosSedeValidos = formData.requiere_modalidades
+        ? []
+        : (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
       if (preciosSedeValidos.length !== (formData.precios_sede || []).length) {
         showNotificacion('Completa la sede y el precio de cada fila, o quítala.', 'warning');
         return;
@@ -195,6 +203,7 @@ export function PlanesPage() {
         requiere_pago: Boolean(formData.requiere_pago),
         requiere_entrenador: Boolean(formData.requiere_entrenador),
         renovable: Boolean(formData.renovable),
+        requiere_modalidades: Boolean(formData.requiere_modalidades),
         servicio_ids: formData.requiere_entrenador
           ? (formData.servicio_ids || []).map(Number)
           : [],
@@ -255,6 +264,17 @@ export function PlanesPage() {
                   <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
                   <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="requiere_modalidades"
+                        checked={Boolean(formData.requiere_modalidades)}
+                        onChange={handleChange}
+                        disabled={formData.tipo_producto === 'PASE_DIARIO'}
+                      />
+                    }
+                    label="Requiere modalidades"
+                  />
                 </Stack>
               </Box>
 
@@ -296,14 +316,37 @@ export function PlanesPage() {
                         size="small"
                         label="Servicios incluidos"
                         placeholder="Buscar y seleccionar servicios"
-                        helperText="Selecciona uno o varios servicios incluidos en esta membresía."
+                        helperText="Selecciona uno o varios servicios incluidos en este plan."
                       />
                     )}
                   />
                 </Box>
               ) : null}
 
-              <Box sx={formStyles.seccion}>
+              {formData.requiere_modalidades ? (
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
+                    La duración, frecuencia de uso y tarifas se configuran en cada modalidad.
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    startIcon={<ListAltOutlinedIcon />}
+                    disabled={!formData.id}
+                    onClick={() => setVista('modalidades')}
+                    sx={dbanuStyles.secondaryButtonRevive}
+                  >
+                    Gestionar modalidades
+                  </Button>
+                  {!formData.id ? (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .75 }}>
+                      Guarda primero el plan para poder agregar sus modalidades.
+                    </Typography>
+                  ) : null}
+                </Box>
+              ) : (
+                <>
+                  <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>La fecha fin del contrato se calcula automáticamente desde esta duración.</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
@@ -317,6 +360,8 @@ export function PlanesPage() {
                   )}
                 </Box>
               </Box>
+
+                  </Box>
 
               <Box sx={formStyles.seccion}>
                 <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
@@ -333,6 +378,8 @@ export function PlanesPage() {
                   ))}</Stack>
                 )}
               </Box>
+                </>
+              )}
             </Stack>
           </Box>
           <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
