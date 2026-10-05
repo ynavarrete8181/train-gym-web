@@ -1,6 +1,7 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import { Button, IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.jsx';
@@ -54,24 +55,18 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
               />
             </TableCell>
             <TableCell>
-              {plan.requiere_modalidades ? (
-                <Stack direction="row" spacing={0.8} alignItems="center">
-                  <Typography variant="body2" fontWeight={800}>
-                    {(plan.modalidades || []).length} configurada(s)
-                  </Typography>
-                  {onModalidades ? (
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      onClick={() => onModalidades(plan)}
-                      sx={{ minWidth: 'auto', px: 1.1, py: .35, fontSize: 12, fontWeight: 800 }}
-                    >
-                      Configurar
-                    </Button>
-                  ) : null}
-                </Stack>
+              {(plan.modalidades || []).length > 0 && onModalidades ? (
+                <Tooltip title="Ver modalidades">
+                  <IconButton
+                    size="small"
+                    onClick={() => onModalidades(plan)}
+                    sx={dbanuStyles.actionView}
+                  >
+                    <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                </Tooltip>
               ) : (
-                <Typography variant="body2" color="text.secondary">No aplica</Typography>
+                <Typography variant="body2" color="text.secondary">—</Typography>
               )}
             </TableCell>
             <TableCell align="right">
