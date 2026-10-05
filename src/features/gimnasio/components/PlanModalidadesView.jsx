@@ -47,7 +47,7 @@ const initialModalidad = () => ({
   precios_sede: [],
 });
 
-export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado }) {
+export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado, embedded = false }) {
   const [modalidades, setModalidades] = useState([]);
   const [form, setForm] = useState(initialModalidad());
   const [editando, setEditando] = useState(false);
@@ -213,15 +213,17 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado 
   };
 
   return (
-    <Box className="page-wrapper">
-      <PageHeader
-        titulo={'Modalidades · ' + (plan?.nombre || 'Plan')}
-        descripcion="Configura frecuencia, duración, precio y reglas comerciales de cada modalidad."
-        icono={<ListAltOutlinedIcon />}
-        acciones={<BotonVolver onClick={onVolver} />}
-      />
+    <Box className={embedded ? undefined : 'page-wrapper'}>
+      {!embedded ? (
+        <PageHeader
+          titulo={'Modalidades · ' + (plan?.nombre || 'Plan')}
+          descripcion="Configura frecuencia, duración, precio y reglas comerciales de cada modalidad."
+          icono={<ListAltOutlinedIcon />}
+          acciones={<BotonVolver onClick={onVolver} />}
+        />
+      ) : null}
 
-      <Paper elevation={0} sx={{ mt: 2, p: { xs: 1.5, md: 2 }, border: '1px solid #e2e8f0', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ mt: embedded ? 1.25 : 2, p: { xs: 1.5, md: 2 }, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: embedded ? '#fbfdff' : '#fff' }}>
         <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1.2} sx={{ mb: 1.5 }}>
           <Box>
             <Typography variant="subtitle1" fontWeight={900}>Modalidades configuradas</Typography>
