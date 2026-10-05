@@ -113,7 +113,8 @@ export const dbanuStyles = {
   },
   addButtonRevive: {
     minHeight: 38,
-    px: 1.45,
+    minWidth: 118,
+    px: 1.8,
     bgcolor: uiTokens.colores.acento,
     color: '#111827',
     border: `1px solid ${uiTokens.colores.acento}`,
