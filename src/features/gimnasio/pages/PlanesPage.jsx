@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
@@ -14,7 +15,6 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { PlanesTable } from '../components/PlanesTable.jsx';
-import { PlanModalidadesView } from '../components/PlanModalidadesView.jsx';
 import { PlanModalidadesEditor } from '../components/PlanModalidadesEditor.jsx';
 
 const getInitialForm = () => ({
@@ -119,16 +119,75 @@ export function PlanesPage() {
     setFormData({ ...formData, precios_sede: nuevos });
   };
 
+  const escaparHtml = (valor = '') => String(valor)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+
   const handleModalidadesPlan = (plan) => {
-    setFormData({
-      ...getInitialForm(),
-      ...plan,
-      precio_por_sede: Boolean((plan.precios_sede || []).length),
-      precios_sede: plan.precios_sede || [],
-      servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
-      modalidades: plan.modalidades || [],
+    const modalidades = plan.modalidades || [];
+    if (!modalidades.length) return;
+
+    const filas = modalidades.map((modalidad) => {
+      const frecuencia = modalidad.uso_ilimitado
+        ? 'Ilimitado'
+        : `${modalidad.usos_por_semana || modalidad.dias_por_semana || 0} uso(s)/sem.`;
+      const duracion = `${modalidad.duracion || 0} ${String(modalidad.tipo_duracion || '').toLowerCase()}`;
+      const cobro = modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS'
+        ? 'Prorrateado'
+        : 'Fijo';
+      const sedesDetalle = (modalidad.precios_sede || []).length
+        ? `<div style="margin-top:6px;font-size:11px;color:#64748b;">${(modalidad.precios_sede || []).map((precio) =>
+            `${escaparHtml(precio.sede_nombre || 'Sede')} · ${Number(precio.precio || 0).toFixed(2)}`
+          ).join('<br/>')}</div>`
+        : '';
+
+      return `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:left;">
+            <div style="font-weight:800;color:#0f172a;">${escaparHtml(modalidad.nombre)}</div>
+            ${sedesDetalle}
+          </td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${escaparHtml(frecuencia)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${escaparHtml(duracion)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${Number(modalidad.precio_base || 0).toFixed(2)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${cobro}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:800;">${modalidad.activo ? 'Activa' : 'Inactiva'}</span>
+          </td>
+        </tr>`;
+    }).join('');
+
+    Swal.fire({
+      title: `Modalidades · ${plan.nombre}`,
+      html: `
+        <div style="max-height:420px;overflow:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#f8fafc;color:#475569;">
+                <th style="padding:10px 12px;text-align:left;">Modalidad</th>
+                <th style="padding:10px 12px;">Frecuencia</th>
+                <th style="padding:10px 12px;">Duración</th>
+                <th style="padding:10px 12px;">Precio</th>
+                <th style="padding:10px 12px;">Cobro</th>
+                <th style="padding:10px 12px;">Estado</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>`,
+      width: 900,
+      confirmButtonText: 'Cerrar',
+      buttonsStyling: false,
+      customClass: {
+        popup: 'base-swal-popup',
+        title: 'base-swal-title',
+        htmlContainer: 'base-swal-text',
+        confirmButton: 'base-swal-confirm',
+      },
     });
-    setVista('modalidades');
   };
 
   const handleEditar = (plan) => {
@@ -265,17 +324,6 @@ export function PlanesPage() {
       showNotificacion(error.response?.data?.mensaje || primerError || error.response?.data?.message || 'Error al guardar el plan', 'error');
     }
   };
-
-  if (vista === 'modalidades') {
-    return (
-      <PlanModalidadesView
-        plan={formData}
-        sedes={sedes}
-        onVolver={() => setVista('lista')}
-        onActualizado={(datos) => setFormData((prev) => ({ ...prev, modalidades: datos }))}
-      />
-    );
-  }
 
   if (vista === 'formulario') {
     return (
