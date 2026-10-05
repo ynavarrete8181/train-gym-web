@@ -34,6 +34,7 @@ const getInitialForm = () => ({
   renovable: true,
   requiere_modalidades: false,
   activo: true,
+  precio_por_sede: false,
   precios_sede: [],
   servicio_ids: [],
   modalidades: [],
@@ -122,6 +123,7 @@ export function PlanesPage() {
     setFormData({
       ...getInitialForm(),
       ...plan,
+      precio_por_sede: Boolean((plan.precios_sede || []).length),
       precios_sede: plan.precios_sede || [],
       servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
       modalidades: plan.modalidades || [],
@@ -133,6 +135,7 @@ export function PlanesPage() {
     setFormData({
       ...getInitialForm(),
       ...plan,
+      precio_por_sede: Boolean((plan.precios_sede || []).length),
       precios_sede: plan.precios_sede || [],
       servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
       modalidades: plan.modalidades || [],
@@ -155,6 +158,10 @@ export function PlanesPage() {
         siguiente.servicio_ids = [];
       }
       if (name === 'requiere_modalidades' && checked) {
+        siguiente.precio_por_sede = false;
+        siguiente.precios_sede = [];
+      }
+      if (name === 'precio_por_sede' && !checked) {
         siguiente.precios_sede = [];
       }
       return siguiente;
@@ -193,10 +200,10 @@ export function PlanesPage() {
         return;
       }
 
-      const preciosSedeValidos = formData.requiere_modalidades
+      const preciosSedeValidos = formData.requiere_modalidades || !formData.precio_por_sede
         ? []
         : (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
-      if (!formData.requiere_modalidades && preciosSedeValidos.length !== (formData.precios_sede || []).length) {
+      if (!formData.requiere_modalidades && formData.precio_por_sede && preciosSedeValidos.length !== (formData.precios_sede || []).length) {
         showNotificacion('Completa la sede y el precio de cada fila, o quítala.', 'warning');
         return;
       }
@@ -216,8 +223,10 @@ export function PlanesPage() {
         return;
       }
 
+      const { precio_por_sede, ...datosPlan } = formData;
+
       const payload = {
-        ...formData,
+        ...datosPlan,
         codigo: formData.id ? formData.codigo : undefined,
         precio_base: precioBase,
         tarifa_inscripcion: formData.tipo_producto === 'PASE_DIARIO' ? 0 : Number(formData.tarifa_inscripcion || 0),
@@ -393,19 +402,48 @@ export function PlanesPage() {
               </Box>
 
               <Box sx={formStyles.seccion}>
-                <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                  <Box><Typography sx={formStyles.modalSeccionTitulo}>Precios por sede</Typography><Typography variant="body2" color="text.secondary">Opcional. Si una sede no tiene precio propio, usa el Precio Base.</Typography></Box>
-                  <Button size="small" startIcon={<AddOutlinedIcon />} onClick={handleAddPrecioSede}>Agregar precio</Button>
+                <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" spacing={1}>
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="precio_por_sede"
+                          checked={Boolean(formData.precio_por_sede)}
+                          onChange={handleChange}
+                        />
+                      }
+                      label="Precio diferente por sede"
+                      sx={{ m: 0 }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
+                      Si está apagado, todas las sedes usan el precio base del plan.
+                    </Typography>
+                  </Box>
+
+                  {formData.precio_por_sede ? (
+                    <Button startIcon={<AddOutlinedIcon />} onClick={handleAddPrecioSede} sx={dbanuStyles.addButtonRevive}>
+                      Añadir
+                    </Button>
+                  ) : null}
                 </Stack>
-                {(formData.precios_sede || []).length === 0 ? <Typography variant="body2" color="text.secondary">Este plan usa el mismo precio (${Number(formData.precio_base || 0).toFixed(2)}) en todas las sedes.</Typography> : (
-                  <Stack spacing={1}>{(formData.precios_sede || []).map((fila, index) => (
-                    <Stack key={index} direction="row" spacing={1.5} alignItems="center" sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
-                      <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>{sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}</TextField>
-                      <TextField label="Precio ($)" type="number" size="small" value={fila.precio} onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)} sx={{ width: 140 }} />
-                      <Tooltip title="Quitar"><IconButton size="small" onClick={() => handleRemovePrecioSede(index)} sx={dbanuStyles.actionDelete}><DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>
-                    </Stack>
-                  ))}</Stack>
-                )}
+
+                {formData.precio_por_sede && (formData.precios_sede || []).length ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
+                    {(formData.precios_sede || []).map((fila, index) => (
+                      <Stack key={index} direction="row" spacing={1} alignItems="center">
+                        <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
+                          {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
+                        </TextField>
+                        <TextField label="Precio ($)" type="number" size="small" value={fila.precio} onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)} sx={{ width: 140 }} />
+                        <Tooltip title="Quitar">
+                          <IconButton size="small" onClick={() => handleRemovePrecioSede(index)} sx={dbanuStyles.actionDelete}>
+                            <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    ))}
+                  </Box>
+                ) : null}
               </Box>
                 </>
               )}
