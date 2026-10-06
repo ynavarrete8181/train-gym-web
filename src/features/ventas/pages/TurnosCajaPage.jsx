@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import { Box, Button, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
@@ -99,6 +100,12 @@ export function TurnosCajaPage() {
     setVista('cerrar');
   };
 
+  const prepararConciliacion = (turno) => {
+    setTurnoCerrar(turno);
+    setFormCierre({ efectivo_contado: '', observaciones: '' });
+    setVista('conciliar');
+  };
+
   const cerrarTurno = async () => {
     if (formCierre.efectivo_contado === '') {
       showNotificacion('Ingresa el efectivo contado.', 'warning');
@@ -121,6 +128,28 @@ export function TurnosCajaPage() {
     }
   };
 
+  const conciliarTurno = async () => {
+    if (formCierre.efectivo_contado === '') {
+      showNotificacion('Ingresa el efectivo contado para conciliar el arqueo.', 'warning');
+      return;
+    }
+    setGuardando(true);
+    try {
+      await ventaServicio.conciliarTurnoCaja(turnoCerrar.id, {
+        efectivo_contado: Number(formCierre.efectivo_contado),
+        observaciones: formCierre.observaciones || null,
+      });
+      showNotificacion('Arqueo de caja conciliado correctamente.', 'success');
+      setVista('lista');
+      setTurnoCerrar(null);
+      cargar();
+    } catch (error) {
+      showNotificacion(error.response?.data?.mensaje || 'No se pudo conciliar el arqueo de caja.', 'error');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
   const columnas = useMemo(() => {
     const filtro = (key, label, opts) => (
       <FilterHeaderCell key={key} value={filtrosColumna[key]} onChange={(v) => aplicarFiltro(key, v)} options={opts}>{label}</FilterHeaderCell>
@@ -133,7 +162,7 @@ export function TurnosCajaPage() {
       { key: 'cierre', header: <TableCell key="cierre">Cierre</TableCell>, render: (item) => fechaHora(item.fecha_cierre) },
       { key: 'inicial', header: <TableCell key="inicial">Saldo inicial</TableCell>, render: (item) => dinero(item.saldo_inicial) },
       { key: 'diferencia', header: <TableCell key="diferencia">Diferencia</TableCell>, render: (item) => item.diferencia === null ? '—' : dinero(item.diferencia) },
-      { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'ABIERTA', label: 'Abierta' }, { value: 'CERRADA', label: 'Cerrada' }]), render: (item) => <StatusChip estado={item.estado === 'ABIERTA' ? 'activo' : 'cerrado'} /> },
+      { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'ABIERTA', label: 'Abierta' }, { value: 'CERRADA', label: 'Cerrada' }]), render: (item) => <StatusChip estado={item.requiere_arqueo ? 'pendiente' : item.estado === 'ABIERTA' ? 'activo' : 'cerrado'} /> },
     ];
   }, [meta, filtrosColumna]);
 
@@ -187,6 +216,33 @@ export function TurnosCajaPage() {
     );
   }
 
+  if (vista === 'conciliar' && turnoCerrar) {
+    return (
+      <Box className="page-wrapper">
+        <PageHeader titulo="Conciliar arqueo de caja" descripcion="Revisa el cierre automático, registra el efectivo contado y deja el turno conciliado." icono={<FactCheckOutlinedIcon />} acciones={<BotonVolver onClick={() => setVista('lista')} />} />
+        <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
+          <Box sx={{ bgcolor: '#f6f8fc', px: 2.5, py: 2.5 }}>
+            <Box sx={formStyles.seccion}>
+              <Typography sx={formStyles.modalSeccionTitulo}>Arqueo pendiente</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5, mb: 2 }}>
+                <TextField label="Caja" value={turnoCerrar.caja_nombre || ''} size="small" disabled />
+                <TextField label="Cajero" value={turnoCerrar.cajero_nombre || ''} size="small" disabled />
+                <TextField label="Efectivo esperado" value={dinero(turnoCerrar.efectivo_esperado)} size="small" disabled />
+                <TextField label="Fecha del turno" value={fechaHora(turnoCerrar.fecha_apertura)} size="small" disabled />
+              </Box>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
+                <TextField label="Observaciones de conciliación" value={formCierre.observaciones} onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value }))} size="small" />
+              </Box>
+            </Box>
+          </Box>
+          <AccionesFormulario onCancelar={() => setVista('lista')} onGuardar={conciliarTurno} guardando={guardando} textoGuardar="Conciliar arqueo" />
+        </Paper>
+        <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
+      </Box>
+    );
+  }
+
   const turnoActual = catalogos.turno_abierto;
 
   return (
@@ -206,7 +262,7 @@ export function TurnosCajaPage() {
         <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 5} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }} cargando={cargando}>
           <TableHead><TableRow>{columnas.map((columna) => columna.header)}<TableCell align="right">Acciones</TableCell></TableRow></TableHead>
           <TableBody>
-            {items.map((item) => <TableRow key={item.id} hover>{columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}<TableCell align="right">{item.estado === 'ABIERTA' ? <Tooltip title="Cerrar turno"><Button size="small" variant="outlined" color="error" onClick={() => prepararCierre(item)}>Cerrar</Button></Tooltip> : '—'}</TableCell></TableRow>)}
+            {items.map((item) => <TableRow key={item.id} hover>{columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}<TableCell align="right">{item.requiere_arqueo ? <Tooltip title="Conciliar arqueo"><Button size="small" variant="outlined" startIcon={<FactCheckOutlinedIcon />} onClick={() => prepararConciliacion(item)}>Conciliar</Button></Tooltip> : item.estado === 'ABIERTA' ? <Tooltip title="Cerrar turno"><Button size="small" variant="outlined" color="error" onClick={() => prepararCierre(item)}>Cerrar</Button></Tooltip> : '—'}</TableCell></TableRow>)}
             {items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + 1} cargando={cargando} texto="No hay turnos de caja registrados." /> : null}
           </TableBody>
         </TablaGestion>
