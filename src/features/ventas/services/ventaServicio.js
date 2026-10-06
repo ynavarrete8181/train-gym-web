@@ -9,6 +9,7 @@ export const ventaServicio = {
   obtenerTurnoCajaActual: async () => (await api.get('/base/ventas/turnos-caja/actual')).data,
   abrirTurnoCaja: async (payload) => (await api.post('/base/ventas/turnos-caja/abrir', payload)).data,
   cerrarTurnoCaja: async (id, payload) => (await api.post(`/base/ventas/turnos-caja/${id}/cerrar`, payload)).data,
+  conciliarTurnoCaja: async (id, payload) => (await api.post(`/base/ventas/turnos-caja/${id}/conciliar`, payload)).data,
 
   obtenerVentas: async (params = { page: 1 }) => (await api.get('/base/ventas/ventas', { params })).data,
   obtenerDetalleVenta: async (id) => (await api.get(`/base/ventas/ventas/${id}/detalle`)).data,
