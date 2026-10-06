@@ -789,7 +789,7 @@ export function DeportistasPage() {
 
   const handleGuardarMembresia = async () => {
     try {
-      if (!membresiaForm.plan_id || !membresiaForm.sede_id || !membresiaForm.fecha_inicio || !membresiaForm.fecha_fin) {
+      if (!membresiaForm.plan_id || !membresiaForm.sede_id || !membresiaForm.fecha_inicio) {
         showNotificacion('Completa los campos obligatorios de la membresía', 'warning');
         return;
       }
@@ -1412,11 +1412,14 @@ export function DeportistasPage() {
             name="fecha_fin"
             type="date"
             value={membresiaForm.fecha_fin || ''}
-            onChange={handleMembresiaChange}
-            required
             size="small"
+            disabled
             slotProps={{ inputLabel: { shrink: true } }}
-            helperText={!membresiaForm.id ? `Calculada según la duración de ${modalidadMembresiaSeleccionada ? 'la modalidad' : 'el plan'}.` : ''}
+            helperText={
+              !membresiaForm.id
+                ? `Calculada automáticamente según la duración de ${modalidadMembresiaSeleccionada ? 'la modalidad' : 'el plan'}.`
+                : 'Calculada automáticamente por el sistema.'
+            }
           />
           <TextField select label="Estado" name="estado" value={membresiaForm.estado || 'PENDIENTE_PAGO'} onChange={handleMembresiaChange} required size="small">
             <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
