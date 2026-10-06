@@ -107,6 +107,7 @@ const hoyISO = () => new Date().toISOString().slice(0, 10);
 const getInitialMembresia = () => ({
   id: null,
   plan_id: '',
+  modalidad_id: '',
   sede_id: '',
   codigo_contrato: '',
   fecha_inicio: hoyISO(),
@@ -124,23 +125,27 @@ const getInitialMembresia = () => ({
 
 const limpiarFechaMembresia = (valor) => (valor ? String(valor).slice(0, 10) : '');
 
-// Mismo criterio que se usa en Membresías: suma la duración del plan
-// (DIAS, MESES o ANIOS) a la fecha de inicio, sin restar un día.
-const calcularFechaFinMembresia = (fechaInicioStr, plan) => {
-  if (!fechaInicioStr || !plan) return '';
-  const duracion = Number(plan.duracion || 0);
+// Preview alineado con el backend. Si el plan usa modalidades, la duración viene de la modalidad seleccionada.
+const calcularFechaFinMembresia = (fechaInicioStr, configuracion) => {
+  if (!fechaInicioStr || !configuracion) return '';
+  const duracion = Number(configuracion.duracion || 0);
   if (!duracion) return '';
 
   const fecha = new Date(`${fechaInicioStr}T00:00:00`);
-  switch (plan.tipo_duracion) {
+  switch (configuracion.tipo_duracion) {
     case 'DIAS':
-      fecha.setDate(fecha.getDate() + duracion);
+      fecha.setDate(fecha.getDate() + Math.max(duracion - 1, 0));
+      break;
+    case 'SEMANAS':
+      fecha.setDate(fecha.getDate() + (duracion * 7) - 1);
       break;
     case 'MESES':
       fecha.setMonth(fecha.getMonth() + duracion);
+      fecha.setDate(fecha.getDate() - 1);
       break;
     case 'ANIOS':
       fecha.setFullYear(fecha.getFullYear() + duracion);
+      fecha.setDate(fecha.getDate() - 1);
       break;
     default:
       return '';
@@ -171,8 +176,18 @@ const calcularProximaFechaCobroPreview = (fechaInicioStr, diaPagoValor) => {
   return `${anio}-${mes}-${dia}`;
 };
 
-const precioAplicableMembresia = (plan, sedeId) => {
+const precioAplicableMembresia = (plan, modalidad, sedeId) => {
   if (!plan) return null;
+
+  if (modalidad) {
+    const precioModalidadSede = (modalidad.precios_sede || [])
+      .find((p) => String(p.sede_id) === String(sedeId));
+
+    return precioModalidadSede
+      ? Number(precioModalidadSede.precio)
+      : Number(modalidad.precio_base || 0);
+  }
+
   const precioSede = (plan.precios_sede || []).find((p) => String(p.sede_id) === String(sedeId));
   return precioSede ? Number(precioSede.precio) : Number(plan.precio_base || 0);
 };
@@ -692,17 +707,38 @@ export function DeportistasPage() {
   // --- Membresía (dentro de la ficha del cliente) ---
 
   useEffect(() => {
-    if (membresiaForm.id) return; // no recalcular al editar una membresía existente
+    if (membresiaForm.id) return;
     if (!membresiaForm.fecha_inicio || !membresiaForm.plan_id) return;
 
     const plan = planes.find((p) => String(p.id) === String(membresiaForm.plan_id));
     if (!plan) return;
 
-    const nuevaFechaFin = calcularFechaFinMembresia(membresiaForm.fecha_inicio, plan);
+    const modalidadesActivas = (plan.modalidades || [])
+      .filter((modalidad) => booleanoBackend(modalidad.activo));
+    const modalidad = modalidadesActivas.find(
+      (item) => String(item.id) === String(membresiaForm.modalidad_id),
+    );
+
+    if (booleanoBackend(plan.requiere_modalidades) && !modalidad) {
+      setMembresiaForm((actual) => ({ ...actual, fecha_fin: '' }));
+      return;
+    }
+
+    const nuevaFechaFin = calcularFechaFinMembresia(
+      membresiaForm.fecha_inicio,
+      modalidad || plan,
+    );
+
     if (nuevaFechaFin) {
       setMembresiaForm((actual) => ({ ...actual, fecha_fin: nuevaFechaFin }));
     }
-  }, [membresiaForm.fecha_inicio, membresiaForm.plan_id, membresiaForm.id, planes]);
+  }, [
+    membresiaForm.fecha_inicio,
+    membresiaForm.plan_id,
+    membresiaForm.modalidad_id,
+    membresiaForm.id,
+    planes,
+  ]);
 
   const handleMembresiaChange = (e) => {
     const { name, value, checked, type } = e.target;
@@ -716,6 +752,15 @@ export function DeportistasPage() {
           congelar_membresia: checked,
           fecha_congelacion_inicio: checked ? actual.fecha_congelacion_inicio : '',
           fecha_congelacion_fin: checked ? actual.fecha_congelacion_fin : '',
+        };
+      }
+
+      if (name === 'plan_id') {
+        return {
+          ...actual,
+          plan_id: nuevoValor,
+          modalidad_id: '',
+          fecha_fin: '',
         };
       }
 
@@ -749,6 +794,12 @@ export function DeportistasPage() {
         return;
       }
 
+      const planSeleccionado = planes.find((plan) => String(plan.id) === String(membresiaForm.plan_id));
+      if (booleanoBackend(planSeleccionado?.requiere_modalidades) && !membresiaForm.modalidad_id) {
+        showNotificacion('Selecciona una modalidad para este plan.', 'warning');
+        return;
+      }
+
       if (membresiaForm.generar_venta_automatica && !membresiaForm.dia_pago) {
         showNotificacion('Selecciona el día habitual de pago para generar la venta automáticamente', 'warning');
         return;
@@ -772,6 +823,8 @@ export function DeportistasPage() {
           ? (membresiaForm.fecha_congelacion_fin || null)
           : null,
         deportista_id: formData.id,
+        modalidad_id: membresiaForm.modalidad_id ? Number(membresiaForm.modalidad_id) : null,
+        sedes_habilitadas: [Number(membresiaForm.sede_id)],
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
@@ -1222,6 +1275,18 @@ export function DeportistasPage() {
   const planMembresiaSeleccionado = planes.find(
     (plan) => String(plan.id) === String(membresiaForm.plan_id),
   );
+  const modalidadesMembresiaDisponibles = (planMembresiaSeleccionado?.modalidades || [])
+    .filter((modalidad) => booleanoBackend(modalidad.activo));
+  const modalidadMembresiaSeleccionada = modalidadesMembresiaDisponibles.find(
+    (modalidad) => String(modalidad.id) === String(membresiaForm.modalidad_id),
+  );
+  const precioMembresiaPreview = membresiaForm.plan_id && membresiaForm.sede_id
+    ? precioAplicableMembresia(
+        planMembresiaSeleccionado,
+        modalidadMembresiaSeleccionada,
+        membresiaForm.sede_id,
+      )
+    : null;
   const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable);
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
@@ -1238,11 +1303,61 @@ export function DeportistasPage() {
           ) : null}
         </Stack>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-          <TextField select label="Plan" name="plan_id" value={membresiaForm.plan_id || ''} onChange={handleMembresiaChange} required size="small" disabled={!!membresiaForm.id}>
-            {planes.map((plan) => (
-              <MenuItem key={plan.id} value={plan.id}>{plan.nombre} - ${Number(plan.precio_base || 0).toFixed(2)}</MenuItem>
-            ))}
+          <TextField
+            select
+            label="Plan"
+            name="plan_id"
+            value={membresiaForm.plan_id || ''}
+            onChange={handleMembresiaChange}
+            required
+            size="small"
+            disabled={!!membresiaForm.id}
+          >
+            {planes.map((plan) => {
+              const modalidadesActivas = (plan.modalidades || [])
+                .filter((modalidad) => booleanoBackend(modalidad.activo));
+              const textoPlan = booleanoBackend(plan.requiere_modalidades)
+                ? `${plan.nombre} · ${modalidadesActivas.length} modalidad(es)`
+                : `${plan.nombre} · $${Number(plan.precio_base || 0).toFixed(2)}`;
+
+              return <MenuItem key={plan.id} value={plan.id}>{textoPlan}</MenuItem>;
+            })}
           </TextField>
+
+          {booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) ? (
+            <TextField
+              select
+              label={`Modalidad · ${modalidadesMembresiaDisponibles.length} disponibles`}
+              name="modalidad_id"
+              value={membresiaForm.modalidad_id || ''}
+              onChange={handleMembresiaChange}
+              required
+              size="small"
+              disabled={!!membresiaForm.id}
+              helperText={
+                modalidadMembresiaSeleccionada
+                  ? `${modalidadMembresiaSeleccionada.uso_ilimitado
+                    ? 'Uso ilimitado'
+                    : `${modalidadMembresiaSeleccionada.usos_por_semana || modalidadMembresiaSeleccionada.dias_por_semana} uso(s)/sem.`} · ${modalidadMembresiaSeleccionada.duracion} ${String(modalidadMembresiaSeleccionada.tipo_duracion || '').toLowerCase()}`
+                  : 'Selecciona la frecuencia contratada.'
+              }
+            >
+              {modalidadesMembresiaDisponibles.map((modalidad) => (
+                <MenuItem key={modalidad.id} value={modalidad.id}>
+                  {modalidad.nombre}
+                  {' · '}
+                  {modalidad.uso_ilimitado
+                    ? 'Ilimitado'
+                    : `${modalidad.usos_por_semana || modalidad.dias_por_semana} uso(s)/sem.`}
+                  {' · '}
+                  {modalidad.duracion} {String(modalidad.tipo_duracion || '').toLowerCase()}
+                  {' · $'}
+                  {Number(modalidad.precio_base || 0).toFixed(2)}
+                </MenuItem>
+              ))}
+            </TextField>
+          ) : null}
+
           <TextField
             select
             label="Sede"
@@ -1253,8 +1368,8 @@ export function DeportistasPage() {
             size="small"
             disabled={!!membresiaForm.id}
             helperText={
-              !membresiaForm.id && membresiaForm.plan_id && membresiaForm.sede_id
-                ? `Precio aplicado: $${precioAplicableMembresia(planes.find((p) => String(p.id) === String(membresiaForm.plan_id)), membresiaForm.sede_id).toFixed(2)}`
+              !membresiaForm.id && precioMembresiaPreview !== null
+                ? `Precio aplicado: $${Number(precioMembresiaPreview).toFixed(2)}`
                 : ''
             }
           >
@@ -1262,7 +1377,7 @@ export function DeportistasPage() {
               <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
             ))}
           </TextField>
-          {membresiaForm.id ? (
+                    {membresiaForm.id ? (
             <TextField
               label="Código de membresía"
               value={membresiaForm.codigo_contrato || ''}
@@ -1301,7 +1416,7 @@ export function DeportistasPage() {
             required
             size="small"
             slotProps={{ inputLabel: { shrink: true } }}
-            helperText={!membresiaForm.id ? 'Calculada según la duración del plan. Puedes ajustarla si es necesario.' : ''}
+            helperText={!membresiaForm.id ? `Calculada según la duración de ${modalidadMembresiaSeleccionada ? 'la modalidad' : 'el plan'}.` : ''}
           />
           <TextField select label="Estado" name="estado" value={membresiaForm.estado || 'PENDIENTE_PAGO'} onChange={handleMembresiaChange} required size="small">
             <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
@@ -1501,7 +1616,11 @@ export function DeportistasPage() {
                 sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
                 <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
                   <Chip label={m.estado} size="small" color="default" />
-                  <Typography variant="body2" fontWeight="500">{m.plan_nombre}{m.precio_aplicado ? ` · $${Number(m.precio_aplicado).toFixed(2)}` : ''}</Typography>
+                  <Typography variant="body2" fontWeight="500">
+                    {m.plan_nombre}
+                    {m.modalidad_nombre ? ` · ${m.modalidad_nombre}` : ''}
+                    {m.precio_aplicado !== null && m.precio_aplicado !== undefined ? ` · ${Number(m.precio_aplicado).toFixed(2)}` : ''}
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">{fechaMembresia(m.fecha_inicio)} - {fechaMembresia(m.fecha_fin)}</Typography>
                 </Stack>
                 <Stack direction="row" spacing={0.5}>
