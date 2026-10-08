@@ -272,7 +272,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_venta)), render: (item) => <StatusChip estado={estadoTexto(item.estado_nombre || item.estado)} /> },
   ];
   if (tipo === 'pagos') return [
-    { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
+    { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.codigo_cobro || item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
     { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero || '—' },
     { key: 'cliente', header: <TableCell key="cliente">Cliente</TableCell>, render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
     { key: 'cobrador', header: <TableCell key="cobrador">Cobrado por</TableCell>, render: (item) => item.cobrado_por_nombre || 'Sin usuario' },
