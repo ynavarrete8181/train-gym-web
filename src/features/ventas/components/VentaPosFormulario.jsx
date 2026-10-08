@@ -115,6 +115,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
               clave: `CUENTA-${fila.id || indice}`,
               tipo: tipoItem,
               referencia_id: fila.referencia_id || (contractual ? ventaInicial.membresia_plan_id : null),
+              membresia_id: contractual ? ventaInicial.membresia_id : null,
               producto_id: fila.producto_id || null,
               descripcion: fila.descripcion,
               cantidad: Number(fila.cantidad || 1),
