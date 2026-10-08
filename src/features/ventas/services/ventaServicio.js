@@ -25,4 +25,5 @@ export const ventaServicio = {
   obtenerPagos: async (params = { page: 1 }) => (await api.get('/base/ventas/pagos', { params })).data,
   crearPago: async (payload) => (await api.post('/base/ventas/pagos', payload)).data,
   obtenerComprobantes: async (params = { page: 1 }) => (await api.get('/base/ventas/comprobantes', { params })).data,
+  reenviarComprobante: async (id) => (await api.post(`/base/ventas/comprobantes/${id}/reenviar`)).data,
 };
