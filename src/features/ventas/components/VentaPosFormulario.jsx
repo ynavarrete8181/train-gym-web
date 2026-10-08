@@ -390,22 +390,47 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 onChange={(_, value) => {
                   setCliente(value);
                   setCarrito((actual) => actual.filter((item) => item.tipo !== 'MEMBRESIA'));
+
+                  if (value) {
+                    const tieneMembresiaPendiente = (contexto.membresias || [])
+                      .some((item) => Number(item.cliente_id) === Number(value.id));
+
+                    if (tieneMembresiaPendiente) {
+                      setTipo('MEMBRESIA');
+                      setBusqueda('');
+                    }
+                  }
                 }}
                 disabled={esCuentaAbierta}
                 getOptionLabel={(item) => [
+                  item.identificacion,
                   item.nombre,
                   item.codigo,
-                  item.identificacion,
+                  item.telefono,
                 ].filter(Boolean).join(' · ')}
                 isOptionEqualToValue={(a, b) => a.id === b.id}
-                renderInput={(params) => <TextField {...params} size="small" placeholder="Buscar por nombre, código, cédula o teléfono" />}
+                renderOption={(props, item) => (
+                  <Box component="li" {...props} key={item.id}>
+                    <Box sx={{ minWidth: 0 }}>
+                      <Typography variant="body2" fontWeight={850}>
+                        {item.nombre || 'Cliente'}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {item.identificacion || 'Sin identificación'}
+                        {item.codigo ? ` · ${item.codigo}` : ''}
+                        {item.telefono ? ` · ${item.telefono}` : ''}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                renderInput={(params) => <TextField {...params} size="small" placeholder="Buscar por cédula, nombre, código o teléfono" />}
               />
               {cliente ? (
                 <Box sx={{ mt: 1.2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr auto' }, gap: 1, alignItems: 'center', px: 1.3, py: 1, bgcolor: '#f8fafc', border: '1px solid #e1e7ef', borderRadius: 1.5 }}>
                   <Box>
                     <Typography variant="body2" fontWeight={900}>{cliente.nombre}</Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {cliente.codigo || 'Sin código'}{cliente.identificacion ? ` · ${cliente.identificacion}` : ''} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
+                      {cliente.identificacion || 'Sin identificación'}{cliente.codigo ? ` · ${cliente.codigo}` : ''} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
                     </Typography>
                   </Box>
                   <Chip size="small" label="Cliente activo" color="success" variant="outlined" />
