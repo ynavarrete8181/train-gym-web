@@ -60,9 +60,9 @@ const configs = {
     inicial: { id: null, cliente_id: '', membresia_id: '', caja_id: '', tipo_venta: 'PRODUCTO', concepto: '', subtotal: 0, descuento: 0, impuesto: 0, total: 0, estado: 'PENDIENTE', observaciones: '', detalle: { producto_id: '', cantidad: 1, precio_unitario: 0 } },
   },
   pagos: {
-    titulo: 'Pagos', singular: 'Pago', descripcion: 'Registra abonos y pagos confirmados de ventas.', icono: <PaymentsOutlinedIcon />,
-    obtener: 'obtenerPagos', crear: 'crearPago', actualizar: null,
-    inicial: { id: null, venta_id: '', caja_id: '', metodo_pago: 'EFECTIVO', monto: '', estado: 'CONFIRMADO', referencia: '', observaciones: '' },
+    titulo: 'Cobros', singular: 'Cobro', descripcion: 'Consulta operaciones de cobro consolidadas por venta, turno y métodos de pago.', icono: <PaymentsOutlinedIcon />,
+    obtener: 'obtenerPagos', crear: null, actualizar: null,
+    inicial: {},
   },
   comprobantes: {
     titulo: 'Comprobantes', singular: 'Comprobante', descripcion: 'Consulta recibos generados por ventas y pagos.', icono: <ReceiptLongOutlinedIcon />,
@@ -272,11 +272,17 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_venta)), render: (item) => <StatusChip estado={estadoTexto(item.estado_nombre || item.estado)} /> },
   ];
   if (tipo === 'pagos') return [
-    { key: 'comprobante', header: filtro('comprobante', 'Comprobante', null), render: (item) => <Box><Typography variant="body2" fontWeight="600">{item.numero_comprobante}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
-    { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero },
-    { key: 'metodo', header: filtro('metodo', 'Método', opciones(meta.opciones_filtro?.metodo)), render: (item) => item.metodo_pago },
-    { key: 'monto', header: <TableCell key="monto">Monto</TableCell>, render: (item) => dinero(item.monto) },
-    { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado_nombre || item.estado)} /> },
+    { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
+    { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero || '—' },
+    { key: 'cliente', header: <TableCell key="cliente">Cliente</TableCell>, render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
+    { key: 'cobrador', header: <TableCell key="cobrador">Cobrado por</TableCell>, render: (item) => item.cobrado_por_nombre || 'Sin usuario' },
+    { key: 'efectivo', header: <TableCell key="efectivo" align="right">Efectivo</TableCell>, render: (item) => dinero(item.efectivo) },
+    { key: 'transferencia', header: <TableCell key="transferencia" align="right">Transferencia</TableCell>, render: (item) => dinero(item.transferencia) },
+    { key: 'tarjeta', header: <TableCell key="tarjeta" align="right">Tarjeta</TableCell>, render: (item) => dinero(item.tarjeta) },
+    { key: 'deposito', header: <TableCell key="deposito" align="right">Depósito</TableCell>, render: (item) => dinero(item.deposito) },
+    { key: 'otros', header: <TableCell key="otros" align="right">Otros</TableCell>, render: (item) => dinero(item.otros) },
+    { key: 'total', header: <TableCell key="total" align="right">Total</TableCell>, render: (item) => <Typography variant="body2" fontWeight="800">{dinero(item.total_cobrado)}</Typography> },
+    { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} /> },
   ];
   return [
     { key: 'numero', header: filtro('numero', 'Comprobante', null), render: (item) => <Typography variant="body2" fontWeight="600">{item.numero}</Typography> },
