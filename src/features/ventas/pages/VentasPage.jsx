@@ -21,6 +21,7 @@ const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : '
 export function VentasPage() {
   const [vista, setVista] = useState('lista');
   const [cuentasAbiertas, setCuentasAbiertas] = useState([]);
+  const [turnoActual, setTurnoActual] = useState(null);
   const [cargandoCuentas, setCargandoCuentas] = useState(true);
   const [cuentaInicial, setCuentaInicial] = useState(null);
   const [busquedaCuenta, setBusquedaCuenta] = useState('');
@@ -33,8 +34,12 @@ export function VentasPage() {
   const cargarCuentas = async () => {
     setCargandoCuentas(true);
     try {
-      const response = await ventaServicio.obtenerCuentasAbiertasPos();
+      const [response, turnoResponse] = await Promise.all([
+        ventaServicio.obtenerCuentasAbiertasPos(),
+        ventaServicio.obtenerTurnoCajaActual().catch(() => ({ datos: null })),
+      ]);
       setCuentasAbiertas(response.datos || []);
+      setTurnoActual(turnoResponse?.datos || null);
     } catch (error) {
       setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudieron cargar las cuentas abiertas.', tipo: 'error' });
     } finally {
@@ -43,6 +48,14 @@ export function VentasPage() {
   };
 
   const abrirCuenta = async (venta) => {
+    if (!turnoActual?.id) {
+      setNotificacion({
+        mensaje: 'Modo consulta: para cobrar debes tener un turno de caja propio abierto.',
+        tipo: 'warning',
+      });
+      return;
+    }
+
     try {
       const response = await ventaServicio.obtenerDetalleVenta(venta.id);
       setCuentaInicial(response.datos || response);
@@ -118,7 +131,11 @@ export function VentasPage() {
           <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', gap: 1.4, flexDirection: { xs: 'column', md: 'row' } }}>
             <Box>
               <Typography variant="h6" fontWeight={950}>Cuentas abiertas</Typography>
-              <Typography variant="body2" color="text.secondary">Gestiona consumos pendientes y cobra al finalizar la atención.</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {turnoActual?.id
+                  ? `Turno activo: ${turnoActual.caja_nombre || turnoActual.caja_codigo || 'Caja'} · Puedes registrar cobros.`
+                  : 'Modo consulta: puedes revisar las cuentas, pero para cobrar necesitas un turno de caja propio.'}
+              </Typography>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
               <TextField
@@ -131,6 +148,8 @@ export function VentasPage() {
               <Button
                 startIcon={<AddOutlinedIcon />}
                 onClick={() => { setCuentaInicial(null); setVista('pos'); }}
+                disabled={!turnoActual?.id}
+                title={!turnoActual?.id ? 'Necesitas un turno de caja propio para registrar una venta directa.' : ''}
                 sx={{ ...dbanuStyles.addButtonRevive, minWidth: 112 }}
               >
                 Añadir
@@ -242,6 +261,8 @@ export function VentasPage() {
                         variant="contained"
                         startIcon={<PointOfSaleOutlinedIcon />}
                         onClick={() => abrirCuenta(venta)}
+                        disabled={!turnoActual?.id}
+                        title={!turnoActual?.id ? 'Solo consulta: abre tu propio turno de caja para cobrar.' : ''}
                         sx={{
                           ...dbanuStyles.addButtonRevive,
                           minHeight: 38,
@@ -266,7 +287,17 @@ export function VentasPage() {
               })}
 
             <Box
-              onClick={() => { setCuentaInicial(null); setVista('pos'); }}
+              onClick={() => {
+                if (!turnoActual?.id) {
+                  setNotificacion({
+                    mensaje: 'Modo consulta: para registrar una venta directa debes abrir tu propio turno de caja.',
+                    tipo: 'warning',
+                  });
+                  return;
+                }
+                setCuentaInicial(null);
+                setVista('pos');
+              }}
               sx={{
                 minHeight: 260,
                 border: '1px dashed #d5dae1',
@@ -274,7 +305,8 @@ export function VentasPage() {
                 bgcolor: '#fff',
                 display: 'grid',
                 placeItems: 'center',
-                cursor: 'pointer',
+                cursor: turnoActual?.id ? 'pointer' : 'not-allowed',
+                opacity: turnoActual?.id ? 1 : 0.68,
                 transition: 'border-color .18s ease, background .18s ease',
                 '&:hover': { borderColor: '#b88a00', bgcolor: 'rgba(212,160,23,.035)' },
               }}
@@ -287,8 +319,13 @@ export function VentasPage() {
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: .35 }}>
                   Registra una venta de servicios, productos o membresías.
                 </Typography>
-                <Button variant="outlined" startIcon={<AddOutlinedIcon />} sx={{ mt: 1.5, textTransform: 'none', fontWeight: 900, borderColor: '#b88a00', color: '#8a6500' }}>
-                  Añadir
+                <Button
+                  variant="outlined"
+                  startIcon={<AddOutlinedIcon />}
+                  disabled={!turnoActual?.id}
+                  sx={{ mt: 1.5, textTransform: 'none', fontWeight: 900, borderColor: '#b88a00', color: '#8a6500' }}
+                >
+                  {turnoActual?.id ? 'Añadir' : 'Solo consulta'}
                 </Button>
               </Box>
             </Box>
