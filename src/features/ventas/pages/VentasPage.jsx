@@ -176,7 +176,7 @@ export function VentasPage() {
               .filter((venta) => {
                 const texto = busquedaCuenta.trim().toLowerCase();
                 if (!texto) return true;
-                return `${venta.cliente_nombre || ''} ${venta.codigo_deportista || ''} ${venta.numero || ''}`
+                return `${venta.cliente_nombre || ''} ${venta.cliente_identificacion || ''} ${venta.codigo_deportista || ''} ${venta.numero || ''}`
                   .toLowerCase()
                   .includes(texto);
               })
@@ -206,7 +206,7 @@ export function VentasPage() {
                         {nombre}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        {venta.codigo_deportista || 'Cliente sin código'}
+                        {venta.cliente_identificacion || 'Sin identificación'}
                       </Typography>
                     </Box>
 
