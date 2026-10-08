@@ -361,11 +361,12 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} /> },
   ];
   return [
-    { key: 'numero', header: filtro('numero', 'Comprobante', null), render: (item) => <Typography variant="body2" fontWeight="600">{item.numero}</Typography> },
-    { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero },
-    { key: 'cliente', header: filtro('cliente', 'Cliente', opciones(meta.opciones_filtro?.cliente)), render: (item) => item.cliente_nombre || 'Consumidor final' },
-    { key: 'concepto', header: <TableCell key="concepto">Concepto</TableCell>, render: (item) => item.concepto },
+    { key: 'numero', header: filtro('numero', 'Comprobante', null), render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.numero}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.emitido_at || item.created_at)}</Typography></Box> },
+    { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero || '—' },
+    { key: 'cliente', header: filtro('cliente', 'Cliente', opciones(meta.opciones_filtro?.cliente)), render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
+    { key: 'correo', header: <TableCell key="correo">Correo</TableCell>, render: (item) => item.cliente_email || item.correo_destino || 'Sin correo' },
     { key: 'total', header: <TableCell key="total">Total</TableCell>, render: (item) => dinero(item.total) },
+    { key: 'envio', header: <TableCell key="envio">Envío</TableCell>, render: (item) => <Box><Typography variant="body2">{Number(item.cantidad_envios || 0) > 0 ? `Enviado · ${item.cantidad_envios}` : 'Sin enviar'}</Typography><Typography variant="caption" color="text.secondary">{item.ultimo_envio_at ? fecha(item.ultimo_envio_at) : '—'}</Typography></Box> },
     { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'BORRADOR', label: 'Borrador' }, { value: 'EMITIDO', label: 'Emitido' }, { value: 'ANULADO', label: 'Anulado' }]), render: (item) => <StatusChip estado={estadoTexto(item.estado)} /> },
   ];
 }
