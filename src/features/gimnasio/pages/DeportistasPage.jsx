@@ -828,6 +828,7 @@ export function DeportistasPage() {
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
+        generar_venta: String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO',
         proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
@@ -839,7 +840,12 @@ export function DeportistasPage() {
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
         await gimnasioServicio.crearMembresia(payload);
-        showNotificacion('Membresía creada con éxito', 'success');
+        showNotificacion(
+          String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() === 'PASE_DIARIO'
+            ? 'Pase diario asignado. La venta se generará cuando se consuma.'
+            : 'Membresía creada y venta pendiente generada con éxito',
+          'success',
+        );
       }
 
       setMembresiaForm(getInitialMembresia());
