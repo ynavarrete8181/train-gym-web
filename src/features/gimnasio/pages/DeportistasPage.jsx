@@ -115,6 +115,7 @@ const getInitialMembresia = () => ({
   estado: 'PENDIENTE_PAGO',
   dias_gracia: 0,
   dia_pago: '',
+  generar_venta: false,
   generar_venta_automatica: false,
   proxima_fecha_cobro: '',
   renovacion_automatica: false,
@@ -780,6 +781,7 @@ export function DeportistasPage() {
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
       fecha_congelacion_fin: limpiarFechaMembresia(m.fecha_congelacion_fin),
       renovacion_automatica: Boolean(m.renovacion_automatica),
+      generar_venta: Boolean(m.requiere_facturar),
       generar_venta_automatica: Boolean(m.generar_venta_automatica),
       dia_pago: m.dia_pago ?? '',
       proxima_fecha_cobro: limpiarFechaMembresia(m.proxima_fecha_cobro),
@@ -828,7 +830,9 @@ export function DeportistasPage() {
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
-        generar_venta: String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO',
+        generar_venta: String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() === 'PASE_DIARIO'
+          ? false
+          : Boolean(membresiaForm.generar_venta),
         proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
@@ -840,10 +844,13 @@ export function DeportistasPage() {
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
         await gimnasioServicio.crearMembresia(payload);
+        const esPaseDiario = String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() === 'PASE_DIARIO';
         showNotificacion(
-          String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() === 'PASE_DIARIO'
+          esPaseDiario
             ? 'Pase diario asignado. La venta se generará cuando se consuma.'
-            : 'Membresía creada y venta pendiente generada con éxito',
+            : membresiaForm.generar_venta
+              ? 'Membresía creada y venta pendiente generada con éxito'
+              : 'Membresía creada sin venta. Podrá cobrarse manualmente desde Ventas.',
           'success',
         );
       }
@@ -1496,6 +1503,37 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
+        {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' ? (
+          <Box
+            sx={{
+              mt: 1.5,
+              p: 1.5,
+              border: '1px solid #dbe5f0',
+              borderRadius: 1.5,
+              bgcolor: '#fbfdff',
+            }}
+          >
+            <Typography variant="body2" fontWeight={800}>
+              Venta inicial
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              Actívalo solo si deseas crear ahora una cuenta pendiente. Si queda apagado, la membresía podrá cobrarse manualmente desde Ventas cuando el cliente llegue a pagar.
+            </Typography>
+            <FormControlLabel
+              control={
+                <Switch
+                  name="generar_venta"
+                  checked={Boolean(membresiaForm.generar_venta)}
+                  onChange={handleMembresiaChange}
+                  size="small"
+                />
+              }
+              label="Generar venta al asignar"
+              sx={{ m: 0 }}
+            />
+          </Box>
+        ) : null}
+
         {permiteCobroProgramado ? (
           <Box
             sx={{
@@ -1510,7 +1548,7 @@ export function DeportistasPage() {
               Configuración de cobro
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
-              Define el día habitual de pago. Si activas la venta automática, el sistema dejará una venta pendiente cuando llegue esa fecha.
+              Define el día habitual de pago para futuras renovaciones. Esta configuración no controla la venta inicial.
             </Typography>
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.15fr' }, gap: 1.5 }}>
@@ -1553,7 +1591,7 @@ export function DeportistasPage() {
                       size="small"
                     />
                   }
-                  label="Generar venta automáticamente"
+                  label="Generar renovaciones automáticamente"
                   sx={{ m: 0 }}
                 />
               </Box>
