@@ -7,7 +7,7 @@ import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -83,6 +83,7 @@ export function VentasCatalogo({ tipo }) {
   const [filtrosColumna, setFiltrosColumna] = useState({});
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const [reenviandoId, setReenviandoId] = useState(null);
 
   const showNotificacion = (mensaje, tipoAviso = 'info') => setNotificacion({ mensaje, tipo: tipoAviso });
 
@@ -157,6 +158,9 @@ export function VentasCatalogo({ tipo }) {
   };
 
   const handleReenviarComprobante = async (item) => {
+    if (reenviandoId) return;
+
+    setReenviandoId(item.id);
     try {
       const response = await ventaServicio.reenviarComprobante(item.id);
       showNotificacion(
@@ -165,11 +169,13 @@ export function VentasCatalogo({ tipo }) {
           : 'Comprobante reenviado correctamente',
         'success',
       );
-      cargar();
+      await cargar();
     } catch (error) {
       const errores = error.response?.data?.errors;
       const primero = errores ? Object.values(errores).flat()[0] : null;
       showNotificacion(primero || error.response?.data?.mensaje || 'No se pudo reenviar el comprobante', 'error');
+    } finally {
+      setReenviandoId(null);
     }
   };
 
@@ -220,6 +226,7 @@ export function VentasCatalogo({ tipo }) {
           onEditar={handleEditar}
           onVerPdf={handleVerPdf}
           onReenviar={handleReenviarComprobante}
+          reenviandoId={reenviandoId}
           onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }}
           onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
         />
@@ -289,7 +296,7 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
   </Box>;
 }
 
-function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar, onVerPdf, onReenviar, onPageChange, onRowsPerPageChange }) {
+function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar, onVerPdf, onReenviar, reenviandoId, onPageChange, onRowsPerPageChange }) {
   const tieneAcciones = editable || tipo === 'comprobantes';
 
   return <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 5} onPageChange={onPageChange} onRowsPerPageChange={onRowsPerPageChange} cargando={cargando}>
@@ -312,10 +319,15 @@ function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar
                     <span>
                       <IconButton
                         sx={dbanuStyles.actionEdit}
-                        disabled={String(item.estado || '').toUpperCase() !== 'EMITIDO'}
+                        disabled={
+                          String(item.estado || '').toUpperCase() !== 'EMITIDO'
+                          || reenviandoId === item.id
+                        }
                         onClick={() => onReenviar(item)}
                       >
-                        <SendOutlinedIcon sx={{ fontSize: 17 }} />
+                        {reenviandoId === item.id
+                          ? <CircularProgress size={16} thickness={5} />
+                          : <SendOutlinedIcon sx={{ fontSize: 17 }} />}
                       </IconButton>
                     </span>
                   </Tooltip>
