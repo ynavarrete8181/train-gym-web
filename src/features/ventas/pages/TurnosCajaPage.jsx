@@ -21,6 +21,28 @@ const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fechaHora = (valor) => valor ? new Date(valor).toLocaleString('es-EC') : '—';
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 
+const ResumenCobrosTurno = ({ turno }) => {
+  const items = [
+    ['Efectivo', turno?.efectivo_cobrado],
+    ['Transferencia', turno?.transferencia_cobrada],
+    ['Tarjeta', turno?.tarjeta_cobrada],
+    ['Depósito', turno?.deposito_cobrado],
+    ['Otros', turno?.otros_cobrado],
+    ['Total cobrado', turno?.total_cobrado],
+  ];
+
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' }, gap: 1, mb: 2 }}>
+      {items.map(([label, value]) => (
+        <Box key={label} sx={{ p: 1.15, border: '1px solid #e2e8f0', borderRadius: 1.5, bgcolor: '#fff' }}>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.2 }}>{label}</Typography>
+          <Typography variant="subtitle2" fontWeight={700}>{dinero(value)}</Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+};
+
 export function TurnosCajaPage() {
   const [vista, setVista] = useState('lista');
   const [items, setItems] = useState([]);
@@ -161,6 +183,8 @@ export function TurnosCajaPage() {
       { key: 'apertura', header: <TableCell key="apertura">Apertura</TableCell>, render: (item) => fechaHora(item.fecha_apertura) },
       { key: 'cierre', header: <TableCell key="cierre">Cierre</TableCell>, render: (item) => fechaHora(item.fecha_cierre) },
       { key: 'inicial', header: <TableCell key="inicial">Saldo inicial</TableCell>, render: (item) => dinero(item.saldo_inicial) },
+      { key: 'cobrado', header: <TableCell key="cobrado">Total cobrado</TableCell>, render: (item) => dinero(item.total_cobrado) },
+      { key: 'efectivo', header: <TableCell key="efectivo">Efectivo</TableCell>, render: (item) => dinero(item.efectivo_cobrado) },
       { key: 'diferencia', header: <TableCell key="diferencia">Diferencia</TableCell>, render: (item) => item.diferencia === null ? '—' : dinero(item.diferencia) },
       { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'ABIERTA', label: 'Abierta' }, { value: 'CERRADA', label: 'Cerrada' }]), render: (item) => <StatusChip estado={item.requiere_arqueo ? 'pendiente' : item.estado === 'ABIERTA' ? 'activo' : 'cerrado'} /> },
     ];
@@ -198,10 +222,16 @@ export function TurnosCajaPage() {
           <Box sx={{ bgcolor: '#f6f8fc', px: 2.5, py: 2.5 }}>
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Resumen del turno</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mb: 2 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5, mb: 2 }}>
                 <TextField label="Caja" value={turnoCerrar.caja_nombre || ''} size="small" disabled />
                 <TextField label="Sede" value={turnoCerrar.sede_nombre || ''} size="small" disabled />
                 <TextField label="Saldo inicial" value={dinero(turnoCerrar.saldo_inicial)} size="small" disabled />
+                <TextField label="Cobros realizados" value={turnoCerrar.cantidad_cobros || 0} size="small" disabled />
+              </Box>
+              <ResumenCobrosTurno turno={turnoCerrar} />
+              <Box sx={{ mb: 2, px: 1.5, py: 1.25, borderRadius: 1.5, bgcolor: '#eef4fb', border: '1px solid #d8e4f2' }}>
+                <Typography variant="body2" fontWeight={700}>Efectivo esperado en caja: {dinero(turnoCerrar.efectivo_esperado_actual ?? (Number(turnoCerrar.saldo_inicial || 0) + Number(turnoCerrar.efectivo_cobrado || 0)))}</Typography>
+                <Typography variant="caption" color="text.secondary">Saldo inicial + cobros en efectivo. Transferencias, tarjetas, depósitos y otros medios no aumentan el efectivo físico de caja.</Typography>
               </Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
                 <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
@@ -230,6 +260,7 @@ export function TurnosCajaPage() {
                 <TextField label="Efectivo esperado" value={dinero(turnoCerrar.efectivo_esperado)} size="small" disabled />
                 <TextField label="Fecha del turno" value={fechaHora(turnoCerrar.fecha_apertura)} size="small" disabled />
               </Box>
+              <ResumenCobrosTurno turno={turnoCerrar} />
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
                 <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
                 <TextField label="Observaciones de conciliación" value={formCierre.observaciones} onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value }))} size="small" />
@@ -254,6 +285,7 @@ export function TurnosCajaPage() {
             <Box>
               <Typography variant="subtitle2" fontWeight={700}>Turno abierto</Typography>
               <Typography variant="body2" color="text.secondary">{turnoActual.caja_nombre} · {turnoActual.sede_nombre} · desde {fechaHora(turnoActual.fecha_apertura)}</Typography>
+              <Typography variant="caption" color="text.secondary">{turnoActual.cantidad_cobros || 0} cobros · Total {dinero(turnoActual.total_cobrado)} · Efectivo {dinero(turnoActual.efectivo_cobrado)}</Typography>
             </Box>
             <Button variant="outlined" color="error" startIcon={<LockOutlinedIcon />} onClick={() => prepararCierre(turnoActual)}>Cerrar turno</Button>
           </Box>
