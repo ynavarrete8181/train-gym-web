@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
@@ -143,6 +145,34 @@ export function VentasCatalogo({ tipo }) {
     setFormData((actual) => ({ ...actual, [name]: inputType === 'checkbox' ? checked : value }));
   };
 
+  const handleVerPdf = async (item) => {
+    try {
+      const blob = await ventaServicio.obtenerComprobantePdf(item.venta_id);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      showNotificacion(error.response?.data?.mensaje || 'No se pudo abrir el comprobante PDF', 'error');
+    }
+  };
+
+  const handleReenviarComprobante = async (item) => {
+    try {
+      const response = await ventaServicio.reenviarComprobante(item.id);
+      showNotificacion(
+        response.datos?.correo_destino
+          ? `Comprobante reenviado a ${response.datos.correo_destino}`
+          : 'Comprobante reenviado correctamente',
+        'success',
+      );
+      cargar();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const primero = errores ? Object.values(errores).flat()[0] : null;
+      showNotificacion(primero || error.response?.data?.mensaje || 'No se pudo reenviar el comprobante', 'error');
+    }
+  };
+
   const handleGuardar = async () => {
     try {
       const payload = normalizar(tipo, formData);
@@ -180,7 +210,19 @@ export function VentasCatalogo({ tipo }) {
       <PageHeader titulo={config.titulo} descripcion={config.descripcion} icono={config.icono} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || items.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={config.crear ? <Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button> : null} />
-        <TablaVentas items={items} columnas={columnas} meta={meta} cargando={cargando} editable={Boolean(config.actualizar)} onEditar={handleEditar} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }} />
+        <TablaVentas
+          tipo={tipo}
+          items={items}
+          columnas={columnas}
+          meta={meta}
+          cargando={cargando}
+          editable={Boolean(config.actualizar)}
+          onEditar={handleEditar}
+          onVerPdf={handleVerPdf}
+          onReenviar={handleReenviarComprobante}
+          onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }}
+          onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
+        />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
@@ -247,10 +289,44 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
   </Box>;
 }
 
-function TablaVentas({ items, columnas, meta, cargando, editable, onEditar, onPageChange, onRowsPerPageChange }) {
+function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar, onVerPdf, onReenviar, onPageChange, onRowsPerPageChange }) {
+  const tieneAcciones = editable || tipo === 'comprobantes';
+
   return <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 5} onPageChange={onPageChange} onRowsPerPageChange={onRowsPerPageChange} cargando={cargando}>
-    <TableHead><TableRow>{columnas.map((columna) => columna.header)}{editable ? <TableCell align="right">Acciones</TableCell> : null}</TableRow></TableHead>
-    <TableBody>{items.map((item) => <TableRow key={item.id} hover>{columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}{editable ? <TableCell align="right"><Tooltip title="Editar"><IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(item)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip></TableCell> : null}</TableRow>)}{items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + (editable ? 1 : 0)} cargando={cargando} texto="No hay registros para los filtros aplicados." /> : null}</TableBody>
+    <TableHead><TableRow>{columnas.map((columna) => columna.header)}{tieneAcciones ? <TableCell align="right">Acciones</TableCell> : null}</TableRow></TableHead>
+    <TableBody>
+      {items.map((item) => (
+        <TableRow key={item.id} hover>
+          {columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}
+          {tieneAcciones ? (
+            <TableCell align="right">
+              {editable ? <Tooltip title="Editar"><IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(item)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip> : null}
+              {tipo === 'comprobantes' ? (
+                <>
+                  <Tooltip title="Ver PDF">
+                    <IconButton sx={dbanuStyles.actionView || dbanuStyles.actionEdit} onClick={() => onVerPdf(item)}>
+                      <PictureAsPdfOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={String(item.estado || '').toUpperCase() === 'EMITIDO' ? 'Reenviar comprobante' : 'Disponible al emitir el comprobante'}>
+                    <span>
+                      <IconButton
+                        sx={dbanuStyles.actionEdit}
+                        disabled={String(item.estado || '').toUpperCase() !== 'EMITIDO'}
+                        onClick={() => onReenviar(item)}
+                      >
+                        <SendOutlinedIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                </>
+              ) : null}
+            </TableCell>
+          ) : null}
+        </TableRow>
+      ))}
+      {items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + (tieneAcciones ? 1 : 0)} cargando={cargando} texto="No hay registros para los filtros aplicados." /> : null}
+    </TableBody>
   </TablaGestion>;
 }
 
