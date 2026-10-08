@@ -70,9 +70,9 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [descuento, setDescuento] = useState(0);
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
-  const [metodoPago, setMetodoPago] = useState('EFECTIVO');
-  const [referencia, setReferencia] = useState('');
-  const [recibido, setRecibido] = useState('');
+  const [pagos, setPagos] = useState([
+    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '', referencia: '', recibido: '' },
+  ]);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const tiposVisibles = esCuentaAbierta ? [] : tipos;
@@ -140,10 +140,37 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     [carrito],
   );
   const total = Math.max(0, subtotal - Number(descuento || 0) + Number(impuesto || 0));
-  const recibidoNumero = Number(recibido || 0);
-  const cambio = metodoPago === 'EFECTIVO' ? Math.max(0, recibidoNumero - total) : 0;
-  const faltante = metodoPago === 'EFECTIVO' ? Math.max(0, total - recibidoNumero) : 0;
+  const pagadoPrevio = esCuentaAbierta
+    ? Math.max(0, Number(ventaInicial?.total || 0) - Number(ventaInicial?.saldo_pendiente ?? ventaInicial?.total ?? 0))
+    : 0;
+  const saldoCobro = Math.max(0, total - pagadoPrevio);
+  const totalPagos = pagos.reduce((acc, pago) => acc + Number(pago.monto || 0), 0);
+  const saldoDespuesPago = Math.max(0, saldoCobro - totalPagos);
+  const excedentePagos = Math.max(0, totalPagos - saldoCobro);
   const totalItems = carrito.reduce((acc, item) => acc + Number(item.cantidad || 0), 0);
+
+  const actualizarPago = (clave, campo, valor) => {
+    setPagos((actual) => actual.map((pago) => (
+      pago.clave === clave ? { ...pago, [campo]: valor } : pago
+    )));
+  };
+
+  const agregarPago = () => {
+    setPagos((actual) => [
+      ...actual,
+      {
+        clave: `PAGO-${Date.now()}-${actual.length + 1}`,
+        metodo_pago: 'EFECTIVO',
+        monto: '',
+        referencia: '',
+        recibido: '',
+      },
+    ]);
+  };
+
+  const quitarPago = (clave) => {
+    setPagos((actual) => actual.length > 1 ? actual.filter((pago) => pago.clave !== clave) : actual);
+  };
 
   const disponibles = useMemo(() => {
     const texto = busqueda.trim().toLowerCase();
@@ -249,9 +276,24 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       avisar('Agrega al menos un ítem a la venta.', 'warning');
       return;
     }
-    if (cobrar && metodoPago === 'EFECTIVO' && recibidoNumero < total) {
-      avisar('El valor recibido en efectivo no puede ser menor que el total de la venta.', 'warning');
-      return;
+    if (cobrar) {
+      if (totalPagos <= 0) {
+        avisar('Registra al menos un pago mayor que cero.', 'warning');
+        return;
+      }
+      if (excedentePagos > 0.00001) {
+        avisar('La suma de los pagos no puede superar el saldo pendiente.', 'warning');
+        return;
+      }
+      const efectivoInvalido = pagos.some((pago) => (
+        pago.metodo_pago === 'EFECTIVO'
+        && pago.recibido !== ''
+        && Number(pago.recibido || 0) < Number(pago.monto || 0)
+      ));
+      if (efectivoInvalido) {
+        avisar('En efectivo, el valor recibido no puede ser menor que el monto aplicado.', 'warning');
+        return;
+      }
     }
     setGuardando(true);
     try {
@@ -267,11 +309,26 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
 
       const payloadCobro = {
         ...payloadVenta,
-        metodo_pago: metodoPago,
-        referencia_pago: referencia || null,
-        observaciones_pago: metodoPago === 'EFECTIVO'
-          ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.`
-          : 'Cobro registrado desde POS.',
+        pagos: pagos
+          .filter((pago) => Number(pago.monto || 0) > 0)
+          .map((pago) => {
+            const monto = Number(pago.monto || 0);
+            const recibidoEfectivo = pago.metodo_pago === 'EFECTIVO'
+              ? Number(pago.recibido || monto)
+              : null;
+            const cambioEfectivo = pago.metodo_pago === 'EFECTIVO'
+              ? Math.max(0, recibidoEfectivo - monto)
+              : 0;
+
+            return {
+              metodo_pago: pago.metodo_pago,
+              monto,
+              referencia: pago.referencia || null,
+              observaciones: pago.metodo_pago === 'EFECTIVO'
+                ? `Cobro POS. Recibido ${dinero(recibidoEfectivo)}. Cambio ${dinero(cambioEfectivo)}.`
+                : 'Cobro registrado desde POS.',
+            };
+          }),
       };
 
       const response = esCuentaAbierta
@@ -285,7 +342,13 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       const venta = response.datos || response;
       if (cobrar) {
         const comprobante = venta.comprobante?.numero ? ` · Recibo ${venta.comprobante.numero}` : '';
-        avisar(`${esCuentaAbierta ? 'Cuenta' : 'Venta'} ${venta.numero || ''} pagada correctamente${comprobante}.`, 'success');
+        const saldoResultado = Number(venta.saldo_pendiente || 0);
+        avisar(
+          saldoResultado > 0
+            ? `Pago registrado en ${venta.numero || 'la venta'}. Saldo pendiente ${dinero(saldoResultado)}.`
+            : `${esCuentaAbierta ? 'Cuenta' : 'Venta'} ${venta.numero || ''} pagada correctamente${comprobante}.`,
+          'success',
+        );
       } else {
         avisar(`${esCuentaAbierta ? 'Cuenta' : 'Venta'} ${venta.numero || ''} guardada como pendiente de pago.`, 'success');
       }
@@ -502,21 +565,134 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 <Box sx={{ mt: 1.3, pt: 1.25, borderTop: '1px solid #dfe4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Typography variant="h6" fontWeight={950} sx={{ color: NEGRO_REVIVE }}>TOTAL</Typography><Typography variant="h4" fontWeight={950} sx={{ color: DORADO_REVIVE_OSCURO }}>{dinero(total)}</Typography></Box>
 
                 <SeccionInterna titulo="Cobro" sx={{ mt: 1.8 }}>
-                  <TextField select label="Método de pago" size="small" fullWidth value={metodoPago} onChange={(e) => setMetodoPago(e.target.value)}>
-                    <MenuItem value="EFECTIVO">Efectivo</MenuItem><MenuItem value="TARJETA">Tarjeta</MenuItem><MenuItem value="TRANSFERENCIA">Transferencia</MenuItem><MenuItem value="DEPOSITO">Depósito</MenuItem><MenuItem value="OTRO">Otro</MenuItem>
-                  </TextField>
-                  {metodoPago === 'EFECTIVO' ? (
-                    <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                      <TextField label="Recibido" size="small" type="number" value={recibido} onChange={(e) => setRecibido(e.target.value)} inputProps={{ min: 0 }} />
-                      <Box sx={{ px: 1.1, py: .7, borderRadius: 1.25, border: '1px solid #e0e7ef', bgcolor: '#f8fafc' }}><Typography variant="caption" color="text.secondary" display="block">{faltante > 0 ? 'Faltante' : 'Cambio'}</Typography><Typography variant="body1" fontWeight={900} color={faltante > 0 ? 'error.main' : 'success.main'}>{dinero(faltante > 0 ? faltante : cambio)}</Typography></Box>
+                  <Stack spacing={1}>
+                    {pagos.map((pago, indice) => {
+                      const monto = Number(pago.monto || 0);
+                      const recibidoEfectivo = Number(pago.recibido || monto);
+                      const cambioEfectivo = pago.metodo_pago === 'EFECTIVO'
+                        ? Math.max(0, recibidoEfectivo - monto)
+                        : 0;
+
+                      return (
+                        <Box
+                          key={pago.clave}
+                          sx={{
+                            border: 1,
+                            borderColor: 'divider',
+                            borderRadius: 0.5,
+                            p: 1,
+                            bgcolor: 'background.paper',
+                          }}
+                        >
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1.25fr 1fr auto' }, gap: 1, alignItems: 'center' }}>
+                            <TextField
+                              select
+                              label={`Método ${indice + 1}`}
+                              size="small"
+                              value={pago.metodo_pago}
+                              onChange={(e) => actualizarPago(pago.clave, 'metodo_pago', e.target.value)}
+                              sx={dbanuStyles.field}
+                            >
+                              <MenuItem value="EFECTIVO">Efectivo</MenuItem>
+                              <MenuItem value="TARJETA">Tarjeta</MenuItem>
+                              <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+                              <MenuItem value="DEPOSITO">Depósito</MenuItem>
+                              <MenuItem value="OTRO">Otro</MenuItem>
+                            </TextField>
+                            <TextField
+                              label="Monto"
+                              size="small"
+                              type="number"
+                              value={pago.monto}
+                              onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
+                              inputProps={{ min: 0, step: '0.01' }}
+                              sx={dbanuStyles.field}
+                            />
+                            <Tooltip title="Quitar método">
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  disabled={pagos.length === 1}
+                                  onClick={() => quitarPago(pago.clave)}
+                                  sx={dbanuStyles.actionDelete}
+                                >
+                                  <DeleteOutlineOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </Box>
+
+                          {pago.metodo_pago === 'EFECTIVO' ? (
+                            <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+                              <TextField
+                                label="Efectivo recibido"
+                                size="small"
+                                type="number"
+                                value={pago.recibido}
+                                onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
+                                inputProps={{ min: 0, step: '0.01' }}
+                                helperText="Opcional; si se omite se asume igual al monto."
+                                sx={dbanuStyles.field}
+                              />
+                              <Box sx={{ px: 1.1, py: .7, border: 1, borderColor: 'divider', borderRadius: 0.5, bgcolor: 'background.default' }}>
+                                <Typography variant="caption" color="text.secondary" display="block">Cambio</Typography>
+                                <Typography variant="body1" fontWeight={900} color="success.main">{dinero(cambioEfectivo)}</Typography>
+                              </Box>
+                            </Box>
+                          ) : (
+                            <TextField
+                              label="Referencia / comprobante"
+                              size="small"
+                              fullWidth
+                              value={pago.referencia}
+                              onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
+                              sx={{ ...dbanuStyles.field, mt: 1 }}
+                            />
+                          )}
+                        </Box>
+                      );
+                    })}
+
+                    <Button
+                      variant="outlined"
+                      startIcon={<AddOutlinedIcon />}
+                      onClick={agregarPago}
+                      sx={{ ...dbanuStyles.secondaryButtonRevive, alignSelf: 'flex-start' }}
+                    >
+                      Agregar otro método
+                    </Button>
+
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 0.6, pt: 0.6 }}>
+                      <Typography variant="caption" color="text.secondary">Saldo a cobrar</Typography>
+                      <Typography variant="caption" fontWeight={900}>{dinero(saldoCobro)}</Typography>
+                      <Typography variant="caption" color="text.secondary">Pagos ingresados</Typography>
+                      <Typography variant="caption" fontWeight={900}>{dinero(totalPagos)}</Typography>
+                      <Typography variant="caption" color="text.secondary">Saldo restante</Typography>
+                      <Typography variant="caption" fontWeight={900} color={saldoDespuesPago > 0 ? 'warning.main' : 'success.main'}>{dinero(saldoDespuesPago)}</Typography>
                     </Box>
-                  ) : <TextField label="Referencia / comprobante" size="small" fullWidth value={referencia} onChange={(e) => setReferencia(e.target.value)} sx={{ mt: 1 }} />}
+                    {excedentePagos > 0 ? <Alert severity="warning">Los pagos superan el saldo por {dinero(excedentePagos)}.</Alert> : null}
+                  </Stack>
                 </SeccionInterna>
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
-                  <Button variant="contained" disabled={guardando || carrito.length === 0 || !turno?.id || (metodoPago === 'EFECTIVO' && faltante > 0)} onClick={() => guardar(true)} sx={{ ...dbanuStyles.addButtonRevive, minHeight: 46, borderRadius: 1.2, textTransform: 'none', color: '#111827', fontWeight: 950, fontSize: 13, boxShadow: '0 8px 18px rgba(184,138,0,.18)' }} startIcon={<ReceiptLongOutlinedIcon />}>{esCuentaAbierta ? 'Cobrar ahora' : 'Proceder al cobro'} · {dinero(total)}</Button>
-                  <Button variant="outlined" disabled={guardando || carrito.length === 0 || !turno?.id} onClick={() => guardar(false)} sx={{ borderColor: '#c8cdd3', color: NEGRO_REVIVE, fontWeight: 900, '&:hover': { borderColor: DORADO_REVIVE, bgcolor: DORADO_SUAVE, color: DORADO_REVIVE_OSCURO } }}>{esCuentaAbierta ? 'Guardar cuenta' : 'Guardar pendiente'}</Button>
+                  <Button
+                    variant="contained"
+                    disabled={guardando || carrito.length === 0 || !turno?.id || totalPagos <= 0 || excedentePagos > 0}
+                    onClick={() => guardar(true)}
+                    sx={dbanuStyles.addButtonRevive}
+                    startIcon={<ReceiptLongOutlinedIcon />}
+                  >
+                    Registrar pago · {dinero(totalPagos)}
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    disabled={guardando || carrito.length === 0 || !turno?.id}
+                    onClick={() => guardar(false)}
+                    sx={dbanuStyles.secondaryButtonRevive}
+                  >
+                    {esCuentaAbierta ? 'Guardar cuenta' : 'Guardar pendiente'}
+                  </Button>
                 </Stack>
               </Box>
             </Box>
