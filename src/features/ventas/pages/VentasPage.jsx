@@ -4,6 +4,7 @@ import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
@@ -201,6 +202,12 @@ export function VentasPage() {
                         <CalendarMonthOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
                         <Typography variant="body2" color="text.secondary" fontWeight={700}>
                           {fecha(venta.fecha_venta)}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={0.75} alignItems="center">
+                        <PersonOutlineOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
+                        <Typography variant="body2" color="text.secondary" fontWeight={700} noWrap>
+                          Generada por: {venta.generado_por_nombre || 'Sistema'}
                         </Typography>
                       </Stack>
                     </Stack>
