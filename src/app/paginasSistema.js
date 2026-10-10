@@ -55,6 +55,7 @@ const nombresPaginas = {
   VentasPage: 'Ventas',
   PagosPage: 'Pagos',
   ComprobantesPage: 'Comprobantes',
+  CarteraPage: 'Cartera',
   DispositivosAccesoPage: 'Dispositivos',
   CredencialesAccesoPage: 'Credenciales',
   EventosAccesoPage: 'Eventos',
