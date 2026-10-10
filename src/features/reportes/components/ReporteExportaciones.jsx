@@ -1,5 +1,5 @@
-import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
-import TableViewOutlinedIcon from '@mui/icons-material/TableViewOutlined';
+import { faFileExcel, faFilePdf } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Stack } from '@mui/material';
 import { useState } from 'react';
 import reviveLogo from '../../../assets/brand/revive-logo.jpeg';
@@ -142,22 +142,45 @@ export function ReporteExportaciones({
       <Button
         size="small"
         variant="outlined"
-        startIcon={<PictureAsPdfOutlinedIcon />}
+        startIcon={<FontAwesomeIcon icon={faFileExcel} />}
         disabled={Boolean(procesando)}
-        onClick={generarPdf}
-        sx={{ minHeight: 38, borderRadius: 1.2, textTransform: 'none', fontWeight: 800 }}
+        onClick={generarExcel}
+        sx={{
+          minHeight: 38,
+          borderRadius: 1.2,
+          textTransform: 'none',
+          borderColor: '#2e7d32',
+          color: '#2e7d32',
+          fontWeight: 700,
+          '&:hover': {
+            borderColor: '#2e7d32',
+            backgroundColor: 'rgba(46,125,50,0.08)',
+          },
+        }}
       >
-        {procesando === 'pdf' ? 'Generando...' : 'PDF'}
+        {procesando === 'excel' ? 'Generando...' : 'EXCEL'}
       </Button>
+
       <Button
         size="small"
         variant="outlined"
-        startIcon={<TableViewOutlinedIcon />}
+        startIcon={<FontAwesomeIcon icon={faFilePdf} />}
         disabled={Boolean(procesando)}
-        onClick={generarExcel}
-        sx={{ minHeight: 38, borderRadius: 1.2, textTransform: 'none', fontWeight: 800 }}
+        onClick={generarPdf}
+        sx={{
+          minHeight: 38,
+          borderRadius: 1.2,
+          textTransform: 'none',
+          borderColor: '#c62828',
+          color: '#c62828',
+          fontWeight: 700,
+          '&:hover': {
+            borderColor: '#c62828',
+            backgroundColor: 'rgba(198,40,40,0.08)',
+          },
+        }}
       >
-        {procesando === 'excel' ? 'Generando...' : 'Excel'}
+        {procesando === 'pdf' ? 'Generando...' : 'PDF'}
       </Button>
     </Stack>
   );
