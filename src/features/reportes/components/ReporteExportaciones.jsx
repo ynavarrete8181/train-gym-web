@@ -52,7 +52,15 @@ function sedesReporte(filas = []) {
 }
 
 function filtrosVisibles(filtros = {}) {
-  const ignorar = new Set(['page', 'per_page']);
+  const ignorar = new Set([
+    'page',
+    'per_page',
+    'desde',
+    'hasta',
+    'vence_desde',
+    'vence_hasta',
+    'sede_id',
+  ]);
   return Object.entries(filtros)
     .filter(([clave, valor]) => !ignorar.has(clave) && valor !== '' && valor !== null && valor !== undefined && !(Array.isArray(valor) && valor.length === 0))
     .map(([clave, valor]) => [etiquetaFiltro(clave), Array.isArray(valor) ? valor.join(', ') : valor]);
@@ -101,7 +109,7 @@ export function ReporteExportaciones({
 <meta charset="utf-8" />
 <title>${escapar(titulo)}</title>
 <style>
-  @page { size: landscape; margin: 16mm 16mm 18mm 16mm; }
+  @page { size: landscape; margin: 10mm 16mm 18mm 16mm; }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100%; }
   body {
@@ -140,13 +148,13 @@ export function ReporteExportaciones({
     width: 297mm;
     min-height: 210mm;
     margin: 18px auto 28px;
-    padding: 16mm 16mm 18mm;
+    padding: 10mm 16mm 18mm;
     background: #fff;
     box-shadow: 0 4px 22px rgba(0,0,0,.14);
   }
   .membrete {
     position: relative;
-    min-height: 82px;
+    min-height: 70px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -158,15 +166,15 @@ export function ReporteExportaciones({
     position: absolute;
     left: 0;
     top: 4px;
-    width: 104px;
-    height: 70px;
+    width: 96px;
+    height: 62px;
     display: flex;
     align-items: center;
     justify-content: flex-start;
   }
   .logo img {
-    max-width: 96px;
-    max-height: 66px;
+    max-width: 88px;
+    max-height: 58px;
     object-fit: contain;
   }
   .encabezado-centro {
@@ -309,7 +317,7 @@ export function ReporteExportaciones({
       </div>
     </header>
 
-    <section class="meta">${filtrosHtml || '<span><strong>Filtros:</strong> Sin filtros adicionales</span>'}</section>
+    ${filtrosHtml ? `<section class="meta">${filtrosHtml}</section>` : ''}
 
     <table>
       <thead><tr>${thead}</tr></thead>
