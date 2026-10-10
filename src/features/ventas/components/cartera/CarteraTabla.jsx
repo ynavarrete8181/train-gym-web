@@ -8,6 +8,19 @@ import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
 import { cuentaCerrada, dinero, estadoVisualCartera, fecha } from '../../config/carteraConfig.js';
 
 const columnas = [
+  { key: 'sede', label: 'Sede', render: (item) => item.sede_nombre || '—' },
+  {
+    key: 'venta',
+    label: 'N.º de venta',
+    render: (item) => (
+      <Box>
+        <Typography variant="body2" fontWeight={700}>{item.venta_numero}</Typography>
+        <Typography variant="caption" color="text.secondary">
+          {item.plan_nombre || item.concepto}
+        </Typography>
+      </Box>
+    ),
+  },
   {
     key: 'cliente',
     label: 'Cliente',
@@ -20,19 +33,6 @@ const columnas = [
       </Box>
     ),
   },
-  {
-    key: 'venta',
-    label: 'Venta',
-    render: (item) => (
-      <Box>
-        <Typography variant="body2" fontWeight={700}>{item.venta_numero}</Typography>
-        <Typography variant="caption" color="text.secondary">
-          {item.plan_nombre || item.concepto}
-        </Typography>
-      </Box>
-    ),
-  },
-  { key: 'sede', label: 'Sede', render: (item) => item.sede_nombre || '—' },
   {
     key: 'vencimiento',
     label: 'Vencimiento',
@@ -96,8 +96,6 @@ export function CarteraTabla({
     >
       <TableHead>
         <TableRow>
-          <FilterHeaderCell>Cliente</FilterHeaderCell>
-          <FilterHeaderCell>Venta</FilterHeaderCell>
           <FilterHeaderCell
             value={filtrosColumna.sede_id || []}
             onChange={(valor) => onFiltroColumna?.('sede_id', valor)}
@@ -106,6 +104,8 @@ export function CarteraTabla({
           >
             Sede
           </FilterHeaderCell>
+          <FilterHeaderCell>N.º de venta</FilterHeaderCell>
+          <FilterHeaderCell>Cliente</FilterHeaderCell>
           <FilterHeaderCell>Vencimiento</FilterHeaderCell>
           <FilterHeaderCell align="right">Total</FilterHeaderCell>
           <FilterHeaderCell align="right">Pagado</FilterHeaderCell>
