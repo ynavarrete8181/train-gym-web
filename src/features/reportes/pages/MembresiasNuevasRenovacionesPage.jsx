@@ -88,6 +88,27 @@ export function MembresiasNuevasRenovacionesPage() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo="Membresías nuevas y renovaciones"
+                descripcion="Altas y renovaciones de membresías por período, sede, plan y estado."
+                filtros={filtros}
+                columnas={[
+                  { label: 'Fecha', value: (fila) => fecha(fila.fecha_movimiento) },
+                  { label: 'Sede', value: 'sede', align: 'left' },
+                  { label: 'Movimiento', value: (fila) => fila.tipo_movimiento === 'RENOVACION' ? 'Renovación' : 'Nueva' },
+                  { label: 'Contrato', value: 'codigo_contrato' },
+                  { label: 'Cliente', value: (fila) => `${fila.cliente || ''} ${fila.identificacion || ''}`, align: 'left' },
+                  { label: 'Plan', value: 'plan', align: 'left' },
+                  { label: 'Modalidad', value: 'modalidad', align: 'left' },
+                  { label: 'Período', value: 'numero_periodo' },
+                  { label: 'Estado', value: 'estado_periodo' },
+                  { label: 'Precio', value: (fila) => dinero(fila.precio) },
+                  { label: 'Cobrado', value: (fila) => dinero(fila.total_cobrado) },
+                  { label: 'Saldo', value: (fila) => dinero(fila.saldo_pendiente) },
+                ]}
+                obtenerFilas={() => membresiasNuevasRenovacionesServicio.consultarTodo(filtros)}
+                exportarExcel={() => membresiasNuevasRenovacionesServicio.exportarExcel(filtros)}
+              />
             </Stack>
           )}
         />
