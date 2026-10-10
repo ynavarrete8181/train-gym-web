@@ -104,12 +104,45 @@ export function CarteraTabla({
           >
             Sede
           </FilterHeaderCell>
-          <FilterHeaderCell>N.º de venta</FilterHeaderCell>
-          <FilterHeaderCell>Cliente</FilterHeaderCell>
-          <FilterHeaderCell>Vencimiento</FilterHeaderCell>
-          <FilterHeaderCell align="right">Total</FilterHeaderCell>
-          <FilterHeaderCell align="right">Pagado</FilterHeaderCell>
-          <FilterHeaderCell align="right">Saldo</FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.venta_numero || ''}
+            onChange={(valor) => onFiltroColumna?.('venta_numero', valor)}
+          >
+            N.º de venta
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.cliente || ''}
+            onChange={(valor) => onFiltroColumna?.('cliente', valor)}
+          >
+            Cliente
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.vencimiento || ''}
+            onChange={(valor) => onFiltroColumna?.('vencimiento', valor)}
+          >
+            Vencimiento
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            align="right"
+            value={filtrosColumna.total || ''}
+            onChange={(valor) => onFiltroColumna?.('total', valor)}
+          >
+            Total
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            align="right"
+            value={filtrosColumna.pagado || ''}
+            onChange={(valor) => onFiltroColumna?.('pagado', valor)}
+          >
+            Pagado
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            align="right"
+            value={filtrosColumna.saldo || ''}
+            onChange={(valor) => onFiltroColumna?.('saldo', valor)}
+          >
+            Saldo
+          </FilterHeaderCell>
           <FilterHeaderCell
             value={filtrosColumna.responsable_id || []}
             onChange={(valor) => onFiltroColumna?.('responsable_id', valor)}
