@@ -103,27 +103,56 @@ export function ReporteExportaciones({
 <style>
   @page { size: landscape; margin: 16mm 16mm 18mm 16mm; }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
   body {
     font-family: Arial, Helvetica, sans-serif;
     color: #202124;
     font-size: 9.5px;
+    background: #e9ecef;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .barra-preview {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: rgba(255,255,255,.96);
+    border-bottom: 1px solid #d9d9d9;
+    box-shadow: 0 1px 5px rgba(0,0,0,.08);
+  }
+  .btn-imprimir {
+    border: 1px solid #c62828;
+    background: #fff;
+    color: #c62828;
+    border-radius: 5px;
+    padding: 8px 13px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+  .btn-imprimir:hover { background: rgba(198,40,40,.07); }
   .documento {
-    width: 100%;
-    max-width: 100%;
+    width: 297mm;
+    min-height: 210mm;
+    margin: 18px auto 28px;
+    padding: 16mm 16mm 18mm;
+    background: #fff;
+    box-shadow: 0 4px 22px rgba(0,0,0,.14);
   }
   .membrete {
     position: relative;
-    min-height: 76px;
+    min-height: 82px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-bottom: 3px solid #f5c400;
-    padding: 2px 118px 10px;
-    margin-bottom: 9px;
+    padding: 2px 118px 9px;
+    margin-bottom: 8px;
   }
   .logo {
     position: absolute;
@@ -162,13 +191,11 @@ export function ReporteExportaciones({
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 3px 16px;
-    padding: 7px 10px;
-    margin: 0 0 8px;
-    background: #fafafa;
-    border: 1px solid #e3e3e3;
-    border-radius: 4px;
-    font-size: 9px;
+    gap: 2px 14px;
+    margin-top: 5px;
+    padding: 0;
+    font-size: 8.8px;
+    line-height: 1.3;
   }
   .dato {
     display: inline-flex;
@@ -186,13 +213,14 @@ export function ReporteExportaciones({
   .meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px 16px;
-    min-height: 26px;
-    padding: 7px 9px;
-    margin-bottom: 10px;
-    border: 1px solid #ececec;
+    gap: 4px 14px;
+    min-height: 22px;
+    padding: 5px 7px;
+    margin-bottom: 9px;
     border-left: 3px solid #f5c400;
     background: #fffdf5;
+    color: #555;
+    font-size: 8.5px;
   }
   .meta span { white-space: normal; }
   table {
@@ -221,10 +249,7 @@ export function ReporteExportaciones({
   .izq { text-align: left; }
   .centro { text-align: center; }
   .pie {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: -10mm;
+    margin-top: 10px;
     padding-top: 5px;
     border-top: 1px solid #d8d8d8;
     font-size: 7.5px;
@@ -234,38 +259,55 @@ export function ReporteExportaciones({
     align-items: center;
   }
   @media print {
-    .no-print { display: none; }
+    body { background: #fff; }
+    .no-print { display: none !important; }
+    .documento {
+      width: auto;
+      min-height: 0;
+      margin: 0;
+      padding: 0;
+      box-shadow: none;
+    }
+    .pie {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: -10mm;
+    }
   }
 </style>
 </head>
 <body>
+  <div class="barra-preview no-print">
+    <button class="btn-imprimir" onclick="window.print()">Imprimir / Guardar PDF</button>
+  </div>
+
   <main class="documento">
     <header class="membrete">
       <div class="logo"><img src="${logoUrl}" alt="Revive" /></div>
       <div class="encabezado-centro">
         <div class="institucion">Centro de Entrenamiento Físico Revive</div>
         <div class="titulo">Reporte de ${escapar(titulo)}</div>
+        <div class="informacion-documento">
+          <div class="dato">
+            <span class="dato-etiqueta">Generado por:</span>
+            <span class="dato-valor">${escapar(usuario.name || 'Usuario')}</span>
+          </div>
+          <div class="dato">
+            <span class="dato-etiqueta">Rol:</span>
+            <span class="dato-valor">${escapar(usuario.rol_nombre || 'Sin rol')}</span>
+          </div>
+          <div class="dato">
+            <span class="dato-etiqueta">Período:</span>
+            <span class="dato-valor">${escapar(periodo)}</span>
+          </div>
+          <div class="dato">
+            <span class="dato-etiqueta">Sedes:</span>
+            <span class="dato-valor">${escapar(sedes)}</span>
+          </div>
+        </div>
       </div>
     </header>
-
-    <section class="informacion-documento">
-      <div class="dato">
-        <span class="dato-etiqueta">Generado por:</span>
-        <span class="dato-valor">${escapar(usuario.name || 'Usuario')}</span>
-      </div>
-      <div class="dato">
-        <span class="dato-etiqueta">Rol:</span>
-        <span class="dato-valor">${escapar(usuario.rol_nombre || 'Sin rol')}</span>
-      </div>
-      <div class="dato">
-        <span class="dato-etiqueta">Período:</span>
-        <span class="dato-valor">${escapar(periodo)}</span>
-      </div>
-      <div class="dato">
-        <span class="dato-etiqueta">Sedes:</span>
-        <span class="dato-valor">${escapar(sedes)}</span>
-      </div>
-    </section>
 
     <section class="meta">${filtrosHtml || '<span><strong>Filtros:</strong> Sin filtros adicionales</span>'}</section>
 
@@ -283,7 +325,6 @@ export function ReporteExportaciones({
 </html>`);
       ventana.document.close();
       ventana.focus();
-      setTimeout(() => ventana.print(), 350);
     } finally {
       setProcesando('');
     }
