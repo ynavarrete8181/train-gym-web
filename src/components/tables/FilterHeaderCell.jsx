@@ -62,7 +62,15 @@ export function FilterHeaderCell({ children, value = '', onChange, options = [],
 
   return (
     <TableCell align={align} sx={sx}>
-      <Stack direction="row" spacing={0.5} sx={{ minHeight: 28, alignItems: 'center', justifyContent: align === 'right' ? 'flex-end' : 'flex-start' }}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          minHeight: 28,
+          alignItems: 'center',
+          justifyContent: align === 'center' ? 'center' : (align === 'right' ? 'flex-end' : 'flex-start'),
+        }}
+      >
         <Typography noWrap sx={{ fontSize: 12, fontWeight: 900, color: uiTokens.colores.textoFuerte, lineHeight: 1.2 }}>{children}</Typography>
         {onChange ? (
           <Tooltip title={activo ? `Filtro aplicado${modoExcel ? ` (${seleccion.length})` : ''}` : 'Filtrar columna'}>
