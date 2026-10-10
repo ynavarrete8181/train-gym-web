@@ -19,8 +19,11 @@ export function CobrosMetodoPagoPage() {
   const [filtros, setFiltros] = useState({
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
     hasta: hoy.toISOString().slice(0, 10),
+    fecha: '',
     sede_id: [],
     metodo_pago: [],
+    operaciones: '',
+    total: '',
     page: 1,
     per_page: 10,
   });
@@ -74,11 +77,11 @@ export function CobrosMetodoPagoPage() {
         <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 10} onPageChange={(page) => { const n = { ...filtros, page }; setFiltros(n); cargar(n); }} onRowsPerPageChange={(perPage) => { const n = { ...filtros, page: 1, per_page: perPage }; setFiltros(n); cargar(n); }} cargando={cargando}>
           <TableHead>
             <TableRow>
-              <FilterHeaderCell>Fecha</FilterHeaderCell>
+              <FilterHeaderCell value={filtros.fecha} onChange={(valor) => aplicar({ fecha: valor })}>Fecha</FilterHeaderCell>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
               <FilterHeaderCell value={filtros.metodo_pago} onChange={(valor) => aplicar({ metodo_pago: valor })} options={(catalogos.metodos_pago || []).map((m) => ({ value: m, label: m }))} multiple>Método</FilterHeaderCell>
-              <FilterHeaderCell align="right">Operaciones</FilterHeaderCell>
-              <FilterHeaderCell align="right">Total</FilterHeaderCell>
+              <FilterHeaderCell align="right" value={filtros.operaciones} onChange={(valor) => aplicar({ operaciones: valor })}>Operaciones</FilterHeaderCell>
+              <FilterHeaderCell align="right" value={filtros.total} onChange={(valor) => aplicar({ total: valor })}>Total</FilterHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
