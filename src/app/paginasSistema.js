@@ -61,6 +61,7 @@ const nombresPaginas = {
   CobrosMetodoPagoPage: 'Cobros por método de pago',
   VentasPeriodoPage: 'Ventas por período',
   VentasResponsablePage: 'Ventas por responsable',
+  MembresiasNuevasRenovacionesPage: 'Membresías nuevas y renovaciones',
   DispositivosAccesoPage: 'Dispositivos',
   CredencialesAccesoPage: 'Credenciales',
   EventosAccesoPage: 'Eventos',
