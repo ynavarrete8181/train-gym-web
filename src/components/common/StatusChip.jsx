@@ -8,6 +8,6 @@ const colores = {
   cerrado: 'default',
 }
 
-export function StatusChip({ estado }) {
-  return <Chip label={estado} color={colores[estado] || 'default'} size="small" variant="outlined" />
+export function StatusChip({ estado, label }) {
+  return <Chip label={label || estado} color={colores[estado] || 'default'} size="small" variant="outlined" />
 }
