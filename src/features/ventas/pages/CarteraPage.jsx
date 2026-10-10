@@ -259,6 +259,7 @@ export function CarteraPage() {
           total={meta.total || 0}
           busqueda={filtros.busqueda}
           onBusqueda={(valor) => aplicarBusqueda({ busqueda: valor })}
+          mostrarTotal={false}
           resumen={<CarteraResumen resumen={resumen} />}
         />
 
