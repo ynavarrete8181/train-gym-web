@@ -14,9 +14,13 @@ const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateStrin
 const opciones = (items = []) => (items || []).map((item) => ({ value: String(item), label: String(item) }));
 
 function sumarDias(fechaBase, dias) {
-  const fecha = new Date(fechaBase);
+  const [anio, mes, dia] = fechaBase.split('-').map(Number);
+  const fecha = new Date(anio, mes - 1, dia, 12, 0, 0);
   fecha.setDate(fecha.getDate() + dias);
-  return fecha.toISOString().slice(0, 10);
+  const yyyy = fecha.getFullYear();
+  const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+  const dd = String(fecha.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export function MembresiasPorVencerPage() {
