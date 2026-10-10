@@ -7,6 +7,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { conciliacionCajaServicio } from '../services/ventas/conciliacionCajaServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -94,6 +95,32 @@ export function ConciliacionCajaPage() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo="Conciliación de caja"
+                descripcion="Cierres de caja, efectivo esperado, efectivo contado y diferencias."
+                filtros={filtros}
+                columnas={[
+                  { label: 'Fecha', value: (fila) => fecha(fila.fecha_cierre) },
+                  { label: 'Sede', value: 'sede', align: 'left' },
+                  { label: 'Caja', value: (fila) => `${fila.caja_nombre || ''} ${fila.caja_codigo || ''}`, align: 'left' },
+                  { label: 'Cajero', value: 'cajero', align: 'left' },
+                  { label: 'Apertura', value: (fila) => hora(fila.fecha_apertura) },
+                  { label: 'Cierre', value: (fila) => hora(fila.fecha_cierre) },
+                  { label: 'Saldo inicial', value: (fila) => dinero(fila.saldo_inicial) },
+                  { label: 'Efectivo cobrado', value: (fila) => dinero(fila.efectivo_cobrado) },
+                  { label: 'Esperado', value: (fila) => dinero(fila.efectivo_esperado) },
+                  { label: 'Contado', value: (fila) => dinero(fila.efectivo_contado) },
+                  { label: 'Diferencia', value: (fila) => dinero(fila.diferencia) },
+                  { label: 'Transferencias', value: (fila) => dinero(fila.transferencia_cobrada) },
+                  { label: 'Tarjetas', value: (fila) => dinero(fila.tarjeta_cobrada) },
+                  { label: 'Depósitos', value: (fila) => dinero(fila.deposito_cobrado) },
+                  { label: 'Otros', value: (fila) => dinero(fila.otros_cobrado) },
+                  { label: 'Tipo cierre', value: 'tipo_cierre' },
+                  { label: 'Conciliación', value: (fila) => fila.requiere_arqueo ? 'Pendiente' : 'Conciliado' },
+                ]}
+                obtenerFilas={() => conciliacionCajaServicio.consultarTodo(filtros)}
+                exportarExcel={() => conciliacionCajaServicio.exportarExcel(filtros)}
+              />
             </Stack>
           )}
         />
