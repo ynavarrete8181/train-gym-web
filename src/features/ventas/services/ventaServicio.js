@@ -26,4 +26,11 @@ export const ventaServicio = {
   crearPago: async (payload) => (await api.post('/base/ventas/pagos', payload)).data,
   obtenerComprobantes: async (params = { page: 1 }) => (await api.get('/base/ventas/comprobantes', { params })).data,
   reenviarComprobante: async (id) => (await api.post(`/base/ventas/comprobantes/${id}/reenviar`)).data,
+
+  obtenerCartera: async (params = { page: 1, per_page: 10 }) => (await api.get('/base/ventas/cartera', { params })).data,
+  obtenerDetalleCartera: async (id) => (await api.get(`/base/ventas/cartera/${id}`)).data,
+  actualizarCartera: async (id, payload) => (await api.put(`/base/ventas/cartera/${id}`, payload)).data,
+  registrarGestionCartera: async (id, payload) => (await api.post(`/base/ventas/cartera/${id}/gestiones`, payload)).data,
+  registrarCompromisoCartera: async (id, payload) => (await api.post(`/base/ventas/cartera/${id}/compromisos`, payload)).data,
+  actualizarCompromisoCartera: async (id, payload) => (await api.patch(`/base/ventas/cartera/compromisos/${id}`, payload)).data,
 };
