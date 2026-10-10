@@ -88,6 +88,7 @@ export function ReporteExportaciones({
   descripcion,
   filtros,
   columnas,
+  filaTotal = null,
   obtenerFilas,
   exportarExcel,
 }) {
@@ -127,6 +128,7 @@ export function ReporteExportaciones({
         sedes,
         logoUrl,
         filtrosAdicionales: filtrosVisibles(filtros),
+        filaTotal,
       });
 
       const archivo = new File(
