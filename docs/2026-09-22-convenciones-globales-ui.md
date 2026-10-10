@@ -59,6 +59,34 @@ Componentes base prioritarios:
 - `AccionesFormulario`
 - `StatusChip`
 
+
+## Estructura de módulos frontend
+
+Las páginas nuevas deben actuar como contenedores de coordinación y no concentrar tablas, formularios, diálogos y reglas visuales en un solo archivo.
+
+Patrón recomendado:
+
+```
+src/features/<modulo>/
+├── pages/
+│   └── <Vista>Page.jsx
+├── components/
+│   └── <submodulo>/
+├── services/
+│   └── <submodulo>Servicio.js
+└── config/
+    └── <submodulo>Config.js
+```
+
+Reglas:
+
+1. `pages/` coordina carga, estado, navegación interna y composición.
+2. `components/` contiene tablas, formularios, diálogos y bloques reutilizables.
+3. `services/` concentra las llamadas HTTP del submódulo; evitar mezclar endpoints no relacionados en un servicio general cuando el dominio ya tiene entidad propia.
+4. `config/` contiene formateadores, catálogos visuales y configuración estática del submódulo cuando sea necesario.
+5. Los estados visuales deben reutilizar `StatusChip` y los estilos de `dbanuStyles` antes de definir estilos locales.
+6. Las reglas de negocio, permisos, alcance por sede y validaciones permanecen en backend; el frontend renderiza y captura datos.
+
 ## Criterio general
 
 La interfaz debe conservar:
