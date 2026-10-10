@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import { Box, MenuItem, Paper, TextField } from '@mui/material';
+import { Box, Paper } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
@@ -35,7 +35,8 @@ export function CarteraPage() {
   const [vista, setVista] = useState('lista');
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
-  const [filtros, setFiltros] = useState({ busqueda: '', estado: '', page: 1, per_page: 10 });
+  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 10 });
+  const [filtrosColumna, setFiltrosColumna] = useState({ estado: [], sede_id: [], responsable_id: [], prioridad: [] });
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [turnoActual, setTurnoActual] = useState(null);
@@ -78,6 +79,14 @@ export function CarteraPage() {
 
   const aplicarBusqueda = (cambios) => {
     const nuevos = { ...filtros, ...cambios, page: 1 };
+    setFiltros(nuevos);
+    cargar(nuevos);
+  };
+
+  const aplicarFiltroColumna = (columna, valor) => {
+    const nuevosFiltrosColumna = { ...filtrosColumna, [columna]: valor };
+    const nuevos = { ...filtros, ...nuevosFiltrosColumna, [columna]: valor, page: 1 };
+    setFiltrosColumna(nuevosFiltrosColumna);
     setFiltros(nuevos);
     cargar(nuevos);
   };
@@ -241,21 +250,6 @@ export function CarteraPage() {
           total={meta.total || 0}
           busqueda={filtros.busqueda}
           onBusqueda={(valor) => aplicarBusqueda({ busqueda: valor })}
-          acciones={(
-            <TextField
-              select
-              size="small"
-              label="Estado"
-              value={filtros.estado}
-              onChange={(e) => aplicarBusqueda({ estado: e.target.value })}
-              sx={{ minWidth: 160 }}
-            >
-              <MenuItem value="">Todos</MenuItem>
-              {(catalogos.estados || []).map((estado) => (
-                <MenuItem key={estado} value={estado}>{estado}</MenuItem>
-              ))}
-            </TextField>
-          )}
         />
 
         <CarteraTabla
@@ -263,6 +257,8 @@ export function CarteraPage() {
           meta={meta}
           cargando={cargando}
           turnoActual={turnoActual}
+          filtrosColumna={filtrosColumna}
+          onFiltroColumna={aplicarFiltroColumna}
           onGestionar={abrirGestion}
           onCobrar={abrirCobro}
           onPageChange={(page) => {
