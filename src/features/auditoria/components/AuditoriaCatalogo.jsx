@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import BugReportOutlinedIcon from '@mui/icons-material/BugReportOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import LoginOutlinedIcon from '@mui/icons-material/LoginOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { Box, Chip, Dialog, DialogContent, DialogTitle, IconButton, Paper, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
@@ -49,6 +50,12 @@ const configs = {
     descripcion: 'Excepciones y errores técnicos del backend, capturados automáticamente.',
     icono: <BugReportOutlinedIcon />,
     obtener: 'obtenerLogs',
+  },
+  integraciones: {
+    titulo: 'Integraciones',
+    descripcion: 'Solicitudes a servicios externos, tiempos de respuesta y fallos de integración.',
+    icono: <HubOutlinedIcon />,
+    obtener: 'obtenerIntegraciones',
   },
 };
 
@@ -101,17 +108,17 @@ function TablaAuditoria({ tipo }) {
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || items.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} />
         <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 10} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }} cargando={cargando}>
-          <TableHead><TableRow>{columnas.map((columna) => columna.header)}{tipo === 'eventos' || tipo === 'logs' ? <TableCell align="right">Detalle</TableCell> : null}</TableRow></TableHead>
+          <TableHead><TableRow>{columnas.map((columna) => columna.header)}{tipo === 'eventos' || tipo === 'logs' || tipo === 'integraciones' ? <TableCell align="right">Detalle</TableCell> : null}</TableRow></TableHead>
           <TableBody>
-            {!cargando && items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + (tipo === 'eventos' || tipo === 'logs' ? 1 : 0)} texto="No hay registros para los filtros seleccionados." /> : null}
+            {!cargando && items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + (tipo === 'eventos' || tipo === 'logs' || tipo === 'integraciones' ? 1 : 0)} texto="No hay registros para los filtros seleccionados." /> : null}
             {items.map((item) => (
               <TableRow hover key={item.id}>
                 {columnas.map((columna) => <TableCell key={columna.key} align={columna.align || 'left'}>{columna.render(item)}</TableCell>)}
-                {tipo === 'eventos' || tipo === 'logs' ? (
+                {tipo === 'eventos' || tipo === 'logs' || tipo === 'integraciones' ? (
                   <TableCell align="right">
                     <Tooltip title={tipo === 'logs' ? 'Ver detalle técnico' : 'Ver datos antes/después'}>
                       <span>
-                        <IconButton size="small" disabled={tipo === 'eventos' ? !item.datos_antes && !item.datos_despues : !item.stack_trace} onClick={() => setDetalle(item)} sx={dbanuStyles.actionEdit}>
+                        <IconButton size="small" disabled={tipo === 'eventos' ? !item.datos_antes && !item.datos_despues : tipo === 'logs' ? !item.stack_trace : false} onClick={() => setDetalle(item)} sx={dbanuStyles.actionEdit}>
                           <VisibilityOutlinedIcon fontSize="small" />
                         </IconButton>
                       </span>
@@ -136,6 +143,20 @@ function TablaAuditoria({ tipo }) {
               <Box component="pre" sx={{ fontSize: 11, bgcolor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 1, p: 1.2, overflowX: 'auto', maxHeight: 320 }}>
                 {detalle?.stack_trace || 'Sin traza registrada.'}
               </Box>
+            </>
+          ) : tipo === 'integraciones' ? (
+            <>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: uiTokens.colores.textoMedio, mb: 0.5 }}>REQUEST</Typography>
+              <Box component="pre" sx={{ fontSize: 11, bgcolor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 1, p: 1.2, overflowX: 'auto', mb: 1.2, maxHeight: 180 }}>
+                {formatearJson(detalle?.request_payload)}
+              </Box>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: uiTokens.colores.textoMedio, mb: 0.5 }}>RESPONSE</Typography>
+              <Box component="pre" sx={{ fontSize: 11, bgcolor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 1, p: 1.2, overflowX: 'auto', mb: 1.2, maxHeight: 180 }}>
+                {formatearJson(detalle?.response_payload)}
+              </Box>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 800, color: detalle?.error ? 'error.main' : uiTokens.colores.textoMedio }}>
+                {detalle?.error || 'Sin error registrado.'}
+              </Typography>
             </>
           ) : (
             <>
@@ -175,6 +196,19 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro) {
       { key: 'tipo', header: filtro('tipo', 'Tipo', opciones(meta.opciones_filtro?.tipo_acceso)), render: (item) => <Chip label={item.tipo} color={colorAcceso(item.tipo)} size="small" variant="outlined" /> },
       { key: 'motivo', header: <FilterHeaderCell key="motivo">Motivo</FilterHeaderCell>, render: (item) => item.motivo || '—' },
       { key: 'ip', header: <FilterHeaderCell key="ip">IP</FilterHeaderCell>, render: (item) => item.ip || '—' },
+    ];
+  }
+
+  if (tipo === 'integraciones') {
+    const estado = (item) => item.error || Number(item.status_code || 0) >= 400 ? 'ERROR' : 'OK';
+    return [
+      { key: 'fecha', header: <FilterHeaderCell key="fecha">Fecha</FilterHeaderCell>, render: (item) => fecha(item.created_at) },
+      { key: 'proveedor', header: filtro('proveedor', 'Proveedor', opciones(meta.opciones_filtro?.proveedor)), render: (item) => item.proveedor || '—' },
+      { key: 'tipo', header: filtro('tipo', 'Tipo', opciones(meta.opciones_filtro?.tipo)), render: (item) => item.tipo || '—' },
+      { key: 'direccion', header: filtro('direccion', 'Dirección', opciones(meta.opciones_filtro?.direccion)), render: (item) => item.direccion || '—' },
+      { key: 'endpoint', header: <FilterHeaderCell key="endpoint">Endpoint</FilterHeaderCell>, render: (item) => <Typography sx={{ fontSize: 12, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.endpoint || '—'}</Typography> },
+      { key: 'status', header: filtro('estado', 'Estado', opciones(meta.opciones_filtro?.estado)), render: (item) => <Chip label={estado(item)} color={estado(item) === 'ERROR' ? 'error' : 'success'} size="small" variant="outlined" /> },
+      { key: 'duracion', header: <FilterHeaderCell key="duracion">Duración</FilterHeaderCell>, render: (item) => item.duracion_ms != null ? `${item.duracion_ms} ms` : '—', align: 'center' },
     ];
   }
 
