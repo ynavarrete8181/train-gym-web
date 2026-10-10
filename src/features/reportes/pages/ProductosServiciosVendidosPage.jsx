@@ -72,7 +72,6 @@ export function ProductosServiciosVendidosPage() {
           resumen={(
             <>
               <Chip variant="outlined" label={`Ítems distintos: ${resumen.items_distintos || 0}`} sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, color: uiTokens.colores.textoFuerte, borderColor: uiTokens.colores.borde }} />
-              <Chip variant="outlined" label={`Ventas: ${resumen.ventas || 0}`} sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, color: uiTokens.colores.primario, borderColor: uiTokens.colores.primario }} />
               <Chip variant="outlined" label={`Unidades: ${numero(resumen.unidades)}`} sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, color: uiTokens.colores.info, borderColor: uiTokens.colores.info }} />
               <Chip variant="outlined" label={`Total vendido: ${dinero(resumen.total_vendido)}`} sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, color: uiTokens.colores.exito, borderColor: uiTokens.colores.exito }} />
             </>
