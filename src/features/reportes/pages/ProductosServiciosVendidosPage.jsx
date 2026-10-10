@@ -94,6 +94,15 @@ export function ProductosServiciosVendidosPage() {
                   { label: 'Precio promedio', value: (fila) => dinero(fila.precio_promedio) },
                   { label: 'Total vendido', value: (fila) => dinero(fila.total_vendido) },
                 ]}
+                filaTotal={[
+                  'TOTAL',
+                  '',
+                  '',
+                  (filas) => numero(filas.reduce((suma, fila) => suma + Number(fila.ventas || 0), 0)),
+                  (filas) => numero(filas.reduce((suma, fila) => suma + Number(fila.cantidad || 0), 0)),
+                  '',
+                  (filas) => dinero(filas.reduce((suma, fila) => suma + Number(fila.total_vendido || 0), 0)),
+                ]}
                 obtenerFilas={() => productosServiciosVendidosServicio.consultarTodo(filtros)}
                 exportarExcel={() => productosServiciosVendidosServicio.exportarExcel(filtros)}
               />
