@@ -27,6 +27,8 @@ export function ConciliacionCajaPage() {
     sede_id: [],
     caja: '',
     cajero: '',
+    apertura: '',
+    cierre: '',
     saldo_inicial: '',
     efectivo_cobrado: '',
     efectivo_esperado: '',
@@ -119,8 +121,8 @@ export function ConciliacionCajaPage() {
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
               <FilterHeaderCell value={filtros.caja} onChange={(valor) => aplicar({ caja: valor })}>Caja</FilterHeaderCell>
               <FilterHeaderCell value={filtros.cajero} onChange={(valor) => aplicar({ cajero: valor })}>Cajero</FilterHeaderCell>
-              <FilterHeaderCell align="center">Apertura</FilterHeaderCell>
-              <FilterHeaderCell align="center">Cierre</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.apertura} onChange={(valor) => aplicar({ apertura: valor })}>Apertura</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.cierre} onChange={(valor) => aplicar({ cierre: valor })}>Cierre</FilterHeaderCell>
               <FilterHeaderCell align="center" value={filtros.saldo_inicial} onChange={(valor) => aplicar({ saldo_inicial: valor })}>Saldo inicial</FilterHeaderCell>
               <FilterHeaderCell align="center" value={filtros.efectivo_cobrado} onChange={(valor) => aplicar({ efectivo_cobrado: valor })}>Efectivo cobrado</FilterHeaderCell>
               <FilterHeaderCell align="center" value={filtros.efectivo_esperado} onChange={(valor) => aplicar({ efectivo_esperado: valor })}>Efectivo esperado</FilterHeaderCell>
