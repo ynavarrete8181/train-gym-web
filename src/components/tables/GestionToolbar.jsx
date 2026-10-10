@@ -26,7 +26,7 @@ function normalizarAccion(elemento) {
   return elemento
 }
 
-export function GestionToolbar({ total, busqueda, onBusqueda, acciones = null, resumen = null, etiqueta = 'RESULTADOS' }) {
+export function GestionToolbar({ total, busqueda, onBusqueda, acciones = null, resumen = null, etiqueta = 'RESULTADOS', mostrarTotal = true }) {
   return (
     <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} sx={{ mb: 2, alignItems: { xs: 'stretch', lg: 'center' }, justifyContent: 'space-between' }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ flex: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
@@ -46,19 +46,21 @@ export function GestionToolbar({ total, busqueda, onBusqueda, acciones = null, r
             },
           }}
         />
-        <Chip
-          variant="outlined"
-          label={`${Number(total || 0).toLocaleString('es-EC')} ${etiqueta}`}
-          sx={{
-            height: 38,
-            borderRadius: 0.5,
-            fontWeight: 900,
-            color: uiTokens.colores.textoFuerte,
-            bgcolor: 'transparent',
-            borderColor: uiTokens.colores.borde,
-            '& .MuiChip-label': { px: 1.4, fontSize: 11.5 },
-          }}
-        />
+        {mostrarTotal ? (
+          <Chip
+            variant="outlined"
+            label={`${Number(total || 0).toLocaleString('es-EC')} ${etiqueta}`}
+            sx={{
+              height: 38,
+              borderRadius: 0.5,
+              fontWeight: 900,
+              color: uiTokens.colores.textoFuerte,
+              bgcolor: 'transparent',
+              borderColor: uiTokens.colores.borde,
+              '& .MuiChip-label': { px: 1.4, fontSize: 11.5 },
+            }}
+          />
+        ) : null}
         {resumen ? <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8, alignItems: 'center' }}>{resumen}</Box> : null}
       </Stack>
       {acciones ? <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>{normalizarAccion(acciones)}</Box> : null}
