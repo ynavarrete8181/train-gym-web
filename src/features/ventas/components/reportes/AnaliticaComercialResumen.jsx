@@ -53,7 +53,7 @@ function BloqueTabla({ titulo, columnas, filas, renderFila }) {
   );
 }
 
-export function AnaliticaComercialResumen({ analitica = {} }) {
+export function AnaliticaComercialResumen({ analitica = {}, resumen = {} }) {
   const actual = analitica.periodo_actual || {};
   const anterior = analitica.periodo_anterior || {};
   const variacion = analitica.variacion || {};
@@ -66,11 +66,14 @@ export function AnaliticaComercialResumen({ analitica = {} }) {
     <Stack spacing={1.4} sx={{ mb: 2 }}>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
         <Indicador label="Ventas período" value={dinero(actual.ventas)} color={uiTokens.colores.primario} fondo={uiTokens.colores.primarioSuave} />
+        <Indicador label="Transacciones" value={numero(resumen.transacciones)} color={uiTokens.colores.textoFuerte} fondo="rgba(15,23,42,0.035)" />
         <Indicador label="Variación ventas" value={porcentaje(variacion.ventas_porcentaje)} color={uiTokens.colores.info} fondo="rgba(29, 78, 216, 0.06)" />
         <Indicador label="Cobrado período" value={dinero(actual.cobrado)} color={uiTokens.colores.exito} fondo="rgba(8, 127, 91, 0.06)" />
+        <Indicador label="Efectivo" value={dinero(resumen.efectivo_cobrado)} color={uiTokens.colores.exito} fondo="rgba(8,127,91,0.04)" />
         <Indicador label="Variación cobros" value={porcentaje(variacion.cobrado_porcentaje)} color={uiTokens.colores.acentoOscuro} fondo={uiTokens.colores.acentoSuave} />
         <Indicador label="Membresías nuevas" value={numero(membresias.nuevas)} color={uiTokens.colores.primario} fondo="rgba(0,73,135,0.05)" />
         <Indicador label="Renovaciones" value={numero(membresias.renovaciones)} color={uiTokens.colores.info} fondo="rgba(29,78,216,0.05)" />
+        <Indicador label="Saldo cartera" value={dinero(resumen.saldo_cartera)} color={uiTokens.colores.advertencia} fondo="rgba(183,121,31,0.05)" />
         <Indicador label="Cartera vencida" value={dinero(cartera.saldo)} color={uiTokens.colores.peligro} fondo="rgba(180,35,24,0.06)" />
       </Box>
 
