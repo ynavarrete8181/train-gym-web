@@ -43,6 +43,23 @@ function periodoReporte(filtros = {}) {
   return desde || hasta || 'Sin período definido';
 }
 
+function tituloPestanaReporte(titulo, filtros = {}) {
+  const desde = filtros.desde || filtros.vence_desde || '';
+  const hasta = filtros.hasta || filtros.vence_hasta || '';
+
+  const normalizarFecha = (valor) => {
+    if (!valor) return '';
+    const [anio, mes, dia] = String(valor).split('-');
+    return anio && mes && dia ? `${dia}-${mes}-${anio}` : valor;
+  };
+
+  if (desde && hasta) {
+    return `Revive · ${titulo} · ${normalizarFecha(desde)} a ${normalizarFecha(hasta)}`;
+  }
+
+  return `Revive · ${titulo}`;
+}
+
 function sedesReporte(filas = []) {
   const sedes = [...new Set(
     filas
@@ -94,6 +111,7 @@ export function ReporteExportaciones({
       const periodo = periodoReporte(filtros);
       const sedes = sedesReporte(filas);
       const logoUrl = new URL(reviveLogo, window.location.href).href;
+      const tituloPestana = tituloPestanaReporte(titulo, filtros);
       const filtrosHtml = filtrosVisibles(filtros)
         .map(([clave, valor]) => `<span><strong>${escapar(clave)}:</strong> ${escapar(valor)}</span>`)
         .join('');
@@ -112,7 +130,7 @@ export function ReporteExportaciones({
 <html lang="es">
 <head>
 <meta charset="utf-8" />
-<title>${escapar(titulo)}</title>
+<title>${escapar(tituloPestana)}</title>
 <style>
   @page {
     size: landscape;
