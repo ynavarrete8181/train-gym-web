@@ -58,8 +58,9 @@ export function ReporteExportaciones({
         return `<td class="${c.align === 'left' ? 'izq' : 'centro'}">${escapar(valor)}</td>`;
       }).join('')}</tr>`).join('');
 
-      const ventana = window.open('', '_blank', 'noopener,noreferrer');
+      const ventana = window.open('', '_blank');
       if (!ventana) return;
+      ventana.opener = null;
 
       ventana.document.write(`<!doctype html>
 <html lang="es">
