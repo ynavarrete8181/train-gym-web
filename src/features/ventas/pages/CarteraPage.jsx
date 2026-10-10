@@ -36,7 +36,18 @@ export function CarteraPage() {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 10 });
-  const [filtrosColumna, setFiltrosColumna] = useState({ estado: [], sede_id: [], responsable_id: [], prioridad: [] });
+  const [filtrosColumna, setFiltrosColumna] = useState({
+    sede_id: [],
+    venta_numero: '',
+    cliente: '',
+    vencimiento: '',
+    total: '',
+    pagado: '',
+    saldo: '',
+    responsable_id: [],
+    prioridad: [],
+    estado: [],
+  });
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [turnoActual, setTurnoActual] = useState(null);
