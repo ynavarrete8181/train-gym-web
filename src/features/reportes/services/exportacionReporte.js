@@ -21,12 +21,20 @@ export async function descargarExcelReporte(endpoint, params = {}, nombreBase = 
   const match = disposition.match(/filename="?([^"]+)"?/i);
   const nombre = match?.[1] || `${nombreBase}.xlsx`;
 
-  const url = URL.createObjectURL(response.data);
+  const blob = response.data instanceof Blob
+    ? response.data
+    : new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+  const url = URL.createObjectURL(blob);
   const enlace = document.createElement('a');
   enlace.href = url;
   enlace.download = nombre;
+  enlace.style.display = 'none';
   document.body.appendChild(enlace);
   enlace.click();
   enlace.remove();
-  URL.revokeObjectURL(url);
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
