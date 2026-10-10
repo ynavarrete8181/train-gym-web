@@ -7,6 +7,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { carteraVencidaServicio } from '../services/ventas/carteraVencidaServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -67,6 +68,25 @@ export function CarteraVencidaReportePage() {
               <Chip variant="outlined" label={`Saldo vencido: ${dinero(resumen.saldo_vencido)}`} sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, color: uiTokens.colores.advertencia, borderColor: uiTokens.colores.advertencia }} />
               <Chip variant="outlined" label={`Promedio días: ${Number(resumen.promedio_dias_vencidos || 0).toFixed(1)}`} sx={{ height: 38, borderRadius: 0.5, fontWeight: 900, color: uiTokens.colores.info, borderColor: uiTokens.colores.info }} />
             </>
+          )}
+          acciones={(
+            <ReporteExportaciones
+              titulo="Cartera vencida"
+              descripcion="Cuentas vencidas y saldos pendientes por sede."
+              filtros={filtros}
+              columnas={[
+                { label: 'Sede', value: 'sede', align: 'left' },
+                { label: 'N.º venta', value: 'venta_numero' },
+                { label: 'Cliente', value: (fila) => `${fila.cliente || ''} ${fila.identificacion || ''}`, align: 'left' },
+                { label: 'Vencimiento', value: (fila) => fecha(fila.fecha_vencimiento) },
+                { label: 'Días', value: 'dias_vencidos' },
+                { label: 'Saldo', value: (fila) => dinero(fila.saldo_pendiente) },
+                { label: 'Responsable', value: 'responsable', align: 'left' },
+                { label: 'Prioridad', value: 'prioridad' },
+              ]}
+              obtenerFilas={() => carteraVencidaServicio.consultarTodo(filtros)}
+              exportarExcel={() => carteraVencidaServicio.exportarExcel(filtros)}
+            />
           )}
         />
 
