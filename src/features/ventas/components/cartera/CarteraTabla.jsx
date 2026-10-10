@@ -140,7 +140,11 @@ export function CarteraTabla({
       <TableBody>
         {items.map((item) => (
           <TableRow key={item.id} hover>
-            {columnas.map((columna) => (
+            {columnas.slice(0, 8).map((columna) => (
+              <TableCell key={columna.key}>{columna.render(item)}</TableCell>
+            ))}
+            <TableCell>{item.prioridad || 'NORMAL'}</TableCell>
+            {columnas.slice(8).map((columna) => (
               <TableCell key={columna.key}>{columna.render(item)}</TableCell>
             ))}
             <TableCell align="right">
