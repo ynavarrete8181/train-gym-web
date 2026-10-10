@@ -64,6 +64,7 @@ const nombresPaginas = {
   MembresiasNuevasRenovacionesPage: 'Membresías nuevas y renovaciones',
   MembresiasPorVencerPage: 'Membresías por vencer',
   ConciliacionCajaPage: 'Conciliación de caja',
+  ProductosServiciosVendidosPage: 'Productos y servicios vendidos',
   DispositivosAccesoPage: 'Dispositivos',
   CredencialesAccesoPage: 'Credenciales',
   EventosAccesoPage: 'Eventos',
