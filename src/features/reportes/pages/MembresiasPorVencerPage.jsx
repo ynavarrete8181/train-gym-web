@@ -97,6 +97,26 @@ export function MembresiasPorVencerPage() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Vence desde" value={filtros.vence_desde} onChange={(e) => aplicar({ vence_desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Vence hasta" value={filtros.vence_hasta} onChange={(e) => aplicar({ vence_hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo="Membresías por vencer"
+                descripcion="Períodos vigentes próximos a finalizar para gestión de renovación."
+                filtros={filtros}
+                columnas={[
+                  { label: 'Sede', value: 'sede', align: 'left' },
+                  { label: 'Contrato', value: 'codigo_contrato' },
+                  { label: 'Cliente', value: (fila) => `${fila.cliente || ''} ${fila.identificacion || ''}`, align: 'left' },
+                  { label: 'Plan', value: 'plan', align: 'left' },
+                  { label: 'Modalidad', value: 'modalidad', align: 'left' },
+                  { label: 'Período', value: 'numero_periodo' },
+                  { label: 'Vence', value: (fila) => fecha(fila.fecha_fin) },
+                  { label: 'Días restantes', value: 'dias_restantes' },
+                  { label: 'Renovable', value: (fila) => fila.renovable ? 'Sí' : 'No' },
+                  { label: 'Estado', value: 'estado_periodo' },
+                  { label: 'Saldo', value: (fila) => dinero(fila.saldo_pendiente) },
+                ]}
+                obtenerFilas={() => membresiasPorVencerServicio.consultarTodo(filtros)}
+                exportarExcel={() => membresiasPorVencerServicio.exportarExcel(filtros)}
+              />
             </Stack>
           )}
         />
