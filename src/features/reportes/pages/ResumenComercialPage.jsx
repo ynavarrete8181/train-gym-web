@@ -83,8 +83,8 @@ export function ResumenComercialPage() {
             {porSede.map((item) => (
               <TableRow key={item.sede} hover>
                 <TableCell>{item.sede}</TableCell>
-                <TableCell align="center">{numero(item.transacciones)}</TableCell>
-                <TableCell align="center">{dinero(item.total_ventas)}</TableCell>
+                <TableCell align="center" sx={{ textAlign: 'center !important' }}>{numero(item.transacciones)}</TableCell>
+                <TableCell align="center" sx={{ textAlign: 'center !important' }}>{dinero(item.total_ventas)}</TableCell>
               </TableRow>
             ))}
             {!cargando && porSede.length === 0 ? <TablaEstadoFila colSpan={3} texto="No existen movimientos comerciales para los filtros seleccionados." /> : null}
