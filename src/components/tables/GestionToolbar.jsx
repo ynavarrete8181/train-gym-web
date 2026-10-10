@@ -26,26 +26,28 @@ function normalizarAccion(elemento) {
   return elemento
 }
 
-export function GestionToolbar({ total, busqueda, onBusqueda, acciones = null, resumen = null, etiqueta = 'RESULTADOS', mostrarTotal = true }) {
+export function GestionToolbar({ total, busqueda, onBusqueda, acciones = null, resumen = null, etiqueta = 'RESULTADOS', mostrarTotal = true, mostrarBusqueda = true }) {
   return (
     <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1.5} sx={{ mb: 2, alignItems: { xs: 'stretch', lg: 'center' }, justifyContent: 'space-between' }}>
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.2} sx={{ flex: 1, alignItems: { xs: 'stretch', sm: 'center' } }}>
-        <TextField
-          size="small"
-          label="Buscar"
-          value={busqueda}
-          onChange={(evento) => onBusqueda(evento.target.value)}
-          sx={{ ...dbanuStyles.field, width: { xs: '100%', sm: 260, md: 320 } }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchOutlinedIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+        {mostrarBusqueda ? (
+          <TextField
+            size="small"
+            label="Buscar"
+            value={busqueda}
+            onChange={(evento) => onBusqueda?.(evento.target.value)}
+            sx={{ ...dbanuStyles.field, width: { xs: '100%', sm: 260, md: 320 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchOutlinedIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              },
+            }}
+          />
+        ) : null}
         {mostrarTotal ? (
           <Chip
             variant="outlined"
