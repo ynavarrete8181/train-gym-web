@@ -74,26 +74,26 @@ export function CarteraVencidaReportePage() {
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.venta_numero} onChange={(valor) => aplicar({ venta_numero: valor })}>N.º de venta</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.venta_numero} onChange={(valor) => aplicar({ venta_numero: valor })}>N.º de venta</FilterHeaderCell>
               <FilterHeaderCell value={filtros.cliente} onChange={(valor) => aplicar({ cliente: valor })}>Cliente</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.vencimiento} onChange={(valor) => aplicar({ vencimiento: valor })}>Vencimiento</FilterHeaderCell>
-              <FilterHeaderCell align="right" value={filtros.dias_vencidos} onChange={(valor) => aplicar({ dias_vencidos: valor })}>Días</FilterHeaderCell>
-              <FilterHeaderCell align="right" value={filtros.saldo} onChange={(valor) => aplicar({ saldo: valor })}>Saldo</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.vencimiento} onChange={(valor) => aplicar({ vencimiento: valor })}>Vencimiento</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.dias_vencidos} onChange={(valor) => aplicar({ dias_vencidos: valor })}>Días</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.saldo} onChange={(valor) => aplicar({ saldo: valor })}>Saldo</FilterHeaderCell>
               <FilterHeaderCell value={filtros.responsable} onChange={(valor) => aplicar({ responsable: valor })}>Responsable</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.prioridad} onChange={(valor) => aplicar({ prioridad: valor })} options={(catalogos.prioridades || []).map((p) => ({ value: p, label: p }))} multiple>Prioridad</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.prioridad} onChange={(valor) => aplicar({ prioridad: valor })} options={(catalogos.prioridades || []).map((p) => ({ value: p, label: p }))} multiple>Prioridad</FilterHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.id} hover>
                 <TableCell>{item.sede}</TableCell>
-                <TableCell>{item.venta_numero}</TableCell>
+                <TableCell align="center">{item.venta_numero}</TableCell>
                 <TableCell>{item.cliente}<br /><small>{item.identificacion}</small></TableCell>
-                <TableCell>{fecha(item.fecha_vencimiento)}</TableCell>
-                <TableCell align="right">{item.dias_vencidos}</TableCell>
-                <TableCell align="right">{dinero(item.saldo_pendiente)}</TableCell>
+                <TableCell align="center">{fecha(item.fecha_vencimiento)}</TableCell>
+                <TableCell align="center">{item.dias_vencidos}</TableCell>
+                <TableCell align="center">{dinero(item.saldo_pendiente)}</TableCell>
                 <TableCell>{item.responsable}</TableCell>
-                <TableCell>{item.prioridad}</TableCell>
+                <TableCell align="center">{item.prioridad}</TableCell>
               </TableRow>
             ))}
             {!cargando && items.length === 0 ? <TablaEstadoFila colSpan={8} texto="No existen cuentas vencidas para los filtros seleccionados." /> : null}
