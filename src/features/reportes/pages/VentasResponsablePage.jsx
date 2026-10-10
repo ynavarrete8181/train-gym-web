@@ -135,7 +135,7 @@ export function VentasResponsablePage() {
             {items.map((item, index) => (
               <TableRow key={`${item.responsable_comercial_id ?? 'sin'}-${index}`} hover>
                 <TableCell>{item.responsable}</TableCell>
-                <TableCell>{filtros.sede_id.length === 1 ? (catalogos.sedes || []).find((s) => String(s.id) === String(filtros.sede_id[0]))?.nombre || 'Sede seleccionada' : 'Sedes filtradas'}</TableCell>
+                <TableCell>{item.sede}</TableCell>
                 <TableCell align="center">{numero(item.ventas)}</TableCell>
                 <TableCell align="center">{numero(item.clientes)}</TableCell>
                 <TableCell align="center">{dinero(item.total_ventas)}</TableCell>
