@@ -85,6 +85,25 @@ export function VentasPeriodoPage() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo="Ventas por período"
+                descripcion="Detalle transaccional de ventas por rango de fechas, sede, cliente y estado."
+                filtros={filtros}
+                columnas={[
+                  { label: 'Fecha', value: (fila) => fecha(fila.fecha) },
+                  { label: 'Sede', value: 'sede', align: 'left' },
+                  { label: 'N.º venta', value: 'venta_numero' },
+                  { label: 'Cliente', value: (fila) => `${fila.cliente || ''} ${fila.identificacion || ''}`, align: 'left' },
+                  { label: 'Tipo', value: 'tipo_venta' },
+                  { label: 'Estado', value: 'estado' },
+                  { label: 'Responsable', value: 'responsable_comercial', align: 'left' },
+                  { label: 'Total', value: (fila) => dinero(fila.total_venta) },
+                  { label: 'Cobrado', value: (fila) => dinero(fila.total_cobrado) },
+                  { label: 'Saldo', value: (fila) => dinero(fila.saldo_pendiente) },
+                ]}
+                obtenerFilas={() => ventasPeriodoServicio.consultarTodo(filtros)}
+                exportarExcel={() => ventasPeriodoServicio.exportarExcel(filtros)}
+              />
             </Stack>
           )}
         />
