@@ -6,6 +6,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../../reportes/components/ReporteExportaciones.jsx';
 import { reportesAuditoriaServicio } from '../services/reportesAuditoriaServicio.js';
 
 const reportes = [
@@ -114,6 +115,15 @@ export function ReportesAuditoriaPage() {
   const columnas = useMemo(() => configuraciones[tipo]?.columnas || [], [tipo]);
   const tituloActual = reportes.find((reporte) => reporte.value === tipo)?.label || 'Reporte';
 
+  const columnasExportacion = useMemo(
+    () => columnas.map(([label, key, align, formatter]) => ({
+      label,
+      value: formatter ? (fila) => formatter(fila[key]) : key,
+      align: align === 'center' ? 'center' : 'left',
+    })),
+    [columnas],
+  );
+
   return (
     <Box className="page-wrapper">
       <PageHeader
@@ -147,6 +157,18 @@ export function ReportesAuditoriaPage() {
             <Stack direction="row" spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo={`Auditoría - ${tituloActual}`}
+                descripcion="Reporte detallado generado desde la auditoría permanente de Revive."
+                filtros={{ ...filtros, tipo }}
+                columnas={columnasExportacion}
+                filaTotal={[
+                  'TOTAL',
+                  (filas) => `${filas.length} registros`,
+                ]}
+                obtenerFilas={() => reportesAuditoriaServicio.consultarTodo({ ...filtros, tipo })}
+                exportarExcel={() => reportesAuditoriaServicio.exportarExcel({ ...filtros, tipo })}
+              />
             </Stack>
           )}
         />
