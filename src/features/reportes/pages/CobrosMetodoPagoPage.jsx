@@ -7,6 +7,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { cobrosMetodoPagoServicio } from '../services/ventas/cobrosMetodoPagoServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -70,6 +71,20 @@ export function CobrosMetodoPagoPage() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo="Cobros por método de pago"
+                descripcion="Cobros confirmados consolidados por fecha, sede y método."
+                filtros={filtros}
+                columnas={[
+                  { label: 'Fecha', value: (fila) => fecha(fila.fecha) },
+                  { label: 'Sede', value: 'sede', align: 'left' },
+                  { label: 'Método', value: 'metodo_pago' },
+                  { label: 'Operaciones', value: 'operaciones' },
+                  { label: 'Total', value: (fila) => dinero(fila.total) },
+                ]}
+                obtenerFilas={() => cobrosMetodoPagoServicio.consultarTodo(filtros)}
+                exportarExcel={() => cobrosMetodoPagoServicio.exportarExcel(filtros)}
+              />
             </Stack>
           )}
         />
