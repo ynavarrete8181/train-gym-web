@@ -84,6 +84,24 @@ export function VentasResponsablePage() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+              <ReporteExportaciones
+                titulo="Ventas por responsable"
+                descripcion="Desempeño comercial por responsable y sede."
+                filtros={filtros}
+                columnas={[
+                  { label: 'Responsable', value: 'responsable', align: 'left' },
+                  { label: 'Sede', value: 'sede', align: 'left' },
+                  { label: 'Ventas', value: (fila) => numero(fila.ventas) },
+                  { label: 'Clientes', value: (fila) => numero(fila.clientes) },
+                  { label: 'Total vendido', value: (fila) => dinero(fila.total_ventas) },
+                  { label: 'Cobrado', value: (fila) => dinero(fila.total_cobrado) },
+                  { label: 'Saldo', value: (fila) => dinero(fila.saldo_pendiente) },
+                  { label: 'Ticket promedio', value: (fila) => dinero(fila.ticket_promedio) },
+                  { label: '% cobrado', value: (fila) => porcentaje(fila.porcentaje_cobrado) },
+                ]}
+                obtenerFilas={() => ventasResponsableServicio.consultarTodo(filtros)}
+                exportarExcel={() => ventasResponsableServicio.exportarExcel(filtros)}
+              />
             </Stack>
           )}
         />
