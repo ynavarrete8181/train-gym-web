@@ -2,6 +2,7 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import { Box, Button, Stack, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { StatusChip } from '../../../../components/common/StatusChip.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
 import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
 import { cuentaCerrada, dinero, estadoVisualCartera, fecha } from '../../config/carteraConfig.js';
@@ -66,11 +67,18 @@ const columnas = [
   },
 ];
 
+const opciones = (items = [], valorKey = 'id', labelKey = 'nombre') => (items || []).map((item) => ({
+  value: String(typeof item === 'object' ? item[valorKey] : item),
+  label: String(typeof item === 'object' ? item[labelKey] : item),
+}));
+
 export function CarteraTabla({
   items,
   meta,
   cargando,
   turnoActual,
+  filtrosColumna = {},
+  onFiltroColumna,
   onGestionar,
   onCobrar,
   onPageChange,
@@ -88,7 +96,44 @@ export function CarteraTabla({
     >
       <TableHead>
         <TableRow>
-          {columnas.map((columna) => <TableCell key={columna.key}>{columna.label}</TableCell>)}
+          <FilterHeaderCell>Cliente</FilterHeaderCell>
+          <FilterHeaderCell>Venta</FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.sede_id || []}
+            onChange={(valor) => onFiltroColumna?.('sede_id', valor)}
+            options={opciones(meta.catalogos?.sedes)}
+            multiple
+          >
+            Sede
+          </FilterHeaderCell>
+          <FilterHeaderCell>Vencimiento</FilterHeaderCell>
+          <FilterHeaderCell align="right">Total</FilterHeaderCell>
+          <FilterHeaderCell align="right">Pagado</FilterHeaderCell>
+          <FilterHeaderCell align="right">Saldo</FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.responsable_id || []}
+            onChange={(valor) => onFiltroColumna?.('responsable_id', valor)}
+            options={opciones(meta.catalogos?.responsables, 'id', 'name')}
+            multiple
+          >
+            Responsable
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.prioridad || []}
+            onChange={(valor) => onFiltroColumna?.('prioridad', valor)}
+            options={opciones(meta.catalogos?.prioridades)}
+            multiple
+          >
+            Prioridad
+          </FilterHeaderCell>
+          <FilterHeaderCell
+            value={filtrosColumna.estado || []}
+            onChange={(valor) => onFiltroColumna?.('estado', valor)}
+            options={opciones(meta.catalogos?.estados)}
+            multiple
+          >
+            Estado
+          </FilterHeaderCell>
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>
@@ -129,7 +174,7 @@ export function CarteraTabla({
         ))}
         {items.length === 0 ? (
           <TablaEstadoFila
-            colSpan={columnas.length + 1}
+            colSpan={columnas.length + 2}
             cargando={cargando}
             texto="No hay cuentas en cartera."
           />
