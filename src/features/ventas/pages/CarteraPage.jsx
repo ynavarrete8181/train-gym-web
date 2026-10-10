@@ -254,13 +254,12 @@ export function CarteraPage() {
         icono={<AccountBalanceWalletOutlinedIcon />}
       />
 
-      <CarteraResumen resumen={resumen} />
-
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar
           total={meta.total || 0}
           busqueda={filtros.busqueda}
           onBusqueda={(valor) => aplicarBusqueda({ busqueda: valor })}
+          resumen={<CarteraResumen resumen={resumen} />}
         />
 
         <CarteraTabla
