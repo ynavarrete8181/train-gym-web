@@ -59,6 +59,7 @@ const nombresPaginas = {
   ResumenComercialPage: 'Resumen comercial',
   CarteraVencidaReportePage: 'Cartera vencida',
   CobrosMetodoPagoPage: 'Cobros por método de pago',
+  VentasPeriodoPage: 'Ventas por período',
   DispositivosAccesoPage: 'Dispositivos',
   CredencialesAccesoPage: 'Credenciales',
   EventosAccesoPage: 'Eventos',
