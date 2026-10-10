@@ -7,6 +7,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { ventasResponsableServicio } from '../services/ventas/ventasResponsableServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
