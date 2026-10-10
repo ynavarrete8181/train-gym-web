@@ -109,7 +109,31 @@ export function ReporteExportaciones({
 <meta charset="utf-8" />
 <title>${escapar(titulo)}</title>
 <style>
-  @page { size: landscape; margin: 10mm 16mm 18mm 16mm; }
+  @page {
+    size: landscape;
+    margin: 10mm 16mm 18mm 16mm;
+
+    @bottom-left {
+      content: "Revive · Sistema de Gestión";
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 7.5pt;
+      color: #777;
+    }
+
+    @bottom-center {
+      content: "Generado: ${escapar(generadoEl)}";
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 7.5pt;
+      color: #777;
+    }
+
+    @bottom-right {
+      content: "Página " counter(page) " de " counter(pages);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 7.5pt;
+      color: #777;
+    }
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; min-height: 100%; }
   body {
@@ -256,16 +280,19 @@ export function ReporteExportaciones({
   tbody tr:nth-child(even) { background: #fafafa; }
   .izq { text-align: left; }
   .centro { text-align: center; }
-  .pie {
+  .pie-preview {
     margin-top: 10px;
     padding-top: 5px;
     border-top: 1px solid #d8d8d8;
     font-size: 7.5px;
     color: #777;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
     align-items: center;
   }
+  .pie-preview .centro-pie { text-align: center; }
+  .pie-preview .derecha-pie { text-align: right; }
   @media print {
     body { background: #fff; }
     .no-print { display: none !important; }
@@ -276,12 +303,7 @@ export function ReporteExportaciones({
       padding: 0;
       box-shadow: none;
     }
-    .pie {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: -10mm;
-    }
+    .pie-preview { display: none !important; }
   }
 </style>
 </head>
@@ -324,9 +346,10 @@ export function ReporteExportaciones({
       <tbody>${tbody || `<tr><td colspan="${columnas.length}" class="centro">Sin registros</td></tr>`}</tbody>
     </table>
 
-    <footer class="pie">
+    <footer class="pie-preview no-print">
       <span>Revive · Sistema de Gestión</span>
-      <span>Generado: ${escapar(generadoEl)}</span>
+      <span class="centro-pie">Generado: ${escapar(generadoEl)}</span>
+      <span class="derecha-pie">Página 1</span>
     </footer>
   </main>
 </body>
