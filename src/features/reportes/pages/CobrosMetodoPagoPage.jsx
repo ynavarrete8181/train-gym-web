@@ -55,7 +55,7 @@ export function CobrosMetodoPagoPage() {
         <GestionToolbar
           total={meta.total || 0}
           busqueda=""
-          onBusqueda={() => {}}
+          mostrarBusqueda={false}
           mostrarTotal={false}
           resumen={(
             <>
