@@ -15,7 +15,19 @@ const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateStrin
 export function CarteraVencidaReportePage() {
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
-  const [filtros, setFiltros] = useState({ busqueda: '', sede_id: [], prioridad: [], page: 1, per_page: 10 });
+  const [filtros, setFiltros] = useState({
+    busqueda: '',
+    sede_id: [],
+    venta_numero: '',
+    cliente: '',
+    vencimiento: '',
+    dias_vencidos: '',
+    saldo: '',
+    responsable: '',
+    prioridad: [],
+    page: 1,
+    per_page: 10,
+  });
   const [cargando, setCargando] = useState(true);
 
   const cargar = async (params = filtros) => {
@@ -62,12 +74,12 @@ export function CarteraVencidaReportePage() {
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell>N.º de venta</FilterHeaderCell>
-              <FilterHeaderCell>Cliente</FilterHeaderCell>
-              <FilterHeaderCell>Vencimiento</FilterHeaderCell>
-              <FilterHeaderCell align="right">Días</FilterHeaderCell>
-              <FilterHeaderCell align="right">Saldo</FilterHeaderCell>
-              <FilterHeaderCell>Responsable</FilterHeaderCell>
+              <FilterHeaderCell value={filtros.venta_numero} onChange={(valor) => aplicar({ venta_numero: valor })}>N.º de venta</FilterHeaderCell>
+              <FilterHeaderCell value={filtros.cliente} onChange={(valor) => aplicar({ cliente: valor })}>Cliente</FilterHeaderCell>
+              <FilterHeaderCell value={filtros.vencimiento} onChange={(valor) => aplicar({ vencimiento: valor })}>Vencimiento</FilterHeaderCell>
+              <FilterHeaderCell align="right" value={filtros.dias_vencidos} onChange={(valor) => aplicar({ dias_vencidos: valor })}>Días</FilterHeaderCell>
+              <FilterHeaderCell align="right" value={filtros.saldo} onChange={(valor) => aplicar({ saldo: valor })}>Saldo</FilterHeaderCell>
+              <FilterHeaderCell value={filtros.responsable} onChange={(valor) => aplicar({ responsable: valor })}>Responsable</FilterHeaderCell>
               <FilterHeaderCell value={filtros.prioridad} onChange={(valor) => aplicar({ prioridad: valor })} options={(catalogos.prioridades || []).map((p) => ({ value: p, label: p }))} multiple>Prioridad</FilterHeaderCell>
             </TableRow>
           </TableHead>
