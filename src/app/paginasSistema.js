@@ -62,6 +62,7 @@ const nombresPaginas = {
   VentasPeriodoPage: 'Ventas por período',
   VentasResponsablePage: 'Ventas por responsable',
   MembresiasNuevasRenovacionesPage: 'Membresías nuevas y renovaciones',
+  MembresiasPorVencerPage: 'Membresías por vencer',
   DispositivosAccesoPage: 'Dispositivos',
   CredencialesAccesoPage: 'Credenciales',
   EventosAccesoPage: 'Eventos',
