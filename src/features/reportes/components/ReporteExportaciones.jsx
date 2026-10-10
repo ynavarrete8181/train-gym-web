@@ -31,6 +31,26 @@ function etiquetaFiltro(clave) {
     .replace(/\b\w/g, (letra) => letra.toUpperCase());
 }
 
+function periodoReporte(filtros = {}) {
+  const desde = filtros.desde || filtros.vence_desde || '';
+  const hasta = filtros.hasta || filtros.vence_hasta || '';
+  if (desde && hasta) return `${desde} - ${hasta}`;
+  return desde || hasta || 'Sin período definido';
+}
+
+function sedesReporte(filas = []) {
+  const sedes = [...new Set(
+    filas
+      .map((fila) => fila?.sede)
+      .filter((sede) => typeof sede === 'string' && sede.trim())
+      .map((sede) => sede.trim()),
+  )];
+
+  if (sedes.length === 0) return 'Todas las sedes';
+  if (sedes.length <= 3) return sedes.join(', ');
+  return `${sedes.slice(0, 3).join(', ')} y ${sedes.length - 3} más`;
+}
+
 function filtrosVisibles(filtros = {}) {
   const ignorar = new Set(['page', 'per_page']);
   return Object.entries(filtros)
@@ -58,6 +78,8 @@ export function ReporteExportaciones({
 
       const usuario = sesion?.usuario || {};
       const generadoEl = fechaHoraInstitucional(new Date());
+      const periodo = periodoReporte(filtros);
+      const sedes = sedesReporte(filas);
       const logoUrl = new URL(reviveLogo, window.location.href).href;
       const filtrosHtml = filtrosVisibles(filtros)
         .map(([clave, valor]) => `<span><strong>${escapar(clave)}:</strong> ${escapar(valor)}</span>`)
@@ -95,12 +117,12 @@ export function ReporteExportaciones({
   }
   .membrete {
     position: relative;
-    min-height: 84px;
+    min-height: 76px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-bottom: 3px solid #f5c400;
-    padding: 0 118px 11px;
+    padding: 2px 118px 10px;
     margin-bottom: 9px;
   }
   .logo {
@@ -122,49 +144,35 @@ export function ReporteExportaciones({
     width: 100%;
     text-align: center;
   }
-  .marca {
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 1.2px;
-    color: #5b4700;
-    text-transform: uppercase;
-  }
-  .tipo-documento {
-    margin-top: 1px;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: 1.4px;
-    color: #6b7280;
-    text-transform: uppercase;
-  }
-  .titulo {
-    margin: 7px 0 3px;
-    font-size: 18px;
-    line-height: 1.15;
+  .institucion {
+    font-size: 13px;
+    line-height: 1.2;
     font-weight: 900;
     color: #171717;
+    letter-spacing: .2px;
   }
-  .descripcion {
-    max-width: 720px;
-    margin: 0 auto;
-    font-size: 9.5px;
-    line-height: 1.35;
-    color: #5f6368;
+  .titulo {
+    margin: 4px 0 0;
+    font-size: 17px;
+    line-height: 1.15;
+    font-weight: 900;
+    color: #5b4700;
   }
   .informacion-documento {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px 22px;
-    padding: 9px 10px;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 3px 16px;
+    padding: 7px 10px;
     margin: 0 0 8px;
     background: #fafafa;
     border: 1px solid #e3e3e3;
     border-radius: 4px;
+    font-size: 9px;
   }
   .dato {
-    display: grid;
-    grid-template-columns: 92px 1fr;
-    gap: 7px;
+    display: inline-flex;
+    gap: 4px;
     min-width: 0;
   }
   .dato-etiqueta {
@@ -235,10 +243,8 @@ export function ReporteExportaciones({
     <header class="membrete">
       <div class="logo"><img src="${logoUrl}" alt="Revive" /></div>
       <div class="encabezado-centro">
-        <div class="marca">REVIVE</div>
-        <div class="tipo-documento">REPORTE INSTITUCIONAL</div>
-        <div class="titulo">${escapar(titulo)}</div>
-        <div class="descripcion">${escapar(descripcion)}</div>
+        <div class="institucion">Centro de Entrenamiento Físico Revive</div>
+        <div class="titulo">Reporte de ${escapar(titulo)}</div>
       </div>
     </header>
 
@@ -252,12 +258,12 @@ export function ReporteExportaciones({
         <span class="dato-valor">${escapar(usuario.rol_nombre || 'Sin rol')}</span>
       </div>
       <div class="dato">
-        <span class="dato-etiqueta">Correo:</span>
-        <span class="dato-valor">${escapar(usuario.email || '')}</span>
+        <span class="dato-etiqueta">Período:</span>
+        <span class="dato-valor">${escapar(periodo)}</span>
       </div>
       <div class="dato">
-        <span class="dato-etiqueta">Generado el:</span>
-        <span class="dato-valor">${escapar(generadoEl)}</span>
+        <span class="dato-etiqueta">Sedes:</span>
+        <span class="dato-valor">${escapar(sedes)}</span>
       </div>
     </section>
 
@@ -270,7 +276,7 @@ export function ReporteExportaciones({
 
     <footer class="pie">
       <span>Revive · Sistema de Gestión</span>
-      <span>${escapar(titulo)} · ${escapar(generadoEl.split(' ')[0] || generadoEl)}</span>
+      <span>Generado: ${escapar(generadoEl)}</span>
     </footer>
   </main>
 </body>
