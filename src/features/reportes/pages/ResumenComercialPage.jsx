@@ -75,16 +75,16 @@ export function ResumenComercialPage() {
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell align="right" value={filtros.transacciones} onChange={(valor) => aplicar({ transacciones: valor })}>Transacciones</FilterHeaderCell>
-              <FilterHeaderCell align="right" value={filtros.total_ventas} onChange={(valor) => aplicar({ total_ventas: valor })}>Ventas</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.transacciones} onChange={(valor) => aplicar({ transacciones: valor })}>Transacciones</FilterHeaderCell>
+              <FilterHeaderCell align="center" value={filtros.total_ventas} onChange={(valor) => aplicar({ total_ventas: valor })}>Ventas</FilterHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {porSede.map((item) => (
               <TableRow key={item.sede} hover>
                 <TableCell>{item.sede}</TableCell>
-                <TableCell align="right">{numero(item.transacciones)}</TableCell>
-                <TableCell align="right">{dinero(item.total_ventas)}</TableCell>
+                <TableCell align="center">{numero(item.transacciones)}</TableCell>
+                <TableCell align="center">{dinero(item.total_ventas)}</TableCell>
               </TableRow>
             ))}
             {!cargando && porSede.length === 0 ? <TablaEstadoFila colSpan={3} texto="No existen movimientos comerciales para los filtros seleccionados." /> : null}
