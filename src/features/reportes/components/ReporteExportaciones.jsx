@@ -15,14 +15,19 @@ function escapar(valor) {
 }
 
 function fechaHoraInstitucional(valor = new Date()) {
-  return new Intl.DateTimeFormat('es-EC', {
+  const fecha = new Intl.DateTimeFormat('es-EC', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  }).format(valor);
+
+  const hora = new Intl.DateTimeFormat('es-EC', {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
   }).format(valor);
+
+  return `${fecha}, ${hora}`;
 }
 
 function etiquetaFiltro(clave) {
@@ -128,7 +133,7 @@ export function ReporteExportaciones({
     }
 
     @bottom-right {
-      content: "Página " counter(page) " de " counter(pages);
+      content: "Página " counter(page) "-" counter(pages);
       font-family: Arial, Helvetica, sans-serif;
       font-size: 7.5pt;
       color: #777;
@@ -169,10 +174,11 @@ export function ReporteExportaciones({
   }
   .btn-imprimir:hover { background: rgba(198,40,40,.07); }
   .documento {
+    position: relative;
     width: 297mm;
     min-height: 210mm;
     margin: 18px auto 28px;
-    padding: 10mm 16mm 18mm;
+    padding: 10mm 16mm 24mm;
     background: #fff;
     box-shadow: 0 4px 22px rgba(0,0,0,.14);
   }
@@ -281,7 +287,10 @@ export function ReporteExportaciones({
   .izq { text-align: left; }
   .centro { text-align: center; }
   .pie-preview {
-    margin-top: 10px;
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 8mm;
     padding-top: 5px;
     border-top: 1px solid #d8d8d8;
     font-size: 7.5px;
@@ -302,6 +311,7 @@ export function ReporteExportaciones({
       margin: 0;
       padding: 0;
       box-shadow: none;
+      position: static;
     }
     .pie-preview { display: none !important; }
   }
@@ -349,7 +359,7 @@ export function ReporteExportaciones({
     <footer class="pie-preview no-print">
       <span>Revive · Sistema de Gestión</span>
       <span class="centro-pie">Generado: ${escapar(generadoEl)}</span>
-      <span class="derecha-pie">Página 1</span>
+      <span class="derecha-pie">Página 1-1</span>
     </footer>
   </main>
 </body>
