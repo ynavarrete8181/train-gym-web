@@ -19,6 +19,8 @@ export function ResumenComercialPage() {
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
     hasta: hoy.toISOString().slice(0, 10),
     sede_id: [],
+    transacciones: '',
+    total_ventas: '',
   });
 
   const cargar = async (params = filtros) => {
@@ -73,8 +75,8 @@ export function ResumenComercialPage() {
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell align="right">Transacciones</FilterHeaderCell>
-              <FilterHeaderCell align="right">Ventas</FilterHeaderCell>
+              <FilterHeaderCell align="right" value={filtros.transacciones} onChange={(valor) => aplicar({ transacciones: valor })}>Transacciones</FilterHeaderCell>
+              <FilterHeaderCell align="right" value={filtros.total_ventas} onChange={(valor) => aplicar({ total_ventas: valor })}>Ventas</FilterHeaderCell>
             </TableRow>
           </TableHead>
           <TableBody>
