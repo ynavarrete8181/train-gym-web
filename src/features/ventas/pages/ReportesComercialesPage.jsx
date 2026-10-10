@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import { Box, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Box, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { uiTokens } from '../../../styles/uiTokens.js';
+import { AnaliticaComercialResumen } from '../components/reportes/AnaliticaComercialResumen.jsx';
 import { reporteComercialServicio } from '../services/reporteComercialServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -25,6 +25,7 @@ export function ReportesComercialesPage() {
 
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
+  const [analitica, setAnalitica] = useState({});
   const [filtros, setFiltros] = useState({
     busqueda: '',
     desde: inicioMes,
@@ -39,9 +40,18 @@ export function ReportesComercialesPage() {
   const cargar = async (params = filtros) => {
     setCargando(true);
     try {
-      const response = await reporteComercialServicio.consultar(params);
+      const [response, responseAnalitica] = await Promise.all([
+        reporteComercialServicio.consultar(params),
+        reporteComercialServicio.obtenerAnalitica({
+          desde: params.desde,
+          hasta: params.hasta,
+          sede_id: params.sede_id,
+          tipo_venta: params.tipo_venta,
+        }),
+      ]);
       setItems(response.datos || []);
       setMeta(response.meta || {});
+      setAnalitica(responseAnalitica.datos || {});
     } finally {
       setCargando(false);
     }
@@ -69,20 +79,7 @@ export function ReportesComercialesPage() {
       />
 
       <Paper className="page-content-container" elevation={0}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', xl: 'repeat(5, 1fr)' }, gap: 1.2, mb: 2 }}>
-          {[
-            ['Ventas', dinero(resumen.total_ventas)],
-            ['Transacciones', numero(resumen.transacciones)],
-            ['Cobrado', dinero(resumen.total_cobrado)],
-            ['Efectivo', dinero(resumen.efectivo_cobrado)],
-            ['Saldo cartera', dinero(resumen.saldo_cartera)],
-          ].map(([label, value]) => (
-            <Box key={label} sx={{ border: `1px solid ${uiTokens.colores.borde}`, borderRadius: 1, px: 1.5, py: 1.25, minHeight: 72 }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 900, color: uiTokens.colores.textoMedio, textTransform: 'uppercase' }}>{label}</Typography>
-              <Typography sx={{ mt: 0.35, fontSize: 21, lineHeight: 1.1, fontWeight: 900, color: uiTokens.colores.textoFuerte }}>{value}</Typography>
-            </Box>
-          ))}
-        </Box>
+        <AnaliticaComercialResumen analitica={analitica} resumen={resumen} />
 
         <GestionToolbar
           total={meta.total || 0}
