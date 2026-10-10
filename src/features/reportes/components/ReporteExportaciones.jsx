@@ -14,6 +14,17 @@ function escapar(valor) {
     .replaceAll("'", '&#039;');
 }
 
+function fechaHoraInstitucional(valor = new Date()) {
+  return new Intl.DateTimeFormat('es-EC', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(valor);
+}
+
 function etiquetaFiltro(clave) {
   return clave
     .replaceAll('_', ' ')
@@ -46,7 +57,7 @@ export function ReporteExportaciones({
       ]);
 
       const usuario = sesion?.usuario || {};
-      const generadoEl = new Date().toLocaleString('es-EC');
+      const generadoEl = fechaHoraInstitucional(new Date());
       const logoUrl = new URL(reviveLogo, window.location.href).href;
       const filtrosHtml = filtrosVisibles(filtros)
         .map(([clave, valor]) => `<span><strong>${escapar(clave)}:</strong> ${escapar(valor)}</span>`)
@@ -68,56 +79,200 @@ export function ReporteExportaciones({
 <meta charset="utf-8" />
 <title>${escapar(titulo)}</title>
 <style>
-  @page { size: landscape; margin: 12mm 10mm 14mm; }
+  @page { size: landscape; margin: 16mm 16mm 18mm 16mm; }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #202124; font-size: 10px; }
-  .membrete { display: grid; grid-template-columns: 105px 1fr 210px; gap: 14px; align-items: center; border-bottom: 4px solid #f5c400; padding: 0 0 10px; }
-  .logo img { max-width: 92px; max-height: 68px; object-fit: contain; }
-  .institucion { font-size: 12px; font-weight: 900; color: #5b4700; letter-spacing: .8px; }
-  .titulo { font-size: 20px; font-weight: 900; color: #171717; margin: 3px 0; }
-  .descripcion { font-size: 10px; color: #5f6368; line-height: 1.35; }
-  .generacion { text-align: right; font-size: 9px; line-height: 1.5; }
-  .generacion strong { color: #171717; }
-  .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 9px 0 8px; border-bottom: 1px solid #dedede; margin-bottom: 10px; }
-  .meta span { white-space: nowrap; }
-  table { width: 100%; border-collapse: collapse; table-layout: auto; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    color: #202124;
+    font-size: 9.5px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .documento {
+    width: 100%;
+    max-width: 100%;
+  }
+  .membrete {
+    position: relative;
+    min-height: 84px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-bottom: 3px solid #f5c400;
+    padding: 0 118px 11px;
+    margin-bottom: 9px;
+  }
+  .logo {
+    position: absolute;
+    left: 0;
+    top: 4px;
+    width: 104px;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .logo img {
+    max-width: 96px;
+    max-height: 66px;
+    object-fit: contain;
+  }
+  .encabezado-centro {
+    width: 100%;
+    text-align: center;
+  }
+  .marca {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    color: #5b4700;
+    text-transform: uppercase;
+  }
+  .tipo-documento {
+    margin-top: 1px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+    color: #6b7280;
+    text-transform: uppercase;
+  }
+  .titulo {
+    margin: 7px 0 3px;
+    font-size: 18px;
+    line-height: 1.15;
+    font-weight: 900;
+    color: #171717;
+  }
+  .descripcion {
+    max-width: 720px;
+    margin: 0 auto;
+    font-size: 9.5px;
+    line-height: 1.35;
+    color: #5f6368;
+  }
+  .informacion-documento {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 22px;
+    padding: 9px 10px;
+    margin: 0 0 8px;
+    background: #fafafa;
+    border: 1px solid #e3e3e3;
+    border-radius: 4px;
+  }
+  .dato {
+    display: grid;
+    grid-template-columns: 92px 1fr;
+    gap: 7px;
+    min-width: 0;
+  }
+  .dato-etiqueta {
+    font-weight: 800;
+    color: #3f3f3f;
+  }
+  .dato-valor {
+    color: #5f6368;
+    overflow-wrap: anywhere;
+  }
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 16px;
+    min-height: 26px;
+    padding: 7px 9px;
+    margin-bottom: 10px;
+    border: 1px solid #ececec;
+    border-left: 3px solid #f5c400;
+    background: #fffdf5;
+  }
+  .meta span { white-space: normal; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+    margin-bottom: 16px;
+  }
   thead { display: table-header-group; }
-  th { background: #4f3c0a; color: white; font-size: 9px; font-weight: 800; padding: 6px 5px; border: 1px solid #d8d8d8; }
-  td { padding: 5px; border: 1px solid #e1e1e1; vertical-align: middle; }
+  tr { page-break-inside: avoid; }
+  th {
+    background: #2f2f2f;
+    color: white;
+    font-size: 8.5px;
+    font-weight: 800;
+    padding: 6px 5px;
+    border: 1px solid #d2d2d2;
+  }
+  td {
+    padding: 5px;
+    border: 1px solid #e1e1e1;
+    vertical-align: middle;
+    line-height: 1.3;
+  }
   tbody tr:nth-child(even) { background: #fafafa; }
   .izq { text-align: left; }
   .centro { text-align: center; }
-  .pie { margin-top: 10px; padding-top: 6px; border-top: 1px solid #ddd; font-size: 8px; color: #777; display: flex; justify-content: space-between; }
+  .pie {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: -10mm;
+    padding-top: 5px;
+    border-top: 1px solid #d8d8d8;
+    font-size: 7.5px;
+    color: #777;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
   @media print {
     .no-print { display: none; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
 <body>
-  <header class="membrete">
-    <div class="logo"><img src="${logoUrl}" alt="Revive" /></div>
-    <div>
-      <div class="institucion">REVIVE · REPORTE INSTITUCIONAL</div>
-      <div class="titulo">${escapar(titulo)}</div>
-      <div class="descripcion">${escapar(descripcion)}</div>
-    </div>
-    <div class="generacion">
-      <div><strong>Generado por:</strong> ${escapar(usuario.name || 'Usuario')}</div>
-      <div><strong>Rol:</strong> ${escapar(usuario.rol_nombre || 'Sin rol')}</div>
-      <div><strong>Correo:</strong> ${escapar(usuario.email || '')}</div>
-      <div><strong>Fecha:</strong> ${escapar(generadoEl)}</div>
-    </div>
-  </header>
-  <section class="meta">${filtrosHtml || '<span><strong>Filtros:</strong> Sin filtros adicionales</span>'}</section>
-  <table>
-    <thead><tr>${thead}</tr></thead>
-    <tbody>${tbody || `<tr><td colspan="${columnas.length}" class="centro">Sin registros</td></tr>`}</tbody>
-  </table>
-  <footer class="pie">
-    <span>Revive · Documento generado desde el sistema</span>
-    <span>${escapar(titulo)}</span>
-  </footer>
+  <main class="documento">
+    <header class="membrete">
+      <div class="logo"><img src="${logoUrl}" alt="Revive" /></div>
+      <div class="encabezado-centro">
+        <div class="marca">REVIVE</div>
+        <div class="tipo-documento">REPORTE INSTITUCIONAL</div>
+        <div class="titulo">${escapar(titulo)}</div>
+        <div class="descripcion">${escapar(descripcion)}</div>
+      </div>
+    </header>
+
+    <section class="informacion-documento">
+      <div class="dato">
+        <span class="dato-etiqueta">Generado por:</span>
+        <span class="dato-valor">${escapar(usuario.name || 'Usuario')}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Rol:</span>
+        <span class="dato-valor">${escapar(usuario.rol_nombre || 'Sin rol')}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Correo:</span>
+        <span class="dato-valor">${escapar(usuario.email || '')}</span>
+      </div>
+      <div class="dato">
+        <span class="dato-etiqueta">Generado el:</span>
+        <span class="dato-valor">${escapar(generadoEl)}</span>
+      </div>
+    </section>
+
+    <section class="meta">${filtrosHtml || '<span><strong>Filtros:</strong> Sin filtros adicionales</span>'}</section>
+
+    <table>
+      <thead><tr>${thead}</tr></thead>
+      <tbody>${tbody || `<tr><td colspan="${columnas.length}" class="centro">Sin registros</td></tr>`}</tbody>
+    </table>
+
+    <footer class="pie">
+      <span>Revive · Sistema de Gestión</span>
+      <span>${escapar(titulo)} · ${escapar(generadoEl.split(' ')[0] || generadoEl)}</span>
+    </footer>
+  </main>
 </body>
 </html>`);
       ventana.document.close();
