@@ -1,39 +1,62 @@
-import { Box, Paper, Typography } from '@mui/material';
+import { Chip } from '@mui/material';
+import { uiTokens } from '../../../../styles/uiTokens.js';
 import { dinero } from '../../config/carteraConfig.js';
 
-function ResumenItem({ label, value, secondary }) {
+function ResumenChip({ label, value, color, fondo }) {
   return (
-    <Paper elevation={0} sx={{ p: 1.35, border: 1, borderColor: 'divider', borderRadius: 0.5 }}>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography variant="h6" fontWeight={900} sx={{ lineHeight: 1.2, mt: 0.25 }}>
-        {value}
-      </Typography>
-      {secondary ? (
-        <Typography variant="caption" color="text.secondary">{secondary}</Typography>
-      ) : null}
-    </Paper>
+    <Chip
+      variant="outlined"
+      label={`${label}: ${value}`}
+      sx={{
+        height: 38,
+        borderRadius: 0.5,
+        fontWeight: 900,
+        color,
+        bgcolor: fondo,
+        borderColor: color,
+        '& .MuiChip-label': {
+          px: 1.35,
+          fontSize: 11.5,
+          whiteSpace: 'nowrap',
+        },
+      }}
+    />
   );
 }
 
 export function CarteraResumen({ resumen = {} }) {
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gridTemplateColumns: { xs: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-        gap: 1.25,
-        mt: 2,
-        mb: 1.5,
-      }}
-    >
-      <ResumenItem label="Cuentas abiertas" value={resumen.cuentas_abiertas || 0} />
-      <ResumenItem label="Saldo por cobrar" value={dinero(resumen.saldo_total)} />
-      <ResumenItem label="Cuentas vencidas" value={resumen.vencidas || 0} />
-      <ResumenItem
+    <>
+      <ResumenChip
+        label="Cuentas abiertas"
+        value={Number(resumen.cuentas_abiertas || 0).toLocaleString('es-EC')}
+        color={uiTokens.colores.primario}
+        fondo={uiTokens.colores.primarioSuave}
+      />
+      <ResumenChip
+        label="Saldo por cobrar"
+        value={dinero(resumen.saldo_total)}
+        color={uiTokens.colores.info}
+        fondo="rgba(29, 78, 216, 0.06)"
+      />
+      <ResumenChip
+        label="Cuentas vencidas"
+        value={Number(resumen.vencidas || 0).toLocaleString('es-EC')}
+        color={uiTokens.colores.peligro}
+        fondo="rgba(180, 35, 24, 0.06)"
+      />
+      <ResumenChip
         label="Saldo vencido"
         value={dinero(resumen.saldo_vencido)}
-        secondary={`${resumen.compromisos_pendientes || 0} compromisos pendientes`}
+        color={uiTokens.colores.advertencia}
+        fondo="rgba(183, 121, 31, 0.07)"
       />
-    </Box>
+      <ResumenChip
+        label="Compromisos pendientes"
+        value={Number(resumen.compromisos_pendientes || 0).toLocaleString('es-EC')}
+        color={uiTokens.colores.exito}
+        fondo="rgba(8, 127, 91, 0.06)"
+      />
+    </>
   );
 }
