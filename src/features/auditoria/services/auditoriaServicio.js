@@ -5,4 +5,5 @@ export const auditoriaServicio = {
   obtenerAccesos: async (params = { page: 1 }) => (await api.get('/base/auditoria/accesos', { params })).data,
   obtenerResumen: async () => (await api.get('/base/auditoria/resumen')).data,
   obtenerLogs: async (params = { page: 1 }) => (await api.get('/base/auditoria/logs', { params })).data,
+  obtenerIntegraciones: async (params = { page: 1 }) => (await api.get('/base/auditoria/integraciones', { params })).data,
 };
