@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import EventUpcomingOutlinedIcon from '@mui/icons-material/EventUpcomingOutlined';
+import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
@@ -74,7 +74,7 @@ export function MembresiasPorVencerPage() {
       <PageHeader
         titulo="Membresías por vencer"
         descripcion="Seguimiento de períodos vigentes próximos a finalizar para gestión de renovación."
-        icono={<EventUpcomingOutlinedIcon />}
+        icono={<EventAvailableOutlinedIcon />}
       />
 
       <Paper className="page-content-container" elevation={0}>
