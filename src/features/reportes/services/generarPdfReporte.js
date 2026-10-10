@@ -168,6 +168,7 @@ export async function generarPdfReporte({
   sedes,
   logoUrl,
   filtrosAdicionales = [],
+  filaTotal = null,
 }) {
   const logoResponse = await fetch(logoUrl);
   if (!logoResponse.ok) throw new Error('No se pudo cargar el logo de Revive.');
@@ -265,6 +266,7 @@ export async function generarPdfReporte({
     columnas.forEach((column, index) => {
       const w = widths[index];
       page.commands += rectCommand(x, y - rowHeight, w, rowHeight, fill, 0.86);
+      page.commands += '0 g 0 G ';
 
       const align = column.align === 'left' ? 'left' : 'center';
       wrapped[index].forEach((text, lineIndex) => {
@@ -280,7 +282,37 @@ export async function generarPdfReporte({
   });
 
   if (!filas.length) {
+    page.commands += '0 g 0 G ';
     page.commands += textCommand('Sin registros para los filtros seleccionados.', pageWidth / 2, y - 24, 9, false, 'center');
+  }
+
+  if (filaTotal && filas.length) {
+    const totalHeight = 19;
+
+    if (y - totalHeight < TABLE_BOTTOM) {
+      pages.push(page);
+      startPage();
+    }
+
+    let x = MARGIN_X;
+    page.commands += '0.94 g 0 G ';
+
+    columnas.forEach((column, index) => {
+      const w = widths[index];
+      page.commands += rectCommand(x, y - totalHeight, w, totalHeight, 0.94, 0.65);
+      page.commands += '0 g 0 G ';
+
+      const value = typeof filaTotal[index] === 'function'
+        ? filaTotal[index](filas)
+        : (filaTotal[index] ?? '');
+
+      const align = column.align === 'left' ? 'left' : 'center';
+      const tx = align === 'left' ? x + padding : x + (w / 2);
+      page.commands += textCommand(value, tx, y - 12, bodyFont, true, align);
+      x += w;
+    });
+
+    y -= totalHeight;
   }
 
   pages.push(page);
