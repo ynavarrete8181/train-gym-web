@@ -9,6 +9,7 @@ const modulosPagina = import.meta.glob([
 
 const nombresPaginas = {
   DashboardPage: 'Dashboard',
+  DashboardEjecutivoPage: 'Dashboard ejecutivo',
   UsuariosPage: 'Usuarios',
   PermisosUsuariosPage: 'Permisos de usuarios',
   MenusPage: 'Menús',
