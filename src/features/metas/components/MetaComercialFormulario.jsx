@@ -1,6 +1,15 @@
 import { Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import TrendingUpOutlinedIcon from '@mui/icons-material/TrendingUpOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
+import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
+import { CampoSelectIcono } from '../../../components/common/CampoSelectIcono.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
@@ -28,29 +37,100 @@ export function MetaComercialFormulario({
         <Stack spacing={2}>
           <Box sx={formStyles.seccion}>
             <Typography sx={formStyles.modalSeccionTitulo}>Configuración mensual</Typography>
+
+            <Box sx={{ mb: 1.5, p: 1.3, border: '1px solid #dbe3f0', borderRadius: 1.5, bgcolor: '#f8fafc' }}>
+              <Typography sx={{ fontSize: 11.5, fontWeight: 900, mb: 0.4 }}>
+                ¿Cómo se configura?
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Seleccione la sede y el período. Luego ingrese el objetivo total del mes para ventas, cobros,
+                membresías nuevas y renovaciones. Las metas por responsable son opcionales y sirven para distribuir
+                el objetivo de la sede entre personas específicas.
+              </Typography>
+            </Box>
+
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-              <TextField
-                select
-                size="small"
+              <CampoSelectIcono
+                icono={<BusinessOutlinedIcon />}
                 label="Sede"
                 value={formulario.sede_id}
                 onChange={(e) => onCambiarSede(e.target.value)}
                 required
               >
                 {(catalogos.sedes || []).map((s) => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
-              </TextField>
-              <TextField size="small" type="number" label="Año" value={formulario.anio} onChange={(e) => onChange('anio', e.target.value)} required />
-              <TextField select size="small" label="Mes" value={formulario.mes} onChange={(e) => onChange('mes', e.target.value)} required>
+              </CampoSelectIcono>
+
+              <CampoSelectIcono
+                icono={<EventOutlinedIcon />}
+                label="Año"
+                value={formulario.anio}
+                onChange={(e) => onChange('anio', e.target.value)}
+                required
+              >
+                {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((anio) => (
+                  <MenuItem key={anio} value={anio}>{anio}</MenuItem>
+                ))}
+              </CampoSelectIcono>
+
+              <CampoSelectIcono
+                icono={<CalendarMonthOutlinedIcon />}
+                label="Mes"
+                value={formulario.mes}
+                onChange={(e) => onChange('mes', e.target.value)}
+                required
+              >
                 {meses.map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
-              </TextField>
-              <TextField size="small" type="number" label="Meta ventas ($)" value={formulario.meta_ventas} onChange={(e) => onChange('meta_ventas', e.target.value)} />
-              <TextField size="small" type="number" label="Meta cobros ($)" value={formulario.meta_cobros} onChange={(e) => onChange('meta_cobros', e.target.value)} />
-              <TextField size="small" type="number" label="Membresías nuevas" value={formulario.meta_membresias_nuevas} onChange={(e) => onChange('meta_membresias_nuevas', e.target.value)} />
-              <TextField size="small" type="number" label="Renovaciones" value={formulario.meta_renovaciones} onChange={(e) => onChange('meta_renovaciones', e.target.value)} />
-              <TextField select size="small" label="Estado" value={formulario.estado} onChange={(e) => onChange('estado', e.target.value)}>
+              </CampoSelectIcono>
+
+              <TextField
+                size="small"
+                type="number"
+                label="Meta ventas ($)"
+                value={formulario.meta_ventas}
+                onChange={(e) => onChange('meta_ventas', e.target.value)}
+                helperText="Total facturado que la sede debe alcanzar en el mes."
+                slotProps={{ htmlInput: { min: 0, step: '0.01' }, input: { startAdornment: <TrendingUpOutlinedIcon sx={{ mr: 1, fontSize: 18, color: '#144985' }} /> } }}
+              />
+
+              <TextField
+                size="small"
+                type="number"
+                label="Meta cobros ($)"
+                value={formulario.meta_cobros}
+                onChange={(e) => onChange('meta_cobros', e.target.value)}
+                helperText="Dinero efectivamente cobrado durante el mes."
+                slotProps={{ htmlInput: { min: 0, step: '0.01' }, input: { startAdornment: <PaymentsOutlinedIcon sx={{ mr: 1, fontSize: 18, color: '#144985' }} /> } }}
+              />
+
+              <TextField
+                size="small"
+                type="number"
+                label="Membresías nuevas"
+                value={formulario.meta_membresias_nuevas}
+                onChange={(e) => onChange('meta_membresias_nuevas', e.target.value)}
+                helperText="Cantidad de membresías que inician su primer período."
+                slotProps={{ htmlInput: { min: 0, step: 1 }, input: { startAdornment: <CardMembershipOutlinedIcon sx={{ mr: 1, fontSize: 18, color: '#144985' }} /> } }}
+              />
+
+              <TextField
+                size="small"
+                type="number"
+                label="Renovaciones"
+                value={formulario.meta_renovaciones}
+                onChange={(e) => onChange('meta_renovaciones', e.target.value)}
+                helperText="Cantidad de membresías que renuevan un período posterior."
+                slotProps={{ htmlInput: { min: 0, step: 1 }, input: { startAdornment: <AutorenewOutlinedIcon sx={{ mr: 1, fontSize: 18, color: '#144985' }} /> } }}
+              />
+
+              <CampoSelectIcono
+                icono={<FlagOutlinedIcon />}
+                label="Estado"
+                value={formulario.estado}
+                onChange={(e) => onChange('estado', e.target.value)}
+              >
                 <MenuItem value="ACTIVA">Activa</MenuItem>
                 <MenuItem value="INACTIVA">Inactiva</MenuItem>
-              </TextField>
+              </CampoSelectIcono>
               <TextField
                 size="small"
                 label="Observaciones"
@@ -69,9 +149,8 @@ export function MetaComercialFormulario({
               Opcional. Distribuya objetivos individuales entre responsables habilitados en la sede seleccionada.
             </Typography>
 
-            <TextField
-              select
-              size="small"
+            <CampoSelectIcono
+              icono={<PersonOutlineOutlinedIcon />}
               label="Responsable"
               value=""
               onChange={(e) => onAgregarResponsable(e.target.value)}
@@ -81,7 +160,7 @@ export function MetaComercialFormulario({
               {responsablesDisponibles.map((r) => (
                 <MenuItem key={r.id} value={r.id}>{r.nombre} · {r.rol}</MenuItem>
               ))}
-            </TextField>
+            </CampoSelectIcono>
 
             <Stack spacing={1}>
               {(formulario.responsables || []).map((r) => {
