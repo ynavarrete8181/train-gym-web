@@ -1,4 +1,4 @@
-import { Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
@@ -56,9 +56,13 @@ export function MetaComercialFormulario({
                 value={formulario.sede_id}
                 onChange={(e) => onCambiarSede(e.target.value)}
                 required
-              >
-                {(catalogos.sedes || []).map((s) => <MenuItem key={s.id} value={s.id}>{s.nombre}</MenuItem>)}
-              </CampoSelectIcono>
+                options={(catalogos.sedes || []).map((s) => ({
+                  value: s.id,
+                  label: s.nombre,
+                  description: 'Sede operativa',
+                  icono: <BusinessOutlinedIcon />,
+                }))}
+              />
 
               <CampoSelectIcono
                 icono={<EventOutlinedIcon />}
@@ -66,11 +70,13 @@ export function MetaComercialFormulario({
                 value={formulario.anio}
                 onChange={(e) => onChange('anio', e.target.value)}
                 required
-              >
-                {[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((anio) => (
-                  <MenuItem key={anio} value={anio}>{anio}</MenuItem>
-                ))}
-              </CampoSelectIcono>
+                options={[new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1].map((anio) => ({
+                  value: anio,
+                  label: String(anio),
+                  description: 'Año de cumplimiento',
+                  icono: <EventOutlinedIcon />,
+                }))}
+              />
 
               <CampoSelectIcono
                 icono={<CalendarMonthOutlinedIcon />}
@@ -78,9 +84,13 @@ export function MetaComercialFormulario({
                 value={formulario.mes}
                 onChange={(e) => onChange('mes', e.target.value)}
                 required
-              >
-                {meses.map((m, i) => <MenuItem key={m} value={i + 1}>{m}</MenuItem>)}
-              </CampoSelectIcono>
+                options={meses.map((m, i) => ({
+                  value: i + 1,
+                  label: m,
+                  description: 'Período mensual',
+                  icono: <CalendarMonthOutlinedIcon />,
+                }))}
+              />
 
               <TextField
                 size="small"
@@ -127,10 +137,21 @@ export function MetaComercialFormulario({
                 label="Estado"
                 value={formulario.estado}
                 onChange={(e) => onChange('estado', e.target.value)}
-              >
-                <MenuItem value="ACTIVA">Activa</MenuItem>
-                <MenuItem value="INACTIVA">Inactiva</MenuItem>
-              </CampoSelectIcono>
+                options={[
+                  {
+                    value: 'ACTIVA',
+                    label: 'Activa',
+                    description: 'Participa en seguimiento y alertas',
+                    icono: <FlagOutlinedIcon />,
+                  },
+                  {
+                    value: 'INACTIVA',
+                    label: 'Inactiva',
+                    description: 'Se conserva sin seguimiento operativo',
+                    icono: <FlagOutlinedIcon />,
+                  },
+                ]}
+              />
               <TextField
                 size="small"
                 label="Observaciones"
@@ -156,11 +177,13 @@ export function MetaComercialFormulario({
               onChange={(e) => onAgregarResponsable(e.target.value)}
               disabled={!formulario.sede_id || responsablesDisponibles.length === 0}
               sx={{ minWidth: { xs: '100%', sm: 340 }, mb: 1.5 }}
-            >
-              {responsablesDisponibles.map((r) => (
-                <MenuItem key={r.id} value={r.id}>{r.nombre} · {r.rol}</MenuItem>
-              ))}
-            </CampoSelectIcono>
+              options={responsablesDisponibles.map((r) => ({
+                value: r.id,
+                label: r.nombre,
+                description: r.rol,
+                icono: <PersonOutlineOutlinedIcon />,
+              }))}
+            />
 
             <Stack spacing={1}>
               {(formulario.responsables || []).map((r) => {
