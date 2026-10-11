@@ -84,7 +84,7 @@ export function CampoSelectIcono({
                 mx: 0.5,
                 my: 0.2,
                 borderRadius: 1,
-                gap: 0.75,
+                gap: 1.25,
               },
               '& .MuiMenuItem-root:hover': {
                 bgcolor: 'rgba(20, 73, 133, 0.055)',
@@ -122,6 +122,7 @@ export function CampoSelectIcono({
                       color: selected ? uiTokens.colores.primario : uiTokens.colores.textoMedio,
                       bgcolor: selected ? 'rgba(20, 73, 133, 0.09)' : '#f8fafc',
                       border: `1px solid ${selected ? 'rgba(20,73,133,.22)' : uiTokens.colores.borde}`,
+                      mr: 0.35,
                       '& .MuiSvgIcon-root': { fontSize: 17 },
                     }}
                   >
