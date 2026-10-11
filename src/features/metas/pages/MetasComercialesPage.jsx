@@ -4,7 +4,7 @@ import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
-import { Box, Button, MenuItem, Paper, Stack } from '@mui/material';
+import { Box, Button, Paper, Stack } from '@mui/material';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { CampoSelectIcono } from '../../../components/common/CampoSelectIcono.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -346,22 +346,28 @@ export function MetasComercialesPage() {
             label="Año"
             value={filtros.anio}
             onChange={(e) => aplicarFiltro('anio', e.target.value)}
-            sx={{ minWidth: 140 }}
-          >
-            {[hoy.getFullYear() - 1, hoy.getFullYear(), hoy.getFullYear() + 1].map((anio) => (
-              <MenuItem key={anio} value={anio}>{anio}</MenuItem>
-            ))}
-          </CampoSelectIcono>
+            sx={{ minWidth: 160 }}
+            options={[hoy.getFullYear() - 1, hoy.getFullYear(), hoy.getFullYear() + 1].map((anio) => ({
+              value: anio,
+              label: String(anio),
+              description: 'Año de consulta',
+              icono: <EventOutlinedIcon />,
+            }))}
+          />
 
           <CampoSelectIcono
             icono={<CalendarMonthOutlinedIcon />}
             label="Mes"
             value={filtros.mes}
             onChange={(e) => aplicarFiltro('mes', e.target.value)}
-            sx={{ minWidth: 180 }}
-          >
-            {meses.map((nombre, index) => <MenuItem key={nombre} value={index + 1}>{nombre}</MenuItem>)}
-          </CampoSelectIcono>
+            sx={{ minWidth: 190 }}
+            options={meses.map((nombre, index) => ({
+              value: index + 1,
+              label: nombre,
+              description: 'Período mensual',
+              icono: <CalendarMonthOutlinedIcon />,
+            }))}
+          />
         </Stack>
 
         <MetasComercialesTable
