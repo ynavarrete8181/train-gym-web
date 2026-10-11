@@ -110,9 +110,22 @@ export function MetasComercialesPage() {
   };
 
   const nuevaMeta = async () => {
-    await cargarCatalogos();
+    const datosCatalogos = await cargarCatalogos();
+    const sedesDisponibles = datosCatalogos.sedes || [];
+    const sedeAutomatica = sedesDisponibles.length === 1 ? sedesDisponibles[0].id : '';
+
     setEditandoId(null);
-    setFormulario(formularioInicial());
+
+    if (sedeAutomatica) {
+      const catalogosSede = await cargarCatalogos(sedeAutomatica);
+      setCatalogos((actual) => ({ ...actual, ...catalogosSede }));
+    }
+
+    setFormulario({
+      ...formularioInicial(),
+      sede_id: sedeAutomatica,
+    });
+
     setVista('formulario');
   };
 
