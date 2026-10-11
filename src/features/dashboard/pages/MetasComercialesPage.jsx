@@ -79,6 +79,7 @@ export function MetasComercialesPage() {
   const [dialogo, setDialogo] = useState(false);
   const [editandoId, setEditandoId] = useState(null);
   const [formulario, setFormulario] = useState(formularioInicial());
+  const [seguimientoResponsables, setSeguimientoResponsables] = useState([]);
   const [filtros, setFiltros] = useState({
     busqueda: '',
     anio: hoy.getFullYear(),
@@ -124,6 +125,7 @@ export function MetasComercialesPage() {
   const abrirNueva = async () => {
     await cargarCatalogos();
     setEditandoId(null);
+    setSeguimientoResponsables([]);
     setFormulario(formularioInicial());
     setDialogo(true);
   };
@@ -133,6 +135,7 @@ export function MetasComercialesPage() {
     const datos = response.datos || {};
     const metaActual = datos.meta || {};
     setEditandoId(id);
+    setSeguimientoResponsables(datos.responsables || []);
     setCatalogos((actual) => ({ ...actual, ...(datos.catalogos || {}) }));
     setFormulario({
       sede_id: metaActual.sede_id || '',
@@ -388,6 +391,7 @@ export function MetasComercialesPage() {
 
             {formulario.responsables.map((r) => {
               const usuario = (catalogos.responsables || []).find((u) => Number(u.id) === Number(r.usuario_id));
+              const seguimiento = seguimientoResponsables.find((s) => Number(s.usuario_id) === Number(r.usuario_id));
               return (
                 <Paper key={r.usuario_id} variant="outlined" sx={{ p: 1.1, mb: 1, borderColor: uiTokens.colores.borde }}>
                   <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} alignItems={{ md: 'center' }}>
@@ -398,6 +402,14 @@ export function MetasComercialesPage() {
                     <TextField type="number" size="small" label="Renovaciones" value={r.meta_renovaciones} onChange={(e) => actualizarResponsable(r.usuario_id, 'meta_renovaciones', e.target.value)} />
                     <Button size="small" color="error" onClick={() => quitarResponsable(r.usuario_id)}>Quitar</Button>
                   </Stack>
+                  {seguimiento ? (
+                    <Typography sx={{ mt: 0.8, fontSize: 10.8, color: uiTokens.colores.textoMedio }}>
+                      Real: ventas {dinero(seguimiento.real_ventas)} ({Number(seguimiento.cumplimiento_ventas || 0).toFixed(1)}%) ·
+                      cobros {dinero(seguimiento.real_cobros)} ({Number(seguimiento.cumplimiento_cobros || 0).toFixed(1)}%) ·
+                      nuevas {numero(seguimiento.real_membresias_nuevas)} ({Number(seguimiento.cumplimiento_membresias_nuevas || 0).toFixed(1)}%) ·
+                      renovaciones {numero(seguimiento.real_renovaciones)} ({Number(seguimiento.cumplimiento_renovaciones || 0).toFixed(1)}%)
+                    </Typography>
+                  ) : null}
                 </Paper>
               );
             })}
