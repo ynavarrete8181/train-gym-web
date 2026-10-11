@@ -1,7 +1,7 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 import { consultarTodoPaginado, descargarExcelReporte } from '../../reportes/services/exportacionReporte.js';
 
-const endpoint = '/base/dashboard/metas';
+const endpoint = '/base/metas';
 
 const consultar = async (params = {}) => (await api.get(endpoint, { params })).data;
 
