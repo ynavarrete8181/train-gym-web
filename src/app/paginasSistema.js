@@ -11,6 +11,7 @@ const nombresPaginas = {
   DashboardPage: 'Dashboard',
   DashboardEjecutivoPage: 'Dashboard ejecutivo',
   AlertasOperativasPage: 'Alertas operativas',
+  MetasComercialesPage: 'Metas comerciales',
   UsuariosPage: 'Usuarios',
   PermisosUsuariosPage: 'Permisos de usuarios',
   MenusPage: 'Menús',
