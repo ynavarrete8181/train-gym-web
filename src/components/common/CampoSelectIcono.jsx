@@ -54,15 +54,76 @@ export function CampoSelectIcono({
         IconComponent: KeyboardArrowDownRoundedIcon,
         ...SelectProps,
         renderValue: opciones
-          ? () => (
-              <Typography
-                component="span"
-                noWrap
-                sx={{ fontSize: 12, fontWeight: 700, color: uiTokens.colores.textoFuerte }}
-              >
-                {seleccionada ? getOptionLabel(seleccionada) : ''}
-              </Typography>
-            )
+          ? () => {
+              if (!seleccionada) return '';
+
+              const selectedIcon = getOptionIcon(seleccionada);
+              const selectedDescription = getOptionDescription(seleccionada);
+
+              return (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1.35,
+                    minWidth: 0,
+                    width: '100%',
+                    pr: 0.5,
+                  }}
+                >
+                  {selectedIcon ? (
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        flex: '0 0 32px',
+                        display: 'grid',
+                        placeItems: 'center',
+                        borderRadius: 1,
+                        color: uiTokens.colores.primario,
+                        bgcolor: 'rgba(20, 73, 133, 0.07)',
+                        border: '1px solid rgba(20, 73, 133, 0.16)',
+                        '& .MuiSvgIcon-root': { fontSize: 17 },
+                      }}
+                    >
+                      {selectedIcon}
+                    </Box>
+                  ) : null}
+
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography
+                      component="span"
+                      noWrap
+                      sx={{
+                        display: 'block',
+                        fontSize: 12,
+                        lineHeight: 1.2,
+                        fontWeight: 850,
+                        color: uiTokens.colores.textoFuerte,
+                      }}
+                    >
+                      {getOptionLabel(seleccionada)}
+                    </Typography>
+
+                    {selectedDescription ? (
+                      <Typography
+                        component="span"
+                        noWrap
+                        sx={{
+                          display: 'block',
+                          mt: 0.15,
+                          fontSize: 10.2,
+                          lineHeight: 1.15,
+                          color: uiTokens.colores.textoMedio,
+                        }}
+                      >
+                        {selectedDescription}
+                      </Typography>
+                    ) : null}
+                  </Box>
+                </Box>
+              );
+            }
           : SelectProps.renderValue,
         MenuProps: {
           ...(SelectProps.MenuProps || {}),
