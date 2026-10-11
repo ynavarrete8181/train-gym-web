@@ -51,6 +51,11 @@ export function MetasComercialesPage() {
     mes: hoy.getMonth() + 1,
     estado: '',
     sede_id: [],
+    periodo: '',
+    ventas: '',
+    cobros: '',
+    nuevas: '',
+    renovaciones: '',
     page: 1,
     per_page: 10,
   });
