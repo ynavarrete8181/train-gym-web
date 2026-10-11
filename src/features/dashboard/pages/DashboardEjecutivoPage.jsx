@@ -294,6 +294,23 @@ export function DashboardEjecutivoPage() {
           </Bloque>
         </Box>
 
+        {(datos.metas_comerciales || []).length > 0 ? (
+          <Box sx={{ mb: 1.2 }}>
+            <Bloque titulo="Cumplimiento de metas comerciales" descripcion="Seguimiento mensual por sede según el mes correspondiente al período seleccionado.">
+              <TablaCompacta
+                columnas={[
+                  { key: 'sede', label: 'Sede' },
+                  { key: 'ventas', label: 'Ventas', align: 'center', render: (f) => `${dinero(f.real_ventas)} / ${dinero(f.meta_ventas)} · ${Number(f.cumplimiento_ventas || 0).toFixed(1)}%` },
+                  { key: 'cobros', label: 'Cobros', align: 'center', render: (f) => `${dinero(f.real_cobros)} / ${dinero(f.meta_cobros)} · ${Number(f.cumplimiento_cobros || 0).toFixed(1)}%` },
+                  { key: 'nuevas', label: 'Nuevas', align: 'center', render: (f) => `${numero(f.real_membresias_nuevas)} / ${numero(f.meta_membresias_nuevas)} · ${Number(f.cumplimiento_membresias_nuevas || 0).toFixed(1)}%` },
+                  { key: 'renovaciones', label: 'Renovaciones', align: 'center', render: (f) => `${numero(f.real_renovaciones)} / ${numero(f.meta_renovaciones)} · ${Number(f.cumplimiento_renovaciones || 0).toFixed(1)}%` },
+                ]}
+                filas={datos.metas_comerciales || []}
+              />
+            </Bloque>
+          </Box>
+        ) : null}
+
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 1.2, mb: 1.2 }}>
           <Bloque titulo="Productos y servicios más vendidos" descripcion="Ranking por valor vendido en el período.">
             <TablaCompacta
