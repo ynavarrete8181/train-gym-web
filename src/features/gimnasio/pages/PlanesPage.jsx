@@ -1,0 +1,517 @@
+import { useEffect, useState } from 'react';
+import Swal from 'sweetalert2';
+import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import LocalOfferOutlinedIcon from '@mui/icons-material/LocalOfferOutlined';
+import { Autocomplete, Box, Button, Chip, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { AccionesFormulario } from "../../../components/common/AccionesFormulario.jsx";
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
+import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
+import { PageHeader } from '../../../components/common/PageHeader.jsx';
+import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
+import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { formStyles } from '../../../styles/formStyles.js';
+import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { confirmarAccion } from '../../../utils/confirmacion.js';
+import { PlanesTable } from '../components/PlanesTable.jsx';
+import { PlanModalidadesEditor } from '../components/PlanModalidadesEditor.jsx';
+
+const getInitialForm = () => ({
+  id: null,
+  codigo: '',
+  nombre: '',
+  descripcion: '',
+  tipo_duracion: 'MESES',
+  duracion: 1,
+  precio_base: 0,
+  tarifa_inscripcion: 0,
+  tipo_producto: 'MEMBRESIA',
+  tipo_cobro: 'RECURRENTE',
+  generar_venta: true,
+  requiere_pago: true,
+  requiere_entrenador: false,
+  renovable: true,
+  requiere_modalidades: false,
+  activo: true,
+  precio_por_sede: false,
+  precios_sede: [],
+  servicio_ids: [],
+  modalidades: [],
+});
+
+export function PlanesPage() {
+  const [vista, setVista] = useState('lista');
+  const [formData, setFormData] = useState(getInitialForm());
+  const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const [planes, setPlanes] = useState([]);
+  const [meta, setMeta] = useState({});
+  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
+  const [filtrosColumna, setFiltrosColumna] = useState({ codigo: [], nombre: [], estado: [] });
+  const [cargando, setCargando] = useState(true);
+  const [sedes, setSedes] = useState([]);
+  const [serviciosPlan, setServiciosPlan] = useState([]);
+
+  const showNotificacion = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
+
+  const cargarPlanes = async (parametros = filtros) => {
+    setCargando(true);
+    try {
+      const response = await gimnasioServicio.obtenerPlanes(parametros);
+      setPlanes(response.datos || []);
+      setMeta(response.meta || {});
+    } catch {
+      showNotificacion('Error al cargar los planes', 'error');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  useEffect(() => { if (vista === 'lista') cargarPlanes(); }, [vista]);
+
+  useEffect(() => {
+    gimnasioServicio.obtenerEstructuraOperativa()
+      .then((resp) => setSedes(resp.datos?.sedes || []))
+      .catch(() => setSedes([]));
+  }, []);
+
+  useEffect(() => {
+    gimnasioServicio.obtenerServiciosPlanCatalogo()
+      .then((resp) => setServiciosPlan(resp.datos || []))
+      .catch(() => {
+        setServiciosPlan([]);
+        showNotificacion('No se pudieron cargar los servicios disponibles para los planes.', 'error');
+      });
+  }, []);
+
+  const buscar = (parametros) => {
+    const nuevos = { ...parametros, page: 1 };
+    setFiltros(nuevos);
+    cargarPlanes(nuevos);
+  };
+
+  const handleNuevo = () => {
+    setFormData(getInitialForm());
+    setVista('formulario');
+  };
+
+  const handleEliminar = async (plan) => {
+    const confirmado = await confirmarAccion({ titulo: 'Eliminar plan', texto: `¿Estás seguro que deseas eliminar el plan "${plan.nombre}"?`, textoConfirmar: 'Sí, eliminar', icono: 'warning' });
+    if (!confirmado) return;
+    try {
+      await gimnasioServicio.eliminarPlan(plan.id);
+      showNotificacion('Plan eliminado con éxito', 'success');
+      cargarPlanes();
+    } catch (error) {
+      showNotificacion(error?.response?.data?.mensaje || 'Error al eliminar el plan', 'error');
+    }
+  };
+
+  const handleAddPrecioSede = () => setFormData((prev) => ({ ...prev, precios_sede: [...(prev.precios_sede || []), { sede_id: '', precio: '' }] }));
+  const handleUpdatePrecioSede = (index, field, value) => {
+    const nuevos = [...(formData.precios_sede || [])];
+    nuevos[index][field] = value;
+    setFormData({ ...formData, precios_sede: nuevos });
+  };
+  const handleRemovePrecioSede = (index) => {
+    const nuevos = [...(formData.precios_sede || [])];
+    nuevos.splice(index, 1);
+    setFormData({ ...formData, precios_sede: nuevos });
+  };
+
+  const escaparHtml = (valor = '') => String(valor)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+
+  const handleModalidadesPlan = (plan) => {
+    const modalidades = plan.modalidades || [];
+    if (!modalidades.length) return;
+
+    const filas = modalidades.map((modalidad) => {
+      const frecuencia = modalidad.uso_ilimitado
+        ? 'Ilimitado'
+        : `${modalidad.usos_por_semana || modalidad.dias_por_semana || 0} uso(s)/sem.`;
+      const duracion = `${modalidad.duracion || 0} ${String(modalidad.tipo_duracion || '').toLowerCase()}`;
+      const cobro = modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS'
+        ? 'Prorrateado'
+        : 'Fijo';
+      const sedesDetalle = (modalidad.precios_sede || []).length
+        ? `<div style="margin-top:6px;font-size:11px;color:#64748b;">${(modalidad.precios_sede || []).map((precio) =>
+            `${escaparHtml(precio.sede_nombre || 'Sede')} · ${Number(precio.precio || 0).toFixed(2)}`
+          ).join('<br/>')}</div>`
+        : '';
+
+      return `
+        <tr>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;text-align:left;">
+            <div style="font-weight:800;color:#0f172a;">${escaparHtml(modalidad.nombre)}</div>
+            ${sedesDetalle}
+          </td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${escaparHtml(frecuencia)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${escaparHtml(duracion)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${Number(modalidad.precio_base || 0).toFixed(2)}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">${cobro}</td>
+          <td style="padding:10px 12px;border-bottom:1px solid #e2e8f0;">
+            <span style="font-weight:800;">${modalidad.activo ? 'Activa' : 'Inactiva'}</span>
+          </td>
+        </tr>`;
+    }).join('');
+
+    Swal.fire({
+      title: `Modalidades · ${plan.nombre}`,
+      html: `
+        <div style="max-height:420px;overflow:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+              <tr style="background:#f8fafc;color:#475569;">
+                <th style="padding:10px 12px;text-align:left;">Modalidad</th>
+                <th style="padding:10px 12px;">Frecuencia</th>
+                <th style="padding:10px 12px;">Duración</th>
+                <th style="padding:10px 12px;">Precio</th>
+                <th style="padding:10px 12px;">Cobro</th>
+                <th style="padding:10px 12px;">Estado</th>
+              </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+          </table>
+        </div>`,
+      width: 900,
+      confirmButtonText: 'Cerrar',
+      buttonsStyling: false,
+      customClass: {
+        popup: 'base-swal-popup',
+        title: 'base-swal-title',
+        htmlContainer: 'base-swal-text',
+        confirmButton: 'base-swal-confirm',
+      },
+    });
+  };
+
+  const handleEditar = (plan) => {
+    setFormData({
+      ...getInitialForm(),
+      ...plan,
+      precio_por_sede: Boolean((plan.precios_sede || []).length),
+      precios_sede: plan.precios_sede || [],
+      servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
+      modalidades: plan.modalidades || [],
+    });
+    setVista('formulario');
+  };
+
+  const handleChange = (e) => {
+    const { name, value, checked, type } = e.target;
+    setFormData((prev) => {
+      const siguiente = { ...prev, [name]: type === 'checkbox' ? checked : value };
+      if (name === 'tipo_producto' && value === 'PASE_DIARIO') {
+        siguiente.tipo_cobro = 'PAGO_UNICO';
+        siguiente.renovable = false;
+        siguiente.tipo_duracion = 'DIAS';
+        siguiente.duracion = 1;
+        siguiente.tarifa_inscripcion = 0;
+      }
+      if (name === 'requiere_entrenador' && !checked) {
+        siguiente.servicio_ids = [];
+      }
+      if (name === 'requiere_modalidades' && checked) {
+        siguiente.precio_por_sede = false;
+        siguiente.precios_sede = [];
+      }
+      if (name === 'precio_por_sede' && !checked) {
+        siguiente.precios_sede = [];
+      }
+      return siguiente;
+    });
+  };
+
+  const handleGuardar = async () => {
+    try {
+      if (!String(formData.nombre || '').trim()) {
+        showNotificacion('Ingresa el nombre del plan.', 'warning');
+        return;
+      }
+
+      const precioBase = Number(formData.precio_base);
+      const duracion = Number(formData.duracion);
+
+      if (!formData.requiere_modalidades) {
+        if (!Number.isFinite(precioBase) || precioBase < 0) {
+          showNotificacion('El precio base debe ser un valor válido mayor o igual a 0.', 'warning');
+          return;
+        }
+
+        if (!Number.isInteger(duracion) || duracion < 1) {
+          showNotificacion('La duración debe ser un número entero mayor o igual a 1.', 'warning');
+          return;
+        }
+      }
+
+      if (formData.requiere_entrenador && !(formData.servicio_ids || []).length) {
+        showNotificacion('Selecciona al menos un servicio incluido para el plan que requiere entrenador.', 'warning');
+        return;
+      }
+
+      if (formData.requiere_modalidades && !(formData.modalidades || []).length) {
+        showNotificacion('Agrega al menos una modalidad antes de guardar este plan.', 'warning');
+        return;
+      }
+
+      const preciosSedeValidos = formData.requiere_modalidades || !formData.precio_por_sede
+        ? []
+        : (formData.precios_sede || []).filter((fila) => fila.sede_id && fila.precio !== '');
+      if (!formData.requiere_modalidades && formData.precio_por_sede && preciosSedeValidos.length !== (formData.precios_sede || []).length) {
+        showNotificacion('Completa la sede y el precio de cada fila, o quítala.', 'warning');
+        return;
+      }
+
+      const sedesSeleccionadas = preciosSedeValidos.map((fila) => String(fila.sede_id));
+      if (new Set(sedesSeleccionadas).size !== sedesSeleccionadas.length) {
+        showNotificacion('No puedes registrar dos precios para la misma sede.', 'warning');
+        return;
+      }
+
+      const precioSedeInvalido = preciosSedeValidos.some((fila) => {
+        const precio = Number(fila.precio);
+        return !Number.isFinite(precio) || precio < 0;
+      });
+      if (precioSedeInvalido) {
+        showNotificacion('Todos los precios por sede deben ser valores válidos mayores o iguales a 0.', 'warning');
+        return;
+      }
+
+      const { precio_por_sede, ...datosPlan } = formData;
+
+      const payload = {
+        ...datosPlan,
+        codigo: formData.id ? formData.codigo : undefined,
+        precio_base: precioBase,
+        tarifa_inscripcion: formData.tipo_producto === 'PASE_DIARIO' ? 0 : Number(formData.tarifa_inscripcion || 0),
+        duracion: formData.tipo_producto === 'PASE_DIARIO' ? 1 : duracion,
+        generar_venta: Boolean(formData.generar_venta),
+        requiere_pago: Boolean(formData.requiere_pago),
+        requiere_entrenador: Boolean(formData.requiere_entrenador),
+        renovable: Boolean(formData.renovable),
+        requiere_modalidades: Boolean(formData.requiere_modalidades),
+        servicio_ids: formData.requiere_entrenador
+          ? (formData.servicio_ids || []).map(Number)
+          : [],
+        precios_sede: preciosSedeValidos.map((fila) => ({ sede_id: Number(fila.sede_id), precio: parseFloat(fila.precio) })),
+        modalidades: formData.requiere_modalidades
+          ? (formData.modalidades || []).map(({ precio_por_sede, ...modalidad }) => ({
+              ...modalidad,
+              id: modalidad.id || undefined,
+              codigo: modalidad.codigo || undefined,
+              precios_sede: (modalidad.precios_sede || []).map((fila) => ({
+                sede_id: Number(fila.sede_id),
+                precio: Number(fila.precio),
+              })),
+            }))
+          : [],
+      };
+
+      if (formData.id) await gimnasioServicio.actualizarPlan(formData.id, payload);
+      else await gimnasioServicio.crearPlan(payload);
+
+      showNotificacion(formData.id ? 'Plan actualizado con éxito' : 'Plan creado con éxito', 'success');
+      setVista('lista');
+      cargarPlanes();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const primerError = errores ? Object.values(errores)[0]?.[0] : null;
+      showNotificacion(error.response?.data?.mensaje || primerError || error.response?.data?.message || 'Error al guardar el plan', 'error');
+    }
+  };
+
+  if (vista === 'formulario') {
+    return (
+      <Box className="page-wrapper">
+        <PageHeader titulo={formData.id ? 'Editar Plan' : 'Nuevo Plan'} descripcion="Define producto, cobro, duración estándar y tarifas. La vigencia real se calcula al crear la membresía." icono={<LocalOfferOutlinedIcon />} acciones={<BotonVolver onClick={() => setVista('lista')} />} />
+        <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
+          <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
+            <Stack spacing={2}>
+              <Box sx={formStyles.seccion}>
+                <Typography sx={formStyles.modalSeccionTitulo}>Datos del plan</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 1.5 }}>
+                  <TextField
+                    label="Código"
+                    value={formData.id ? formData.codigo || '' : 'Se genera al guardar'}
+                    size="small"
+                    disabled
+                    helperText="Identificador generado automáticamente por el sistema."
+                  />
+                  <TextField label="Nombre del Plan" name="nombre" value={formData.nombre} onChange={handleChange} required size="small" />
+                </Box>
+                <TextField fullWidth label="Descripción / Beneficios" name="descripcion" value={formData.descripcion || ''} onChange={handleChange} multiline rows={2} size="small" sx={{ mt: 1.5 }} />
+              </Box>
+
+              <Box sx={formStyles.seccion}>
+                <Typography sx={formStyles.modalSeccionTitulo}>Comportamiento comercial</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                  <TextField select label="Tipo de producto" name="tipo_producto" value={formData.tipo_producto || 'MEMBRESIA'} onChange={handleChange} size="small">
+                    <MenuItem value="MEMBRESIA">Membresía</MenuItem>
+                    <MenuItem value="PASE_DIARIO">Pase diario</MenuItem>
+                    <MenuItem value="PAQUETE_VISITAS">Paquete de visitas</MenuItem>
+                    <MenuItem value="PAQUETE_SESIONES">Paquete de sesiones</MenuItem>
+                  </TextField>
+                  <TextField select label="Tipo de cobro" name="tipo_cobro" value={formData.tipo_cobro || 'PAGO_UNICO'} onChange={handleChange} size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'}>
+                    <MenuItem value="PAGO_UNICO">Pago único</MenuItem>
+                    <MenuItem value="RECURRENTE">Recurrente</MenuItem>
+                  </TextField>
+                </Box>
+                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 1 }}>
+                  <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Generar cobro al contratar" />
+                  <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
+                  <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
+                  <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        name="requiere_modalidades"
+                        checked={Boolean(formData.requiere_modalidades)}
+                        onChange={handleChange}
+                        disabled={formData.tipo_producto === 'PASE_DIARIO'}
+                      />
+                    }
+                    label="Requiere modalidades"
+                  />
+                </Stack>
+              </Box>
+
+              {formData.requiere_entrenador ? (
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Servicios incluidos</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
+                    Define los servicios que el cliente podrá reservar con este plan. Luego el sistema cruzará estos servicios con los habilitados para cada entrenador.
+                  </Typography>
+                  <Autocomplete
+                    multiple
+                    disableCloseOnSelect
+                    options={serviciosPlan}
+                    value={serviciosPlan.filter((servicio) => (formData.servicio_ids || []).map(Number).includes(Number(servicio.id)))}
+                    onChange={(_, seleccionados) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        servicio_ids: seleccionados.map((servicio) => Number(servicio.id)),
+                      }));
+                    }}
+                    isOptionEqualToValue={(opcion, valor) => Number(opcion.id) === Number(valor.id)}
+                    getOptionLabel={(opcion) => `${opcion.nombre}${opcion.duracion_minutos ? ` · ${opcion.duracion_minutos} min` : ''}`}
+                    groupBy={(opcion) => opcion.categoria || 'Sin categoría'}
+                    renderTags={(seleccionados, getTagProps) =>
+                      seleccionados.map((opcion, index) => (
+                        <Chip
+                          {...getTagProps({ index })}
+                          key={opcion.id}
+                          size="small"
+                          label={`${opcion.nombre}${opcion.duracion_minutos ? ` · ${opcion.duracion_minutos} min` : ''}`}
+                          sx={{ fontWeight: 700 }}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        required
+                        size="small"
+                        label="Servicios incluidos"
+                        placeholder="Buscar y seleccionar servicios"
+                        helperText="Selecciona uno o varios servicios incluidos en este plan."
+                      />
+                    )}
+                  />
+                </Box>
+              ) : null}
+
+              {formData.requiere_modalidades ? (
+                <PlanModalidadesEditor
+                  modalidades={formData.modalidades || []}
+                  sedes={sedes}
+                  onChange={(modalidades) => setFormData((prev) => ({ ...prev, modalidades }))}
+                  onAvisar={showNotificacion}
+                />
+              ) : (
+                <>
+                  <Box sx={formStyles.seccion}>
+                <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>La fecha fin del contrato se calcula automáticamente desde esta duración.</Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+                  <TextField select label="Tipo de Duración" name="tipo_duracion" value={formData.tipo_duracion} onChange={handleChange} size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'}><MenuItem value="DIAS">Días</MenuItem><MenuItem value="MESES">Meses</MenuItem><MenuItem value="ANIOS">Años</MenuItem></TextField>
+                  <TextField label="Duración" name="duracion" type="number" value={formData.duracion} onChange={handleChange} required size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'} />
+                  <TextField label="Precio Base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" inputProps={{ min: 0, step: '0.01' }} />
+                  {formData.tipo_producto !== 'PASE_DIARIO' ? (
+                    <TextField label="Tarifa de Inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" helperText="Opcional" inputProps={{ min: 0, step: '0.01' }} />
+                  ) : (
+                    <Box />
+                  )}
+                </Box>
+              </Box>
+
+              <Box sx={formStyles.seccion}>
+                <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" spacing={1}>
+                  <Box>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          name="precio_por_sede"
+                          checked={Boolean(formData.precio_por_sede)}
+                          onChange={handleChange}
+                        />
+                      }
+                      label="Precio diferente por sede"
+                      sx={{ m: 0 }}
+                    />
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
+                      Si está apagado, todas las sedes usan el precio base del plan.
+                    </Typography>
+                  </Box>
+
+                  {formData.precio_por_sede ? (
+                    <Button startIcon={<AddOutlinedIcon />} onClick={handleAddPrecioSede} sx={dbanuStyles.addButtonRevive}>
+                      Añadir
+                    </Button>
+                  ) : null}
+                </Stack>
+
+                {formData.precio_por_sede && (formData.precios_sede || []).length ? (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
+                    {(formData.precios_sede || []).map((fila, index) => (
+                      <Stack key={index} direction="row" spacing={1} alignItems="center">
+                        <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
+                          {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
+                        </TextField>
+                        <TextField label="Precio ($)" type="number" size="small" value={fila.precio} onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)} sx={{ width: 140 }} />
+                        <Tooltip title="Quitar">
+                          <IconButton size="small" onClick={() => handleRemovePrecioSede(index)} sx={dbanuStyles.actionDelete}>
+                            <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    ))}
+                  </Box>
+                ) : null}
+              </Box>
+                </>
+              )}
+            </Stack>
+          </Box>
+          <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
+        </Paper>
+        <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box className="page-wrapper">
+      <PageHeader titulo="Planes de membresía" descripcion="Administra los productos comerciales, vigencias y formas de cobro de Revive." icono={<ListAltOutlinedIcon />} />
+      <Paper className="page-content-container" elevation={0}>
+        <GestionToolbar total={meta.total || planes.length} busqueda={filtros.busqueda} onBusqueda={(v) => buscar({ ...filtros, busqueda: v })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
+        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onModalidades={handleModalidadesPlan} onEliminar={handleEliminar} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
+      </Paper>
+      <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
+    </Box>
+  );
+}

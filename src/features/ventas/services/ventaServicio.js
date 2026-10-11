@@ -1,0 +1,29 @@
+import { apiClient as api } from '../../../services/apiClient.js';
+
+export const ventaServicio = {
+  obtenerCajas: async (params = { page: 1 }) => (await api.get('/base/ventas/cajas', { params })).data,
+  crearCaja: async (payload) => (await api.post('/base/ventas/cajas', payload)).data,
+  actualizarCaja: async (id, payload) => (await api.put(`/base/ventas/cajas/${id}`, payload)).data,
+
+  obtenerTurnosCaja: async (params = { page: 1, per_page: 5 }) => (await api.get('/base/ventas/turnos-caja', { params })).data,
+  obtenerTurnoCajaActual: async () => (await api.get('/base/ventas/turnos-caja/actual')).data,
+  abrirTurnoCaja: async (payload) => (await api.post('/base/ventas/turnos-caja/abrir', payload)).data,
+  cerrarTurnoCaja: async (id, payload) => (await api.post(`/base/ventas/turnos-caja/${id}/cerrar`, payload)).data,
+  conciliarTurnoCaja: async (id, payload) => (await api.post(`/base/ventas/turnos-caja/${id}/conciliar`, payload)).data,
+
+  obtenerVentas: async (params = { page: 1 }) => (await api.get('/base/ventas/ventas', { params })).data,
+  obtenerDetalleVenta: async (id) => (await api.get(`/base/ventas/ventas/${id}/detalle`)).data,
+  obtenerComprobantePdf: async (id) => (await api.get(`/base/ventas/ventas/${id}/comprobante.pdf`, { responseType: 'blob' })).data,
+  obtenerCuentasAbiertasPos: async () => (await api.get('/base/ventas/pos/cuentas-abiertas')).data,
+  obtenerContextoPos: async () => (await api.get('/base/ventas/pos/contexto')).data,
+  crearVentaPos: async (payload) => (await api.post('/base/ventas/pos', payload)).data,
+  actualizarCuentaPos: async (id, payload) => (await api.put(`/base/ventas/pos/${id}`, payload)).data,
+  cobrarVentaPos: async (payload) => (await api.post('/base/ventas/pos/cobrar', payload)).data,
+  cobrarCuentaPos: async (id, payload) => (await api.post(`/base/ventas/pos/${id}/cobrar`, payload)).data,
+  crearVenta: async (payload) => (await api.post('/base/ventas/ventas', payload)).data,
+  actualizarVenta: async (id, payload) => (await api.put(`/base/ventas/ventas/${id}`, payload)).data,
+  obtenerPagos: async (params = { page: 1 }) => (await api.get('/base/ventas/pagos', { params })).data,
+  crearPago: async (payload) => (await api.post('/base/ventas/pagos', payload)).data,
+  obtenerComprobantes: async (params = { page: 1 }) => (await api.get('/base/ventas/comprobantes', { params })).data,
+  reenviarComprobante: async (id) => (await api.post(`/base/ventas/comprobantes/${id}/reenviar`)).data,
+};
