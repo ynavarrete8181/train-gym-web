@@ -99,11 +99,85 @@ export function crearTema(modo = 'light') {
           },
         },
       },
+      MuiSelect: {
+        styleOverrides: {
+          select: {
+            display: 'flex',
+            alignItems: 'center',
+            minWidth: 0,
+          },
+          icon: {
+            color: modo === 'dark' ? '#94a3b8' : '#64748b',
+            right: 8,
+          },
+        },
+      },
+      MuiMenu: {
+        styleOverrides: {
+          paper: {
+            marginTop: 6,
+            border: `1px solid ${modo === 'dark' ? '#334155' : uiTokens.colores.borde}`,
+            borderRadius: 10,
+            backgroundColor: modo === 'dark' ? '#111827' : '#ffffff',
+            boxShadow: modo === 'dark'
+              ? '0 12px 28px rgba(0, 0, 0, 0.32)'
+              : '0 12px 28px rgba(15, 58, 107, 0.14)',
+          },
+          list: {
+            paddingTop: 4,
+            paddingBottom: 4,
+          },
+        },
+      },
       MuiMenuItem: {
         styleOverrides: {
           root: {
-            minHeight: 34,
+            minHeight: 40,
+            margin: '2px 4px',
+            padding: '7px 10px',
+            borderRadius: 8,
+            gap: 10,
             fontSize: uiTokens.tipografia.campo,
+            color: modo === 'dark' ? '#f8fafc' : uiTokens.colores.textoFuerte,
+            '&:hover': {
+              backgroundColor: modo === 'dark'
+                ? 'rgba(255,255,255,0.06)'
+                : 'rgba(20, 73, 133, 0.055)',
+            },
+            '&.Mui-selected': {
+              backgroundColor: modo === 'dark'
+                ? 'rgba(255,255,255,0.09)'
+                : 'rgba(20, 73, 133, 0.085)',
+            },
+            '&.Mui-selected:hover': {
+              backgroundColor: modo === 'dark'
+                ? 'rgba(255,255,255,0.12)'
+                : 'rgba(20, 73, 133, 0.12)',
+            },
+            '& .MuiListItemIcon-root': {
+              minWidth: '32px !important',
+              marginRight: 4,
+              color: modo === 'dark' ? '#94a3b8' : uiTokens.colores.primario,
+            },
+            '& .MuiListItemIcon-root .MuiSvgIcon-root': {
+              fontSize: 17,
+            },
+            '& .MuiListItemText-root': {
+              minWidth: 0,
+              marginTop: 0,
+              marginBottom: 0,
+            },
+            '& .MuiListItemText-primary': {
+              fontSize: uiTokens.tipografia.campo,
+              fontWeight: 750,
+              lineHeight: 1.25,
+            },
+            '& .MuiListItemText-secondary': {
+              marginTop: 2,
+              fontSize: 10.5,
+              lineHeight: 1.2,
+              color: modo === 'dark' ? '#94a3b8' : uiTokens.colores.textoMedio,
+            },
           },
         },
       },
