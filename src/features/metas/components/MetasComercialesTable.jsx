@@ -52,11 +52,21 @@ export function MetasComercialesTable({
           <FilterHeaderCell value={filtros.sede_id} onChange={(v) => onFiltro('sede_id', v)} options={sedes} multiple>
             Sede
           </FilterHeaderCell>
-          <TableCell align="center">Período</TableCell>
-          <TableCell align="center">Ventas</TableCell>
-          <TableCell align="center">Cobros</TableCell>
-          <TableCell align="center">Nuevas</TableCell>
-          <TableCell align="center">Renovaciones</TableCell>
+          <FilterHeaderCell align="center" value={filtros.periodo} onChange={(v) => onFiltro('periodo', v)}>
+            Período
+          </FilterHeaderCell>
+          <FilterHeaderCell align="center" value={filtros.ventas} onChange={(v) => onFiltro('ventas', v)}>
+            Ventas
+          </FilterHeaderCell>
+          <FilterHeaderCell align="center" value={filtros.cobros} onChange={(v) => onFiltro('cobros', v)}>
+            Cobros
+          </FilterHeaderCell>
+          <FilterHeaderCell align="center" value={filtros.nuevas} onChange={(v) => onFiltro('nuevas', v)}>
+            Nuevas
+          </FilterHeaderCell>
+          <FilterHeaderCell align="center" value={filtros.renovaciones} onChange={(v) => onFiltro('renovaciones', v)}>
+            Renovaciones
+          </FilterHeaderCell>
           <FilterHeaderCell
             align="center"
             value={filtros.estado ? [filtros.estado] : []}
