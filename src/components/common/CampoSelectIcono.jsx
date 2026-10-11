@@ -2,7 +2,6 @@ import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
 import {
   Box,
-  InputAdornment,
   ListItemIcon,
   ListItemText,
   MenuItem,
@@ -43,13 +42,6 @@ export function CampoSelectIcono({
           ...(dbanuStyles.field?.['& .MuiInputBase-root'] || {}),
           minHeight: 40,
         },
-        '& .MuiInputAdornment-root': {
-          color: uiTokens.colores.primario,
-          mr: 0.75,
-        },
-        '& .MuiInputAdornment-root .MuiSvgIcon-root': {
-          fontSize: 18,
-        },
         '& .MuiSelect-select': {
           display: 'flex',
           alignItems: 'center',
@@ -57,17 +49,7 @@ export function CampoSelectIcono({
         },
         ...sx,
       }}
-      slotProps={{
-        ...slotProps,
-        input: {
-          ...(slotProps.input || {}),
-          startAdornment: icono ? (
-            <InputAdornment position="start">
-              {icono}
-            </InputAdornment>
-          ) : slotProps.input?.startAdornment,
-        },
-      }}
+      slotProps={slotProps}
       SelectProps={{
         IconComponent: KeyboardArrowDownRoundedIcon,
         ...SelectProps,
