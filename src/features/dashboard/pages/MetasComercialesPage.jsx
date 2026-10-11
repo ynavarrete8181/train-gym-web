@@ -29,6 +29,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../../reportes/components/ReporteExportaciones.jsx';
 import { metasComercialesServicio } from '../services/metasComercialesServicio.js';
 
 const meses = [
@@ -230,6 +231,24 @@ export function MetasComercialesPage() {
     }
   };
 
+  const columnasPdf = useMemo(() => [
+    { label: 'Sede', value: 'sede', align: 'left' },
+    { label: 'Período', value: (fila) => `${meses[Number(fila.mes || 1) - 1]} ${fila.anio}` },
+    { label: 'Meta ventas', value: (fila) => dinero(fila.meta_ventas) },
+    { label: 'Ventas reales', value: (fila) => dinero(fila.real_ventas) },
+    { label: '% ventas', value: (fila) => `${Number(fila.cumplimiento_ventas || 0).toFixed(1)}%` },
+    { label: 'Meta cobros', value: (fila) => dinero(fila.meta_cobros) },
+    { label: 'Cobros reales', value: (fila) => dinero(fila.real_cobros) },
+    { label: '% cobros', value: (fila) => `${Number(fila.cumplimiento_cobros || 0).toFixed(1)}%` },
+    { label: 'Meta nuevas', value: 'meta_membresias_nuevas' },
+    { label: 'Nuevas reales', value: 'real_membresias_nuevas' },
+    { label: '% nuevas', value: (fila) => `${Number(fila.cumplimiento_membresias_nuevas || 0).toFixed(1)}%` },
+    { label: 'Meta renovaciones', value: 'meta_renovaciones' },
+    { label: 'Renovaciones reales', value: 'real_renovaciones' },
+    { label: '% renovaciones', value: (fila) => `${Number(fila.cumplimiento_renovaciones || 0).toFixed(1)}%` },
+    { label: 'Estado', value: 'estado' },
+  ], []);
+
   const responsablesDisponibles = useMemo(
     () => (catalogos.responsables || []).filter((u) => !formulario.responsables.some((r) => Number(r.usuario_id) === Number(u.id))),
     [catalogos.responsables, formulario.responsables],
@@ -249,9 +268,20 @@ export function MetasComercialesPage() {
           busqueda={filtros.busqueda}
           onBusqueda={(valor) => aplicar('busqueda', valor)}
           acciones={(
-            <Button variant="outlined" startIcon={<AddOutlinedIcon />} onClick={abrirNueva}>
-              Añadir
-            </Button>
+            <>
+              <Button variant="outlined" startIcon={<AddOutlinedIcon />} onClick={abrirNueva}>
+                Añadir
+              </Button>
+              <ReporteExportaciones
+                titulo="Metas comerciales"
+                descripcion="Seguimiento de objetivos comerciales por sede y período."
+                filtros={filtros}
+                columnas={columnasPdf}
+                filaTotal={['TOTAL', (filas) => `${filas.length} metas`]}
+                obtenerFilas={() => metasComercialesServicio.consultarTodo(filtros)}
+                exportarExcel={() => metasComercialesServicio.exportarExcel(filtros)}
+              />
+            </>
           )}
         />
 
