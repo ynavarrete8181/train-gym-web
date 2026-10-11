@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import { Box, Button, MenuItem, Paper, Stack, TextField } from '@mui/material';
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import { Box, Button, MenuItem, Paper, Stack } from '@mui/material';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
+import { CampoSelectIcono } from '../../../components/common/CampoSelectIcono.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
@@ -338,29 +341,27 @@ export function MetasComercialesPage() {
         />
 
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mb: 2 }}>
-          <TextField
-            select
-            size="small"
+          <CampoSelectIcono
+            icono={<EventOutlinedIcon />}
             label="Año"
             value={filtros.anio}
             onChange={(e) => aplicarFiltro('anio', e.target.value)}
-            sx={{ minWidth: 120 }}
+            sx={{ minWidth: 140 }}
           >
             {[hoy.getFullYear() - 1, hoy.getFullYear(), hoy.getFullYear() + 1].map((anio) => (
               <MenuItem key={anio} value={anio}>{anio}</MenuItem>
             ))}
-          </TextField>
+          </CampoSelectIcono>
 
-          <TextField
-            select
-            size="small"
+          <CampoSelectIcono
+            icono={<CalendarMonthOutlinedIcon />}
             label="Mes"
             value={filtros.mes}
             onChange={(e) => aplicarFiltro('mes', e.target.value)}
-            sx={{ minWidth: 160 }}
+            sx={{ minWidth: 180 }}
           >
             {meses.map((nombre, index) => <MenuItem key={nombre} value={index + 1}>{nombre}</MenuItem>)}
-          </TextField>
+          </CampoSelectIcono>
         </Stack>
 
         <MetasComercialesTable
