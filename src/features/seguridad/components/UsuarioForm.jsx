@@ -20,9 +20,6 @@ import { confirmarAccion } from "../../../utils/confirmacion.js";
 import { BotonGuardar } from "../../../components/common/BotonGuardar.jsx";
 import { BotonVolver } from "../../../components/common/BotonVolver.jsx";
 import { ContextosUsuarioSelector } from "./contextosUsuario/ContextosUsuarioSelector.jsx";
-import { TooltipRequisitosClave } from "../../../components/common/RequisitosClave.jsx";
-import { claveEsSegura } from "../../../utils/claveSegura.js";
-import { CampoClave } from "../../../components/common/CampoClave.jsx";
 
 const inicial = {
   persona_id: "",
@@ -30,8 +27,6 @@ const inicial = {
   apellidos: "",
   cedula: "",
   email: "",
-  password: "",
-  password_confirmation: "",
   usr_tipo: "",
   usr_estado: 1,
   contextos: [],
@@ -78,8 +73,6 @@ export function UsuarioForm({
       apellidos: usuario?.apellidos || "",
       cedula: usuario?.cedula || "",
       email: usuario?.email || "",
-      password: "",
-      password_confirmation: "",
       usr_tipo: usuario?.usr_tipo || roles[0]?.id_userrole || "",
       usr_estado: usuario?.usr_estado ?? 1,
       contextos: usuario?.contextos || [],
@@ -150,21 +143,6 @@ export function UsuarioForm({
         nuevosErrores.email = "Ingresa un correo válido.";
       }
 
-      if (!usuario && !claveEsSegura(formulario.password)) {
-        nuevosErrores.password =
-          "La contraseña temporal todavía no cumple todos los requisitos.";
-      } else if (
-        usuario &&
-        formulario.password &&
-        !claveEsSegura(formulario.password)
-      ) {
-        nuevosErrores.password =
-          "La nueva contraseña todavía no cumple todos los requisitos.";
-      }
-
-      if (!usuario && formulario.password !== formulario.password_confirmation) {
-        nuevosErrores.password_confirmation = "Las contraseñas no coinciden.";
-      }
 
       if (!formulario.usr_tipo) nuevosErrores.usr_tipo = "Selecciona un rol.";
       if (requiereContextoOperativo && !formulario.contextos.length) {
@@ -262,7 +240,7 @@ export function UsuarioForm({
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: { xs: "1fr", md: "1.2fr 1fr" },
+                    gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" },
                     gap: 1.5,
                   }}
                 >
@@ -276,28 +254,6 @@ export function UsuarioForm({
                     helperText={errores.email}
                     autoComplete="off"
                   />
-                  {!usuario ? <TooltipRequisitosClave valor={formulario.password}>
-                    <CampoClave
-                      fullWidth
-                      label="Contraseña temporal"
-                      name="nueva_clave_usuario"
-                      autoComplete="new-password"
-                      value={formulario.password}
-                      onChange={(evento) => cambiar("password", evento.target.value)}
-                      required
-                      error={Boolean(errores.password)}
-                      helperText={errores.password}
-                    />
-                  </TooltipRequisitosClave> : null}
-                  {!usuario ? <CampoClave
-                    label="Confirmar contraseña"
-                    autoComplete="new-password"
-                    value={formulario.password_confirmation}
-                    onChange={(evento) => cambiar("password_confirmation", evento.target.value)}
-                    required
-                    error={Boolean(errores.password_confirmation)}
-                    helperText={errores.password_confirmation}
-                  /> : null}
                   <TextField
                     select
                     label="Rol"
@@ -323,6 +279,11 @@ export function UsuarioForm({
                     <MenuItem value={0}>Inactivo</MenuItem>
                   </TextField>
                 </Box>
+                {!usuario ? (
+                  <Alert severity="info" variant="outlined" sx={{ mt: 1.5 }}>
+                    El usuario recibirá un enlace seguro en su correo para establecer su propia contraseña. El administrador no define ni conoce la contraseña.
+                  </Alert>
+                ) : null}
               </Box>
 
               {requiereContextoOperativo ? <Box sx={formStyles.seccion}>
