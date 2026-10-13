@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx'
 import { PageHeader } from '../../../components/common/PageHeader.jsx'
 import { obtenerMensajeError } from '../../../services/mensajeError.js'
+import { GmailConexion } from '../components/GmailConexion.jsx'
 import { NavegacionIntegraciones } from '../components/NavegacionIntegraciones.jsx'
 import { FormularioIntegracion as FormularioIntegracionComponente } from '../components/FormularioIntegracion.jsx'
 import { TarjetaIntegracion as TarjetaIntegracionComponente } from '../components/TarjetaIntegracion.jsx'
@@ -101,6 +102,7 @@ export function IntegracionesPage() {
 
   return <Box className="page-wrapper">
     <PageHeader titulo="Configuración de APIs" descripcion="Centraliza proveedores, servicios externos y sus formas de autenticación." icono={<HubOutlinedIcon />} />
+    <GmailConexion />
     <Paper className="page-content-container" elevation={0} sx={{ p: { xs: 1.5, md: 2.5 } }}>
       {data.cola && <Alert severity={data.cola.procesamiento_inmediato ? 'info' : (data.cola.trabajos_pendientes > 0 ? 'warning' : 'success')} sx={{ mb: 2 }}>
         <Typography sx={{ fontSize: 12.5, fontWeight: 800 }}>{data.cola.procesamiento_inmediato ? 'Procesamiento inmediato activo' : 'Procesamiento en segundo plano activo'}</Typography>
