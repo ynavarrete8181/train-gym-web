@@ -12,6 +12,8 @@ export function HistorialNotificacionDrawer({ abierto, usuario, historial = [], 
     <Stack spacing={1.2}>{historial.length ? historial.map((item, i) => <Box key={`${item.id}-${item.numero_intento}-${i}`} sx={{ p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5 }}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}><Typography sx={{ fontSize: 12.5, fontWeight: 850 }}>Intento {item.numero_intento || 'pendiente'}</Typography><NotificacionEstado estado={item.estado_intento || item.estado} /></Stack>
       <Typography sx={{ mt: .8, fontSize: 12, color: 'text.secondary' }}>{item.finalizado_at || item.encolado_at || 'Sin fecha'}</Typography>
+      {(item.proveedor || item.http_status) && <Typography sx={{ mt: .65, fontSize: 11.5, color: 'text.secondary' }}>Proveedor: {item.proveedor || '—'}{item.http_status ? ` · HTTP ${item.http_status}` : ''}</Typography>}
+      {(() => { try { const detalle = typeof item.respuesta_sanitizada === 'string' ? JSON.parse(item.respuesta_sanitizada) : (item.respuesta_sanitizada || {}); return detalle.razon || detalle.diagnostico ? <Box sx={{ mt: .65 }}><Typography sx={{ fontSize: 12, fontWeight: 700 }}>Causa: {detalle.razon || 'Sin código específico'}</Typography>{detalle.diagnostico && <Typography sx={{ fontSize: 12, color: 'text.secondary' }}>{detalle.diagnostico}</Typography>}</Box> : null } catch { return null } })()}
       {item.mensaje_error ? <Typography sx={{ mt: .7, fontSize: 12, color: 'error.main' }}>{item.mensaje_error}</Typography> : null}
     </Box>) : <Typography color="text.secondary" sx={{ fontSize: 13 }}>Este usuario todavía no tiene intentos de envío.</Typography>}</Stack>
   </Drawer>
