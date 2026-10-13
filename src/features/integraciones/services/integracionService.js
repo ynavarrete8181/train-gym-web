@@ -35,3 +35,23 @@ export async function probarCredencial(id) {
   const { data } = await apiClient.post(`/base/integraciones/credenciales/${id}/probar`)
   return data.datos
 }
+
+export async function obtenerEstadoGmail() {
+  const { data } = await apiClient.get('/base/integraciones/gmail/estado')
+  return data.datos
+}
+
+export async function configurarGmail(payload) {
+  const { data } = await apiClient.post('/base/integraciones/gmail/configurar', payload)
+  return data.datos
+}
+
+export async function conectarGmail() {
+  const { data } = await apiClient.post('/base/integraciones/gmail/conectar')
+  return data.datos
+}
+
+export async function desconectarGmail() {
+  const { data } = await apiClient.post('/base/integraciones/gmail/desconectar')
+  return data.datos
+}
