@@ -3,6 +3,7 @@ import { AppLayout } from '../components/layout/AppLayout.jsx'
 import { LoadingState } from '../components/common/LoadingState.jsx'
 import { NotificacionSnackbar } from '../components/common/NotificacionSnackbar.jsx'
 import { LoginPage } from '../features/auth/pages/LoginPage.jsx'
+import { ActivarCuentaPage } from '../features/auth/pages/ActivarCuentaPage.jsx'
 import { cerrarSesion, iniciarSesion, obtenerUsuarioActual } from '../features/auth/services/authService.js'
 import { API_EVENTO_ACCESO_DENEGADO, API_EVENTO_SESION_EXPIRADA } from '../services/apiEvents.js'
 import { conectarTiempoRealUsuario, EVENTO_TIEMPO_REAL } from '../services/tiempoRealService.js'
@@ -104,4 +105,12 @@ const procesarLogin = async (credenciales) => {
   return <><AppLayout menuItems={menuItems} vistaActual={funcionActual?.id_menu} tituloVista={funcionActual?.nombre} usuario={usuario} navegando={navegando} onNavigate={navegar} onLogout={procesarLogout} onAvisoNavigate={navegarAviso}><Suspense fallback={navegando ? null : <LoadingState texto="Cargando módulo..." />}><VistaActual {...propsVista} /></Suspense></AppLayout><NotificacionSnackbar mensaje={aviso?.mensaje} tipo={aviso?.severidad || 'info'} duracion={5000} onClose={() => setAviso(null)} /></>
 }
 
-export function AppRoutes() { return <SistemaRoutes /> }
+export function AppRoutes() {
+  const ruta = window.location.pathname
+
+  if (ruta === '/activar-cuenta' || ruta.startsWith('/activar-cuenta/')) {
+    return <ActivarCuentaPage />
+  }
+
+  return <SistemaRoutes />
+}
