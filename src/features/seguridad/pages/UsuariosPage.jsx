@@ -238,12 +238,11 @@ export function UsuariosPage() {
       };
 
       if (dialogoUsuario.usuario) {
-        if (!payload.password) delete payload.password;
         await actualizarUsuario(dialogoUsuario.usuario.id, payload);
         setMensaje("Usuario actualizado correctamente.");
       } else {
         await crearUsuario(payload);
-        setMensaje("Usuario creado correctamente.");
+        setMensaje("Usuario creado correctamente. Se programó el correo para establecer su contraseña.");
       }
 
       setDialogoUsuario({ abierto: false, usuario: null });
@@ -371,7 +370,7 @@ export function UsuariosPage() {
           descripcion={
             dialogoUsuario.usuario
               ? "Actualiza la información, el rol y los permisos asignados."
-              : "Registra la información de acceso y configura los permisos iniciales."
+              : "Registra la cuenta, asigna su rol y permisos; el usuario definirá su contraseña desde el enlace enviado a su correo."
           }
           icono={<ManageAccountsOutlinedIcon />}
           acciones={<BotonVolver onClick={volverListado} />}
