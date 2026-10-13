@@ -49,6 +49,12 @@ function obtenerMensajeError(error, fallback) {
   const data = error.response?.data;
   const primerError =
     data?.errores && Object.values(data.errores).flat().find(Boolean);
+  if (primerError === "validation.unique" && data?.errors?.email) {
+    return "Este correo ya está registrado en otra cuenta. Revisa el listado de usuarios o utiliza otro correo.";
+  }
+  if (primerError === "validation.unique" && data?.errors?.persona_id) {
+    return "Esta persona ya tiene una cuenta registrada.";
+  }
   return primerError || data?.mensaje || fallback;
 }
 

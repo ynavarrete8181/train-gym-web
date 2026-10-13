@@ -15,6 +15,13 @@ export async function listarClientesDisponiblesParaUsuario() {
   return data.datos || []
 }
 
+export async function verificarDisponibilidadUsuario(personaId, email) {
+  const { data } = await apiClient.get('/base/seguridad/usuarios/verificar-disponibilidad', {
+    params: { persona_id: personaId, email },
+  })
+  return data.datos
+}
+
 export async function crearUsuario(payload) {
   const { data } = await apiClient.post('/base/seguridad/usuarios', payload)
   return data.datos

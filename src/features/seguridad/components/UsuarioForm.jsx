@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { dbanuStyles } from "../../../styles/dbanuStyles.js";
 import { formStyles } from "../../../styles/formStyles.js";
 import { FuncionesUsuarioPanel } from "./FuncionesUsuarioPanel.jsx";
+import { verificarDisponibilidadUsuario } from "../services/usuarioService.js";
 import { confirmarAccion } from "../../../utils/confirmacion.js";
 import { BotonGuardar } from "../../../components/common/BotonGuardar.jsx";
 import { BotonVolver } from "../../../components/common/BotonVolver.jsx";
@@ -54,6 +55,8 @@ export function UsuarioForm({
   const [formulario, setFormulario] = useState(inicial);
   const [etapa, setEtapa] = useState(0);
   const [errores, setErrores] = useState({});
+  const [avisoDisponibilidad, setAvisoDisponibilidad] = useState("");
+  const [verificando, setVerificando] = useState(false);
   const formularioInicialRef = useRef(inicial);
   const etapas = ["Información del usuario", "Permisos y confirmación"];
   const rolSeleccionado = roles.find(
@@ -66,6 +69,7 @@ export function UsuarioForm({
   useEffect(() => {
     setEtapa(0);
     setErrores({});
+    setAvisoDisponibilidad("");
     onDirtyChange(false);
     const valoresIniciales = {
       persona_id: usuario?.persona_id || "",
@@ -82,6 +86,7 @@ export function UsuarioForm({
   }, [usuario, roles, onDirtyChange]);
 
   const cambiar = (campo, valor) => {
+    if (campo === "email" || campo === "persona_id") setAvisoDisponibilidad("");
     const rolNuevo = roles.find(
       (rol) => String(rol.id_userrole) === String(valor),
     );
@@ -107,6 +112,7 @@ export function UsuarioForm({
   };
 
   const seleccionarPersona = (personaId) => {
+    setAvisoDisponibilidad("");
     const cliente = clientesDisponibles.find(
       (item) => String(item.persona_id) === String(personaId),
     );
@@ -154,9 +160,25 @@ export function UsuarioForm({
     return Object.keys(nuevosErrores).length === 0;
   };
 
-  const siguiente = () => {
-    if (validarEtapa())
-      setEtapa((actual) => Math.min(actual + 1, etapas.length - 1));
+  const siguiente = async () => {
+    if (!validarEtapa()) return;
+    if (!usuario && etapa === 0) {
+      setVerificando(true);
+      setAvisoDisponibilidad("");
+      try {
+        const disponibilidad = await verificarDisponibilidadUsuario(formulario.persona_id, formulario.email.trim());
+        if (!disponibilidad.disponible) {
+          setAvisoDisponibilidad(disponibilidad.mensaje);
+          return;
+        }
+      } catch (error) {
+        setAvisoDisponibilidad(error.response?.data?.mensaje || "No se pudo comprobar si la cuenta ya existe. Intenta nuevamente.");
+        return;
+      } finally {
+        setVerificando(false);
+      }
+    }
+    setEtapa((actual) => Math.min(actual + 1, etapas.length - 1));
   };
 
   const usarPermisosRol = async () => {
@@ -182,6 +204,7 @@ export function UsuarioForm({
       <Box sx={{ bgcolor: "#f6f8fc", px: 2.5, py: 2.5, minHeight: 390 }}>
         <Stack spacing={2}>
           {error ? <Alert severity="error">{error}</Alert> : null}
+          {avisoDisponibilidad ? <Alert severity="info" variant="outlined">{avisoDisponibilidad}</Alert> : null}
 
           <Stepper
             activeStep={etapa}
@@ -350,10 +373,10 @@ export function UsuarioForm({
               variant="contained"
               endIcon={<ArrowForwardOutlinedIcon />}
               onClick={siguiente}
-              disabled={cargando}
+              disabled={cargando || verificando}
               sx={dbanuStyles.addButton}
             >
-              Siguiente
+              {verificando ? "Verificando..." : "Siguiente"}
             </Button>
           ) : (
             <BotonGuardar
