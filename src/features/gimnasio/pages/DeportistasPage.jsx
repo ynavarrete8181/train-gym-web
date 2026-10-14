@@ -302,6 +302,8 @@ export function DeportistasPage() {
   const [entrenadoresDisp, setEntrenadoresDisp] = useState([]);
   const [turnosEntrenador, setTurnosEntrenador] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
+  const [vistaAsignacion, setVistaAsignacion] = useState('listado');
+  const [buscarAsignacion, setBuscarAsignacion] = useState('');
   const [asignacionForm, setAsignacionForm] = useState(getInitialAsignacion());
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
@@ -684,6 +686,7 @@ export function DeportistasPage() {
       setAsignacionForm(getInitialAsignacion());
       setTurnosEntrenador([]);
       cargarAsignacionesYEntrenadores(formData.id);
+      setVistaAsignacion('listado');
     } catch (error) {
       const errores = error.response?.data?.errors || error.response?.data?.errores;
       const mensaje = errores
@@ -1123,10 +1126,18 @@ export function DeportistasPage() {
         .join(', ')
     : 'Sin recesos';
 
+  const asignacionesFiltradas = asignaciones.filter((item) =>
+    [item.entrenador_nombre, item.entrenador_nombres, item.entrenador_apellidos, item.sede_nombre, item.dia_semana, item.estado]
+      .some((valor) => String(valor || '').toLocaleLowerCase('es').includes(buscarAsignacion.toLocaleLowerCase('es')))
+  );
+
   const renderEntrenadorYHorario = () => (
     <Stack spacing={2}>
-      <Box sx={formStyles.seccion}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Nueva asignación</Typography>
+      {vistaAsignacion === 'formulario' ? <Box sx={formStyles.seccion}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2, gap: 2 }}>
+          <Typography sx={formStyles.modalSeccionTitulo}>Nueva asignación</Typography>
+          <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => setVistaAsignacion('listado')} /></Box>
+        </Stack>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField
             select
@@ -1251,19 +1262,19 @@ export function DeportistasPage() {
             disabled={Boolean(horarioAsignacionSeleccionado && disponiblesHorarioSeleccionado <= 0)}
           />
         </Stack>
-      </Box>
-
-      <Box sx={formStyles.seccion}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Asignaciones e historial</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          La asignación vigente se muestra primero; debajo se conserva el historial de entrenadores y horarios anteriores.
-        </Typography>
+      </Box> : <Box sx={formStyles.seccion}>
+        <GestionToolbar
+          total={asignacionesFiltradas.length}
+          busqueda={buscarAsignacion}
+          onBusqueda={setBuscarAsignacion}
+          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setAsignacionForm(getInitialAsignacion()); setTurnosEntrenador([]); setVistaAsignacion('formulario'); }}>Añadir</Button>}
+        />
         <AsignacionesClienteTable
-          asignaciones={asignaciones}
+          asignaciones={asignacionesFiltradas}
           cargando={cargandoFicha}
           onInactivar={handleInactivarAsignacion}
         />
-      </Box>
+      </Box>}
     </Stack>
   );
 
