@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, CircularProgress, Divider, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
@@ -26,7 +26,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [abierto, setAbierto] = useState(false);
+  const [vista, setVista] = useState('listado');
+  const [busqueda, setBusqueda] = useState('');
+  const [estadoFiltro, setEstadoFiltro] = useState('TODOS');
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
   const [form, setForm] = useState(limpio);
   const [ver, setVer] = useState(null);
   const [error, setError] = useState('');
@@ -37,7 +41,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     let activo = true;
     setCargando(true);
     setError('');
-    setAbierto(false);
+    setVista('listado');
     setVer(null);
     gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion)
       .then((r) => { if (activo) setRegistros(Array.isArray(r.datos) ? r.datos : []); })
@@ -52,6 +56,14 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [deportistaId, seccion]);
+
+  const filtrados = useMemo(() => registros.filter((r) => {
+    const coincideTexto = !busqueda || [r.titulo, ...Object.values(r.datos || {})]
+      .some((v) => String(v ?? '').toLocaleLowerCase('es').includes(busqueda.toLocaleLowerCase('es')));
+    const fecha = String(r.fecha_registro || '').slice(0, 10);
+    return coincideTexto && (estadoFiltro === 'TODOS' || r.estado === estadoFiltro)
+      && (!desde || fecha >= desde) && (!hasta || fecha <= hasta);
+  }), [registros, busqueda, estadoFiltro, desde, hasta]);
 
   const cambiar = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
   const guardar = async () => {
@@ -69,7 +81,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
       setRegistros(Array.isArray(res.datos) ? res.datos : []);
       setForm(limpio());
-      setAbierto(false);
+      setVista('listado');
+      setVer(null);
       onNotificacion?.('Valoración registrada correctamente.', 'success');
     } catch (e) {
       const errores = e.response?.data?.errors;
@@ -106,10 +119,15 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       </Paper>
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
-          <Box><Typography sx={{ fontWeight: 850, fontSize: 14 }}>{actual.titulo}</Typography><Typography color="text.secondary" sx={{ fontSize: 12 }}>Registro cronológico de evaluaciones</Typography></Box>
-          <Button size="small" variant="outlined" startIcon={abierto ? <CloseOutlinedIcon /> : <AddOutlinedIcon />} onClick={() => { setAbierto(!abierto); setForm(limpio()); setVer(null); }} disabled={cargando || guardando || Boolean(error)}>{abierto ? 'Cancelar' : 'Añadir'}</Button>
+          <Box>
+            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'listado' ? actual.titulo : vista === 'nuevo' ? `Añadir · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
+            <Typography color="text.secondary" sx={{ fontSize: 12 }}>{vista === 'listado' ? 'Consulta y filtra el historial de valoraciones.' : 'Navegación interna de la ficha del deportista.'}</Typography>
+          </Box>
+          {vista === 'listado'
+            ? <Button size="small" variant="outlined" startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); }} disabled={cargando || Boolean(error)}>Añadir</Button>
+            : <Button size="small" variant="outlined" startIcon={<ArrowBackOutlinedIcon />} disabled={guardando} onClick={() => { setVista('listado'); setVer(null); }}>Volver</Button>}
         </Stack>
-        {abierto && <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 2, mb: 2 }}>
+        {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 850, mb: 2 }}>Nuevo registro de {actual.titulo.toLowerCase()}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
@@ -131,22 +149,30 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           </Stack>
         </Box>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {cargando ? <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={26} /></Box> : <TableContainer>
+        {vista === 'listado' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr 1fr' }, gap: 1.5, mb: 2 }}>
+          <TextField size="small" label="Buscar registro" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} sx={dbanuStyles.field} />
+          <TextField size="small" select label="Estado" value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)} SelectProps={{ native: true }} sx={dbanuStyles.field}>
+            <option value="TODOS">Todos</option><option value="ACTIVO">Activo</option>
+          </TextField>
+          <TextField size="small" type="date" label="Desde" value={desde} onChange={(e) => setDesde(e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
+          <TextField size="small" type="date" label="Hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
+        </Box>}
+        {vista === 'listado' && (cargando ? <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={26} /></Box> : <TableContainer>
           <Table size="small">
             <TableHead><TableRow><TableCell>Fecha</TableCell><TableCell>Registro</TableCell><TableCell>Próximo control</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acción</TableCell></TableRow></TableHead>
             <TableBody>
-              {registros.map((registro) => <TableRow key={registro.id} hover>
+              {filtrados.map((registro) => <TableRow key={registro.id} hover>
                 <TableCell>{mostrarFecha(registro.fecha_registro)}</TableCell>
                 <TableCell>{registro.titulo}</TableCell>
                 <TableCell>{mostrarFecha(registro.proximo_control)}</TableCell>
                 <TableCell><Chip size="small" variant="outlined" label={registro.estado || 'ACTIVO'} /></TableCell>
-                <TableCell align="right"><Button size="small" variant="text" onClick={() => { setVer(ver?.id === registro.id ? null : registro); setAbierto(false); }}>Ver detalle</Button></TableCell>
+                <TableCell align="right"><Button size="small" variant="text" onClick={() => { setVer(registro); setVista('detalle'); }}>Ver detalle</Button></TableCell>
               </TableRow>)}
-              {!registros.length && <TableRow><TableCell colSpan={5} align="center">No hay registros. Utiliza Añadir para iniciar el historial.</TableCell></TableRow>}
+              {!filtrados.length && <TableRow><TableCell colSpan={5} align="center">No se encontraron registros para los filtros seleccionados.</TableCell></TableRow>}
             </TableBody>
           </Table>
-        </TableContainer>}
-        {ver && <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+        </TableContainer>)}
+        {vista === 'detalle' && ver && <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <Typography fontWeight={800} sx={{ mb: 1 }}>{ver.titulo} · {mostrarFecha(ver.fecha_registro)}</Typography>
           {actual.campos.map(([campo, etiqueta]) => ver.datos?.[campo] !== undefined && ver.datos?.[campo] !== '' ? <Typography key={campo} variant="body2" sx={{ mb: 0.5 }}><strong>{etiqueta}:</strong> {ver.datos[campo]}</Typography> : null)}
           <Typography variant="caption" color="text.secondary">Registrado por usuario #{ver.registrado_por}</Typography>
