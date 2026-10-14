@@ -37,6 +37,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [errorCarga, setErrorCarga] = useState(false);
   const [camposInvalidos, setCamposInvalidos] = useState(false);
 
   useEffect(() => {
@@ -46,15 +47,17 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     setFicha(null);
     setFormularios({});
     setError('');
+    setErrorCarga(false);
     setCamposInvalidos(false);
     gimnasioServicio.obtenerFichaInicial(deportistaId)
       .then((res) => {
         if (!activo) return;
         const datos = res.datos || null;
+        setErrorCarga(false);
         setFicha(datos);
         setFormularios(Object.fromEntries(menus.map((m) => [m.id, datos?.[m.id] || {}])));
       })
-.catch((e) => { if (activo) { const mensaje = e.response?.data?.mensaje || 'No se pudo cargar la ficha.'; setError(mensaje); onNotificacion?.(mensaje, 'error'); } })
+.catch((e) => { if (activo) { const mensaje = e.response?.data?.mensaje || 'No se pudo cargar la ficha.'; setError(mensaje); setErrorCarga(true); onNotificacion?.(mensaje, 'error'); } })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [deportistaId]);
@@ -97,7 +100,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           {menus.map((m) => {
             const Icono = m.icono;
             const seleccionado = m.id === seccion;
-            return <Box key={m.id} component="button" type="button" onClick={() => { setSeccion(m.id); setError(''); setCamposInvalidos(false); }}
+            return <Box key={m.id} component="button" type="button" onClick={() => { setSeccion(m.id); setCamposInvalidos(false); }}
               sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
                 fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
                 color: seleccionado ? 'primary.main' : 'text.primary', bgcolor: seleccionado ? 'rgba(20,73,133,0.08)' : 'transparent',
@@ -126,10 +129,10 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                 sx={{ ...dbanuStyles.field, gridColumn: multilinea ? '1 / -1' : 'auto' }} />
             )}
           </Box>}
-          {error && <Typography color="error" sx={{ fontSize: 12, mt: 1.5 }}>{error}</Typography>}
+          {errorCarga && error && <Typography color="error" sx={{ fontSize: 12, mt: 1.5 }}>{error}</Typography>}
           <Divider sx={{ my: 2 }} />
-          <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
-            <BotonGuardar guardando={guardando} disabled={cargando || ficha?.estado === 'COMPLETADA' || Boolean(error)} onClick={guardar} />
+          <Stack direction="row" sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 1, justifyContent: "flex-end", width: "100%" }}>
+            <BotonGuardar guardando={guardando} disabled={cargando || ficha?.estado === 'COMPLETADA' || errorCarga} onClick={guardar} />
           </Stack>
         </Paper>
       </Box>
