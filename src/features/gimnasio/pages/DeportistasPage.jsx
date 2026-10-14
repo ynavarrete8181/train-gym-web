@@ -1292,6 +1292,10 @@ export function DeportistasPage() {
         />
         <AsignacionesClienteTable
           asignaciones={asignacionesFiltradas}
+          filtrosColumna={filtrosAsignacion}
+          onFiltroColumna={(campo, valores) => setFiltrosAsignacion((actual) => ({ ...actual, [campo]: valores }))}
+          opcionesColumna={Object.fromEntries(['entrenador', 'disponibilidad', 'sede', 'vigencia', 'estado']
+            .map((campo) => [campo, opcionesExcel(asignaciones, (item) => textoAsignacion(item, campo))]))}
           cargando={cargandoFicha}
           onInactivar={handleInactivarAsignacion}
         />
