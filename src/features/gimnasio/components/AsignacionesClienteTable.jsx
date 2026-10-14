@@ -94,7 +94,7 @@ export function AsignacionesClienteTable({
             options={opcionesColumna[campo] || []}
             onChange={onFiltroColumna ? (valores) => onFiltroColumna(campo, valores) : undefined}>
             {titulo}
-          </FilterHeaderCell>)
+          </FilterHeaderCell>)}
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>
