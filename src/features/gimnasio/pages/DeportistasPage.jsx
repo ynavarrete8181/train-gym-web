@@ -20,6 +20,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
+import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
@@ -65,6 +66,7 @@ const getInitialAsignacion = () => ({
 
 const TABS_FICHA = [
   { value: 'datos', label: 'Datos del cliente', icon: <BadgeOutlinedIcon sx={{ fontSize: 17 }} /> },
+  { value: 'ficha_inicial', label: 'Ficha inicial', icon: <MonitorWeightOutlinedIcon sx={{ fontSize: 17 }} /> },
   { value: 'entrenador', label: 'Entrenador y horario', icon: <SportsIcon sx={{ fontSize: 17 }} /> },
   { value: 'membresia', label: 'Membresía', icon: <CardMembershipOutlinedIcon sx={{ fontSize: 17 }} /> },
   { value: 'progreso', label: 'Progreso', icon: <MonitorWeightOutlinedIcon sx={{ fontSize: 17 }} /> },
@@ -2264,6 +2266,7 @@ export function DeportistasPage() {
           />
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
             {tabFicha === 'datos' && renderCamposDatos()}
+            {tabFicha === 'ficha_inicial' && <FichaInicialDeportista deportistaId={formData.id} onNotificacion={showNotificacion} />}
             {tabFicha === 'entrenador' && renderEntrenadorYHorario()}
             {tabFicha === 'membresia' && renderMembresia()}
             {tabFicha === 'progreso' && renderProgreso()}
