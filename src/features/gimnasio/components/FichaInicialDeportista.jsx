@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Chip, CircularProgress, Divider, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, Chip, CircularProgress, Divider, Paper, Stack, TextField, Typography } from '@mui/material';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
-import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { uiTokens } from '../../../styles/uiTokens.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
@@ -36,6 +37,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [camposInvalidos, setCamposInvalidos] = useState(false);
 
   useEffect(() => {
     if (!deportistaId) return;
@@ -43,6 +45,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     setCargando(true);
     setFicha(null);
     setFormularios({});
+    setError('');
+    setCamposInvalidos(false);
     gimnasioServicio.obtenerFichaInicial(deportistaId)
       .then((res) => {
         if (!activo) return;
@@ -50,16 +54,22 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         setFicha(datos);
         setFormularios(Object.fromEntries(menus.map((m) => [m.id, datos?.[m.id] || {}])));
       })
-      .catch((e) => { if (activo) setError(e.response?.data?.mensaje || 'No se pudo cargar la ficha.'); })
+.catch((e) => { if (activo) { const mensaje = e.response?.data?.mensaje || 'No se pudo cargar la ficha.'; setError(mensaje); onNotificacion?.(mensaje, 'error'); } })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [deportistaId]);
 
   const actual = menus.find((m) => m.id === seccion) || menus[0];
-  const terminado = Object.values(formularios[seccion] || {}).some((v) => String(v ?? '').trim());
+  const terminado = actual.campos.some(([campo]) => String(formularios[seccion]?.[campo] ?? '').trim() !== '');
   const guardar = async () => {
+    if (!terminado) {
+      setCamposInvalidos(true);
+      onNotificacion?.('Ingresa al menos un dato en esta sección antes de guardar.', 'warning');
+      return;
+    }
     setGuardando(true);
     setError('');
+    setCamposInvalidos(false);
     try {
       const respuesta = await gimnasioServicio.guardarFichaInicial(deportistaId, {
         seccion, datos: formularios[seccion] || {},
@@ -68,8 +78,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       onNotificacion?.('Sección guardada correctamente.', 'success');
     } catch (e) {
       const mensaje = e.response?.data?.mensaje || e.response?.data?.message || 'No se pudo guardar la ficha.';
-      setError(mensaje);
-      onNotificacion?.(mensaje, 'error');
+      onNotificacion?.(mensaje === 'validation.required' ? 'Completa los campos antes de guardar.' : mensaje, e.response?.status === 422 ? 'warning' : 'error');
     } finally { setGuardando(false); }
   };
   if (!deportistaId) return <Typography variant="body2">Guarda primero los datos del cliente para registrar su ficha.</Typography>;
@@ -88,11 +97,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           {menus.map((m) => {
             const Icono = m.icono;
             const seleccionado = m.id === seccion;
-            return <Box key={m.id} component="button" type="button" onClick={() => { setSeccion(m.id); setError(''); }}
+            return <Box key={m.id} component="button" type="button" onClick={() => { setSeccion(m.id); setError(''); setCamposInvalidos(false); }}
               sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
                 fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
                 color: seleccionado ? 'primary.main' : 'text.primary', bgcolor: seleccionado ? 'rgba(20,73,133,0.08)' : 'transparent',
-                border: 0, borderLeft: seleccionado ? '3px solid #144985' : '3px solid transparent', borderRadius: 0.5,
+                border: 0, borderLeft: seleccionado ? `3px solid ${uiTokens.colores.primario}` : '3px solid transparent', borderRadius: 0.5,
                 '&:hover': { bgcolor: 'rgba(20,73,133,0.05)' } }}>
               <Icono sx={{ fontSize: 18, flexShrink: 0 }} />{m.titulo}
             </Box>;
@@ -109,20 +118,18 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
               <TextField key={campo} size="small" fullWidth label={etiqueta} multiline={Boolean(multilinea)}
                 minRows={multilinea ? 2 : undefined}
                 value={formularios[seccion]?.[campo] ?? ''}
-                onChange={(e) => setFormularios((prev) => ({
+                error={camposInvalidos && String(formularios[seccion]?.[campo] ?? '').trim() === ''}
+                onChange={(e) => { setCamposInvalidos(false); setFormularios((prev) => ({
                   ...prev, [seccion]: { ...prev[seccion], [campo]: e.target.value },
-                }))}
+                })); }}
                 disabled={guardando || ficha?.estado === 'COMPLETADA'}
                 sx={{ ...dbanuStyles.field, gridColumn: multilinea ? '1 / -1' : 'auto' }} />
             )}
           </Box>}
           {error && <Typography color="error" sx={{ fontSize: 12, mt: 1.5 }}>{error}</Typography>}
           <Divider sx={{ my: 2 }} />
-          <Stack direction="row" justifyContent="flex-end" spacing={1}>
-            <Button variant="outlined" size="small" disabled={seccion === 'antecedentes'} onClick={() => setSeccion(menus[Math.max(0, menus.findIndex(m => m.id === seccion) - 1)].id)}>Anterior</Button>
-            <Button variant="outlined" size="small" disabled={seccion === 'valoracion'} onClick={() => setSeccion(menus[Math.min(3, menus.findIndex(m => m.id === seccion) + 1)].id)}>Siguiente</Button>
-            <Button variant="contained" size="small" startIcon={guardando ? <CircularProgress size={14} color="inherit" /> : <SaveOutlinedIcon />}
-              disabled={guardando || cargando || ficha?.estado === 'COMPLETADA'} onClick={guardar}>Guardar</Button>
+          <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+            <BotonGuardar guardando={guardando} disabled={cargando || ficha?.estado === 'COMPLETADA' || Boolean(error)} onClick={guardar} />
           </Stack>
         </Paper>
       </Box>
