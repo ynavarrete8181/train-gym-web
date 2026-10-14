@@ -189,6 +189,19 @@ export const gimnasioServicio = {
     return data;
   },
 
+  obtenerValoracionesDeportista: async (id, seccion) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/valoraciones`, { params: { seccion } });
+    return data;
+  },
+  crearValoracionDeportista: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/clientes/${id}/valoraciones`, payload);
+    return data;
+  },
+  obtenerControlesValoracionPendientes: async (dias = 7) => {
+    const { data } = await api.get('/base/gimnasio/valoraciones/controles-pendientes', { params: { dias } });
+    return data;
+  },
+
   // --- Configuración de Agenda ---
   obtenerJornadas: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/gimnasio/agenda/jornadas', { params });
