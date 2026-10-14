@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, CircularProgress, Divider, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Divider, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
+import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
@@ -31,6 +36,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [estadoFiltro, setEstadoFiltro] = useState('TODOS');
   const [desde, setDesde] = useState('');
   const [hasta, setHasta] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(5);
   const [form, setForm] = useState(limpio);
   const [ver, setVer] = useState(null);
   const [error, setError] = useState('');
@@ -65,6 +72,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       && (!desde || fecha >= desde) && (!hasta || fecha <= hasta);
   }), [registros, busqueda, estadoFiltro, desde, hasta]);
 
+  const paginaRegistros = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
   const cambiar = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
   const guardar = async () => {
     if (!form.titulo.trim() || !form.fecha_registro || !actual.campos.some(([campo]) => String(form.datos[campo] ?? '').trim())) {
@@ -106,7 +114,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         {secciones.map((s) => {
           const Icono = s.icono;
           const seleccionado = s.id === seccion;
-          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setForm(limpio()); }}
+          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); }}
             sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
               fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
               color: seleccionado ? 'primary.main' : 'text.primary',
@@ -118,15 +126,13 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         })}
       </Paper>
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
+        {vista !== 'listado' && <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
           <Box>
-            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'listado' ? actual.titulo : vista === 'nuevo' ? `Añadir · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
-            <Typography color="text.secondary" sx={{ fontSize: 12 }}>{vista === 'listado' ? 'Consulta y filtra el historial de valoraciones.' : 'Navegación interna de la ficha del deportista.'}</Typography>
+            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Añadir · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
+            <Typography color="text.secondary" sx={{ fontSize: 12 }}>Registro de seguimiento del deportista</Typography>
           </Box>
-          {vista === 'listado'
-            ? <Button size="small" variant="outlined" startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); }} disabled={cargando || Boolean(error)}>Añadir</Button>
-            : <Button size="small" variant="outlined" startIcon={<ArrowBackOutlinedIcon />} disabled={guardando} onClick={() => { setVista('listado'); setVer(null); }}>Volver</Button>}
-        </Stack>
+          <Button size="small" variant="outlined" startIcon={<ArrowBackOutlinedIcon />} disabled={guardando} onClick={() => { setVista('listado'); setVer(null); }}>Volver</Button>
+        </Stack>}
         {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontSize: 13, fontWeight: 850, mb: 2 }}>Nuevo registro de {actual.titulo.toLowerCase()}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
@@ -149,29 +155,41 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           </Stack>
         </Box>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {vista === 'listado' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '2fr 1fr 1fr 1fr' }, gap: 1.5, mb: 2 }}>
-          <TextField size="small" label="Buscar registro" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} sx={dbanuStyles.field} />
-          <TextField size="small" select label="Estado" value={estadoFiltro} onChange={(e) => setEstadoFiltro(e.target.value)} SelectProps={{ native: true }} sx={dbanuStyles.field}>
-            <option value="TODOS">Todos</option><option value="ACTIVO">Activo</option>
-          </TextField>
-          <TextField size="small" type="date" label="Desde" value={desde} onChange={(e) => setDesde(e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
-          <TextField size="small" type="date" label="Hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
-        </Box>}
-        {vista === 'listado' && (cargando ? <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={26} /></Box> : <TableContainer>
-          <Table size="small">
-            <TableHead><TableRow><TableCell>Fecha</TableCell><TableCell>Registro</TableCell><TableCell>Próximo control</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acción</TableCell></TableRow></TableHead>
+        {vista === 'listado' && <>
+          <GestionToolbar
+            total={filtrados.length}
+            busqueda={busqueda}
+            onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
+            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
+            resumen={<Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              <TextField size="small" select label="Estado" value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1); }} sx={{ ...dbanuStyles.field, minWidth: 110 }}>
+                <MenuItem value="TODOS">Todos</MenuItem><MenuItem value="ACTIVO">Activo</MenuItem>
+              </TextField>
+              <TextField size="small" type="date" label="Desde" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} InputLabelProps={{ shrink: true }} sx={{ ...dbanuStyles.field, width: 145 }} />
+              <TextField size="small" type="date" label="Hasta" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} InputLabelProps={{ shrink: true }} sx={{ ...dbanuStyles.field, width: 145 }} />
+            </Stack>}
+          />
+          <TablaGestion total={registros.length} filtrados={filtrados.length} page={pagina} rowsPerPage={porPagina}
+            onPageChange={setPagina} onRowsPerPageChange={(cantidad) => { setPorPagina(cantidad); setPagina(1); }} cargando={cargando}>
+            <TableHead><TableRow>
+              <FilterHeaderCell value={desde} onChange={(valor) => { setDesde(valor); setPagina(1); }}>Fecha</FilterHeaderCell>
+              <FilterHeaderCell value={busqueda} onChange={(valor) => { setBusqueda(valor); setPagina(1); }}>Registro</FilterHeaderCell>
+              <TableCell>Próximo control</TableCell>
+              <FilterHeaderCell value={estadoFiltro === 'TODOS' ? '' : estadoFiltro} onChange={(valor) => { setEstadoFiltro(valor || 'TODOS'); setPagina(1); }} options={[{value:'ACTIVO', label:'Activo'}]}>Estado</FilterHeaderCell>
+              <TableCell align="right">Acciones</TableCell>
+            </TableRow></TableHead>
             <TableBody>
-              {filtrados.map((registro) => <TableRow key={registro.id} hover>
+              {paginaRegistros.map((registro) => <TableRow key={registro.id} hover>
                 <TableCell>{mostrarFecha(registro.fecha_registro)}</TableCell>
                 <TableCell>{registro.titulo}</TableCell>
                 <TableCell>{mostrarFecha(registro.proximo_control)}</TableCell>
-                <TableCell><Chip size="small" variant="outlined" label={registro.estado || 'ACTIVO'} /></TableCell>
-                <TableCell align="right"><Button size="small" variant="text" onClick={() => { setVer(registro); setVista('detalle'); }}>Ver detalle</Button></TableCell>
+                <TableCell><StatusChip estado={String(registro.estado || 'ACTIVO').toLowerCase()} /></TableCell>
+                <TableCell align="right"><Tooltip title="Ver detalle"><IconButton sx={dbanuStyles.actionView} onClick={() => { setVer(registro); setVista('detalle'); }}><VisibilityOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip></TableCell>
               </TableRow>)}
-              {!filtrados.length && <TableRow><TableCell colSpan={5} align="center">No se encontraron registros para los filtros seleccionados.</TableCell></TableRow>}
+              {!paginaRegistros.length && !cargando && <TableRow><TableCell colSpan={5} align="center">No se encontraron registros.</TableCell></TableRow>}
             </TableBody>
-          </Table>
-        </TableContainer>)}
+          </TablaGestion>
+        </>}
         {vista === 'detalle' && ver && <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <Typography fontWeight={800} sx={{ mb: 1 }}>{ver.titulo} · {mostrarFecha(ver.fecha_registro)}</Typography>
           {actual.campos.map(([campo, etiqueta]) => ver.datos?.[campo] !== undefined && ver.datos?.[campo] !== '' ? <Typography key={campo} variant="body2" sx={{ mb: 0.5 }}><strong>{etiqueta}:</strong> {ver.datos[campo]}</Typography> : null)}
