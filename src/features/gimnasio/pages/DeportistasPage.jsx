@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip } from '@mui/material';
+import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
 import { Stack } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
+import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { AccionesFormulario } from "../../../components/common/AccionesFormulario.jsx";
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
@@ -299,6 +302,12 @@ export function DeportistasPage() {
   // Ficha del cliente (pestañas: datos / entrenador y horario)
   const [tabFicha, setTabFicha] = useState('datos');
   const [membresiasCliente, setMembresiasCliente] = useState([]);
+  const [vistaMembresia, setVistaMembresia] = useState('listado');
+  const [buscarMembresia, setBuscarMembresia] = useState('');
+  const [paginaMembresia, setPaginaMembresia] = useState(1);
+  const [porPaginaMembresia, setPorPaginaMembresia] = useState(5);
+  const [filtrosMembresia, setFiltrosMembresia] = useState({ plan: [], vigencia: [], precio: [], estado: [] });
+  const [filtrosAsignacion, setFiltrosAsignacion] = useState({ entrenador: [], disponibilidad: [], sede: [], vigencia: [], estado: [] });
   const [entrenadoresDisp, setEntrenadoresDisp] = useState([]);
   const [turnosEntrenador, setTurnosEntrenador] = useState([]);
   const [asignaciones, setAsignaciones] = useState([]);
@@ -776,9 +785,11 @@ export function DeportistasPage() {
 
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
+    setVistaMembresia('formulario');
   };
 
   const handleEditarMembresia = (m) => {
+    setVistaMembresia('formulario');
     setMembresiaForm({
       ...m,
       fecha_inicio: limpiarFechaMembresia(m.fecha_inicio),
@@ -861,6 +872,7 @@ export function DeportistasPage() {
       }
 
       setMembresiaForm(getInitialMembresia());
+      setVistaMembresia('listado');
       cargarFicha(formData);
     } catch (error) {
       const errores = error.response?.data?.errors;
@@ -1126,9 +1138,18 @@ export function DeportistasPage() {
         .join(', ')
     : 'Sin recesos';
 
+  const textoAsignacion = (item, campo) => {
+    if (campo === 'entrenador') return item.entrenador_nombre || [item.entrenador_nombres, item.entrenador_apellidos].filter(Boolean).join(' ') || 'Sin entrenador';
+    if (campo === 'disponibilidad') return `${item.dia_semana || ''} ${item.hora_inicio || ''} ${item.hora_fin || ''}`.trim();
+    if (campo === 'sede') return item.sede_nombre || 'Sin sede';
+    if (campo === 'vigencia') return `${String(item.fecha_inicio || '').slice(0, 10)} → ${String(item.fecha_fin || (item.estado === 'ACTIVO' ? 'Actual' : '')).slice(0, 10)}`;
+    return item.estado || '';
+  };
+  const opcionesExcel = (items, obtener) => [...new Set(items.map(obtener).filter(Boolean))].sort().map((valor) => ({ value: valor, label: valor }));
   const asignacionesFiltradas = asignaciones.filter((item) =>
     [item.entrenador_nombre, item.entrenador_nombres, item.entrenador_apellidos, item.sede_nombre, item.dia_semana, item.estado]
       .some((valor) => String(valor || '').toLocaleLowerCase('es').includes(buscarAsignacion.toLocaleLowerCase('es')))
+    && Object.entries(filtrosAsignacion).every(([campo, valores]) => !valores.length || valores.includes(textoAsignacion(item, campo)))
   );
 
   const renderEntrenadorYHorario = () => (
@@ -1317,16 +1338,28 @@ export function DeportistasPage() {
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
 
+  const textoMembresia = (m, campo) => {
+    if (campo === 'plan') return [m.plan_nombre, m.modalidad_nombre].filter(Boolean).join(' · ') || 'Sin plan';
+    if (campo === 'vigencia') return `${fechaMembresia(m.fecha_inicio)} – ${fechaMembresia(m.fecha_fin)}`;
+    if (campo === 'precio') return m.precio_aplicado == null ? '—' : Number(m.precio_aplicado).toFixed(2);
+    return String(m.estado || '');
+  };
+  const membresiasFiltradas = membresiasCliente.filter((m) =>
+    [m.plan_nombre, m.modalidad_nombre, m.codigo_contrato, m.estado, m.sede_nombre]
+      .some((valor) => String(valor || '').toLocaleLowerCase('es').includes(buscarMembresia.toLocaleLowerCase('es')))
+    && Object.entries(filtrosMembresia).every(([campo, valores]) => !valores.length || valores.includes(textoMembresia(m, campo)))
+  );
+  const filtrarMembresia = (campo, valores) => {
+    setFiltrosMembresia((prev) => ({ ...prev, [campo]: valores }));
+    setPaginaMembresia(1);
+  };
+
   const renderMembresia = () => (
     <Stack spacing={2}>
-      <Box sx={formStyles.seccion}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-          <Typography sx={formStyles.modalSeccionTitulo}>
-            {membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}
-          </Typography>
-          {membresiaForm.id ? (
-            <Button size="small" onClick={handleNuevaMembresia}>Cancelar edición</Button>
-          ) : null}
+      {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
+          <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => { setVistaMembresia('listado'); setMembresiaForm(getInitialMembresia()); }} /></Box>
         </Stack>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField
@@ -1661,48 +1694,40 @@ export function DeportistasPage() {
         <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
           <BotonGuardar texto={membresiaForm.id ? 'Guardar cambios' : 'Guardar membresía'} onClick={handleGuardarMembresia} />
         </Stack>
-      </Box>
-
-      <Box sx={formStyles.seccion}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Membresías del cliente</Typography>
-        {cargandoFicha ? (
-          <Typography variant="body2" color="text.secondary">Cargando...</Typography>
-        ) : membresiasCliente.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">Este cliente no tiene membresías registradas todavía.</Typography>
-        ) : (
-          <Stack spacing={1}>
-            {membresiasCliente.map((m) => (
-              <Stack key={m.id} direction="row" alignItems="center" justifyContent="space-between"
-                sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
-                  <Chip label={m.estado} size="small" color="default" />
-                  <Typography variant="body2" fontWeight="500">
-                    {m.plan_nombre}
-                    {m.modalidad_nombre ? ` · ${m.modalidad_nombre}` : ''}
-                    {m.precio_aplicado !== null && m.precio_aplicado !== undefined ? ` · ${Number(m.precio_aplicado).toFixed(2)}` : ''}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">{fechaMembresia(m.fecha_inicio)} - {fechaMembresia(m.fecha_fin)}</Typography>
-                </Stack>
-                <Stack direction="row" spacing={0.5}>
-                  <Tooltip title="Editar membresía">
-                    <IconButton size="small" onClick={() => handleEditarMembresia(m)}>
-                      <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Eliminar membresía">
-                    <IconButton size="small" sx={dbanuStyles.actionDelete} onClick={() => handleEliminarMembresia(m)}>
-                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </Stack>
-            ))}
-          </Stack>
-        )}
-      </Box>
+      </Box> : null}
+      {vistaMembresia === 'listado' && <Box sx={formStyles.seccion}>
+        <GestionToolbar total={membresiasFiltradas.length} busqueda={buscarMembresia}
+          onBusqueda={(valor) => { setBuscarMembresia(valor); setPaginaMembresia(1); }}
+          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevaMembresia}>Añadir</Button>} />
+        <TablaGestion total={membresiasCliente.length} filtrados={membresiasFiltradas.length}
+          cargando={cargandoFicha} page={paginaMembresia} rowsPerPage={porPaginaMembresia}
+          onPageChange={setPaginaMembresia} onRowsPerPageChange={(numero) => { setPorPaginaMembresia(numero); setPaginaMembresia(1); }}>
+          <TableHead><TableRow>
+            {['plan','vigencia','precio','estado'].map((campo) => <FilterHeaderCell key={campo}
+              value={filtrosMembresia[campo]} onChange={(valores) => filtrarMembresia(campo, valores)}
+              options={opcionesExcel(membresiasCliente, (m) => textoMembresia(m, campo))}>
+              {{ plan: 'Plan', vigencia: 'Vigencia', precio: 'Precio', estado: 'Estado' }[campo]}
+            </FilterHeaderCell>)}
+            <TableCell align="right">Acciones</TableCell>
+          </TableRow></TableHead>
+          <TableBody>
+            {membresiasFiltradas.slice((paginaMembresia - 1) * porPaginaMembresia, paginaMembresia * porPaginaMembresia).map((m) => <TableRow key={m.id} hover>
+              <TableCell><Typography variant="body2" fontWeight={600}>{m.plan_nombre || '—'}</Typography>
+                {m.modalidad_nombre && <Typography variant="caption" color="text.secondary">{m.modalidad_nombre}</Typography>}</TableCell>
+              <TableCell>{textoMembresia(m, 'vigencia')}</TableCell>
+              <TableCell>{textoMembresia(m, 'precio')}</TableCell>
+              <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
+              <TableCell align="right">
+                <Tooltip title="Editar membresía"><IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarMembresia(m)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+                <Tooltip title="Eliminar membresía"><IconButton sx={dbanuStyles.actionDelete} onClick={() => handleEliminarMembresia(m)}><DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+              </TableCell>
+            </TableRow>)}
+            {!membresiasFiltradas.length && !cargandoFicha && <TableRow><TableCell colSpan={5} align="center">No se encontraron membresías.</TableCell></TableRow>}
+          </TableBody>
+        </TablaGestion>
+      </Box>}
     </Stack>
   );
-
 
   // --- Progreso físico (dentro de la ficha del cliente) ---
 
