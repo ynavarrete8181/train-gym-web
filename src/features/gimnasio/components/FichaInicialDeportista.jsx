@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, Divider, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Divider, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
@@ -10,7 +10,6 @@ import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurned
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -33,9 +32,6 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [guardando, setGuardando] = useState(false);
   const [vista, setVista] = useState('listado');
   const [busqueda, setBusqueda] = useState('');
-  const [estadoFiltro, setEstadoFiltro] = useState('TODOS');
-  const [desde, setDesde] = useState('');
-  const [hasta, setHasta] = useState('');
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(5);
   const [form, setForm] = useState(limpio);
@@ -67,10 +63,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const filtrados = useMemo(() => registros.filter((r) => {
     const coincideTexto = !busqueda || [r.titulo, ...Object.values(r.datos || {})]
       .some((v) => String(v ?? '').toLocaleLowerCase('es').includes(busqueda.toLocaleLowerCase('es')));
-    const fecha = String(r.fecha_registro || '').slice(0, 10);
-    return coincideTexto && (estadoFiltro === 'TODOS' || r.estado === estadoFiltro)
-      && (!desde || fecha >= desde) && (!hasta || fecha <= hasta);
-  }), [registros, busqueda, estadoFiltro, desde, hasta]);
+    return coincideTexto;
+  }), [registros, busqueda]);
 
   const paginaRegistros = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
   const cambiar = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -161,21 +155,15 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             busqueda={busqueda}
             onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
             acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
-            resumen={<Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-              <TextField size="small" select label="Estado" value={estadoFiltro} onChange={(e) => { setEstadoFiltro(e.target.value); setPagina(1); }} sx={{ ...dbanuStyles.field, minWidth: 110 }}>
-                <MenuItem value="TODOS">Todos</MenuItem><MenuItem value="ACTIVO">Activo</MenuItem>
-              </TextField>
-              <TextField size="small" type="date" label="Desde" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} InputLabelProps={{ shrink: true }} sx={{ ...dbanuStyles.field, width: 145 }} />
-              <TextField size="small" type="date" label="Hasta" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} InputLabelProps={{ shrink: true }} sx={{ ...dbanuStyles.field, width: 145 }} />
-            </Stack>}
+
           />
           <TablaGestion total={registros.length} filtrados={filtrados.length} page={pagina} rowsPerPage={porPagina}
             onPageChange={setPagina} onRowsPerPageChange={(cantidad) => { setPorPagina(cantidad); setPagina(1); }} cargando={cargando}>
             <TableHead><TableRow>
-              <FilterHeaderCell value={desde} onChange={(valor) => { setDesde(valor); setPagina(1); }}>Fecha</FilterHeaderCell>
-              <FilterHeaderCell value={busqueda} onChange={(valor) => { setBusqueda(valor); setPagina(1); }}>Registro</FilterHeaderCell>
+              <TableCell>Fecha</TableCell>
+              <TableCell>Registro</TableCell>
               <TableCell>Próximo control</TableCell>
-              <FilterHeaderCell value={estadoFiltro === 'TODOS' ? '' : estadoFiltro} onChange={(valor) => { setEstadoFiltro(valor || 'TODOS'); setPagina(1); }} options={[{value:'ACTIVO', label:'Activo'}]}>Estado</FilterHeaderCell>
+              <TableCell>Estado</TableCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow></TableHead>
             <TableBody>
