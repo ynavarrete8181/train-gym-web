@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, Divider, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
@@ -122,13 +122,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
         {vista !== 'listado' && <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
           <Box>
-            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Añadir · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
-            <Typography color="text.secondary" sx={{ fontSize: 12 }}>Registro de seguimiento del deportista</Typography>
+            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Nuevo registro · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
           </Box>
-          <Button size="small" variant="outlined" startIcon={<ArrowBackOutlinedIcon />} disabled={guardando} onClick={() => { setVista('listado'); setVer(null); }}>Volver</Button>
+          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); }} /></Box>
         </Stack>}
         {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
-          <Typography sx={{ fontSize: 13, fontWeight: 850, mb: 2 }}>Nuevo registro de {actual.titulo.toLowerCase()}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
             <TextField size="small" type="date" label="Fecha del registro *" value={form.fecha_registro} onChange={(e) => cambiar('fecha_registro', e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
