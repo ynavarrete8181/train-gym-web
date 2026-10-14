@@ -1,9 +1,13 @@
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
-import { Alert, Box, Chip, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
+import { Alert, Box, Button, Chip, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { FichaInicialDeportista } from './FichaInicialDeportista.jsx';
+import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 
 const extraerDatos = (respuesta) => respuesta?.datos ?? respuesta?.data ?? [];
 
@@ -11,6 +15,8 @@ export function TrabajoEntrenadorPanel({ tipo }) {
   const [items, setItems] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [seleccionado, setSeleccionado] = useState(null);
+  const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const esDeportistas = tipo === 'deportistas';
   const config = useMemo(() => esDeportistas
@@ -48,6 +54,14 @@ export function TrabajoEntrenadorPanel({ tipo }) {
     return () => { activo = false; };
   }, [esDeportistas]);
 
+  if (esDeportistas && seleccionado) return <Box className="page-wrapper">
+    <PageHeader titulo="Ficha inicial del deportista" descripcion={seleccionado.deportista_nombre || seleccionado.codigo_deportista || 'Valoración inicial'} icono={<AssignmentOutlinedIcon />} acciones={<Button variant="outlined" size="small" startIcon={<ArrowBackOutlinedIcon />} onClick={() => setSeleccionado(null)}>Volver</Button>} />
+    <Paper className="page-content-container" elevation={0} sx={{ p: 2 }}>
+      <FichaInicialDeportista deportistaId={seleccionado.deportista_id} onNotificacion={(mensaje, tipo) => setNotificacion({ mensaje, tipo })} />
+    </Paper>
+    <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion((actual) => ({ ...actual, mensaje: '' }))} />
+  </Box>;
+
   return <Box className="page-wrapper">
     <PageHeader titulo={config.titulo} descripcion={config.descripcion} icono={config.icono} />
 
@@ -72,6 +86,7 @@ export function TrabajoEntrenadorPanel({ tipo }) {
                 <TableCell>Días</TableCell>
                 <TableCell>Horario</TableCell>
                 <TableCell>Estado</TableCell>
+                <TableCell align="right">Acciones</TableCell>
               </> : <>
                 <TableCell>Horario</TableCell>
                 <TableCell>Servicio</TableCell>
@@ -94,6 +109,7 @@ export function TrabajoEntrenadorPanel({ tipo }) {
                 <TableCell>{item.dia_semana || '—'}</TableCell>
                 <TableCell>{item.hora_inicio && item.hora_fin ? `${item.hora_inicio} - ${item.hora_fin}` : '—'}</TableCell>
                 <TableCell><Chip size="small" label={item.estado || 'ACTIVO'} variant="outlined" /></TableCell>
+                <TableCell align="right"><Button size="small" variant="outlined" startIcon={<AssignmentOutlinedIcon />} disabled={!item.deportista_id} onClick={() => setSeleccionado(item)}>Ficha inicial</Button></TableCell>
               </> : <>
                 <TableCell><Typography variant="body2" fontWeight={600}>{item.nombre || '—'}</Typography></TableCell>
                 <TableCell>{item.servicio_nombre || '—'}</TableCell>
