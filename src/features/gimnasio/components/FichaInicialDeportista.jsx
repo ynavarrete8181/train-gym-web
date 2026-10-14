@@ -25,6 +25,24 @@ const hoy = () => new Date().toLocaleDateString('en-CA');
 const limpio = () => ({ titulo: '', fecha_registro: hoy(), fecha_inicio: '', fecha_fin: '', proximo_control: '', datos: {} });
 const mostrarFecha = (fecha) => fecha ? String(fecha).substring(0, 10).split('-').reverse().join('/') : '—';
 
+const CampoFecha = ({ etiqueta, valor, onChange, obligatorio = false }) => (
+  <Box sx={{ minWidth: 0 }}>
+    <Typography component="label" sx={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'text.secondary', mb: 0.6 }}>
+      {etiqueta}{obligatorio ? ' *' : ''}
+    </Typography>
+    <TextField
+      fullWidth
+      type="date"
+      size="small"
+      value={valor || ''}
+      onChange={(evento) => onChange(evento.target.value)}
+      inputProps={{ 'aria-label': etiqueta }}
+      sx={dbanuStyles.field}
+    />
+  </Box>
+);
+
+
 export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [seccion, setSeccion] = useState('antecedentes');
   const [registros, setRegistros] = useState([]);
@@ -129,11 +147,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
-            <TextField size="small" type="date" label="Fecha del registro *" value={form.fecha_registro} onChange={(e) => cambiar('fecha_registro', e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
-            <TextField size="small" type="date" label="Próximo control" value={form.proximo_control} onChange={(e) => cambiar('proximo_control', e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
+            <CampoFecha etiqueta="Fecha del registro" obligatorio valor={form.fecha_registro} onChange={(valor) => cambiar('fecha_registro', valor)} />
+            <CampoFecha etiqueta="Próximo control" valor={form.proximo_control} onChange={(valor) => cambiar('proximo_control', valor)} />
             {(seccion === 'antecedentes' || seccion === 'objetivos') && <>
-              <TextField size="small" type="date" label="Fecha de inicio" value={form.fecha_inicio} onChange={(e) => cambiar('fecha_inicio', e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
-              <TextField size="small" type="date" label="Fecha de finalización" value={form.fecha_fin} onChange={(e) => cambiar('fecha_fin', e.target.value)} InputLabelProps={{ shrink: true }} sx={dbanuStyles.field} />
+              <CampoFecha etiqueta="Fecha de inicio" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
+              <CampoFecha etiqueta="Fecha de finalización" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
             </>}
             {actual.campos.map(([campo, etiqueta, multilinea]) => <TextField key={campo} size="small" label={etiqueta} fullWidth
               multiline={Boolean(multilinea)} minRows={multilinea ? 2 : undefined}
