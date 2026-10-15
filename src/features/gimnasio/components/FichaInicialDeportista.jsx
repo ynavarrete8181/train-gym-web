@@ -20,8 +20,8 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 const secciones = [
   { id: 'antecedentes', titulo: 'Antecedentes de salud', icono: HealthAndSafetyOutlinedIcon, campos: [['descripcion', 'Descripción', true], ['tipo', 'Tipo de antecedente'], ['restricciones', 'Restricciones o precauciones', true], ['observaciones', 'Observaciones', true]] },
   { id: 'evaluacion', titulo: 'Evaluación física', icono: MonitorHeartOutlinedIcon, campos: [['peso_kg', 'Peso (kg)'], ['talla_cm', 'Estatura (cm)'], ['cintura_cm', 'Cintura (cm)'], ['grasa_corporal_pct', 'Grasa corporal (%)'], ['actividad_fisica', 'Nivel de actividad'], ['patologia', 'Patología o condición de salud'], ['movilidad', 'Movilidad y observaciones funcionales', true], ['observaciones', 'Observaciones', true]] },
-  { id: 'objetivos', titulo: 'Objetivos deportivos', icono: FlagOutlinedIcon, campos: [['objetivo', 'Objetivo', true], ['indicador', 'Indicador de evaluación'], ['valor_inicial', 'Valor inicial'], ['valor_meta', 'Meta esperada'], ['observaciones', 'Observaciones', true]] },
-  { id: 'valoracion', titulo: 'Valoración profesional', icono: AssignmentTurnedInOutlinedIcon, campos: [['conclusiones', 'Conclusiones', true], ['recomendaciones', 'Recomendaciones', true], ['observaciones', 'Observaciones', true]] },
+  { id: 'objetivos', titulo: 'Objetivos deportivos', icono: FlagOutlinedIcon, campos: [['objetivo', 'Descripción del objetivo', true], ['indicador', 'Indicador de seguimiento'], ['unidad_medida', 'Unidad de medida'], ['valor_inicial', 'Valor inicial'], ['valor_meta', 'Meta esperada'], ['prioridad', 'Prioridad'], ['estado_objetivo', 'Estado del objetivo'], ['observaciones', 'Observaciones', true]] },
+  { id: 'valoracion', titulo: 'Valoración profesional', icono: AssignmentTurnedInOutlinedIcon, campos: [['condicion_fisica', 'Condición física observada'], ['movilidad_general', 'Movilidad observada'], ['experiencia_entrenamiento', 'Experiencia de entrenamiento'], ['requiere_adaptacion', 'Necesidad de adaptación'], ['frecuencia_seguimiento', 'Seguimiento recomendado'], ['conclusiones', 'Conclusiones', true], ['recomendaciones', 'Recomendaciones', true], ['observaciones', 'Observaciones', true]] },
 ];
 const TIPOS_ANTECEDENTES = [{ value: 'LESION', label: 'Lesión' }, { value: 'CONDICION', label: 'Condición de salud' }, { value: 'RESTRICCION', label: 'Restricción de actividad' }, { value: 'OTRO', label: 'Otro antecedente' }];
 const ACTIVIDADES = ['SEDENTARIO', 'LIGERA', 'MODERADA', 'ALTA', 'MUY_ALTA'];
@@ -29,6 +29,17 @@ const OBJETIVOS = [
   ['FUERZA', 'Mejorar fuerza'], ['RESISTENCIA', 'Mejorar resistencia'], ['MOVILIDAD', 'Mejorar movilidad'],
   ['COMPOSICION', 'Composición corporal'], ['ADHERENCIA', 'Constancia en el entrenamiento'],
 ];
+const SELECTS_EVALUACION = {
+  prioridad: [['ALTA', 'Alta'], ['MEDIA', 'Media'], ['BAJA', 'Baja']],
+  estado_objetivo: [['PENDIENTE', 'Pendiente'], ['EN_PROGRESO', 'En progreso'], ['CUMPLIDO', 'Cumplido'], ['SUSPENDIDO', 'Suspendido']],
+  unidad_medida: [['KG', 'Kilogramos (kg)'], ['CM', 'Centímetros (cm)'], ['PORCENTAJE', 'Porcentaje (%)'], ['REPETICIONES', 'Repeticiones'], ['MINUTOS', 'Minutos'], ['OTRO', 'Otra']],
+  condicion_fisica: [['INICIAL', 'Inicial'], ['INTERMEDIA', 'Intermedia'], ['AVANZADA', 'Avanzada'], ['POR_EVALUAR', 'Por evaluar']],
+  movilidad_general: [['ADECUADA', 'Adecuada'], ['LIMITADA', 'Limitada'], ['REQUIERE_EVALUACION', 'Requiere evaluación']],
+  experiencia_entrenamiento: [['PRINCIPIANTE', 'Principiante'], ['INTERMEDIO', 'Intermedio'], ['AVANZADO', 'Avanzado']],
+  requiere_adaptacion: [['SI', 'Sí'], ['NO', 'No'], ['POR_DETERMINAR', 'Por determinar']],
+  frecuencia_seguimiento: [['SEMANAL', 'Semanal'], ['QUINCENAL', 'Quincenal'], ['MENSUAL', 'Mensual'], ['SEGUN_NECESIDAD', 'Según necesidad']],
+};
+const ETIQUETAS_SELECT = Object.fromEntries(Object.entries(SELECTS_EVALUACION).map(([campo, opciones]) => [campo, Object.fromEntries(opciones)]));
 const hoy = () => new Date().toLocaleDateString('en-CA');
 const limpio = () => ({ titulo: '', fecha_registro: hoy(), fecha_inicio: '', fecha_fin: '', proximo_control: '', datos: {} });
 const numero = (valor) => {
@@ -261,8 +272,13 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                 <MenuItem value="">Sin especificar</MenuItem>
                 {ACTIVIDADES.map((nivel) => <MenuItem key={nivel} value={nivel}>{nivel.replace('_', ' ').toLowerCase()}</MenuItem>)}
               </TextField>;
+              if (SELECTS_EVALUACION[campo]) return <TextField key={campo} select size="small" label={etiqueta}
+                value={form.datos[campo] ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, [campo]: e.target.value } }))} sx={dbanuStyles.field}>
+                <MenuItem value="">Seleccionar</MenuItem>
+                {SELECTS_EVALUACION[campo].map(([codigo, nombre]) => <MenuItem key={codigo} value={codigo}>{nombre}</MenuItem>)}
+              </TextField>;
               return <TextField key={campo} size="small" label={etiqueta} fullWidth
-                type={seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? 'number' : 'text'}
+                type={(seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo)) || (seccion === 'objetivos' && ['valor_inicial','valor_meta'].includes(campo)) ? 'number' : 'text'}
                 multiline={Boolean(multilinea)} minRows={multilinea ? 2 : undefined}
                 inputProps={seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? { min: 0, max: campo === 'grasa_corporal_pct' ? 100 : undefined, step: 'any' } : undefined}
                 value={form.datos[campo] ?? ''}
@@ -375,7 +391,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         </>}
         {vista === 'detalle' && ver && <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <Typography fontWeight={800} sx={{ mb: 1 }}>{ver.titulo} · {mostrarFecha(ver.fecha_registro)}</Typography>
-          {actual.campos.map(([campo, etiqueta]) => ver.datos?.[campo] !== undefined && ver.datos?.[campo] !== '' ? <Typography key={campo} variant="body2" sx={{ mb: 0.5 }}><strong>{etiqueta}:</strong> {ver.datos[campo]}</Typography> : null)}
+          {actual.campos.map(([campo, etiqueta]) => ver.datos?.[campo] !== undefined && ver.datos?.[campo] !== '' ? <Typography key={campo} variant="body2" sx={{ mb: 0.5 }}><strong>{etiqueta}:</strong> {ETIQUETAS_SELECT[campo]?.[ver.datos[campo]] || ver.datos[campo]}</Typography> : null)}
           {seccion === 'evaluacion' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,minmax(0,1fr))' }, gap: 1, my: 1.5 }}>
             {[
               ['IMC', indicadores(ver.datos).imc, 'kg/m²'],
