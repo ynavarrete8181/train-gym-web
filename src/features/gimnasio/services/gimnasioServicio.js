@@ -1,6 +1,10 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const gimnasioServicio = {
+  diagnosticarIdentidadCliente: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/diagnostico-identidad`);
+    return data;
+  },
   obtenerFichaInicial: async (id) => {
     const { data } = await api.get(`/base/gimnasio/clientes/${id}/ficha-inicial`);
     return data;
