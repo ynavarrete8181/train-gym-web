@@ -189,6 +189,10 @@ export const gimnasioServicio = {
     return data;
   },
 
+  obtenerInformeProgreso: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/progreso-informe`);
+    return data;
+  },
   obtenerValoracionesDeportista: async (id, seccion) => {
     const { data } = await api.get(`/base/gimnasio/clientes/${id}/valoraciones`, { params: { seccion } });
     return data;
