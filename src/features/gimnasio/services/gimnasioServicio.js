@@ -193,9 +193,10 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/clientes/${id}/fotos-valoracion`);
     return data;
   },
-  subirFotoValoracion: async (id, archivo, registroId, vista, fecha) => {
+  subirFotoValoracion: async (id, archivo, registroId, vista, fecha, consentimiento) => {
     const datos = new FormData();
     datos.append('foto', archivo);
+    datos.append('consentimiento_confirmado', consentimiento ? '1' : '0');
     datos.append('valoracion_registro_id', String(registroId));
     datos.append('vista', vista);
     datos.append('fecha_fotografia', fecha);
