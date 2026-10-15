@@ -24,6 +24,7 @@ import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
+import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
 import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
@@ -2309,7 +2310,7 @@ export function DeportistasPage() {
             {tabFicha === 'ficha_inicial' && <FichaInicialDeportista deportistaId={formData.id} onNotificacion={showNotificacion} />}
             {tabFicha === 'entrenador' && renderEntrenadorYHorario()}
             {tabFicha === 'membresia' && renderMembresia()}
-            {tabFicha === 'progreso' && renderProgreso()}
+            {tabFicha === 'progreso' && <InformeProgresoDeportista deportistaId={formData.id} onNotificacion={showNotificacion} />}
             {tabFicha === 'entrenamiento' && renderEntrenamiento()}
           </Box>
           {tabFicha === 'datos' && (
