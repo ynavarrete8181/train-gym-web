@@ -197,12 +197,26 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <Typography sx={{ fontWeight: 800, fontSize: 13, mb: 1.75 }}>{seccion === 'evaluacion' ? 'Datos y mediciones físicas' : 'Información del registro'}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
-            <CampoFecha etiqueta="Fecha del registro" obligatorio valor={form.fecha_registro} onChange={(valor) => cambiar('fecha_registro', valor)} />
-            <CampoFecha etiqueta="Próximo control" valor={form.proximo_control} onChange={(valor) => cambiar('proximo_control', valor)} />
-            {(seccion === 'antecedentes' || seccion === 'objetivos') && <>
-              <CampoFecha etiqueta="Fecha de inicio" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
-              <CampoFecha etiqueta="Fecha de finalización" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
-            </>}
+            {seccion === 'antecedentes' ? (
+              <>
+                <Box sx={{ gridColumn: '1 / -1' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    La fecha de registro se asigna automáticamente al guardar. Indica las fechas de la condición solo si las conoces.
+                  </Typography>
+                </Box>
+                <CampoFecha etiqueta="Fecha de inicio (opcional)" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
+                <CampoFecha etiqueta="Fecha de finalización (opcional)" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
+              </>
+            ) : (
+              <>
+                <CampoFecha etiqueta="Fecha del registro" obligatorio valor={form.fecha_registro} onChange={(valor) => cambiar('fecha_registro', valor)} />
+                <CampoFecha etiqueta="Próximo control" valor={form.proximo_control} onChange={(valor) => cambiar('proximo_control', valor)} />
+                {seccion === 'objetivos' && <>
+                  <CampoFecha etiqueta="Fecha de inicio" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
+                  <CampoFecha etiqueta="Fecha de finalización" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
+                </>}
+              </>
+            )}
             {seccion === 'evaluacion' && <>
               <TextField select size="small" label="Prueba física estandarizada" value={form.datos.prueba_codigo || ''}
                 onChange={(e) => {
