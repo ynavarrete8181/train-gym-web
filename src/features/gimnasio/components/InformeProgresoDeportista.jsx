@@ -1,9 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, CircularProgress, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { GaleriaProgresoDeportista } from './FotosEvaluacionDeportista.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
+// Exclusivamente para demostración visual. No se envía a la API ni se guarda en PostgreSQL.
+const INFORME_DEMO = {
+  resumen: { evaluaciones: 4, peso_inicial_kg: 82, peso_actual_kg: 80.8, variacion_peso_kg: -1.2 },
+  mediciones: [
+    { fecha:'2026-08-01', peso_kg:82, cintura_cm:92, grasa_corporal_pct:24.5, imc:26.78 },
+    { fecha:'2026-08-15', peso_kg:81.7, cintura_cm:91, grasa_corporal_pct:24.2, imc:26.68 },
+    { fecha:'2026-09-01', peso_kg:81.3, cintura_cm:90.5, grasa_corporal_pct:23.9, imc:26.55 },
+    { fecha:'2026-10-01', peso_kg:80.8, cintura_cm:90, grasa_corporal_pct:23.5, imc:26.38 },
+  ],
+  pruebas: [
+    { fecha:'2026-08-01', codigo:'FLEXIONES', nombre:'Flexiones', unidad:'repeticiones', valor:10 },
+    { fecha:'2026-08-15', codigo:'FLEXIONES', nombre:'Flexiones', unidad:'repeticiones', valor:12 },
+    { fecha:'2026-09-01', codigo:'FLEXIONES', nombre:'Flexiones', unidad:'repeticiones', valor:14 },
+    { fecha:'2026-10-01', codigo:'FLEXIONES', nombre:'Flexiones', unidad:'repeticiones', valor:16 },
+    { fecha:'2026-08-01', codigo:'PLANCHA', nombre:'Plancha abdominal', unidad:'segundos', valor:30 },
+    { fecha:'2026-10-01', codigo:'PLANCHA', nombre:'Plancha abdominal', unidad:'segundos', valor:50 },
+  ],
+  comparativas_pruebas: [
+    { codigo:'FLEXIONES', nombre:'Flexiones', unidad:'repeticiones', inicial:10, actual:16, variacion:6, mejora_verificada:true },
+    { codigo:'PLANCHA', nombre:'Plancha abdominal', unidad:'segundos', inicial:30, actual:50, variacion:20, mejora_verificada:true },
+  ],
+};
 const indicadores = [
   { clave: 'peso_kg', titulo: 'Peso', unidad: 'kg' },
   { clave: 'cintura_cm', titulo: 'Cintura', unidad: 'cm' },
@@ -47,6 +69,8 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
   const [informe, setInforme] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
+  const [demostracion, setDemostracion] = useState(false);
+  const [pruebaElegida, setPruebaElegida] = useState('FLEXIONES');
   useEffect(() => {
     if (!deportistaId) return;
     let activo = true;
@@ -57,17 +81,24 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
   }, [deportistaId]);
-  const datos = useMemo(() => informe?.mediciones || [], [informe]);
-  if (cargando) return <Stack direction="row" justifyContent="center" sx={{ py: 5 }}><CircularProgress size={24} /></Stack>;
-  if (error) return <Alert severity="error">{error}</Alert>;
+  const fuente = demostracion ? INFORME_DEMO : informe;
+  const datos = useMemo(() => fuente?.mediciones || [], [fuente]);
+  const pruebas = fuente?.pruebas || [];
+  const comparativas = fuente?.comparativas_pruebas || [];
+  if (cargando && !demostracion) return <Stack direction="row" justifyContent="center" sx={{ py: 5 }}><CircularProgress size={24} /></Stack>;
+  if (error && !demostracion) return <Stack spacing={2}><Alert severity="warning">{error}</Alert><Button variant="outlined" onClick={() => setDemostracion(true)}>Ver demostración con datos ficticios</Button></Stack>;
   return <Stack spacing={2}>
     <Box>
-      <Typography sx={{ fontWeight: 850, fontSize: 15 }}>Informe de progreso físico</Typography>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+        <Typography sx={{ fontWeight: 850, fontSize: 15 }}>Informe de progreso físico</Typography>
+        <Button size="small" variant="outlined" onClick={() => setDemostracion((v) => !v)}>{demostracion ? 'Ver datos reales' : 'Ver ejemplo simulado'}</Button>
+      </Stack>
       <Typography variant="body2" color="text.secondary">Datos provenientes de las evaluaciones físicas registradas en Ficha inicial.</Typography>
     </Box>
+    {demostracion && <Alert severity="info"><strong>DEMOSTRACIÓN:</strong> todos los valores y logros son ficticios. No se guardan registros ni se envían notificaciones.</Alert>}
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
       {[
-        ['Evaluaciones', String(informe?.resumen?.evaluaciones ?? 0)],
+        ['Evaluaciones', String(fuente?.resumen?.evaluaciones ?? 0)],
         ['Peso inicial', formato(informe?.resumen?.peso_inicial_kg, 'kg')],
         ['Último peso', formato(informe?.resumen?.peso_actual_kg, 'kg')],
         ['Variación de peso', formato(informe?.resumen?.variacion_peso_kg, 'kg')],
@@ -82,7 +113,25 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
         <Tendencia datos={datos} campo={metrica.clave} unidad={metrica.unidad} />
       </Paper>)}
     </Box>
-    <GaleriaProgresoDeportista deportistaId={deportistaId} onNotificacion={onNotificacion} />
+    <Paper elevation={0} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+      <Typography fontWeight={850} sx={{ mb: 1 }}>Evolución de las pruebas deportivas</Typography>
+      <TextField select size="small" label="Prueba comparable" value={pruebaElegida}
+        onChange={(e) => setPruebaElegida(e.target.value)} sx={{ minWidth: 230, mb: 2 }}
+        disabled={!comparativas.length}>
+        {comparativas.map((prueba) => <MenuItem key={prueba.codigo} value={prueba.codigo}>{prueba.nombre} · {prueba.unidad}</MenuItem>)}
+      </TextField>
+      {comparativas.length
+        ? <Tendencia datos={pruebas.filter((prueba) => prueba.codigo === pruebaElegida).map((prueba) => ({ ...prueba, medicion: prueba.valor }))} campo="medicion"
+            unidad={comparativas.find((prueba) => prueba.codigo === pruebaElegida)?.unidad || ''} />
+        : <Typography variant="body2" color="text.secondary">Registra dos controles de la misma prueba para visualizar una tendencia.</Typography>}
+      {comparativas.filter((prueba) => prueba.mejora_verificada).map((prueba) =>
+        <Alert key={prueba.codigo} severity="success" sx={{ mt: 1 }}>
+          Mejora registrada en {prueba.nombre}: {formato(prueba.inicial, prueba.unidad)} → {formato(prueba.actual, prueba.unidad)}.
+          {demostracion ? ' Ejemplo de felicitación: ¡Excelente constancia, sigue así!' : ' Disponible para revisión antes de felicitar al deportista.'}
+        </Alert>)}
+    </Paper>
+    {!demostracion && <GaleriaProgresoDeportista deportistaId={deportistaId} onNotificacion={onNotificacion} />}
+
     {!datos.length && <Alert severity="info">Todavía no existen evaluaciones físicas. Registra una en Ficha inicial → Evaluación física para generar las gráficas.</Alert>}
     <Typography variant="caption" color="text.secondary">El IMC es un indicador orientativo y no determina por sí solo el estado de salud o la aptitud para entrenar. Las variaciones deben interpretarse con el entrenador o profesional autorizado.</Typography>
   </Stack>;
