@@ -291,6 +291,7 @@ const pesoSugeridoPorPorcentaje = (rutina, ultimosRm) => {
 export function DeportistasPage() {
   const [vista, setVista] = useState('lista');
   const [formData, setFormData] = useState(getInitialForm());
+  const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const [deportistas, setDeportistas] = useState([]);
@@ -438,6 +439,8 @@ export function DeportistasPage() {
   };
 
   const handleGuardar = async () => {
+    if (guardandoCliente) return;
+    setGuardandoCliente(true);
     try {
       if (!formData.codigo_deportista || !String(formData.nombres || '').trim()) {
         showNotificacion('Ingresa al menos los nombres de la persona y el código del cliente.', 'warning');
@@ -477,17 +480,25 @@ export function DeportistasPage() {
 
       if (formData.id) {
         await gimnasioServicio.actualizarDeportista(formData.id, payload);
-        showNotificacion('Cliente actualizado con éxito', 'success');
+        showNotificacion('Cliente actualizado correctamente.', 'success');
+        setVista('lista');
       } else {
-        await gimnasioServicio.crearDeportista(payload);
-        showNotificacion('Cliente creado con éxito. Ahora completa su ficha.', 'success');
+        const respuesta = await gimnasioServicio.crearDeportista(payload);
+        const creado = respuesta?.datos;
+        if (creado?.id) {
+          handleAbrirFicha(creado);
+          showNotificacion('Cliente registrado. Puedes completar su ficha inicial, membresía y entrenador.', 'success');
+        } else {
+          setVista('lista');
+          showNotificacion('Cliente registrado, pero no se recibió su identificador para abrir la ficha.', 'warning');
+        }
       }
-
-      setVista('lista');
-      cargarDeportistas();
     } catch (error) {
-      console.error(error);
-      showNotificacion(error.response?.data?.mensaje || 'Error al guardar el cliente', 'error');
+      const errores = error.response?.data?.errors || error.response?.data?.errores;
+      const detalle = errores ? Object.values(errores).flat().join(' ') : '';
+      showNotificacion(detalle || error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar el cliente', 'error');
+    } finally {
+      setGuardandoCliente(false);
     }
   };
 
