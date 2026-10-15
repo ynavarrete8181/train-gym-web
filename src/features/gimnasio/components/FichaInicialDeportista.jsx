@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, Divider, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
@@ -216,6 +217,9 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         </Box>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {vista === 'listado' && <>
+          {seccion === 'evaluacion' && <Alert severity="info" sx={{ mb: 1.5 }}>
+            Para subir fotografías de evolución, primero guarda una evaluación física. Después utiliza «Añadir foto» en su fila.
+          </Alert>}
           <GestionToolbar
             total={filtrados.length}
             busqueda={busqueda}
@@ -238,7 +242,19 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                 <TableCell>{registro.titulo}</TableCell>
                 <TableCell>{mostrarFecha(registro.proximo_control)}</TableCell>
                 <TableCell><StatusChip estado={String(registro.estado || 'ACTIVO').toLowerCase()} /></TableCell>
-                <TableCell align="right"><Tooltip title="Ver detalle"><IconButton sx={dbanuStyles.actionView} onClick={() => { setVer(registro); setVista('detalle'); }}><VisibilityOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip></TableCell>
+                <TableCell align="right">
+                  <Tooltip title="Ver detalle">
+                    <IconButton sx={dbanuStyles.actionView} onClick={() => { setVer(registro); setVista('detalle'); }}>
+                      <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  {seccion === 'evaluacion' && <Tooltip title="Añadir foto a esta evaluación">
+                    <IconButton sx={dbanuStyles.actionView} aria-label="Añadir foto"
+                      onClick={() => { setVer(registro); setVista('detalle'); }}>
+                      <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>}
+                </TableCell>
               </TableRow>)}
               {!paginaRegistros.length && !cargando && <TableRow><TableCell colSpan={5} align="center">No se encontraron registros.</TableCell></TableRow>}
             </TableBody>
