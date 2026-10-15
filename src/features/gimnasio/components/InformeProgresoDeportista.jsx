@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, CircularProgress, Paper, Stack, Typography } from '@mui/material';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { GaleriaProgresoDeportista } from './FotosEvaluacionDeportista.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
 const indicadores = [
@@ -81,6 +82,7 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
         <Tendencia datos={datos} campo={metrica.clave} unidad={metrica.unidad} />
       </Paper>)}
     </Box>
+    <GaleriaProgresoDeportista deportistaId={deportistaId} onNotificacion={onNotificacion} />
     {!datos.length && <Alert severity="info">Todavía no existen evaluaciones físicas. Registra una en Ficha inicial → Evaluación física para generar las gráficas.</Alert>}
     <Typography variant="caption" color="text.secondary">El IMC es un indicador orientativo y no determina por sí solo el estado de salud o la aptitud para entrenar. Las variaciones deben interpretarse con el entrenador o profesional autorizado.</Typography>
   </Stack>;
