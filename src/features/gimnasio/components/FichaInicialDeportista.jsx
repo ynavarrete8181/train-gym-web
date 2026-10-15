@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, Divider, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Divider, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
@@ -21,6 +21,16 @@ const secciones = [
   { id: 'evaluacion', titulo: 'Evaluación física', icono: MonitorHeartOutlinedIcon, campos: [['peso_kg', 'Peso (kg)'], ['talla_cm', 'Estatura (cm)'], ['cintura_cm', 'Cintura (cm)'], ['grasa_corporal_pct', 'Grasa corporal (%)'], ['movilidad', 'Movilidad y pruebas funcionales', true], ['observaciones', 'Observaciones', true]] },
   { id: 'objetivos', titulo: 'Objetivos deportivos', icono: FlagOutlinedIcon, campos: [['objetivo', 'Objetivo', true], ['indicador', 'Indicador de evaluación'], ['valor_inicial', 'Valor inicial'], ['valor_meta', 'Meta esperada'], ['observaciones', 'Observaciones', true]] },
   { id: 'valoracion', titulo: 'Valoración profesional', icono: AssignmentTurnedInOutlinedIcon, campos: [['conclusiones', 'Conclusiones', true], ['recomendaciones', 'Recomendaciones', true], ['observaciones', 'Observaciones', true]] },
+];
+const TIPOS_ANTECEDENTES = [{ value: 'LESION', label: 'Lesión' }, { value: 'CONDICION', label: 'Condición de salud' }, { value: 'RESTRICCION', label: 'Restricción de actividad' }, { value: 'OTRO', label: 'Otro antecedente' }];
+const PRUEBAS = [
+  { codigo: 'FLEXIONES', nombre: 'Flexiones', unidad: 'repeticiones', sentido: 'MAYOR' },
+  { codigo: 'PLANCHA', nombre: 'Plancha abdominal', unidad: 'segundos', sentido: 'MAYOR' },
+  { codigo: 'CARRERA_2KM', nombre: 'Carrera 2 km', unidad: 'segundos', sentido: 'MENOR' },
+];
+const OBJETIVOS = [
+  ['FUERZA', 'Mejorar fuerza'], ['RESISTENCIA', 'Mejorar resistencia'], ['MOVILIDAD', 'Mejorar movilidad'],
+  ['COMPOSICION', 'Composición corporal'], ['ADHERENCIA', 'Constancia en el entrenamiento'],
 ];
 const hoy = () => new Date().toLocaleDateString('en-CA');
 const limpio = () => ({ titulo: '', fecha_registro: hoy(), fecha_inicio: '', fecha_fin: '', proximo_control: '', datos: {} });
@@ -154,11 +164,50 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
               <CampoFecha etiqueta="Fecha de inicio" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
               <CampoFecha etiqueta="Fecha de finalización" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
             </>}
-            {actual.campos.map(([campo, etiqueta, multilinea]) => <TextField key={campo} size="small" label={etiqueta} fullWidth
-              multiline={Boolean(multilinea)} minRows={multilinea ? 2 : undefined}
-              value={form.datos[campo] ?? ''}
-              onChange={(e) => setForm((p) => ({ ...p, datos: { ...p.datos, [campo]: e.target.value } }))}
-              sx={{ ...dbanuStyles.field, gridColumn: multilinea ? '1 / -1' : 'auto' }} />)}
+            {seccion === 'evaluacion' && <>
+              <TextField select size="small" label="Prueba física estandarizada" value={form.datos.prueba_codigo || ''}
+                onChange={(e) => {
+                  const prueba = PRUEBAS.find((item) => item.codigo === e.target.value);
+                  setForm((prev) => ({ ...prev, datos: { ...prev.datos, prueba_codigo: prueba?.codigo || '',
+                    prueba_unidad: prueba?.unidad || '', prueba_valor: '', prueba_protocolo: '' } }));
+                }} sx={dbanuStyles.field}>
+                <MenuItem value="">Sin prueba adicional</MenuItem>
+                {PRUEBAS.map((prueba) => <MenuItem key={prueba.codigo} value={prueba.codigo}>{prueba.nombre} · {prueba.unidad}</MenuItem>)}
+              </TextField>
+              {form.datos.prueba_codigo && <TextField size="small" type="number" label={`Resultado (${form.datos.prueba_unidad})`}
+                value={form.datos.prueba_valor ?? ''} onChange={(e) => setForm((prev) => ({ ...prev,
+                  datos: { ...prev.datos, prueba_valor: e.target.value } }))} sx={dbanuStyles.field} />}
+              {form.datos.prueba_codigo && <TextField size="small" label="Protocolo o condiciones de medición"
+                value={form.datos.prueba_protocolo || ''} onChange={(e) => setForm((prev) => ({ ...prev,
+                  datos: { ...prev.datos, prueba_protocolo: e.target.value } }))} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />}
+            </>}
+            {seccion === 'objetivos' && <>
+              <TextField select size="small" label="Categoría del objetivo" value={form.datos.objetivo_codigo || ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, objetivo_codigo: e.target.value } }))}
+                sx={dbanuStyles.field}>
+                <MenuItem value="">Seleccionar</MenuItem>
+                {OBJETIVOS.map(([codigo, etiqueta]) => <MenuItem key={codigo} value={codigo}>{etiqueta}</MenuItem>)}
+              </TextField>
+              <TextField size="small" type="number" label="Plazo previsto (semanas)" value={form.datos.plazo_semanas ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, plazo_semanas: e.target.value } }))}
+                sx={dbanuStyles.field} />
+            </>}
+            {actual.campos.map(([campo, etiqueta, multilinea]) => {
+              if (seccion === 'antecedentes' && campo === 'tipo') return <TextField key={campo} select size="small"
+                label={etiqueta} value={form.datos[campo] ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, [campo]: e.target.value } }))}
+                sx={dbanuStyles.field}>
+                <MenuItem value="">Seleccionar</MenuItem>
+                {TIPOS_ANTECEDENTES.map((tipo) => <MenuItem key={tipo.value} value={tipo.value}>{tipo.label}</MenuItem>)}
+              </TextField>;
+              return <TextField key={campo} size="small" label={etiqueta} fullWidth
+                type={seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? 'number' : 'text'}
+                multiline={Boolean(multilinea)} minRows={multilinea ? 2 : undefined}
+                value={form.datos[campo] ?? ''}
+                onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, [campo]: e.target.value } }))}
+                sx={{ ...dbanuStyles.field, gridColumn: multilinea ? '1 / -1' : 'auto' }} />;
+            })}
+
           </Box>
           <Divider sx={{ my: 2 }} />
           <Stack direction="row" sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 0, justifyContent: 'flex-end' }}>
