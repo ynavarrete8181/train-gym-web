@@ -2353,6 +2353,16 @@ export function DeportistasPage() {
                   <Typography variant="body2">Cliente: {diagnosticoIdentidad.cliente_id} · Persona vinculada: {diagnosticoIdentidad.persona_id ?? 'Sin vincular'}</Typography>
                   <Typography variant="body2">Coincidencias por documento: {diagnosticoIdentidad.coincidencias_documento} · Personas encontradas: {(diagnosticoIdentidad.persona_ids_coincidentes || []).join(', ') || 'Ninguna'}</Typography>
                   <Typography variant="body2">Relación con usuario: {diagnosticoIdentidad.usuario_consistente === null ? 'Sin usuario' : diagnosticoIdentidad.usuario_consistente ? 'Correcta' : 'Inconsistente'}</Typography>
+                  {(diagnosticoIdentidad.perfiles_coincidentes || []).map((perfil) => (
+                    <Typography key={perfil.cliente_id} variant="body2" sx={{ mt: 1 }}>
+                      Cliente #{perfil.cliente_id} · Persona #{perfil.persona_id} · {perfil.estado} · Código {perfil.codigo_deportista || 'Sin código'} · Membresías: {perfil.membresias} · Valoraciones: {perfil.valoraciones}
+                    </Typography>
+                  ))}
+                  {diagnosticoIdentidad.requiere_revision_manual && (
+                    <Typography variant="caption" color="warning.main">
+                      Hay más de un perfil o persona con este documento. No elimines registros: revisa sus relaciones antes de consolidar.
+                    </Typography>
+                  )}
                 </Box>
               )}
               <AccionesFormulario onGuardar={handleGuardarDatosFicha} onCancelar={handleCancelarFicha} textoCancelar="Volver a la lista" />
