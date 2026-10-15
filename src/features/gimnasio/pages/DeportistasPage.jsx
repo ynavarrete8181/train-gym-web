@@ -292,6 +292,8 @@ export function DeportistasPage() {
   const [vista, setVista] = useState('lista');
   const [formData, setFormData] = useState(getInitialForm());
   const [guardandoCliente, setGuardandoCliente] = useState(false);
+  const [diagnosticoIdentidad, setDiagnosticoIdentidad] = useState(null);
+  const [consultandoIdentidad, setConsultandoIdentidad] = useState(false);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
   const [deportistas, setDeportistas] = useState([]);
@@ -586,6 +588,7 @@ export function DeportistasPage() {
   };
 
   const handleAbrirFicha = (deportista) => {
+    setDiagnosticoIdentidad(null);
     setFormData({ ...deportista });
     setTabFicha('datos');
     setAsignacionForm(getInitialAsignacion());
@@ -599,6 +602,19 @@ export function DeportistasPage() {
     setTurnosEntrenador([]);
     setVista('ficha');
     cargarFicha(deportista);
+  };
+
+  const consultarIdentidad = async () => {
+    if (!formData.id || consultandoIdentidad) return;
+    setConsultandoIdentidad(true);
+    try {
+      const respuesta = await gimnasioServicio.diagnosticarIdentidadCliente(formData.id);
+      setDiagnosticoIdentidad(respuesta.datos || null);
+    } catch (error) {
+      showNotificacion(error.response?.data?.mensaje || 'No se pudo consultar la identidad del cliente.', 'error');
+    } finally {
+      setConsultandoIdentidad(false);
+    }
   };
 
   const handleCancelarFicha = () => {
@@ -2325,7 +2341,22 @@ export function DeportistasPage() {
             {tabFicha === 'entrenamiento' && renderEntrenamiento()}
           </Box>
           {tabFicha === 'datos' && (
-            <AccionesFormulario onGuardar={handleGuardarDatosFicha} onCancelar={handleCancelarFicha} textoCancelar="Volver a la lista" />
+            <Stack spacing={1.5}>
+              <Stack direction="row" justifyContent="flex-end">
+                <Button variant="outlined" size="small" onClick={consultarIdentidad} disabled={consultandoIdentidad}>
+                  {consultandoIdentidad ? 'Verificando…' : 'Verificar identidad'}
+                </Button>
+              </Stack>
+              {diagnosticoIdentidad && (
+                <Box sx={{ mx: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                  <Typography variant="subtitle2">Diagnóstico de identidad · Solo lectura</Typography>
+                  <Typography variant="body2">Cliente: {diagnosticoIdentidad.cliente_id} · Persona vinculada: {diagnosticoIdentidad.persona_id ?? 'Sin vincular'}</Typography>
+                  <Typography variant="body2">Coincidencias por documento: {diagnosticoIdentidad.coincidencias_documento} · Personas encontradas: {(diagnosticoIdentidad.persona_ids_coincidentes || []).join(', ') || 'Ninguna'}</Typography>
+                  <Typography variant="body2">Relación con usuario: {diagnosticoIdentidad.usuario_consistente === null ? 'Sin usuario' : diagnosticoIdentidad.usuario_consistente ? 'Correcta' : 'Inconsistente'}</Typography>
+                </Box>
+              )}
+              <AccionesFormulario onGuardar={handleGuardarDatosFicha} onCancelar={handleCancelarFicha} textoCancelar="Volver a la lista" />
+            </Stack>
           )}
         </Paper>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: "" })} />
