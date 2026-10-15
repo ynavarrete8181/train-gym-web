@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, Divider, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, Divider, FormControlLabel, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
@@ -65,6 +65,17 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(5);
   const [form, setForm] = useState(limpio);
+  const [fotoNueva, setFotoNueva] = useState(null);
+  const [fotoVista, setFotoVista] = useState('FRONTAL');
+  const [consentimientoFoto, setConsentimientoFoto] = useState(false);
+  const [previewFoto, setPreviewFoto] = useState('');
+  useEffect(() => {
+    if (!fotoNueva) { setPreviewFoto(''); return undefined; }
+    const url = URL.createObjectURL(fotoNueva);
+    setPreviewFoto(url);
+    return () => URL.revokeObjectURL(url);
+  }, [fotoNueva]);
+  const limpiarFoto = () => { setFotoNueva(null); setFotoVista('FRONTAL'); setConsentimientoFoto(false); };
   const [ver, setVer] = useState(null);
   const [error, setError] = useState('');
   const actual = secciones.find((s) => s.id === seccion) || secciones[0];
@@ -76,6 +87,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     setError('');
     setVista('listado');
     setVer(null);
+    limpiarFoto();
     gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion)
       .then((r) => { if (activo) setRegistros(Array.isArray(r.datos) ? r.datos : []); })
       .catch((e) => {
@@ -103,19 +115,42 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       onNotificacion?.('Completa título, fecha y al menos un dato de la valoración.', 'warning');
       return;
     }
+    if (fotoNueva && (!consentimientoFoto || !['image/jpeg', 'image/png', 'image/webp'].includes(fotoNueva.type) || fotoNueva.size > 5 * 1024 * 1024)) {
+      onNotificacion?.(!consentimientoFoto ? 'Confirma la autorización para registrar la fotografía.' : 'La fotografía debe ser JPG, PNG o WEBP y pesar hasta 5 MB.', 'warning');
+      return;
+    }
     setGuardando(true);
     try {
-      await gimnasioServicio.crearValoracionDeportista(deportistaId, {
+      const creado = await gimnasioServicio.crearValoracionDeportista(deportistaId, {
         seccion, titulo: form.titulo.trim(), fecha_registro: form.fecha_registro,
         fecha_inicio: form.fecha_inicio || null, fecha_fin: form.fecha_fin || null,
         proximo_control: form.proximo_control || null, datos: form.datos,
       });
+      const nuevoId = creado?.datos?.id;
+      if (fotoNueva) {
+        try {
+          if (!nuevoId) throw new Error('La API no devolvió el identificador de la evaluación.');
+          await gimnasioServicio.subirFotoValoracion(
+            deportistaId, fotoNueva, nuevoId, fotoVista, form.fecha_registro, consentimientoFoto,
+          );
+        } catch (fotoError) {
+          const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
+          const items = Array.isArray(res.datos) ? res.datos : [];
+          setRegistros(items);
+          setVer(items.find((item) => Number(item.id) === Number(nuevoId)) || null);
+          setVista('detalle');
+          limpiarFoto();
+          onNotificacion?.('Evaluación guardada, pero no se pudo subir la foto. Abre el detalle y vuelve a intentarlo.', 'warning');
+          return;
+        }
+      }
       const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
       setRegistros(Array.isArray(res.datos) ? res.datos : []);
       setForm(limpio());
+      limpiarFoto();
       setVista('listado');
       setVer(null);
-      onNotificacion?.('Valoración registrada correctamente.', 'success');
+      onNotificacion?.(fotoNueva ? 'Evaluación y fotografía registradas correctamente.' : 'Valoración registrada correctamente.', 'success');
     } catch (e) {
       const errores = e.response?.data?.errors;
       const mensaje = errores ? Object.values(errores).flat()[0] : e.response?.data?.mensaje || 'No se pudo guardar el registro.';
@@ -138,7 +173,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         {secciones.map((s) => {
           const Icono = s.icono;
           const seleccionado = s.id === seccion;
-          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); }}
+          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); limpiarFoto(); }}
             sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
               fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
               color: seleccionado ? 'primary.main' : 'text.primary',
@@ -154,7 +189,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <Box>
             <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Nuevo registro · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
           </Box>
-          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); }} /></Box>
+          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); limpiarFoto(); }} /></Box>
         </Stack>}
         {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
@@ -210,6 +245,28 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             })}
 
           </Box>
+          {seccion === 'evaluacion' && <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 800, mb: 1 }}>Fotografía de esta evaluación (opcional)</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 1.5 }}>
+              <Button component="label" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />} sx={{ justifyContent: 'flex-start' }}>
+                {fotoNueva?.name || 'Seleccionar fotografía'}
+                <input hidden type="file" accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => setFotoNueva(e.target.files?.[0] || null)} />
+              </Button>
+              <TextField select size="small" label="Vista" value={fotoVista}
+                onChange={(e) => setFotoVista(e.target.value)} sx={dbanuStyles.field}>
+                {['FRONTAL','LATERAL','POSTERIOR','OTRA'].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+              </TextField>
+            </Box>
+            {previewFoto && <Box component="img" src={previewFoto} alt="Vista previa de la fotografía seleccionada"
+              sx={{ mt: 1.5, width: 180, height: 150, objectFit: 'contain', border: 1, borderColor: 'divider', borderRadius: 1 }} />}
+            {fotoNueva && <FormControlLabel sx={{ mt: 1 }} control={<Checkbox size="small"
+              checked={consentimientoFoto} onChange={(e) => setConsentimientoFoto(e.target.checked)} />}
+              label={<Typography variant="body2">Confirmo que el deportista autorizó el uso de esta foto para seguimiento deportivo.</Typography>} />}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              JPG, PNG o WEBP, hasta 5 MB. Al guardar se registrarán primero los datos y luego la fotografía.
+            </Typography>
+          </Box>}
           <Divider sx={{ my: 2 }} />
           <Stack direction="row" sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 0, justifyContent: 'flex-end' }}>
             <BotonGuardar guardando={guardando} onClick={guardar} />
@@ -224,7 +281,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             total={filtrados.length}
             busqueda={busqueda}
             onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
-            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
+            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); limpiarFoto(); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
 
           />
           <TablaGestion total={registros.length} filtrados={filtrados.length} page={pagina} rowsPerPage={porPagina}
