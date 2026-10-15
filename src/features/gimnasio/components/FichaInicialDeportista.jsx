@@ -248,12 +248,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                       <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
-                  {seccion === 'evaluacion' && <Tooltip title="Añadir foto a esta evaluación">
-                    <IconButton sx={dbanuStyles.actionView} aria-label="Añadir foto"
-                      onClick={() => { setVer(registro); setVista('detalle'); }}>
-                      <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>}
+                  {seccion === 'evaluacion' && <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />}
+                    sx={{ ml: 0.75, whiteSpace: 'nowrap' }}
+                    onClick={() => { setVer(registro); setVista('detalle'); }}>
+                    Añadir foto
+                  </Button>}
                 </TableCell>
               </TableRow>)}
               {!paginaRegistros.length && !cargando && <TableRow><TableCell colSpan={5} align="center">No se encontraron registros.</TableCell></TableRow>}
