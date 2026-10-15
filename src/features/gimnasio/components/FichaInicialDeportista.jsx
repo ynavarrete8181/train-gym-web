@@ -192,6 +192,9 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); limpiarFoto(); }} /></Box>
         </Stack>}
         {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: seccion === 'evaluacion' ? 'minmax(0,1fr) 266px' : '1fr' }, gap: 2, alignItems: 'start' }}>
+          <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ fontWeight: 800, fontSize: 13, mb: 1.75 }}>{seccion === 'evaluacion' ? 'Datos y mediciones físicas' : 'Información del registro'}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
             <CampoFecha etiqueta="Fecha del registro" obligatorio valor={form.fecha_registro} onChange={(valor) => cambiar('fecha_registro', valor)} />
@@ -245,28 +248,44 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             })}
 
           </Box>
-          {seccion === 'evaluacion' && <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 800, mb: 1 }}>Fotografía de esta evaluación (opcional)</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 1.5 }}>
-              <Button component="label" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />} sx={{ justifyContent: 'flex-start' }}>
-                {fotoNueva?.name || 'Seleccionar fotografía'}
+          </Box>
+          {seccion === 'evaluacion' && <Box sx={{ p: 1.75, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', minWidth: 0 }}>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+              <AddPhotoAlternateOutlinedIcon sx={{ color: 'primary.main', fontSize: 19 }} />
+              <Typography sx={{ fontSize: 13, fontWeight: 850 }}>Fotografía de evolución</Typography>
+            </Stack>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Opcional · Se asociará a esta evaluación física.
+            </Typography>
+            <Box sx={{ border: '1px dashed', borderColor: 'divider', borderRadius: 1, p: 1.25, textAlign: 'center', bgcolor: 'action.hover' }}>
+              {previewFoto ? <Box component="img" src={previewFoto} alt="Vista previa de la fotografía seleccionada"
+                sx={{ display: 'block', width: '100%', height: 180, objectFit: 'contain', borderRadius: 0.5, mb: 1.25 }} />
+                : <Box sx={{ minHeight: 148, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                    <AddPhotoAlternateOutlinedIcon sx={{ fontSize: 38, color: 'text.disabled' }} />
+                    <Typography variant="body2" color="text.secondary">Sin fotografía seleccionada</Typography>
+                  </Box>}
+              <Button component="label" variant="outlined" size="small" fullWidth startIcon={<AddPhotoAlternateOutlinedIcon />}>
+                {fotoNueva ? 'Cambiar fotografía' : 'Seleccionar fotografía'}
                 <input hidden type="file" accept="image/jpeg,image/png,image/webp"
                   onChange={(e) => setFotoNueva(e.target.files?.[0] || null)} />
               </Button>
-              <TextField select size="small" label="Vista" value={fotoVista}
-                onChange={(e) => setFotoVista(e.target.value)} sx={dbanuStyles.field}>
-                {['FRONTAL','LATERAL','POSTERIOR','OTRA'].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
-              </TextField>
+              {fotoNueva && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75, overflowWrap: 'anywhere' }}>{fotoNueva.name}</Typography>}
             </Box>
-            {previewFoto && <Box component="img" src={previewFoto} alt="Vista previa de la fotografía seleccionada"
-              sx={{ mt: 1.5, width: 180, height: 150, objectFit: 'contain', border: 1, borderColor: 'divider', borderRadius: 1 }} />}
-            {fotoNueva && <FormControlLabel sx={{ mt: 1 }} control={<Checkbox size="small"
-              checked={consentimientoFoto} onChange={(e) => setConsentimientoFoto(e.target.checked)} />}
-              label={<Typography variant="body2">Confirmo que el deportista autorizó el uso de esta foto para seguimiento deportivo.</Typography>} />}
+            <TextField select fullWidth size="small" label="Orientación" value={fotoVista} onChange={(e) => setFotoVista(e.target.value)}
+              sx={{ ...dbanuStyles.field, mt: 1.5 }}>
+              <MenuItem value="FRONTAL">Frontal</MenuItem>
+              <MenuItem value="LATERAL">Lateral</MenuItem>
+              <MenuItem value="POSTERIOR">Posterior</MenuItem>
+              <MenuItem value="OTRA">Otra</MenuItem>
+            </TextField>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              JPG, PNG o WEBP, hasta 5 MB. Al guardar se registrarán primero los datos y luego la fotografía.
+              JPG, PNG o WEBP · Máximo 5 MB
             </Typography>
+            {fotoNueva && <FormControlLabel sx={{ mt: 1, mx: 0, alignItems: 'flex-start' }}
+              control={<Checkbox size="small" sx={{ pt: 0.25 }} checked={consentimientoFoto} onChange={(e) => setConsentimientoFoto(e.target.checked)} />}
+              label={<Typography variant="caption">Confirmo la autorización del deportista para registrar esta imagen.</Typography>} />}
           </Box>}
+          </Box>
           <Divider sx={{ my: 2 }} />
           <Stack direction="row" sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 0, justifyContent: 'flex-end' }}>
             <BotonGuardar guardando={guardando} onClick={guardar} />
