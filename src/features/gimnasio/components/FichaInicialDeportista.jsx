@@ -19,22 +19,37 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 
 const secciones = [
   { id: 'antecedentes', titulo: 'Antecedentes de salud', icono: HealthAndSafetyOutlinedIcon, campos: [['descripcion', 'Descripción', true], ['tipo', 'Tipo de antecedente'], ['restricciones', 'Restricciones o precauciones', true], ['observaciones', 'Observaciones', true]] },
-  { id: 'evaluacion', titulo: 'Evaluación física', icono: MonitorHeartOutlinedIcon, campos: [['peso_kg', 'Peso (kg)'], ['talla_cm', 'Estatura (cm)'], ['cintura_cm', 'Cintura (cm)'], ['grasa_corporal_pct', 'Grasa corporal (%)'], ['movilidad', 'Movilidad y pruebas funcionales', true], ['observaciones', 'Observaciones', true]] },
+  { id: 'evaluacion', titulo: 'Evaluación física', icono: MonitorHeartOutlinedIcon, campos: [['peso_kg', 'Peso (kg)'], ['talla_cm', 'Estatura (cm)'], ['cintura_cm', 'Cintura (cm)'], ['grasa_corporal_pct', 'Grasa corporal (%)'], ['actividad_fisica', 'Nivel de actividad'], ['patologia', 'Patología o condición de salud'], ['movilidad', 'Movilidad y observaciones funcionales', true], ['observaciones', 'Observaciones', true]] },
   { id: 'objetivos', titulo: 'Objetivos deportivos', icono: FlagOutlinedIcon, campos: [['objetivo', 'Objetivo', true], ['indicador', 'Indicador de evaluación'], ['valor_inicial', 'Valor inicial'], ['valor_meta', 'Meta esperada'], ['observaciones', 'Observaciones', true]] },
   { id: 'valoracion', titulo: 'Valoración profesional', icono: AssignmentTurnedInOutlinedIcon, campos: [['conclusiones', 'Conclusiones', true], ['recomendaciones', 'Recomendaciones', true], ['observaciones', 'Observaciones', true]] },
 ];
 const TIPOS_ANTECEDENTES = [{ value: 'LESION', label: 'Lesión' }, { value: 'CONDICION', label: 'Condición de salud' }, { value: 'RESTRICCION', label: 'Restricción de actividad' }, { value: 'OTRO', label: 'Otro antecedente' }];
-const PRUEBAS = [
-  { codigo: 'FLEXIONES', nombre: 'Flexiones', unidad: 'repeticiones', sentido: 'MAYOR' },
-  { codigo: 'PLANCHA', nombre: 'Plancha abdominal', unidad: 'segundos', sentido: 'MAYOR' },
-  { codigo: 'CARRERA_2KM', nombre: 'Carrera 2 km', unidad: 'segundos', sentido: 'MENOR' },
-];
+const ACTIVIDADES = ['SEDENTARIO', 'LIGERA', 'MODERADA', 'ALTA', 'MUY_ALTA'];
 const OBJETIVOS = [
   ['FUERZA', 'Mejorar fuerza'], ['RESISTENCIA', 'Mejorar resistencia'], ['MOVILIDAD', 'Mejorar movilidad'],
   ['COMPOSICION', 'Composición corporal'], ['ADHERENCIA', 'Constancia en el entrenamiento'],
 ];
 const hoy = () => new Date().toLocaleDateString('en-CA');
 const limpio = () => ({ titulo: '', fecha_registro: hoy(), fecha_inicio: '', fecha_fin: '', proximo_control: '', datos: {} });
+const numero = (valor) => {
+  if (valor === '' || valor === null || valor === undefined) return null;
+  const n = Number(valor);
+  return Number.isFinite(n) && n > 0 ? n : null;
+};
+const indicadores = (datos = {}) => {
+  const peso = numero(datos.peso_kg);
+  const altura = numero(datos.talla_cm);
+  const cintura = numero(datos.cintura_cm);
+  const grasa = numero(datos.grasa_corporal_pct);
+  const validoGrasa = grasa !== null && grasa <= 100;
+  return {
+    imc: peso && altura ? peso / ((altura / 100) ** 2) : null,
+    cinturaAltura: cintura && altura ? cintura / altura : null,
+    grasa: validoGrasa ? grasa : null,
+    magra: peso && validoGrasa ? peso * (1 - grasa / 100) : null,
+  };
+};
+const mostrarIndicador = (valor, unidad = '') => valor === null ? '—' : `${valor.toFixed(2)}${unidad ? ` ${unidad}` : ''}`;
 const mostrarFecha = (fecha) => fecha ? String(fecha).substring(0, 10).split('-').reverse().join('/') : '—';
 
 const CampoFecha = ({ etiqueta, valor, onChange, obligatorio = false }) => (
@@ -217,23 +232,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                 </>}
               </>
             )}
-            {seccion === 'evaluacion' && <>
-              <TextField select size="small" label="Prueba física estandarizada" value={form.datos.prueba_codigo || ''}
-                onChange={(e) => {
-                  const prueba = PRUEBAS.find((item) => item.codigo === e.target.value);
-                  setForm((prev) => ({ ...prev, datos: { ...prev.datos, prueba_codigo: prueba?.codigo || '',
-                    prueba_unidad: prueba?.unidad || '', prueba_valor: '', prueba_protocolo: '' } }));
-                }} sx={dbanuStyles.field}>
-                <MenuItem value="">Sin prueba adicional</MenuItem>
-                {PRUEBAS.map((prueba) => <MenuItem key={prueba.codigo} value={prueba.codigo}>{prueba.nombre} · {prueba.unidad}</MenuItem>)}
-              </TextField>
-              {form.datos.prueba_codigo && <TextField size="small" type="number" label={`Resultado (${form.datos.prueba_unidad})`}
-                value={form.datos.prueba_valor ?? ''} onChange={(e) => setForm((prev) => ({ ...prev,
-                  datos: { ...prev.datos, prueba_valor: e.target.value } }))} sx={dbanuStyles.field} />}
-              {form.datos.prueba_codigo && <TextField size="small" label="Protocolo o condiciones de medición"
-                value={form.datos.prueba_protocolo || ''} onChange={(e) => setForm((prev) => ({ ...prev,
-                  datos: { ...prev.datos, prueba_protocolo: e.target.value } }))} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />}
-            </>}
+            {seccion === 'evaluacion' && <Box sx={{ gridColumn: '1 / -1' }}>
+              <Typography variant="body2" color="text.secondary">
+                Registra la composición corporal inicial. Las pruebas de fuerza, resistencia y 1RM se realizarán en el módulo del entrenador.
+              </Typography>
+            </Box>}
             {seccion === 'objetivos' && <>
               <TextField select size="small" label="Categoría del objetivo" value={form.datos.objetivo_codigo || ''}
                 onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, objetivo_codigo: e.target.value } }))}
@@ -253,15 +256,36 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                 <MenuItem value="">Seleccionar</MenuItem>
                 {TIPOS_ANTECEDENTES.map((tipo) => <MenuItem key={tipo.value} value={tipo.value}>{tipo.label}</MenuItem>)}
               </TextField>;
+              if (seccion === 'evaluacion' && campo === 'actividad_fisica') return <TextField key={campo} select size="small" label={etiqueta}
+                value={form.datos[campo] ?? ''} onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, [campo]: e.target.value } }))} sx={dbanuStyles.field}>
+                <MenuItem value="">Sin especificar</MenuItem>
+                {ACTIVIDADES.map((nivel) => <MenuItem key={nivel} value={nivel}>{nivel.replace('_', ' ').toLowerCase()}</MenuItem>)}
+              </TextField>;
               return <TextField key={campo} size="small" label={etiqueta} fullWidth
                 type={seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? 'number' : 'text'}
                 multiline={Boolean(multilinea)} minRows={multilinea ? 2 : undefined}
+                inputProps={seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? { min: 0, max: campo === 'grasa_corporal_pct' ? 100 : undefined, step: 'any' } : undefined}
                 value={form.datos[campo] ?? ''}
                 onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, [campo]: e.target.value } }))}
                 sx={{ ...dbanuStyles.field, gridColumn: multilinea ? '1 / -1' : 'auto' }} />;
             })}
 
           </Box>
+          {seccion === 'evaluacion' && <Box sx={{ mt: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 800, mb: 1.5 }}>Indicadores de composición corporal · vista previa</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,minmax(0,1fr))' }, gap: 1 }}>
+              {[
+                ['IMC', indicadores(form.datos).imc, 'kg/m²'],
+                ['Índice cintura/altura', indicadores(form.datos).cinturaAltura, ''],
+                ['Grasa corporal', indicadores(form.datos).grasa, '%'],
+                ['Masa corporal magra', indicadores(form.datos).magra, 'kg'],
+              ].map(([etiqueta, valor, unidad]) => <Box key={etiqueta} sx={{ p: 1.25, bgcolor: 'action.hover', borderRadius: 1, minWidth: 0 }}>
+                <Typography variant="caption" color="text.secondary">{etiqueta}</Typography>
+                <Typography sx={{ fontWeight: 800, fontSize: 17 }}>{mostrarIndicador(valor, unidad)}</Typography>
+              </Box>)}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Cálculos orientativos a partir de las mediciones ingresadas. No sustituyen una valoración profesional.</Typography>
+          </Box>}
           </Box>
           {seccion === 'evaluacion' && <Box sx={{ p: 1.75, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', minWidth: 0 }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
@@ -352,6 +376,17 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         {vista === 'detalle' && ver && <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
           <Typography fontWeight={800} sx={{ mb: 1 }}>{ver.titulo} · {mostrarFecha(ver.fecha_registro)}</Typography>
           {actual.campos.map(([campo, etiqueta]) => ver.datos?.[campo] !== undefined && ver.datos?.[campo] !== '' ? <Typography key={campo} variant="body2" sx={{ mb: 0.5 }}><strong>{etiqueta}:</strong> {ver.datos[campo]}</Typography> : null)}
+          {seccion === 'evaluacion' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,minmax(0,1fr))' }, gap: 1, my: 1.5 }}>
+            {[
+              ['IMC', indicadores(ver.datos).imc, 'kg/m²'],
+              ['Cintura/altura', indicadores(ver.datos).cinturaAltura, ''],
+              ['Grasa corporal', indicadores(ver.datos).grasa, '%'],
+              ['Masa magra', indicadores(ver.datos).magra, 'kg'],
+            ].map(([etiqueta, valor, unidad]) => <Box key={etiqueta} sx={{ bgcolor: 'action.hover', p: 1.25, borderRadius: 1 }}>
+              <Typography variant="caption" color="text.secondary">{etiqueta}</Typography>
+              <Typography fontWeight={800}>{mostrarIndicador(valor, unidad)}</Typography>
+            </Box>)}
+          </Box>}
           <Typography variant="caption" color="text.secondary">Registrado por usuario #{ver.registrado_por}</Typography>
           {seccion === "evaluacion" && <FotosEvaluacionDeportista deportistaId={deportistaId} registro={ver} onNotificacion={onNotificacion} />}
         </Box>}
