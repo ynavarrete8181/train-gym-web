@@ -6,7 +6,7 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { apiClient } from '../../../services/apiClient.js';
 
-function FotoPrivada({ deportistaId, foto }) {
+export function FotoPrivada({ deportistaId, foto }) {
   const [url, setUrl] = useState('');
   useEffect(() => {
     let valido = true;
@@ -66,5 +66,25 @@ export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificaci
     <Stack direction="row" sx={{ ...dbanuStyles.formActions, justifyContent: 'flex-end', px: 0, pb: 0, mt: 1 }}>
       <BotonGuardar texto="Guardar fotografía" guardando={guardando} onClick={guardar} />
     </Stack>
+  </Box>;
+}
+
+export function GaleriaProgresoDeportista({ deportistaId, onNotificacion }) {
+  const [fotos, setFotos] = useState([]);
+  useEffect(() => {
+    let activo = true;
+    gimnasioServicio.obtenerFotosValoracion(deportistaId)
+      .then((respuesta) => { if (activo) setFotos(respuesta.datos || []); })
+      .catch(() => { if (activo) onNotificacion?.('No se pudieron consultar las fotografías.', 'error'); });
+    return () => { activo = false; };
+  }, [deportistaId]);
+  return <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
+    <Typography fontWeight={800} sx={{ mb: 0.5 }}>Evolución fotográfica</Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      Fotografías vinculadas a las evaluaciones físicas. Para añadir nuevas imágenes, utiliza Ficha inicial → Evaluación física → Ver detalle.
+    </Typography>
+    {fotos.length ? <Stack direction="row" gap={2} flexWrap="wrap">
+      {fotos.map((foto) => <FotoPrivada key={foto.id} deportistaId={deportistaId} foto={foto} />)}
+    </Stack> : <Typography variant="body2" color="text.secondary">No hay fotografías de evolución registradas.</Typography>}
   </Box>;
 }
