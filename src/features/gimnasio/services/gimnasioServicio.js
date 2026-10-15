@@ -189,6 +189,19 @@ export const gimnasioServicio = {
     return data;
   },
 
+  obtenerFotosValoracion: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/fotos-valoracion`);
+    return data;
+  },
+  subirFotoValoracion: async (id, archivo, registroId, vista, fecha) => {
+    const datos = new FormData();
+    datos.append('foto', archivo);
+    datos.append('valoracion_registro_id', String(registroId));
+    datos.append('vista', vista);
+    datos.append('fecha_fotografia', fecha);
+    const { data } = await api.post(`/base/gimnasio/clientes/${id}/fotos-valoracion`, datos);
+    return data;
+  },
   obtenerInformeProgreso: async (id) => {
     const { data } = await api.get(`/base/gimnasio/clientes/${id}/progreso-informe`);
     return data;
