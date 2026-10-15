@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, Checkbox, FormControlLabel, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
@@ -31,6 +31,14 @@ export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificaci
   const [vista, setVista] = useState('FRONTAL');
   const [fecha, setFecha] = useState(String(registro.fecha_registro).slice(0, 10));
   const [guardando, setGuardando] = useState(false);
+  const [consentimiento, setConsentimiento] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState('');
+  useEffect(() => {
+    if (!archivo) { setVistaPrevia(''); return undefined; }
+    const url = URL.createObjectURL(archivo);
+    setVistaPrevia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [archivo]);
   const cargar = async () => {
     const r = await gimnasioServicio.obtenerFotosValoracion(deportistaId);
     setFotos((r.datos || []).filter((f) => Number(f.valoracion_registro_id) === Number(registro.id)));
@@ -38,11 +46,15 @@ export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificaci
   useEffect(() => { cargar().catch(() => onNotificacion?.('No se pudieron consultar las fotografías.', 'error')); }, [deportistaId, registro.id]);
   const guardar = async () => {
     if (!archivo || !fecha) return onNotificacion?.('Selecciona una fotografía y la fecha.', 'warning');
+    if (!consentimiento) return onNotificacion?.('Confirma que cuentas con autorización del deportista para registrar esta fotografía.', 'warning');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(archivo.type) || archivo.size > 5 * 1024 * 1024)
+      return onNotificacion?.('Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.', 'warning');
     setGuardando(true);
     try {
-      await gimnasioServicio.subirFotoValoracion(deportistaId, archivo, registro.id, vista, fecha);
+      await gimnasioServicio.subirFotoValoracion(deportistaId, archivo, registro.id, vista, fecha, consentimiento);
       await cargar();
       setArchivo(null);
+      setConsentimiento(false);
       onNotificacion?.('Fotografía registrada correctamente.', 'success');
     } catch (error) {
       const mensaje = Object.values(error.response?.data?.errors || {})[0]?.[0] || error.response?.data?.mensaje || 'No se pudo guardar la fotografía.';
@@ -62,7 +74,9 @@ export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificaci
       </TextField>
       <TextField type="date" size="small" value={fecha} onChange={(e) => setFecha(e.target.value)} inputProps={{ 'aria-label': 'Fecha de la fotografía' }} sx={dbanuStyles.field} />
     </Box>
-    <Typography variant="caption" color="text.secondary">JPG, PNG o WEBP. Máximo 5 MB. Las imágenes requieren consentimiento informado y almacenamiento privado persistente.</Typography>
+    {vistaPrevia && <Box component="img" src={vistaPrevia} alt="Vista previa de la fotografía seleccionada" sx={{ mt: 1.5, width: 180, height: 150, borderRadius: 1, border: 1, borderColor: 'divider', objectFit: 'contain' }} />}
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>JPG, PNG o WEBP. Máximo 5 MB. Almacenamiento privado.</Typography>
+    <FormControlLabel sx={{ mt: 1 }} control={<Checkbox size="small" checked={consentimiento} onChange={(e) => setConsentimiento(e.target.checked)} />} label={<Typography variant="body2">Confirmo que el deportista autorizó el registro de esta fotografía para seguimiento deportivo.</Typography>} />
     <Stack direction="row" sx={{ ...dbanuStyles.formActions, justifyContent: 'flex-end', px: 0, pb: 0, mt: 1 }}>
       <BotonGuardar texto="Guardar fotografía" guardando={guardando} onClick={guardar} />
     </Stack>
