@@ -2293,7 +2293,7 @@ export function DeportistasPage() {
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
             {renderCamposDatos()}
           </Box>
-          <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelar} />
+          <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelar} guardando={guardandoCliente} />
         </Paper>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: "" })} />
       </Box>
