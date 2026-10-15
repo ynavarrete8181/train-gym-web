@@ -7,6 +7,7 @@ import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { FotosEvaluacionDeportista } from './FotosEvaluacionDeportista.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -198,6 +199,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <Typography fontWeight={800} sx={{ mb: 1 }}>{ver.titulo} · {mostrarFecha(ver.fecha_registro)}</Typography>
           {actual.campos.map(([campo, etiqueta]) => ver.datos?.[campo] !== undefined && ver.datos?.[campo] !== '' ? <Typography key={campo} variant="body2" sx={{ mb: 0.5 }}><strong>{etiqueta}:</strong> {ver.datos[campo]}</Typography> : null)}
           <Typography variant="caption" color="text.secondary">Registrado por usuario #{ver.registrado_por}</Typography>
+          {seccion === "evaluacion" && <FotosEvaluacionDeportista deportistaId={deportistaId} registro={ver} onNotificacion={onNotificacion} />}
         </Box>}
       </Paper>
     </Box>
