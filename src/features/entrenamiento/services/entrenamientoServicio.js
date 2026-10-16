@@ -1,6 +1,14 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const entrenamientoServicio = {
+  obtenerDeportistasEvaluaciones: async () => {
+    const { data } = await api.get('/base/entrenamiento/evaluaciones-fisicas/deportistas');
+    return data;
+  },
+  actualizarPruebaRendimiento: async (id, registro, payload) => {
+    const { data } = await api.put(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento/${registro}`, payload);
+    return data;
+  },
   obtenerPruebasRendimiento: async (id) => {
     const { data } = await api.get(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento`);
     return data;
