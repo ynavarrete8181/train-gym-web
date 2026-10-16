@@ -8,13 +8,14 @@ import { NotificacionSnackbar } from '../../../components/common/NotificacionSna
 export function EvaluacionesFisicasPage() {
   const [deportistas, setDeportistas] = useState([]);
   const [deportistaId, setDeportistaId] = useState('');
+  const [permisos, setPermisos] = useState({ crear: false, editar: false, anular: false });
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(true);
   const [aviso, setAviso] = useState(null);
   useEffect(() => {
     let activo = true;
     entrenamientoServicio.obtenerDeportistasEvaluaciones()
-      .then((r) => { if (activo) setDeportistas(Array.isArray(r.datos) ? r.datos : []); })
+      .then((r) => { if (activo) { setDeportistas(Array.isArray(r.datos?.deportistas) ? r.datos.deportistas : []); setPermisos(r.datos?.permisos || {}); } })
       .catch((e) => { if (activo) setError(e.response?.data?.mensaje || 'No se pudieron cargar los deportistas autorizados.'); })
       .finally(() => { if (activo) setCargando(false); });
     return () => { activo = false; };
@@ -33,7 +34,7 @@ export function EvaluacionesFisicasPage() {
       </Stack>
       {!cargando && !deportistas.length && !error && <Typography color="text.secondary" fontSize={12}>No hay deportistas disponibles para tu usuario.</Typography>}
     </Paper>
-    {deportistaId && <PruebasRendimientoDeportista key={deportistaId} deportistaId={deportistaId}
+    {deportistaId && <PruebasRendimientoDeportista key={deportistaId} deportistaId={deportistaId} permisos={permisos}
       onNotificacion={(mensaje, tipo) => setAviso({ mensaje, tipo })} />}
     <NotificacionSnackbar mensaje={aviso?.mensaje} tipo={aviso?.tipo || 'info'} onClose={() => setAviso(null)} />
   </Box>;
