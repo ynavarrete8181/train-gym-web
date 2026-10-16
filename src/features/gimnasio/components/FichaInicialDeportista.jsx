@@ -137,7 +137,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const paginaRegistros = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
   const cambiar = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
   const guardar = async () => {
-    if (!form.titulo.trim() || !form.fecha_registro || !actual.campos.some(([campo]) => String(form.datos[campo] ?? '').trim())) {
+    if (!form.titulo.trim() || (!['antecedentes', 'objetivos'].includes(seccion) && !form.fecha_registro) || !actual.campos.some(([campo]) => String(form.datos[campo] ?? '').trim())) {
       onNotificacion?.('Completa título, fecha y al menos un dato de la valoración.', 'warning');
       return;
     }
@@ -148,8 +148,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     setGuardando(true);
     try {
       const creado = await gimnasioServicio.crearValoracionDeportista(deportistaId, {
-        seccion, titulo: form.titulo.trim(), fecha_registro: form.fecha_registro,
-        fecha_inicio: form.fecha_inicio || null, fecha_fin: form.fecha_fin || null,
+        seccion, titulo: form.titulo.trim(), fecha_registro: ['antecedentes', 'objetivos'].includes(seccion) ? undefined : form.fecha_registro,
+        fecha_inicio: seccion === 'objetivos' ? null : form.fecha_inicio || null, fecha_fin: seccion === 'objetivos' ? null : form.fecha_fin || null,
         proximo_control: form.proximo_control || null, datos: form.datos,
       });
       const nuevoId = creado?.datos?.id;
@@ -223,24 +223,23 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <Typography sx={{ fontWeight: 800, fontSize: 13, mb: 1.75 }}>{seccion === 'evaluacion' ? 'Datos y mediciones físicas' : 'Información del registro'}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
-            {seccion === 'antecedentes' ? (
+            {['antecedentes', 'objetivos'].includes(seccion) ? (
               <>
                 <Box sx={{ gridColumn: '1 / -1' }}>
                   <Typography variant="caption" color="text.secondary">
-                    La fecha de registro se asigna automáticamente al guardar. Indica las fechas de la condición solo si las conoces.
+                    {seccion === 'objetivos' ? 'La fecha de registro se asigna automáticamente al guardar.' : 'La fecha de registro se asigna automáticamente al guardar. Indica las fechas de la condición solo si las conoces.'}
                   </Typography>
                 </Box>
-                <CampoFecha etiqueta="Fecha de inicio (opcional)" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
-                <CampoFecha etiqueta="Fecha de finalización (opcional)" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
+                {seccion === 'antecedentes' ? <>
+                  <CampoFecha etiqueta="Fecha de inicio (opcional)" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
+                  <CampoFecha etiqueta="Fecha de finalización (opcional)" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
+                </> : <CampoFecha etiqueta="Próxima revisión (opcional)" valor={form.proximo_control} onChange={(valor) => cambiar('proximo_control', valor)} />}
               </>
             ) : (
               <>
                 <CampoFecha etiqueta="Fecha del registro" obligatorio valor={form.fecha_registro} onChange={(valor) => cambiar('fecha_registro', valor)} />
                 <CampoFecha etiqueta="Próximo control" valor={form.proximo_control} onChange={(valor) => cambiar('proximo_control', valor)} />
-                {seccion === 'objetivos' && <>
-                  <CampoFecha etiqueta="Fecha de inicio" valor={form.fecha_inicio} onChange={(valor) => cambiar('fecha_inicio', valor)} />
-                  <CampoFecha etiqueta="Fecha de finalización" valor={form.fecha_fin} onChange={(valor) => cambiar('fecha_fin', valor)} />
-                </>}
+
               </>
             )}
             {seccion === 'evaluacion' && <Box sx={{ gridColumn: '1 / -1' }}>
