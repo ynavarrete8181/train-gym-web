@@ -87,6 +87,8 @@ const CampoFecha = ({ etiqueta, valor, onChange, obligatorio = false }) => (
 export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [seccion, setSeccion] = useState('antecedentes');
   const [registros, setRegistros] = useState([]);
+  const [controles, setControles] = useState([]);
+  const [controlEnCurso, setControlEnCurso] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [vista, setVista] = useState('listado');
@@ -119,8 +121,15 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     setVista('listado');
     setVer(null);
     limpiarFoto();
-    gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion)
-      .then((r) => { if (activo) setRegistros(Array.isArray(r.datos) ? r.datos : []); })
+    Promise.all([
+      gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion),
+      gimnasioServicio.obtenerControlesDeportista(deportistaId),
+    ])
+      .then(([r, c]) => {
+        if (!activo) return;
+        setRegistros(Array.isArray(r.datos) ? r.datos : []);
+        setControles(Array.isArray(c.datos) ? c.datos : []);
+      })
       .catch((e) => {
         if (!activo) return;
         const mensaje = e.response?.status === 500
@@ -150,7 +159,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       proximo_control: String(registro.proximo_control || '').substring(0, 10),
       datos: { ...(registro.datos || {}) },
     });
-    limpiarFoto(); setVista('editar');
+    setControlEnCurso(null); limpiarFoto(); setVista('editar');
   };
   const confirmarEliminacion = async () => {
     if (!eliminarRegistro || guardando) return;
@@ -159,11 +168,28 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       await gimnasioServicio.anularValoracionDeportista(deportistaId, eliminarRegistro.id);
       const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
       setRegistros(Array.isArray(res.datos) ? res.datos : []);
+      setControles((prev) => prev.map((c) => c.registro_origen_id === eliminarRegistro.id && c.estado === 'PROGRAMADO' ? { ...c, estado: 'CANCELADO' } : c));
       setVista('listado'); setVer(null); setEliminarRegistro(null);
       onNotificacion?.('Registro anulado correctamente. Su historial se conserva.', 'success');
     } catch (e) {
       onNotificacion?.(e.response?.data?.mensaje || 'No se pudo anular el registro.', 'error');
     } finally { setGuardando(false); }
+  };
+  const iniciarRevision = (control) => {
+    setSeccion(control.seccion);
+    setForm({ ...limpio(), titulo: `Seguimiento · ${control.titulo}` });
+    setEditandoId(null);
+    setControlEnCurso(control);
+    limpiarFoto();
+    setVista('nuevo');
+  };
+  const refrescarHistorial = async () => {
+    const [r, c] = await Promise.all([
+      gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion),
+      gimnasioServicio.obtenerControlesDeportista(deportistaId),
+    ]);
+    setRegistros(Array.isArray(r.datos) ? r.datos : []);
+    setControles(Array.isArray(c.datos) ? c.datos : []);
   };
   const guardar = async () => {
     if (!form.titulo.trim() || (!['antecedentes', 'objetivos'].includes(seccion) && !form.fecha_registro) || !actual.campos.some(([campo]) => String(form.datos[campo] ?? '').trim())) {
@@ -180,6 +206,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         seccion, titulo: form.titulo.trim(), fecha_registro: ['antecedentes', 'objetivos'].includes(seccion) ? undefined : form.fecha_registro,
         fecha_inicio: seccion === 'objetivos' ? null : form.fecha_inicio || null, fecha_fin: seccion === 'objetivos' ? null : form.fecha_fin || null,
         proximo_control: form.proximo_control || null, datos: form.datos,
+        ...(!editandoId && controlEnCurso ? { control_id: controlEnCurso.id } : {}),
       };
       const creado = editandoId
         ? await gimnasioServicio.actualizarValoracionDeportista(deportistaId, editandoId, payload)
@@ -202,14 +229,14 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           return;
         }
       }
-      const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
-      setRegistros(Array.isArray(res.datos) ? res.datos : []);
+      await refrescarHistorial();
+      setControlEnCurso(null);
       setForm(limpio());
       setEditandoId(null);
       limpiarFoto();
       setVista('listado');
       setVer(null);
-      onNotificacion?.(editandoId ? 'Registro actualizado correctamente.' : fotoNueva ? 'Evaluación y fotografía registradas correctamente.' : 'Valoración registrada correctamente.', 'success');
+      onNotificacion?.(controlEnCurso ? 'Revisión realizada y vinculada al control.' : editandoId ? 'Registro actualizado correctamente.' : fotoNueva ? 'Evaluación y fotografía registradas correctamente.' : 'Valoración registrada correctamente.', 'success');
     } catch (e) {
       const errores = e.response?.data?.errors;
       const mensaje = errores ? Object.values(errores).flat()[0] : e.response?.data?.mensaje || 'No se pudo guardar el registro.';
@@ -232,7 +259,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         {secciones.map((s) => {
           const Icono = s.icono;
           const seleccionado = s.id === seccion;
-          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); setEditandoId(null); limpiarFoto(); }}
+          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); setEditandoId(null); setControlEnCurso(null); limpiarFoto(); }}
             sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
               fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
               color: seleccionado ? 'primary.main' : 'text.primary',
@@ -248,11 +275,12 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <Box>
             <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Nuevo registro · ${actual.titulo}` : vista === 'editar' ? `Editar registro · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
           </Box>
-          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); setEditandoId(null); limpiarFoto(); }} /></Box>
+          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); setEditandoId(null); setControlEnCurso(null); limpiarFoto(); }} /></Box>
         </Stack>}
         {(vista === 'nuevo' || vista === 'editar') && <Box sx={{ minWidth: 0 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: seccion === 'evaluacion' ? 'minmax(0,1fr) 266px' : '1fr' }, gap: 2, alignItems: 'start' }}>
           <Box sx={{ minWidth: 0 }}>
+          {controlEnCurso && <Alert severity="info" sx={{ mb: 1.5 }}>Realizando revisión programada para {mostrarFecha(controlEnCurso.fecha_programada)}. Se guardará como una nueva valoración vinculada al control.</Alert>}
           <Typography sx={{ fontWeight: 800, fontSize: 13, mb: 1.75 }}>{seccion === 'evaluacion' ? 'Datos y mediciones físicas' : 'Información del registro'}</Typography>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
             <TextField size="small" label="Título del registro *" value={form.titulo} onChange={(e) => cambiar('titulo', e.target.value)} sx={{ ...dbanuStyles.field, gridColumn: '1 / -1' }} />
@@ -382,11 +410,26 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           {seccion === 'evaluacion' && <Alert severity="info" sx={{ mb: 1.5 }}>
             Para subir fotografías de evolución, primero guarda una evaluación física. Después utiliza «Añadir foto» en su fila.
           </Alert>}
+          {controles.some((c) => c.seccion === seccion) && <Box sx={{ mb: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 800, mb: 1 }}>Controles y revisiones</Typography>
+            <Stack spacing={1}>
+              {controles.filter((c) => c.seccion === seccion).slice(0, 8).map((control) => (
+                <Stack key={control.id} direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" gap={1} sx={{ py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
+                  <Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: 12 }}>{control.titulo}</Typography>
+                    <Typography variant="caption" color="text.secondary">Programado: {mostrarFecha(control.fecha_programada)} · {control.estado === 'REALIZADO' ? 'Realizado' : control.estado === 'CANCELADO' ? 'Cancelado' : 'Pendiente'}</Typography>
+                  </Box>
+                  {control.estado === 'PROGRAMADO' && <Button size="small" variant="outlined" onClick={() => iniciarRevision(control)} disabled={guardando}>Realizar revisión</Button>}
+                  {control.estado === 'REALIZADO' && <Chip size="small" variant="outlined" label={`Resultado #${control.registro_resultado_id}`} />}
+                </Stack>
+              ))}
+            </Stack>
+          </Box>}
           <GestionToolbar
             total={filtrados.length}
             busqueda={busqueda}
             onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
-            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setEditandoId(null); setForm(limpio()); limpiarFoto(); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
+            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setEditandoId(null); setControlEnCurso(null); setForm(limpio()); limpiarFoto(); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
 
           />
           <TablaGestion total={registros.length} filtrados={filtrados.length} page={pagina} rowsPerPage={porPagina}
