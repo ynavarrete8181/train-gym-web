@@ -2059,7 +2059,7 @@ export function DeportistasPage() {
 
   const handleGuardarRm = async () => {
     try {
-      if (!rmForm.ejercicio_id || !rmForm.peso || !rmForm.rm_estimado || !rmForm.fecha_registro) {
+      if (!rmForm.ejercicio_id || !rmForm.peso || !rmForm.fecha_registro || (rmForm.tipo_registro === 'ESTIMADO' && !rmForm.repeticiones)) {
         showNotificacion('Completa los campos obligatorios del registro RM', 'warning');
         return;
       }
@@ -2068,7 +2068,7 @@ export function DeportistasPage() {
         ...rmForm,
         cliente_id: formData.id,
         peso: Number(rmForm.peso),
-        rm_estimado: Number(rmForm.rm_estimado),
+        rm_estimado: undefined,
         repeticiones: rmForm.repeticiones ? Number(rmForm.repeticiones) : null,
       };
       if (payload.repeticiones === null) delete payload.repeticiones;
@@ -2256,8 +2256,12 @@ export function DeportistasPage() {
           </TextField>
           <TextField label="Fecha de registro" name="fecha_registro" type="date" value={rmForm.fecha_registro || ''} onChange={handleRmChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
           <TextField label="Peso" name="peso" type="number" value={rmForm.peso || ''} onChange={handleRmChange} required size="small" />
-          <TextField label="Repeticiones" name="repeticiones" type="number" value={rmForm.repeticiones || ''} onChange={handleRmChange} size="small" />
-          <TextField label="RM estimado" name="rm_estimado" type="number" value={rmForm.rm_estimado || ''} onChange={handleRmChange} required size="small" />
+          <TextField label="Repeticiones" name="repeticiones" type="number" value={rmForm.tipo_registro === 'DIRECTO' ? 1 : rmForm.repeticiones || ''} onChange={handleRmChange} size="small"
+            disabled={rmForm.tipo_registro === 'DIRECTO'} required={rmForm.tipo_registro === 'ESTIMADO'}
+            inputProps={{ min: 1, max: 10 }} helperText={rmForm.tipo_registro === 'ESTIMADO' ? '1 a 10 repeticiones · fórmula Epley' : 'Una repetición máxima real'} />
+          <TextField label={rmForm.tipo_registro === 'DIRECTO' ? '1RM medida (kg)' : '1RM estimada (kg)'} size="small"
+            value={rmForm.peso && rmForm.tipo_registro === 'DIRECTO' ? Number(rmForm.peso).toFixed(2) : rmForm.peso && Number(rmForm.repeticiones) >= 1 && Number(rmForm.repeticiones) <= 10 ? (Number(rmForm.peso) * (1 + Number(rmForm.repeticiones) / 30)).toFixed(2) : ''}
+            InputProps={{ readOnly: true }} helperText="Cálculo definitivo validado por Laravel" />
         </Box>
         <Box sx={{ mt: 1.5 }}>
           <TextField label="Observaciones" name="observaciones" value={rmForm.observaciones || ''} onChange={handleRmChange} size="small" fullWidth multiline minRows={2} />
