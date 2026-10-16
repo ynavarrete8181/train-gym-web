@@ -78,6 +78,8 @@ export function EntrenamientoCatalogo({ tipo }) {
   const [meta, setMeta] = useState({});
   const [catalogos, setCatalogos] = useState({});
   const [formData, setFormData] = useState(config.inicial);
+  const [videoArchivo, setVideoArchivo] = useState(null);
+  const [guardando, setGuardando] = useState(false);
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({});
   const [cargando, setCargando] = useState(true);
@@ -126,10 +128,12 @@ export function EntrenamientoCatalogo({ tipo }) {
 
   const handleNuevo = () => {
     setFormData(config.inicial);
+    setVideoArchivo(null);
     setVista('formulario');
   };
 
   const handleEditar = (item) => {
+    setVideoArchivo(null);
     setFormData({
       ...config.inicial,
       ...item,
@@ -148,6 +152,8 @@ export function EntrenamientoCatalogo({ tipo }) {
   };
 
   const handleGuardar = async () => {
+    if (guardando) return;
+    setGuardando(true);
     try {
       const payload = normalizar(tipo, formData);
       if (!payload) {
@@ -155,19 +161,28 @@ export function EntrenamientoCatalogo({ tipo }) {
         return;
       }
 
+      let guardado;
       if (formData.id) {
-        await entrenamientoServicio[config.actualizar](formData.id, payload);
+        guardado = await entrenamientoServicio[config.actualizar](formData.id, payload);
         showNotificacion(`${config.singular} actualizado correctamente`, 'success');
       } else {
-        await entrenamientoServicio[config.crear](payload);
+        guardado = await entrenamientoServicio[config.crear](payload);
         showNotificacion(`${config.singular} creado correctamente`, 'success');
       }
 
+      if (tipo === 'ejercicios' && videoArchivo) {
+        const idEjercicio = guardado?.datos?.id || formData.id;
+        if (idEjercicio) {
+          try { await entrenamientoServicio.subirVideoEjercicio(idEjercicio, videoArchivo); }
+          catch (error) { showNotificacion('Ejercicio guardado, pero el video no pudo subirse. Edítalo para reintentar.', 'warning'); setVideoArchivo(null); setFormData((anterior) => ({ ...anterior, id: idEjercicio })); cargar(); return; }
+        }
+      }
+      setVideoArchivo(null);
       setVista('lista');
       cargar();
     } catch (error) {
       showNotificacion(error.response?.data?.mensaje || `Error al guardar ${config.singular.toLowerCase()}`, 'error');
-    }
+    } finally { setGuardando(false); }
   };
 
   const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna), [tipo, meta, filtrosColumna]);
@@ -180,7 +195,7 @@ export function EntrenamientoCatalogo({ tipo }) {
           <Box sx={{ bgcolor: '#f6f8fc', px: 2.5, py: 2.5 }}>
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de {config.singular.toLowerCase()}</Typography>
-              <Formulario tipo={tipo} formData={formData} catalogos={catalogos} onChange={handleChange} />
+              <Formulario tipo={tipo} formData={formData} catalogos={catalogos} onChange={handleChange} videoArchivo={videoArchivo} onVideoArchivo={setVideoArchivo} />
             </Box>
           </Box>
           <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
@@ -223,7 +238,7 @@ export function EntrenamientoCatalogo({ tipo }) {
   );
 }
 
-function Formulario({ tipo, formData, catalogos, onChange }) {
+function Formulario({ tipo, formData, catalogos, onChange, videoArchivo, onVideoArchivo }) {
   const grid = { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 };
 
   if (tipo === 'ejercicios') {
@@ -233,7 +248,16 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
         <TextField label="Grupo muscular" name="grupo_muscular" value={formData.grupo_muscular || ''} onChange={onChange} required size="small" />
         <TextField label="Equipamiento" name="equipamiento" value={formData.equipamiento || ''} onChange={onChange} required size="small" />
         <TextField label="Tipo entrenamiento" name="tipo_entrenamiento" value={formData.tipo_entrenamiento || ''} onChange={onChange} size="small" />
-        <TextField label="URL recurso" name="url_recurso" value={formData.url_recurso || ''} onChange={onChange} size="small" />
+        <TextField label="URL del video (YouTube u otro enlace HTTPS)" name="url_recurso" value={formData.url_recurso || ''} onChange={onChange} size="small" sx={{ gridColumn: { md: 'span 2' } }} />
+        <Button component="label" variant="outlined" size="small" sx={{ minHeight: 40, textTransform: 'none' }}>
+          {videoArchivo ? videoArchivo.name : 'Subir video · MP4, WebM o MOV'}
+          <input type="file" hidden accept="video/mp4,video/webm,video/quicktime" onChange={(e) => onVideoArchivo(e.target.files?.[0] || null)} />
+        </Button>
+        {videoArchivo && <Typography variant="caption" sx={{ gridColumn: { md: 'span 3' } }}>Video seleccionado: {(videoArchivo.size / 1024 / 1024).toFixed(1)} MB · máximo 50 MB. Se subirá al guardar el ejercicio.</Typography>}
+        {(formData.video_url || formData.url_recurso) && <Box sx={{ gridColumn: { md: 'span 3' } }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Ejemplo del ejercicio</Typography>
+          {formData.video_url ? <Box component="video" controls preload="metadata" src={formData.video_url} sx={{ width: '100%', maxWidth: 480, borderRadius: 1 }} /> : <Button component="a" target="_blank" rel="noopener noreferrer" href={formData.url_recurso} variant="outlined" size="small">Ver video del ejercicio</Button>}
+        </Box>}
         <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
         <TextField label="Instrucciones" name="instrucciones" value={formData.instrucciones || ''} onChange={onChange} size="small" multiline minRows={3} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
       </Box>
