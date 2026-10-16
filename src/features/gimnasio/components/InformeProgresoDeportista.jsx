@@ -85,6 +85,7 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
   const datos = useMemo(() => fuente?.mediciones || [], [fuente]);
   const pruebas = fuente?.pruebas || [];
   const comparativas = fuente?.comparativas_pruebas || [];
+  const codigoActivo = comparativas.some((p) => p.codigo === pruebaElegida) ? pruebaElegida : comparativas[0]?.codigo || '';
   if (cargando && !demostracion) return <Stack direction="row" justifyContent="center" sx={{ py: 5 }}><CircularProgress size={24} /></Stack>;
   if (error && !demostracion) return <Stack spacing={2}><Alert severity="warning">{error}</Alert><Button variant="outlined" onClick={() => setDemostracion(true)}>Ver demostración con datos ficticios</Button></Stack>;
   return <Stack spacing={2}>
@@ -93,15 +94,15 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
         <Typography sx={{ fontWeight: 850, fontSize: 15 }}>Informe de progreso físico</Typography>
         <Button size="small" variant="outlined" onClick={() => setDemostracion((v) => !v)}>{demostracion ? 'Ver datos reales' : 'Ver ejemplo simulado'}</Button>
       </Stack>
-      <Typography variant="body2" color="text.secondary">Datos provenientes de las evaluaciones físicas registradas en Ficha inicial.</Typography>
+      <Typography variant="body2" color="text.secondary">Mediciones corporales de Ficha inicial y pruebas de rendimiento registradas en Entrenamiento.</Typography>
     </Box>
     {demostracion && <Alert severity="info"><strong>DEMOSTRACIÓN:</strong> todos los valores y logros son ficticios. No se guardan registros ni se envían notificaciones.</Alert>}
     <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}>
       {[
         ['Evaluaciones', String(fuente?.resumen?.evaluaciones ?? 0)],
-        ['Peso inicial', formato(informe?.resumen?.peso_inicial_kg, 'kg')],
-        ['Último peso', formato(informe?.resumen?.peso_actual_kg, 'kg')],
-        ['Variación de peso', formato(informe?.resumen?.variacion_peso_kg, 'kg')],
+        ['Peso inicial', formato(fuente?.resumen?.peso_inicial_kg, 'kg')],
+        ['Último peso', formato(fuente?.resumen?.peso_actual_kg, 'kg')],
+        ['Variación de peso', formato(fuente?.resumen?.variacion_peso_kg, 'kg')],
       ].map(([titulo, valor]) => <Paper key={titulo} elevation={0} sx={{ p: 2, flex: 1, border: 1, borderColor: 'divider', borderRadius: 1 }}>
         <Typography variant="caption" color="text.secondary">{titulo}</Typography>
         <Typography sx={{ fontWeight: 850, fontSize: 19 }}>{valor}</Typography>
@@ -115,15 +116,15 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
     </Box>
     <Paper elevation={0} sx={{ p: 2, border: 1, borderColor: 'divider', borderRadius: 1 }}>
       <Typography fontWeight={850} sx={{ mb: 1 }}>Evolución de las pruebas deportivas</Typography>
-      <TextField select size="small" label="Prueba comparable" value={pruebaElegida}
+      <TextField select size="small" label="Prueba comparable" value={codigoActivo}
         onChange={(e) => setPruebaElegida(e.target.value)} sx={{ minWidth: 230, mb: 2 }}
         disabled={!comparativas.length}>
         {comparativas.map((prueba) => <MenuItem key={prueba.codigo} value={prueba.codigo}>{prueba.nombre} · {prueba.unidad}</MenuItem>)}
       </TextField>
       {comparativas.length
-        ? <Tendencia datos={pruebas.filter((prueba) => prueba.codigo === pruebaElegida).map((prueba) => ({ ...prueba, medicion: prueba.valor }))} campo="medicion"
+        ? <Tendencia datos={pruebas.filter((prueba) => prueba.codigo === codigoActivo).map((prueba) => ({ ...prueba, medicion: prueba.valor }))} campo="medicion"
             unidad={comparativas.find((prueba) => prueba.codigo === pruebaElegida)?.unidad || ''} />
-        : <Typography variant="body2" color="text.secondary">Registra dos controles de la misma prueba para visualizar una tendencia.</Typography>}
+        : <Typography variant="body2" color="text.secondary">Registra pruebas en Entrenamiento para visualizar una tendencia. Se necesitan al menos dos registros comparables para evaluar cambios.</Typography>}
       {comparativas.filter((prueba) => prueba.mejora_verificada).map((prueba) =>
         <Alert key={prueba.codigo} severity="success" sx={{ mt: 1 }}>
           Mejora registrada en {prueba.nombre}: {formato(prueba.inicial, prueba.unidad)} → {formato(prueba.actual, prueba.unidad)}.
