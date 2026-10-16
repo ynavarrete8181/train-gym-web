@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Checkbox, Chip, Divider, FormControlLabel, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
+import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
@@ -103,6 +106,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   }, [fotoNueva]);
   const limpiarFoto = () => { setFotoNueva(null); setFotoVista('FRONTAL'); setConsentimientoFoto(false); };
   const [ver, setVer] = useState(null);
+  const [editandoId, setEditandoId] = useState(null);
+  const [eliminarRegistro, setEliminarRegistro] = useState(null);
   const [error, setError] = useState('');
   const actual = secciones.find((s) => s.id === seccion) || secciones[0];
 
@@ -136,6 +141,30 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
 
   const paginaRegistros = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
   const cambiar = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
+  const iniciarEdicion = (registro) => {
+    setEditandoId(registro.id);
+    setForm({
+      titulo: registro.titulo || '', fecha_registro: String(registro.fecha_registro || '').substring(0, 10),
+      fecha_inicio: String(registro.fecha_inicio || '').substring(0, 10),
+      fecha_fin: String(registro.fecha_fin || '').substring(0, 10),
+      proximo_control: String(registro.proximo_control || '').substring(0, 10),
+      datos: { ...(registro.datos || {}) },
+    });
+    limpiarFoto(); setVista('editar');
+  };
+  const confirmarEliminacion = async () => {
+    if (!eliminarRegistro || guardando) return;
+    setGuardando(true);
+    try {
+      await gimnasioServicio.anularValoracionDeportista(deportistaId, eliminarRegistro.id);
+      const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
+      setRegistros(Array.isArray(res.datos) ? res.datos : []);
+      setVista('listado'); setVer(null); setEliminarRegistro(null);
+      onNotificacion?.('Registro anulado correctamente. Su historial se conserva.', 'success');
+    } catch (e) {
+      onNotificacion?.(e.response?.data?.mensaje || 'No se pudo anular el registro.', 'error');
+    } finally { setGuardando(false); }
+  };
   const guardar = async () => {
     if (!form.titulo.trim() || (!['antecedentes', 'objetivos'].includes(seccion) && !form.fecha_registro) || !actual.campos.some(([campo]) => String(form.datos[campo] ?? '').trim())) {
       onNotificacion?.('Completa título, fecha y al menos un dato de la valoración.', 'warning');
@@ -147,11 +176,14 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     }
     setGuardando(true);
     try {
-      const creado = await gimnasioServicio.crearValoracionDeportista(deportistaId, {
+      const payload = {
         seccion, titulo: form.titulo.trim(), fecha_registro: ['antecedentes', 'objetivos'].includes(seccion) ? undefined : form.fecha_registro,
         fecha_inicio: seccion === 'objetivos' ? null : form.fecha_inicio || null, fecha_fin: seccion === 'objetivos' ? null : form.fecha_fin || null,
         proximo_control: form.proximo_control || null, datos: form.datos,
-      });
+      };
+      const creado = editandoId
+        ? await gimnasioServicio.actualizarValoracionDeportista(deportistaId, editandoId, payload)
+        : await gimnasioServicio.crearValoracionDeportista(deportistaId, payload);
       const nuevoId = creado?.datos?.id;
       if (fotoNueva) {
         try {
@@ -173,10 +205,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
       setRegistros(Array.isArray(res.datos) ? res.datos : []);
       setForm(limpio());
+      setEditandoId(null);
       limpiarFoto();
       setVista('listado');
       setVer(null);
-      onNotificacion?.(fotoNueva ? 'Evaluación y fotografía registradas correctamente.' : 'Valoración registrada correctamente.', 'success');
+      onNotificacion?.(editandoId ? 'Registro actualizado correctamente.' : fotoNueva ? 'Evaluación y fotografía registradas correctamente.' : 'Valoración registrada correctamente.', 'success');
     } catch (e) {
       const errores = e.response?.data?.errors;
       const mensaje = errores ? Object.values(errores).flat()[0] : e.response?.data?.mensaje || 'No se pudo guardar el registro.';
@@ -199,7 +232,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         {secciones.map((s) => {
           const Icono = s.icono;
           const seleccionado = s.id === seccion;
-          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); limpiarFoto(); }}
+          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); setEditandoId(null); limpiarFoto(); }}
             sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
               fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
               color: seleccionado ? 'primary.main' : 'text.primary',
@@ -213,11 +246,11 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
         {vista !== 'listado' && <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
           <Box>
-            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Nuevo registro · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
+            <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Nuevo registro · ${actual.titulo}` : vista === 'editar' ? `Editar registro · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
           </Box>
-          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); limpiarFoto(); }} /></Box>
+          <Box sx={{ ml: 'auto', flexShrink: 0 }}><BotonVolver disabled={guardando} onClick={() => { setVista('listado'); setVer(null); setEditandoId(null); limpiarFoto(); }} /></Box>
         </Stack>}
-        {vista === 'nuevo' && <Box sx={{ minWidth: 0 }}>
+        {(vista === 'nuevo' || vista === 'editar') && <Box sx={{ minWidth: 0 }}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: seccion === 'evaluacion' ? 'minmax(0,1fr) 266px' : '1fr' }, gap: 2, alignItems: 'start' }}>
           <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontWeight: 800, fontSize: 13, mb: 1.75 }}>{seccion === 'evaluacion' ? 'Datos y mediciones físicas' : 'Información del registro'}</Typography>
@@ -302,7 +335,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Cálculos orientativos a partir de las mediciones ingresadas. No sustituyen una valoración profesional.</Typography>
           </Box>}
           </Box>
-          {seccion === 'evaluacion' && <Box sx={{ p: 1.75, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', minWidth: 0 }}>
+          {seccion === 'evaluacion' && vista !== 'editar' && <Box sx={{ p: 1.75, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', minWidth: 0 }}>
             <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
               <AddPhotoAlternateOutlinedIcon sx={{ color: 'primary.main', fontSize: 19 }} />
               <Typography sx={{ fontSize: 13, fontWeight: 850 }}>Fotografía de evolución</Typography>
@@ -353,7 +386,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             total={filtrados.length}
             busqueda={busqueda}
             onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
-            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setForm(limpio()); limpiarFoto(); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
+            acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setEditandoId(null); setForm(limpio()); limpiarFoto(); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
 
           />
           <TablaGestion total={registros.length} filtrados={filtrados.length} page={pagina} rowsPerPage={porPagina}
@@ -375,6 +408,16 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                   <Tooltip title="Ver detalle">
                     <IconButton sx={dbanuStyles.actionView} onClick={() => { setVer(registro); setVista('detalle'); }}>
                       <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Editar registro">
+                    <IconButton sx={dbanuStyles.actionEdit} onClick={() => iniciarEdicion(registro)} disabled={guardando}>
+                      <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Anular registro">
+                    <IconButton sx={dbanuStyles.actionDelete} onClick={() => setEliminarRegistro(registro)} disabled={guardando}>
+                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
                   {seccion === 'evaluacion' && <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />}
@@ -407,5 +450,15 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         </Box>}
       </Paper>
     </Box>
+    <Dialog open={Boolean(eliminarRegistro)} onClose={() => !guardando && setEliminarRegistro(null)} maxWidth="xs" fullWidth>
+      <DialogTitle>¿Anular registro?</DialogTitle>
+      <DialogContent><DialogContentText>
+        Se anulará «{eliminarRegistro?.titulo}». Dejará de aparecer en el historial activo y los reportes, pero se conservará para trazabilidad.
+      </DialogContentText></DialogContent>
+      <DialogActions>
+        <Button onClick={() => setEliminarRegistro(null)} disabled={guardando}>Cancelar</Button>
+        <Button color="error" onClick={confirmarEliminacion} disabled={guardando}>Anular registro</Button>
+      </DialogActions>
+    </Dialog>
   </Box>;
 }
