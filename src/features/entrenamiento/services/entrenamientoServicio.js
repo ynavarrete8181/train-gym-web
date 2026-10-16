@@ -21,6 +21,12 @@ export const entrenamientoServicio = {
     const { data } = await api.delete(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento/${registro}`);
     return data;
   },
+  subirVideoEjercicio: async (id, archivo) => {
+    const datos = new FormData();
+    datos.append('video', archivo);
+    const { data } = await api.post(`/base/entrenamiento/ejercicios/${id}/video`, datos);
+    return data;
+  },
   obtenerEjercicios: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/entrenamiento/ejercicios', { params });
     return data;
