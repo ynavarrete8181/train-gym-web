@@ -219,6 +219,14 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/clientes/${id}/valoraciones`, payload);
     return data;
   },
+  actualizarValoracionDeportista: async (id, registro, payload) => {
+    const { data } = await api.put(`/base/gimnasio/clientes/${id}/valoraciones/${registro}`, payload);
+    return data;
+  },
+  anularValoracionDeportista: async (id, registro) => {
+    const { data } = await api.delete(`/base/gimnasio/clientes/${id}/valoraciones/${registro}`);
+    return data;
+  },
   obtenerControlesValoracionPendientes: async (dias = 7) => {
     const { data } = await api.get('/base/gimnasio/valoraciones/controles-pendientes', { params: { dias } });
     return data;
