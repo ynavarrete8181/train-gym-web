@@ -6,7 +6,7 @@ import { confirmarAccion } from '../../../utils/confirmacion.js';
 const nuevo = () => ({ codigo_prueba: '', fecha_prueba: new Date().toLocaleDateString('en-CA'), resultado: '', protocolo: '', observaciones: '' });
 const fecha = (valor) => valor ? String(valor).substring(0, 10).split('-').reverse().join('/') : '—';
 
-export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
+export function PruebasRendimientoDeportista({ deportistaId, onNotificacion, permisos = { crear: true, editar: true, anular: true } }) {
   const [form, setForm] = useState(nuevo);
   const [editando, setEditando] = useState(null);
   const [catalogo, setCatalogo] = useState({});
@@ -58,7 +58,7 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
     <Typography fontWeight={800} fontSize={14}>{editando ? "Editar prueba de rendimiento" : "Pruebas de rendimiento físico"}</Typography>
     <Typography fontSize={12} color="text.secondary" sx={{ mb: 2 }}>Fuerza-resistencia, capacidad aeróbica, potencia, velocidad y flexibilidad. Las pruebas RM se registran en su apartado actual.</Typography>
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3,minmax(0,1fr))' }, gap: 1.5 }}>
+    {(permisos.crear || (permisos.editar && editando)) && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3,minmax(0,1fr))' }, gap: 1.5 }}>
       <TextField select size="small" fullWidth label="Prueba física" value={form.codigo_prueba} onChange={(e) => setForm((v) => ({ ...v, codigo_prueba: e.target.value }))}>
         {Object.entries(catalogo).map(([codigo, item]) => <MenuItem key={codigo} value={codigo}>{item.nombre}</MenuItem>)}
       </TextField>
@@ -71,11 +71,11 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
         helperText="Describe condiciones, técnica y procedimiento para comparar resultados posteriores." />
       <TextField size="small" label="Observaciones (opcional)" fullWidth value={form.observaciones}
         onChange={(e) => setForm((v) => ({ ...v, observaciones: e.target.value }))} sx={{ gridColumn: { md: 'span 3' } }} />
-    </Box>
-    <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.5 }}>
+    </Box>}
+    {(permisos.crear || (permisos.editar && editando)) && <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.5 }}>
       {editando && <Button size="small" onClick={() => { setEditando(null); setForm(nuevo()); }} disabled={guardando}>Cancelar edición</Button>}
       <Button variant="contained" size="small" disabled={guardando || cargando} onClick={guardar}>{editando ? 'Guardar cambios' : 'Guardar prueba'}</Button>
-    </Stack>
+    </Stack>}
     <Typography fontSize={13} fontWeight={800} sx={{ mt: 2, mb: 1 }}>Historial de pruebas</Typography>
     {cargando && <CircularProgress size={18} />}
     {!cargando && registros.length === 0 && <Typography fontSize={12} color="text.secondary">No se han registrado pruebas.</Typography>}
@@ -87,12 +87,12 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
           <Typography fontSize={12} color="text.secondary">{fecha(registro.fecha_prueba)} · {registro.protocolo}</Typography>
         </Box>
         <Stack direction="row" gap={1}>
-          <Button variant="outlined" size="small" disabled={guardando} onClick={() => {
+          {permisos.editar && <Button variant="outlined" size="small" disabled={guardando} onClick={() => {
             setEditando(registro.id);
             setForm({ codigo_prueba: registro.codigo_prueba, fecha_prueba: String(registro.fecha_prueba).slice(0,10),
               resultado: String(registro.resultado), protocolo: registro.protocolo || '', observaciones: registro.observaciones || '' });
-          }}>Editar</Button>
-          <Button color="error" variant="outlined" size="small" disabled={guardando} onClick={() => anular(registro)}>Anular</Button>
+          }}>Editar</Button>}
+          {permisos.anular && <Button color="error" variant="outlined" size="small" disabled={guardando} onClick={() => anular(registro)}>Anular</Button>}
         </Stack>
       </Stack>)}
     </Stack>
