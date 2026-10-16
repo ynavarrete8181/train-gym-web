@@ -12,7 +12,7 @@ import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import AssignmentTurnedInOutlinedIcon from '@mui/icons-material/AssignmentTurnedInOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { FotosEvaluacionDeportista } from './FotosEvaluacionDeportista.jsx';
-import { ReporteValoracionesDeportista } from './ReporteValoracionesDeportista.jsx';
+
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -494,7 +494,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         </Box>}
       </Paper>
     </Box>
-    <ReporteValoracionesDeportista deportistaId={deportistaId} />
+
     <Dialog open={Boolean(eliminarRegistro)} onClose={() => !guardando && setEliminarRegistro(null)} maxWidth="xs" fullWidth>
       <DialogTitle>¿Anular registro?</DialogTitle>
       <DialogContent><DialogContentText>
