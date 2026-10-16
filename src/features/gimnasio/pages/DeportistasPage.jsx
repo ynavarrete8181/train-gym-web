@@ -25,6 +25,7 @@ import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
+import { PruebasRendimientoDeportista } from '../../entrenamiento/components/PruebasRendimientoDeportista.jsx';
 import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
@@ -2094,6 +2095,7 @@ export function DeportistasPage() {
 
   const renderEntrenamiento = () => (
     <Stack spacing={2}>
+      <PruebasRendimientoDeportista deportistaId={formData.id} onNotificacion={showNotificacion} />
       <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>
