@@ -42,7 +42,7 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
     } finally { setGuardando(false); }
   };
   const anular = async (registro) => {
-    const confirmado = await confirmarAccion({ titulo: '¿Anular prueba?', texto: 'El registro se conservará para trazabilidad.', confirmarTexto: 'Anular' });
+    const confirmado = await confirmarAccion({ titulo: '¿Anular prueba?', texto: 'El registro se conservará para trazabilidad.', textoConfirmar: 'Anular' });
     if (!confirmado) return;
     setGuardando(true);
     try {
