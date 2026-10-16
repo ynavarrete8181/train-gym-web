@@ -8,6 +8,7 @@ const fecha = (valor) => valor ? String(valor).substring(0, 10).split('-').rever
 
 export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
   const [form, setForm] = useState(nuevo);
+  const [editando, setEditando] = useState(null);
   const [catalogo, setCatalogo] = useState({});
   const [registros, setRegistros] = useState([]);
   const [cargando, setCargando] = useState(false);
@@ -31,11 +32,11 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
     }
     setGuardando(true);
     try {
-      await entrenamientoServicio.registrarPruebaRendimiento(deportistaId, {
-        ...form, resultado: Number(form.resultado),
-      });
-      setForm(nuevo()); await cargar();
-      onNotificacion?.('Prueba de rendimiento registrada.', 'success');
+      const payload = { ...form, resultado: Number(form.resultado) };
+      if (editando) await entrenamientoServicio.actualizarPruebaRendimiento(deportistaId, editando, payload);
+      else await entrenamientoServicio.registrarPruebaRendimiento(deportistaId, payload);
+      setForm(nuevo()); setEditando(null); await cargar();
+      onNotificacion?.(editando ? 'Prueba actualizada.' : 'Prueba registrada.', 'success');
     } catch (e) {
       const errores = e.response?.data?.errors;
       onNotificacion?.(errores ? Object.values(errores).flat()[0] : e.response?.data?.mensaje || 'No se pudo guardar la prueba.', 'error');
@@ -54,7 +55,7 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
   };
   const seleccionada = catalogo[form.codigo_prueba];
   return <Paper elevation={0} sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-    <Typography fontWeight={800} fontSize={14}>Pruebas de rendimiento físico</Typography>
+    <Typography fontWeight={800} fontSize={14}>{editando ? "Editar prueba de rendimiento" : "Pruebas de rendimiento físico"}</Typography>
     <Typography fontSize={12} color="text.secondary" sx={{ mb: 2 }}>Fuerza-resistencia, capacidad aeróbica, potencia, velocidad y flexibilidad. Las pruebas RM se registran en su apartado actual.</Typography>
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3,minmax(0,1fr))' }, gap: 1.5 }}>
@@ -72,7 +73,8 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
         onChange={(e) => setForm((v) => ({ ...v, observaciones: e.target.value }))} sx={{ gridColumn: { md: 'span 3' } }} />
     </Box>
     <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.5 }}>
-      <Button variant="contained" size="small" disabled={guardando || cargando} onClick={guardar}>Guardar prueba</Button>
+      {editando && <Button size="small" onClick={() => { setEditando(null); setForm(nuevo()); }} disabled={guardando}>Cancelar edición</Button>}
+      <Button variant="contained" size="small" disabled={guardando || cargando} onClick={guardar}>{editando ? 'Guardar cambios' : 'Guardar prueba'}</Button>
     </Stack>
     <Typography fontSize={13} fontWeight={800} sx={{ mt: 2, mb: 1 }}>Historial de pruebas</Typography>
     {cargando && <CircularProgress size={18} />}
@@ -84,7 +86,14 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion }) {
           <Typography fontWeight={700} fontSize={12}>{catalogo[registro.codigo_prueba]?.nombre || registro.codigo_prueba} · {registro.resultado} {registro.unidad.toLowerCase()}</Typography>
           <Typography fontSize={12} color="text.secondary">{fecha(registro.fecha_prueba)} · {registro.protocolo}</Typography>
         </Box>
-        <Button color="error" variant="outlined" size="small" disabled={guardando} onClick={() => anular(registro)}>Anular</Button>
+        <Stack direction="row" gap={1}>
+          <Button variant="outlined" size="small" disabled={guardando} onClick={() => {
+            setEditando(registro.id);
+            setForm({ codigo_prueba: registro.codigo_prueba, fecha_prueba: String(registro.fecha_prueba).slice(0,10),
+              resultado: String(registro.resultado), protocolo: registro.protocolo || '', observaciones: registro.observaciones || '' });
+          }}>Editar</Button>
+          <Button color="error" variant="outlined" size="small" disabled={guardando} onClick={() => anular(registro)}>Anular</Button>
+        </Stack>
       </Stack>)}
     </Stack>
   </Paper>;
