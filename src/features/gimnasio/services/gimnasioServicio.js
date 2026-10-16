@@ -207,6 +207,10 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/clientes/${id}/fotos-valoracion`, datos);
     return data;
   },
+  obtenerReporteValoraciones: async (id, params = {}) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/reporte-valoraciones`, { params });
+    return data;
+  },
   obtenerInformeProgreso: async (id) => {
     const { data } = await api.get(`/base/gimnasio/clientes/${id}/progreso-informe`);
     return data;
