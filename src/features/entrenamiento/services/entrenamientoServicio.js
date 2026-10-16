@@ -1,6 +1,18 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const entrenamientoServicio = {
+  obtenerPruebasRendimiento: async (id) => {
+    const { data } = await api.get(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento`);
+    return data;
+  },
+  registrarPruebaRendimiento: async (id, payload) => {
+    const { data } = await api.post(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento`, payload);
+    return data;
+  },
+  anularPruebaRendimiento: async (id, registro) => {
+    const { data } = await api.delete(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento/${registro}`);
+    return data;
+  },
   obtenerEjercicios: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/entrenamiento/ejercicios', { params });
     return data;
