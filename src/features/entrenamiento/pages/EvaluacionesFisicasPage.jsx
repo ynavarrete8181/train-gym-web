@@ -20,7 +20,7 @@ export function EvaluacionesFisicasPage() {
     return () => { activo = false; };
   }, []);
   return <Box sx={{ pt: 2 }}>
-    <PageHeader titulo="Evaluaciones físicas" subtitulo="Registra y consulta pruebas de rendimiento de los deportistas autorizados." />
+    <PageHeader titulo="Evaluaciones físicas" descripcion="Registra y consulta pruebas de rendimiento de los deportistas autorizados." />
     <Paper elevation={0} sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Stack direction="row" alignItems="center" gap={2}>
