@@ -266,7 +266,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                 <TableCell>{modalidad.uso_ilimitado ? 'Ilimitado' : (modalidad.usos_por_semana || modalidad.dias_por_semana || 0) + ' uso(s)/sem.'}</TableCell>
                 <TableCell>{modalidad.duracion} {String(modalidad.tipo_duracion || '').toLowerCase()}</TableCell>
                 <TableCell>
-                  <Typography variant="body2">{'
+                  <Typography variant="body2">{String.fromCharCode(36) + Number(modalidad.precio_base || 0).toFixed(2)}</Typography>
+                  {(modalidad.precios_sede || []).length > 0 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      {modalidad.precios_sede.length} tarifa(s) por sede
+                    </Typography>
+                  )}
+                </TableCell>
                 <TableCell>{modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo'}</TableCell>
                 <TableCell><Chip size="small" label={modalidad.activo ? 'ACTIVA' : 'INACTIVA'} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
                 <TableCell align="center">
@@ -648,11 +654,3 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     </Box>
   );
 }
-                <TableCell>
-                  <Typography variant="body2">{String.fromCharCode(36) + Number(modalidad.precio_base || 0).toFixed(2)}</Typography>
-                  {(modalidad.precios_sede || []).length > 0 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                      {modalidad.precios_sede.length} tarifa(s) por sede
-                    </Typography>
-                  )}
-                </TableCell>
