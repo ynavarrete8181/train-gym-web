@@ -87,22 +87,23 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     });
   };
 
-  const agregarPrecio = () => setForm((prev) => ({
-    ...prev,
-    precios_sede: [...(prev.precios_sede || []), { sede_id: '', precio: '' }],
-  }));
-
-  const cambiarPrecio = (index, field, value) => {
+  // Solo se persisten excepciones de precio; las demás sedes usan precio_base.
+  const fijarPrecioSede = (sedeId, habilitado) => {
     setForm((prev) => {
-      const precios = [...(prev.precios_sede || [])];
-      precios[index] = { ...precios[index], [field]: value };
-      return { ...prev, precios_sede: precios };
+      const actuales = prev.precios_sede || [];
+      const precios_sede = habilitado
+        ? [...actuales.filter((p) => Number(p.sede_id) !== Number(sedeId)), {
+            sede_id: Number(sedeId), precio: String(prev.precio_base ?? 0),
+          }]
+        : actuales.filter((p) => Number(p.sede_id) !== Number(sedeId));
+      return { ...prev, precios_sede };
     });
   };
 
-  const quitarPrecio = (index) => setForm((prev) => ({
+  const cambiarPrecioSede = (sedeId, precio) => setForm((prev) => ({
     ...prev,
-    precios_sede: (prev.precios_sede || []).filter((_, i) => i !== index),
+    precios_sede: (prev.precios_sede || []).map((p) => Number(p.sede_id) === Number(sedeId)
+      ? { ...p, precio } : p),
   }));
 
   const limpiar = () => {
@@ -126,13 +127,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       return;
     }
 
-    if (Number(form.precio_base) < 0) {
+    if (form.precio_base === '' || !Number.isFinite(Number(form.precio_base)) || Number(form.precio_base) < 0) {
       avisar('El precio base de la modalidad no puede ser negativo.');
       return;
     }
 
     const precios = form.precio_por_sede ? (form.precios_sede || []) : [];
-    if (precios.some((fila) => !fila.sede_id || fila.precio === '')) {
+    if (precios.some((fila) => !fila.sede_id || fila.precio === '' || !Number.isFinite(Number(fila.precio)) || Number(fila.precio) < 0)) {
       avisar('Completa o elimina las filas incompletas de precios por sede.');
       return;
     }
@@ -264,7 +265,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                 </TableCell>
                 <TableCell>{modalidad.uso_ilimitado ? 'Ilimitado' : (modalidad.usos_por_semana || modalidad.dias_por_semana || 0) + ' uso(s)/sem.'}</TableCell>
                 <TableCell>{modalidad.duracion} {String(modalidad.tipo_duracion || '').toLowerCase()}</TableCell>
-                <TableCell>{'$' + Number(modalidad.precio_base || 0).toFixed(2)}</TableCell>
+                <TableCell><Typography variant="body2">{'
                 <TableCell>{modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo'}</TableCell>
                 <TableCell><Chip size="small" label={modalidad.activo ? 'ACTIVA' : 'INACTIVA'} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
                 <TableCell align="center">
@@ -294,49 +295,159 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </TablaGestion>
       </Box>
 
-      <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
-          <Box sx={{ flex: 1 }}>
-            <FormControlLabel
-              control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
-              label="Precio diferente por sede"
-              sx={{ m: 0, '& .MuiFormControlLabel-label': { fontWeight: 800, fontSize: 13 } }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
-              Si está apagado, todas las sedes usan el precio base de la modalidad.
+      <Box sx={{ mt: 2, border: '1px solid #dbe5f0', borderRadius: 2, p: 2, bgcolor: '#fbfdff' }}>
+        <Stack spacing={1.5}>
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800}>Tarifas por sede</Typography>
+            <Typography variant="body2" color="text.secondary">
+              El precio general se utiliza en todas las sedes. Marca una sede únicamente si necesitas una tarifa distinta para esta modalidad.
             </Typography>
           </Box>
-
-          {form.precio_por_sede ? (
-            <Button startIcon={<AddOutlinedIcon />} onClick={agregarPrecio} sx={dbanuStyles.addButtonRevive}>
-              Añadir
-            </Button>
-          ) : null}
+          <FormControlLabel
+            sx={{ m: 0 }}
+            control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
+            label="Establecer tarifas específicas por sede"
+          />
+          {form.precio_por_sede && (
+            <Stack spacing={1}>
+              {sedes.length === 0 && (
+                <Typography color="text.secondary" variant="body2">No se encontraron sedes configuradas.</Typography>
+              )}
+              {sedes.map((sede) => {
+                const especial = (form.precios_sede || []).find((p) => Number(p.sede_id) === Number(sede.id_sede));
+                const habilitado = Boolean(especial);
+                return (
+                  <Box key={sede.id_sede} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px, 1fr) minmax(200px, 1fr)' }, alignItems: 'center', gap: 1.5, px: 1.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: '#fff' }}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={700}>{sede.nombre}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {habilitado ? 'Tarifa específica' : `Precio general: $${Number(form.precio_base || 0).toFixed(2)}`}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                      <FormControlLabel
+                        sx={{ m: 0 }}
+                        control={<Switch size="small" checked={habilitado} onChange={(e) => fijarPrecioSede(sede.id_sede, e.target.checked)} />}
+                        label={<Typography variant="caption">Personalizar</Typography>}
+                      />
+                      {habilitado && (
+                        <TextField
+                          label="Precio especial ($)" size="small" type="number"
+                          value={especial.precio}
+                          onChange={(e) => cambiarPrecioSede(sede.id_sede, e.target.value)}
+                          inputProps={{ min: 0, step: '0.01' }}
+                          sx={{ maxWidth: 170 }}
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+          {indiceEdicion !== null && (
+            <Stack direction="row" justifyContent="flex-end">
+              <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
+            </Stack>
+          )}
+          <Typography variant="caption" color="text.secondary">
+            La tarifa de sede reemplaza el precio general solo en esa sede. Los descuentos individuales se gestionan en Clientes.
+          </Typography>
         </Stack>
+      </Box>
 
-        {form.precio_por_sede && (form.precios_sede || []).length ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
-            {(form.precios_sede || []).map((fila, index) => (
-              <Stack key={index} direction="row" spacing={1} alignItems="center">
-                <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => cambiarPrecio(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
-                  {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                </TextField>
-                <TextField label="Precio ($)" type="number" size="small" value={fila.precio ?? ''} onChange={(e) => cambiarPrecio(index, 'precio', e.target.value)} sx={{ width: 130 }} />
-                <Tooltip title="Quitar">
-                  <IconButton size="small" onClick={() => quitarPrecio(index)} sx={dbanuStyles.actionDelete}>
-                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
+    </Box>
+  );
+}
+ + Number(modalidad.precio_base || 0).toFixed(2)}</Typography>{(modalidad.precios_sede || []).length > 0 && <Typography variant="caption" color="text.secondary">{modalidad.precios_sede.length} tarifa(s) por sede</Typography>}</TableCell>
+                <TableCell>{modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo'}</TableCell>
+                <TableCell><Chip size="small" label={modalidad.activo ? 'ACTIVA' : 'INACTIVA'} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
+                <TableCell align="center">
+                  <Stack direction="row" spacing={.5} justifyContent="center">
+                    <Tooltip title="Editar modalidad">
+                      <IconButton size="small" onClick={() => editar(modalidad, index)} sx={dbanuStyles.actionEdit}>
+                        <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Quitar modalidad">
+                      <IconButton size="small" onClick={() => eliminar(index)} sx={dbanuStyles.actionDelete}>
+                        <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  </Stack>
+                </TableCell>
+              </TableRow>
             ))}
-          </Box>
-        ) : null}
+            {modalidades.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                  No hay modalidades agregadas.
+                </TableCell>
+              </TableRow>
+            ) : null}
+          </TableBody>
+        </TablaGestion>
+      </Box>
 
-        {indiceEdicion !== null ? (
-          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
-            <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-          </Stack>
-        ) : null}
+      <Box sx={{ mt: 2, border: '1px solid #dbe5f0', borderRadius: 2, p: 2, bgcolor: '#fbfdff' }}>
+        <Stack spacing={1.5}>
+          <Box>
+            <Typography variant="subtitle2" fontWeight={800}>Tarifas por sede</Typography>
+            <Typography variant="body2" color="text.secondary">
+              El precio general se utiliza en todas las sedes. Marca una sede únicamente si necesitas una tarifa distinta para esta modalidad.
+            </Typography>
+          </Box>
+          <FormControlLabel
+            sx={{ m: 0 }}
+            control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
+            label="Establecer tarifas específicas por sede"
+          />
+          {form.precio_por_sede && (
+            <Stack spacing={1}>
+              {sedes.length === 0 && (
+                <Typography color="text.secondary" variant="body2">No se encontraron sedes configuradas.</Typography>
+              )}
+              {sedes.map((sede) => {
+                const especial = (form.precios_sede || []).find((p) => Number(p.sede_id) === Number(sede.id_sede));
+                const habilitado = Boolean(especial);
+                return (
+                  <Box key={sede.id_sede} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px, 1fr) minmax(200px, 1fr)' }, alignItems: 'center', gap: 1.5, px: 1.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: '#fff' }}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={700}>{sede.nombre}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {habilitado ? 'Tarifa específica' : `Precio general: $${Number(form.precio_base || 0).toFixed(2)}`}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                      <FormControlLabel
+                        sx={{ m: 0 }}
+                        control={<Switch size="small" checked={habilitado} onChange={(e) => fijarPrecioSede(sede.id_sede, e.target.checked)} />}
+                        label={<Typography variant="caption">Personalizar</Typography>}
+                      />
+                      {habilitado && (
+                        <TextField
+                          label="Precio especial ($)" size="small" type="number"
+                          value={especial.precio}
+                          onChange={(e) => cambiarPrecioSede(sede.id_sede, e.target.value)}
+                          inputProps={{ min: 0, step: '0.01' }}
+                          sx={{ maxWidth: 170 }}
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+          {indiceEdicion !== null && (
+            <Stack direction="row" justifyContent="flex-end">
+              <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
+            </Stack>
+          )}
+          <Typography variant="caption" color="text.secondary">
+            La tarifa de sede reemplaza el precio general solo en esa sede. Los descuentos individuales se gestionan en Clientes.
+          </Typography>
+        </Stack>
       </Box>
 
     </Box>
