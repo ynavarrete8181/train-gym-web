@@ -238,7 +238,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
             startIcon={<AddOutlinedIcon />}
             sx={dbanuStyles.addButtonRevive}
           >
-            Añadir
+            {indiceEdicion !== null ? 'Actualizar modalidad' : 'Añadir modalidad'}
           </Button>
         </Stack>
       </Box>
