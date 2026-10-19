@@ -362,7 +362,7 @@ export function PlanesPage() {
                   </TextField>
                 </Box>
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                  <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Generar cobro al contratar" />
+                  {/* La generación de la venta inicial se controla al asignar la membresía al deportista. */}
                   <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
                   <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
