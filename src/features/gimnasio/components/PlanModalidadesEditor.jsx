@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -307,7 +308,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
         <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
-          <Button onClick={limpiar} variant="outlined" color="error" sx={{ fontWeight: 700 }}>Cancelar</Button>
+          <BotonCancelar onClick={limpiar} />
           <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Agregar'} />
         </Box>
       </Box>
