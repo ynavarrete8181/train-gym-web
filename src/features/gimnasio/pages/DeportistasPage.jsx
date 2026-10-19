@@ -23,6 +23,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
+import { DescuentosDeportistaPanel } from '../components/DescuentosDeportistaPanel.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
 import { PruebasRendimientoDeportista } from '../../entrenamiento/components/PruebasRendimientoDeportista.jsx';
@@ -1389,6 +1390,7 @@ export function DeportistasPage() {
 
   const renderMembresia = () => (
     <Stack spacing={2}>
+      <DescuentosDeportistaPanel deportistaId={formData.id} planes={planes} />
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
