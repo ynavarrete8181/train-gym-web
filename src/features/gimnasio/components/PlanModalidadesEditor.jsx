@@ -224,10 +224,14 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
 
   return (
     <Box sx={formStyles.seccion}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', mb: 2, gap: 2 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
-        {vistaInterna === 'formulario' && <BotonVolver onClick={limpiar} />}
-      </Stack>
+        {vistaInterna === 'formulario' && (
+          <Box sx={{ ml: 'auto', flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+            <BotonVolver onClick={limpiar} />
+          </Box>
+        )}
+      </Box>
 
       {vistaInterna === 'formulario' ? (
         <Box>
@@ -300,11 +304,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </Stack>
       </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
-        <FormControlLabel sx={{ mr: { sm: 'auto' }, ml: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
-        <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>
-        <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Guardar modalidad'} />
-      </Stack>
+      <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
+        <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
+          <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>
+          <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Guardar modalidad'} />
+        </Box>
+      </Box>
 
         </Box>
       ) : (
