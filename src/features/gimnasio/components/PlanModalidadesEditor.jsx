@@ -343,7 +343,8 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
             ) : null}
           </TableBody>
         </TablaGestion>
-      </Box>        </Box>
+      </Box>
+        </Box>
       )}
     </Box>
   );
