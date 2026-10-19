@@ -648,3 +648,11 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     </Box>
   );
 }
+                <TableCell>
+                  <Typography variant="body2">{String.fromCharCode(36) + Number(modalidad.precio_base || 0).toFixed(2)}</Typography>
+                  {(modalidad.precios_sede || []).length > 0 && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      {modalidad.precios_sede.length} tarifa(s) por sede
+                    </Typography>
+                  )}
+                </TableCell>
