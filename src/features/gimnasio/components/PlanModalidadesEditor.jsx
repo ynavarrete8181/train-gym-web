@@ -192,7 +192,12 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
 
   return (
     <Box sx={formStyles.seccion}>
-      <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, gap: 1 }}>
+        <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
+        {vistaInterna === 'listado' && (
+          <Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva} sx={dbanuStyles.addButtonRevive}>Añadir</Button>
+        )}
+      </Stack>
 
       {vistaInterna === 'formulario' ? (
         <Box>
@@ -284,9 +289,6 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       ) : (
         <Box>
       <Box sx={{ mt: 1 }}>
-        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1.5 }}>
-          <Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva} sx={dbanuStyles.addButtonRevive}>Añadir</Button>
-        </Stack>
         <TablaGestion total={modalidades.length} filtrados={modalidades.length} textoResumen={modalidades.length + ' modalidad(es)'}>
           <TableHead>
             <TableRow>
