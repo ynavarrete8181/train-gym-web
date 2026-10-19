@@ -29,7 +29,6 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
-import { DescuentosDeportistaPanel } from '../components/DescuentosDeportistaPanel.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
@@ -534,11 +533,6 @@ export function MembresiasPage() {
                   <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
                 </Box>
               </Box>
-
-              <DescuentosDeportistaPanel
-                deportistaId={formData.deportista_id}
-                planes={planes}
-              />
 
               {requiereEntrenador ? (
                 <Box sx={formStyles.seccion}>
