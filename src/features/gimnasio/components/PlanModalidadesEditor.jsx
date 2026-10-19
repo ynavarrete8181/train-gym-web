@@ -307,7 +307,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
         <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
-          <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Agregar'} />
+          <BotonGuardar onClick={agregarOActualizar} texto="Agregar" />
         </Box>
       </Box>
 
