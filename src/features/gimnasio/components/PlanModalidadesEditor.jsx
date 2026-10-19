@@ -307,8 +307,8 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
         <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
-          <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>
-          <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Guardar modalidad'} />
+          <Button onClick={limpiar} variant="outlined" color="error" sx={{ fontWeight: 700 }}>Cancelar</Button>
+          <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Agregar'} />
         </Box>
       </Box>
 
