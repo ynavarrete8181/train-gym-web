@@ -231,7 +231,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
 
       {vistaInterna === 'formulario' ? (
         <Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.5fr .8fr .8fr 1fr .7fr 1fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
         <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
         <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 30 }} />
@@ -246,7 +246,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         {/* Modelo y momento de cobro se conservan en los datos existentes; no son de uso habitual. */}
       </Box>
 
-      <Box sx={{ mt: 1, border: '1px solid #dbe5f0', borderRadius: 2, p: 1.5, bgcolor: '#f8fafc' }}>
+      <Box sx={{ mt: 1.5, border: '1px solid #dbe5f0', borderRadius: 2, p: 1.5, bgcolor: '#f8fafc' }}>
         <Stack spacing={1}>
           <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1}>
             <Box>
