@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -51,6 +54,34 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
   const [form, setForm] = useState(nuevaModalidad());
   const [indiceEdicion, setIndiceEdicion] = useState(null);
   const [vistaInterna, setVistaInterna] = useState('listado');
+  const [busqueda, setBusqueda] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(5);
+  const [filtros, setFiltros] = useState({ nombre: [], frecuencia: [], duracion: [], precio: [], cobro: [], estado: [] });
+
+  const valoresFila = (m) => ({
+    nombre: String(m.nombre || ''),
+    frecuencia: m.uso_ilimitado ? 'Ilimitado' : `${m.usos_por_semana || m.dias_por_semana || 0} uso(s)/sem.`,
+    duracion: `${m.duracion} ${String(m.tipo_duracion || '').toLowerCase()}`,
+    precio: `${Number(m.precio_base || 0).toFixed(2)}`,
+    cobro: m.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo',
+    estado: m.activo ? 'ACTIVA' : 'INACTIVA',
+  });
+  const modalidadesFiltradas = modalidades
+    .map((modalidad, index) => ({ modalidad, index, celdas: valoresFila(modalidad) }))
+    .filter(({ modalidad, celdas }) => {
+      const texto = [modalidad.codigo, ...Object.values(celdas)].join(' ').toLocaleLowerCase('es');
+      return texto.includes(busqueda.trim().toLocaleLowerCase('es'))
+        && Object.entries(filtros).every(([campo, seleccion]) => !seleccion.length || seleccion.includes(celdas[campo]));
+    });
+  const opcionesColumna = (campo) => [...new Set(modalidades.map((m) => valoresFila(m)[campo]))]
+    .sort((a, b) => a.localeCompare(b, 'es'))
+    .map((valor) => ({ value: valor, label: valor }));
+  const cambiarFiltro = (campo, valor) => {
+    setFiltros((actual) => ({ ...actual, [campo]: valor }));
+    setPagina(1);
+  };
+
 
   const avisar = (mensaje, tipo = 'warning') => onAvisar?.(mensaje, tipo);
 
@@ -195,11 +226,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     <Box sx={formStyles.seccion}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, gap: 1 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
-        {vistaInterna === 'listado' ? (
-          <Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva} sx={dbanuStyles.addButtonRevive}>Añadir</Button>
-        ) : (
-          <BotonVolver onClick={limpiar} />
-        )}
+        {vistaInterna === 'formulario' && <BotonVolver onClick={limpiar} />}
       </Stack>
 
       {vistaInterna === 'formulario' ? (
@@ -276,48 +303,53 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
         <FormControlLabel sx={{ mr: { sm: 'auto' }, ml: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>
-        <Button onClick={agregarOActualizar} startIcon={<AddOutlinedIcon />} sx={{ ...dbanuStyles.addButtonRevive, bgcolor: "transparent", color: "success.main", border: "1px solid", borderColor: "success.main", "&:hover": { bgcolor: "action.hover" } }}>
-          {indiceEdicion !== null ? 'Guardar cambios' : 'Agregar modalidad'}
-        </Button>
+        <BotonGuardar onClick={agregarOActualizar} texto={indiceEdicion !== null ? 'Guardar cambios' : 'Guardar modalidad'} />
       </Stack>
 
         </Box>
       ) : (
         <Box>
       <Box sx={{ mt: 1 }}>
-        <TablaGestion total={modalidades.length} filtrados={modalidades.length} textoResumen={modalidades.length + ' modalidad(es)'}>
+        <GestionToolbar total={modalidadesFiltradas.length} busqueda={busqueda}
+          onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
+          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva}>Añadir</Button>} />
+        <TablaGestion total={modalidades.length} filtrados={modalidadesFiltradas.length}
+          page={pagina} rowsPerPage={porPagina}
+          onPageChange={setPagina}
+          onRowsPerPageChange={(cantidad) => { setPorPagina(cantidad); setPagina(1); }}>
           <TableHead>
             <TableRow>
-              <TableCell>Modalidad</TableCell>
-              <TableCell>Frecuencia</TableCell>
-              <TableCell>Duración</TableCell>
-              <TableCell>Precio</TableCell>
-              <TableCell>Cobro</TableCell>
-              <TableCell>Estado</TableCell>
+              {[
+                ['nombre', 'Modalidad'], ['frecuencia', 'Frecuencia'], ['duracion', 'Duración'],
+                ['precio', 'Precio'], ['cobro', 'Cobro'], ['estado', 'Estado'],
+              ].map(([campo, titulo]) => (
+                <FilterHeaderCell key={campo} value={filtros[campo]}
+                  onChange={(valor) => cambiarFiltro(campo, valor)}
+                  options={opcionesColumna(campo)}>{titulo}</FilterHeaderCell>
+              ))}
               <TableCell align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {modalidades.map((modalidad, index) => (
+            {modalidadesFiltradas.slice((pagina - 1) * porPagina, pagina * porPagina).map(({ modalidad, index, celdas }) => (
               <TableRow key={modalidad.id || 'draft-' + index} hover>
                 <TableCell>
-                  <Typography variant="body2" fontWeight={800}>{modalidad.nombre}</Typography>
+                  <Typography variant="body2" fontWeight={700}>{modalidad.nombre}</Typography>
                   <Typography variant="caption" color="text.secondary">{modalidad.codigo || 'Se genera al guardar'}</Typography>
                 </TableCell>
-                <TableCell>{modalidad.uso_ilimitado ? 'Ilimitado' : (modalidad.usos_por_semana || modalidad.dias_por_semana || 0) + ' uso(s)/sem.'}</TableCell>
-                <TableCell>{modalidad.duracion} {String(modalidad.tipo_duracion || '').toLowerCase()}</TableCell>
+                <TableCell>{celdas.frecuencia}</TableCell>
+                <TableCell>{celdas.duracion}</TableCell>
                 <TableCell>
-                  <Typography variant="body2">{String.fromCharCode(36) + Number(modalidad.precio_base || 0).toFixed(2)}</Typography>
-                  {(modalidad.precios_sede || []).length > 0 && (
-                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                  <Typography variant="body2">{celdas.precio}</Typography>
+                  {(modalidad.precios_sede || []).length > 0 &&
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
                       {modalidad.precios_sede.length} tarifa(s) por sede
-                    </Typography>
-                  )}
+                    </Typography>}
                 </TableCell>
-                <TableCell>{modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo'}</TableCell>
-                <TableCell><Chip size="small" label={modalidad.activo ? 'ACTIVA' : 'INACTIVA'} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
+                <TableCell>{celdas.cobro}</TableCell>
+                <TableCell><Chip size="small" label={celdas.estado} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
                 <TableCell align="center">
-                  <Stack direction="row" spacing={.5} justifyContent="center">
+                  <Stack direction="row" spacing={0.5} justifyContent="center">
                     <Tooltip title="Editar modalidad">
                       <IconButton size="small" onClick={() => editar(modalidad, index)} sx={dbanuStyles.actionEdit}>
                         <EditOutlinedIcon sx={{ fontSize: 17 }} />
@@ -332,13 +364,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                 </TableCell>
               </TableRow>
             ))}
-            {modalidades.length === 0 ? (
+            {modalidadesFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                  No hay modalidades agregadas.
+                <TableCell colSpan={7} align="center">
+                  {modalidades.length === 0 ? 'No se encontraron modalidades.' : 'No se encontraron resultados.'}
                 </TableCell>
               </TableRow>
-            ) : null}
+            )}
           </TableBody>
         </TablaGestion>
       </Box>
