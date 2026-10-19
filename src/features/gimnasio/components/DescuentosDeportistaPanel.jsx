@@ -17,6 +17,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
   const [form, setForm] = useState(nuevo);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [modalidades, setModalidades] = useState([]);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [autorizado, setAutorizado] = useState(true);
@@ -34,6 +35,17 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
       else setError(errorApi(e));
     } finally { setCargando(false); }
   };
+
+  useEffect(() => {
+    let vigente = true;
+    setModalidades([]);
+    if (form.alcance === 'MODALIDAD' && form.plan_id) {
+      gimnasioServicio.obtenerModalidadesPlan(form.plan_id)
+        .then((respuesta) => { if (vigente) setModalidades(respuesta.datos || []); })
+        .catch(() => { if (vigente) setError('No se pudieron cargar las modalidades del plan.'); });
+    }
+    return () => { vigente = false; };
+  }, [form.alcance, form.plan_id]);
 
   useEffect(() => {
     setLista([]); setAutorizado(true); setMensaje(''); setError('');
@@ -133,7 +145,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
             onChange={(e) => setForm((a) => ({ ...a, alcance: e.target.value, plan_id: '', modalidad_id: '' }))}>
             <MenuItem value="GENERAL">Todos los planes</MenuItem>
             <MenuItem value="PLAN">Un plan</MenuItem>
-            <MenuItem value="MODALIDAD">Una modalidad (requiere ID)</MenuItem>
+            <MenuItem value="MODALIDAD">Una modalidad</MenuItem>
           </TextField>
           {form.alcance !== 'GENERAL' &&
             <TextField size="small" select label="Plan" value={form.plan_id}
@@ -141,9 +153,13 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
               {planes.map((p) => <MenuItem key={p.id} value={p.id}>{p.nombre}</MenuItem>)}
             </TextField>}
           {form.alcance === 'MODALIDAD' &&
-            <TextField size="small" type="number" label="ID modalidad" value={form.modalidad_id}
-              onChange={(e) => cambiar('modalidad_id', e.target.value)}
-              helperText="Selecciona el identificador de una modalidad del plan." />}
+            <TextField size="small" select label="Modalidad" value={form.modalidad_id}
+              onChange={(e) => cambiar('modalidad_id', e.target.value)}>
+              <MenuItem value="">Selecciona una modalidad</MenuItem>
+              {modalidades.map((m) => (
+                <MenuItem key={m.id} value={m.id}>{m.nombre || m.codigo || `Modalidad #${m.id}`}</MenuItem>
+              ))}
+            </TextField>}
           <TextField size="small" label="Inicio vigencia" type="date" value={form.fecha_inicio}
             onChange={(e) => cambiar('fecha_inicio', e.target.value)} InputLabelProps={{ shrink: true }} />
           <TextField size="small" label="Fin vigencia (opcional)" type="date" value={form.fecha_fin}
