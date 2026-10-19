@@ -183,8 +183,9 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
   return (
     <Box sx={formStyles.seccion}>
       <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
+      <Typography variant="body2" color="text.secondary">Define la frecuencia, duración y tarifa oficial. Las excepciones individuales se gestionan desde la ficha del deportista.</Typography>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.4fr .72fr .72fr .78fr .68fr .8fr .9fr .9fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.5fr .8fr .8fr 1fr .7fr 1fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
         <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
         <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 30 }} />
@@ -196,14 +197,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </TextField>
         <TextField label="Cantidad" name="duracion" type="number" value={form.duracion} onChange={cambiar} size="small" inputProps={{ min: 1 }} />
         <TextField label="Precio ($)" name="precio_base" type="number" value={form.precio_base} onChange={cambiar} size="small" inputProps={{ min: 0, step: '0.01' }} />
-        <TextField select label="Modelo de cobro" name="modelo_cobro" value={form.modelo_cobro} onChange={cambiar} size="small">
-          <MenuItem value="FIJO_POR_PERIODO">Fijo</MenuItem>
-          <MenuItem value="PRORRATEO_POR_SEMANAS_UTILIZADAS">Prorrateado</MenuItem>
-        </TextField>
-        <TextField select label="Momento" name="momento_cobro" value={form.momento_cobro} onChange={cambiar} size="small" disabled={form.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS'}>
-          <MenuItem value="ANTICIPADO">Anticipado</MenuItem>
-          <MenuItem value="VENCIDO">Vencido</MenuItem>
-        </TextField>
+        {/* Modelo y momento de cobro se conservan en los datos existentes; no son de uso habitual. */}
       </Box>
 
       <Box
@@ -220,16 +214,12 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, minmax(0, 1fr))' },
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' },
             alignItems: 'center',
             gap: .5,
             minWidth: 0,
           }}
         >
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="extension_automatica" checked={Boolean(form.extension_automatica)} onChange={cambiar} disabled={!form.permite_extension} />} label="Extensión automática" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="permite_rollover" checked={Boolean(form.permite_rollover)} onChange={cambiar} />} label="Rollover" />
           <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
         </Box>
 
