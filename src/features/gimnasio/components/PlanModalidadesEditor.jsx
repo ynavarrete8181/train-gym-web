@@ -20,6 +20,7 @@ import {
   Typography,
 } from '@mui/material';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
@@ -194,20 +195,15 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     <Box sx={formStyles.seccion}>
       <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5, gap: 1 }}>
         <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
-        {vistaInterna === 'listado' && (
+        {vistaInterna === 'listado' ? (
           <Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva} sx={dbanuStyles.addButtonRevive}>Añadir</Button>
+        ) : (
+          <BotonVolver onClick={limpiar} />
         )}
       </Stack>
 
       {vistaInterna === 'formulario' ? (
         <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-        <Box>
-          <Typography variant="subtitle2" fontWeight={700}>{indiceEdicion !== null ? 'Editar modalidad' : 'Nueva modalidad'}</Typography>
-          <Typography variant="caption" color="text.secondary">Configura frecuencia, duración y precio.</Typography>
-        </Box>
-        <Button size="small" onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Volver</Button>
-      </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.5fr .8fr .8fr 1fr .7fr 1fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
         <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
