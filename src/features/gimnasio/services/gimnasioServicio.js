@@ -171,6 +171,20 @@ export const gimnasioServicio = {
     return data;
   },
 
+  // --- Beneficios personalizados de membresías ---
+  obtenerDescuentosDeportista: async (deportistaId) => {
+    const { data } = await api.get('/base/gimnasio/descuentos-deportistas', { params: { deportista_id: deportistaId } });
+    return data;
+  },
+  crearDescuentoDeportista: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/descuentos-deportistas', payload);
+    return data;
+  },
+  actualizarDescuentoDeportista: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/descuentos-deportistas/${id}`, payload);
+    return data;
+  },
+
   // --- Membresías ---
   obtenerMembresias: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/gimnasio/membresias', { params });
