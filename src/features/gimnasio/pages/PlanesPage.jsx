@@ -450,50 +450,51 @@ export function PlanesPage() {
               </Box>
 
               <Box sx={formStyles.seccion}>
-                <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" spacing={1}>
-                  <Box>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          name="precio_por_sede"
-                          checked={Boolean(formData.precio_por_sede)}
-                          onChange={handleChange}
-                        />
-                      }
-                      label="Precio diferente por sede"
-                      sx={{ m: 0 }}
-                    />
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
-                      Si está apagado, todas las sedes usan el precio base del plan.
-                    </Typography>
-                  </Box>
-
-                  {formData.precio_por_sede ? (
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}
+                  justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }}>
+                  <FormControlLabel
+                    sx={{ m: 0 }}
+                    control={<Switch name="precio_por_sede" checked={Boolean(formData.precio_por_sede)} onChange={handleChange} />}
+                    label={<Typography fontWeight={700} variant="body2">Precio diferente por sede</Typography>}
+                  />
+                  {formData.precio_por_sede && (
                     <Button startIcon={<AddOutlinedIcon />} onClick={handleAddPrecioSede} sx={dbanuStyles.addButtonRevive}>
                       Añadir
                     </Button>
-                  ) : null}
+                  )}
                 </Stack>
-
-                {formData.precio_por_sede && (formData.precios_sede || []).length ? (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
-                    {(formData.precios_sede || []).map((fila, index) => (
-                      <Stack key={index} direction="row" spacing={1} alignItems="center">
-                        <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
-                          {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                        </TextField>
-                        <TextField label="Precio ($)" type="number" size="small" value={fila.precio} onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)} sx={{ width: 140 }} />
-                        <Tooltip title="Quitar">
-                          <IconButton size="small" onClick={() => handleRemovePrecioSede(index)} sx={dbanuStyles.actionDelete}>
-                            <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    ))}
+                {formData.precio_por_sede && (
+                  <Box sx={{ mt: 1.5 }}>
+                    {(formData.precios_sede || []).length ? (
+                      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+                        {(formData.precios_sede || []).map((fila, index) => (
+                          <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 }}>
+                            <TextField select label="Sede" size="small" value={fila.sede_id || ''}
+                              onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)}
+                              sx={{ ...dbanuStyles.field, flex: 1, minWidth: 0 }}>
+                              {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
+                            </TextField>
+                            <TextField label="Precio ($)" type="number" size="small" value={fila.precio}
+                              onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)}
+                              inputProps={{ min: 0, step: '0.01' }}
+                              sx={{ ...dbanuStyles.field, width: { xs: 110, sm: 130 }, flexShrink: 0 }} />
+                            <Tooltip title="Quitar tarifa">
+                              <IconButton size="small" onClick={() => handleRemovePrecioSede(index)}
+                                sx={{ ...dbanuStyles.actionDelete, flexShrink: 0 }}>
+                                <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        ))}
+                      </Box>
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">
+                        Añade la sede que tendrá una tarifa especial.
+                      </Typography>
+                    )}
                   </Box>
-                ) : null}
-              </Box>
-                </>
+                )}
+              </Box>                </>
               )}
             </Stack>
           </Box>
