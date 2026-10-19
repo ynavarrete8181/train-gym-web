@@ -184,7 +184,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
   return (
     <Box sx={formStyles.seccion}>
       <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
-      <Typography variant="body2" color="text.secondary">Define la frecuencia, duración y tarifa oficial. Las excepciones individuales se gestionan desde la ficha del deportista.</Typography>
+      <Typography variant="body2" color="text.secondary">Configura una modalidad a la vez.</Typography>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.5fr .8fr .8fr 1fr .7fr 1fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
@@ -201,61 +201,19 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         {/* Modelo y momento de cobro se conservan en los datos existentes; no son de uso habitual. */}
       </Box>
 
-      <Box
-        sx={{
-          mt: .75,
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' },
-          alignItems: 'center',
-          width: '100%',
-          columnGap: 1.5,
-          rowGap: 1,
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(2, minmax(0, 1fr))' },
-            alignItems: 'center',
-            gap: .5,
-            minWidth: 0,
-          }}
-        >
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
-        </Box>
-
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
-          {indiceEdicion !== null ? (
-            <Chip
-              size="small"
-              label="Editando modalidad"
-              variant="outlined"
-              sx={{ fontWeight: 800 }}
+      <Box sx={{ mt: 1, border: '1px solid #dbe5f0', borderRadius: 2, p: 1.5, bgcolor: '#f8fafc' }}>
+        <Stack spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={800}>Tarifas por sede</Typography>
+              <Typography variant="caption" color="text.secondary">Opcional · Precios diferentes por sede</Typography>
+            </Box>
+            <FormControlLabel
+              sx={{ m: 0 }}
+              control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
+              label="Personalizar"
             />
-          ) : null}
-          <Button
-            onClick={agregarOActualizar}
-            startIcon={<AddOutlinedIcon />}
-            sx={dbanuStyles.addButtonRevive}
-          >
-            {indiceEdicion !== null ? 'Actualizar modalidad' : 'Añadir modalidad'}
-          </Button>
-        </Stack>
-      </Box>
-
-      <Box sx={{ mt: 1.5, mb: 2, border: '1px solid #dbe5f0', borderRadius: 2, p: { xs: 1.5, md: 2 }, bgcolor: '#f8fafc' }}>
-        <Stack spacing={1.5}>
-          <Box>
-            <Typography variant="subtitle2" fontWeight={800}>Tarifas por sede</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Precio general: se aplica a todas las sedes. Personaliza solo las que tengan otra tarifa.
-            </Typography>
-          </Box>
-          <FormControlLabel
-            sx={{ m: 0 }}
-            control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
-            label="Personalizar precios por sede"
-          />
+          </Stack>
           {form.precio_por_sede && (
             <Stack spacing={1}>
               {sedes.length === 0 && (
@@ -293,18 +251,19 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
               })}
             </Stack>
           )}
-          {indiceEdicion !== null && (
-            <Stack direction="row" justifyContent="flex-end">
-              <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-            </Stack>
-          )}
-          <Typography variant="caption" color="text.secondary">
-            El precio especial sustituye al general solo en la sede seleccionada.
-          </Typography>
+
         </Stack>
       </Box>
 
-      <Box sx={{ mt: 1 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
+        <FormControlLabel sx={{ mr: { sm: 'auto' }, ml: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
+        {indiceEdicion !== null && <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>}
+        <Button onClick={agregarOActualizar} startIcon={<AddOutlinedIcon />} sx={dbanuStyles.addButtonRevive}>
+          {indiceEdicion !== null ? 'Actualizar modalidad' : 'Añadir'}
+        </Button>
+      </Stack>
+
+      <Box sx={{ mt: 1.5 }}>
         <TablaGestion total={modalidades.length} filtrados={modalidades.length} textoResumen={modalidades.length + ' modalidad(es)'}>
           <TableHead>
             <TableRow>
