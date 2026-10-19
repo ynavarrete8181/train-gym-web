@@ -49,6 +49,7 @@ const nuevaModalidad = () => ({
 export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], onAvisar }) {
   const [form, setForm] = useState(nuevaModalidad());
   const [indiceEdicion, setIndiceEdicion] = useState(null);
+  const [vistaInterna, setVistaInterna] = useState('listado');
 
   const avisar = (mensaje, tipo = 'warning') => onAvisar?.(mensaje, tipo);
 
@@ -109,6 +110,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
   const limpiar = () => {
     setForm(nuevaModalidad());
     setIndiceEdicion(null);
+    setVistaInterna('listado');
+  };
+
+  const iniciarNueva = () => {
+    setForm(nuevaModalidad());
+    setIndiceEdicion(null);
+    setVistaInterna('formulario');
   };
 
   const agregarOActualizar = () => {
@@ -174,6 +182,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       precios_sede: modalidad.precios_sede || [],
     });
     setIndiceEdicion(index);
+    setVistaInterna('formulario');
   };
 
   const eliminar = (index) => {
@@ -184,8 +193,16 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
   return (
     <Box sx={formStyles.seccion}>
       <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
-      <Typography variant="body2" color="text.secondary">Configura una modalidad a la vez.</Typography>
 
+      {vistaInterna === 'formulario' ? (
+        <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Box>
+          <Typography variant="subtitle2" fontWeight={700}>{indiceEdicion !== null ? 'Editar modalidad' : 'Nueva modalidad'}</Typography>
+          <Typography variant="caption" color="text.secondary">Configura frecuencia, duración y precio.</Typography>
+        </Box>
+        <Button size="small" onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Volver</Button>
+      </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.5fr .8fr .8fr 1fr .7fr 1fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
         <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
@@ -257,13 +274,19 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
 
       <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
         <FormControlLabel sx={{ mr: { sm: 'auto' }, ml: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
-        {indiceEdicion !== null && <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>}
-        <Button onClick={agregarOActualizar} startIcon={<AddOutlinedIcon />} sx={dbanuStyles.addButtonRevive}>
-          {indiceEdicion !== null ? 'Actualizar modalidad' : 'Añadir'}
+        <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar</Button>
+        <Button onClick={agregarOActualizar} startIcon={<AddOutlinedIcon />} sx={{ ...dbanuStyles.addButtonRevive, bgcolor: "transparent", color: "success.main", border: "1px solid", borderColor: "success.main", "&:hover": { bgcolor: "action.hover" } }}>
+          {indiceEdicion !== null ? 'Guardar cambios' : 'Agregar modalidad'}
         </Button>
       </Stack>
 
-      <Box sx={{ mt: 1.5 }}>
+        </Box>
+      ) : (
+        <Box>
+      <Box sx={{ mt: 1 }}>
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 1.5 }}>
+          <Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva} sx={dbanuStyles.addButtonRevive}>Añadir</Button>
+        </Stack>
         <TablaGestion total={modalidades.length} filtrados={modalidades.length} textoResumen={modalidades.length + ' modalidad(es)'}>
           <TableHead>
             <TableRow>
@@ -320,10 +343,8 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
             ) : null}
           </TableBody>
         </TablaGestion>
-      </Box>
-
-
+      </Box>        </Box>
+      )}
     </Box>
   );
 }
-
