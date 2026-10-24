@@ -1,0 +1,104 @@
+import { useEffect, useState } from 'react';
+import { Box, Button, Checkbox, FormControlLabel, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
+import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { apiClient } from '../../../services/apiClient.js';
+
+export function FotoPrivada({ deportistaId, foto }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    let valido = true;
+    let recurso = '';
+    apiClient.get(`/base/gimnasio/clientes/${deportistaId}/fotos-valoracion/${foto.id}`, { responseType: 'blob' })
+      .then((r) => {
+        recurso = URL.createObjectURL(r.data);
+        if (valido) setUrl(recurso);
+        else URL.revokeObjectURL(recurso);
+      })
+      .catch(() => {});
+    return () => { valido = false; if (recurso) URL.revokeObjectURL(recurso); };
+  }, [deportistaId, foto.id]);
+  return <Box sx={{ width: 180 }}>
+    {url ? <Box component="img" src={url} alt={`Foto ${foto.vista} del ${foto.fecha_fotografia}`} sx={{ width: '100%', height: 150, objectFit: 'contain', border: 1, borderColor: 'divider', borderRadius: 1 }} /> : <Box sx={{ height: 150, display: 'grid', placeItems: 'center' }}><CircularProgress size={22} /></Box>}
+    <Typography variant="caption" color="text.secondary">{foto.vista} · {String(foto.fecha_fotografia).slice(0, 10)}</Typography>
+  </Box>;
+}
+export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificacion }) {
+  const [fotos, setFotos] = useState([]);
+  const [archivo, setArchivo] = useState(null);
+  const [vista, setVista] = useState('FRONTAL');
+  const [fecha, setFecha] = useState(String(registro.fecha_registro).slice(0, 10));
+  const [guardando, setGuardando] = useState(false);
+  const [consentimiento, setConsentimiento] = useState(false);
+  const [vistaPrevia, setVistaPrevia] = useState('');
+  useEffect(() => {
+    if (!archivo) { setVistaPrevia(''); return undefined; }
+    const url = URL.createObjectURL(archivo);
+    setVistaPrevia(url);
+    return () => URL.revokeObjectURL(url);
+  }, [archivo]);
+  const cargar = async () => {
+    const r = await gimnasioServicio.obtenerFotosValoracion(deportistaId);
+    setFotos((r.datos || []).filter((f) => Number(f.valoracion_registro_id) === Number(registro.id)));
+  };
+  useEffect(() => { cargar().catch(() => onNotificacion?.('No se pudieron consultar las fotografías.', 'error')); }, [deportistaId, registro.id]);
+  const guardar = async () => {
+    if (!archivo || !fecha) return onNotificacion?.('Selecciona una fotografía y la fecha.', 'warning');
+    if (!consentimiento) return onNotificacion?.('Confirma que cuentas con autorización del deportista para registrar esta fotografía.', 'warning');
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(archivo.type) || archivo.size > 5 * 1024 * 1024)
+      return onNotificacion?.('Selecciona una imagen JPG, PNG o WEBP de máximo 5 MB.', 'warning');
+    setGuardando(true);
+    try {
+      await gimnasioServicio.subirFotoValoracion(deportistaId, archivo, registro.id, vista, fecha, consentimiento);
+      await cargar();
+      setArchivo(null);
+      setConsentimiento(false);
+      onNotificacion?.('Fotografía registrada correctamente.', 'success');
+    } catch (error) {
+      const mensaje = Object.values(error.response?.data?.errors || {})[0]?.[0] || error.response?.data?.mensaje || 'No se pudo guardar la fotografía.';
+      onNotificacion?.(mensaje, error.response?.status === 422 ? 'warning' : 'error');
+    } finally { setGuardando(false); }
+  };
+  return <Box sx={{ borderTop: 1, borderColor: 'divider', mt: 2, pt: 2 }}>
+    <Typography fontWeight={800} sx={{ mb: 1 }}>Fotografías de esta evaluación</Typography>
+    <Stack direction="row" flexWrap="wrap" gap={1.5} sx={{ mb: 2 }}>{fotos.map((foto) => <FotoPrivada key={foto.id} deportistaId={deportistaId} foto={foto} />)}</Stack>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' }, gap: 1.5 }}>
+      <Button component="label" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />} sx={{ justifyContent: 'flex-start' }}>
+        {archivo?.name || 'Seleccionar fotografía'}
+        <input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setArchivo(e.target.files?.[0] || null)} />
+      </Button>
+      <TextField select label="Vista" size="small" value={vista} onChange={(e) => setVista(e.target.value)} sx={dbanuStyles.field}>
+        {['FRONTAL', 'LATERAL', 'POSTERIOR', 'OTRA'].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
+      </TextField>
+      <TextField type="date" size="small" value={fecha} onChange={(e) => setFecha(e.target.value)} inputProps={{ 'aria-label': 'Fecha de la fotografía' }} sx={dbanuStyles.field} />
+    </Box>
+    {vistaPrevia && <Box component="img" src={vistaPrevia} alt="Vista previa de la fotografía seleccionada" sx={{ mt: 1.5, width: 180, height: 150, borderRadius: 1, border: 1, borderColor: 'divider', objectFit: 'contain' }} />}
+    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>JPG, PNG o WEBP. Máximo 5 MB. Almacenamiento privado.</Typography>
+    <FormControlLabel sx={{ mt: 1 }} control={<Checkbox size="small" checked={consentimiento} onChange={(e) => setConsentimiento(e.target.checked)} />} label={<Typography variant="body2">Confirmo que el deportista autorizó el registro de esta fotografía para seguimiento deportivo.</Typography>} />
+    <Stack direction="row" sx={{ ...dbanuStyles.formActions, justifyContent: 'flex-end', px: 0, pb: 0, mt: 1 }}>
+      <BotonGuardar texto="Guardar fotografía" guardando={guardando} onClick={guardar} />
+    </Stack>
+  </Box>;
+}
+
+export function GaleriaProgresoDeportista({ deportistaId, onNotificacion }) {
+  const [fotos, setFotos] = useState([]);
+  useEffect(() => {
+    let activo = true;
+    gimnasioServicio.obtenerFotosValoracion(deportistaId)
+      .then((respuesta) => { if (activo) setFotos(respuesta.datos || []); })
+      .catch(() => { if (activo) onNotificacion?.('No se pudieron consultar las fotografías.', 'error'); });
+    return () => { activo = false; };
+  }, [deportistaId]);
+  return <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 2 }}>
+    <Typography fontWeight={800} sx={{ mb: 0.5 }}>Evolución fotográfica</Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      Fotografías vinculadas a las evaluaciones físicas. Para añadir nuevas imágenes, utiliza Ficha inicial → Evaluación física → Ver detalle.
+    </Typography>
+    {fotos.length ? <Stack direction="row" gap={2} flexWrap="wrap">
+      {fotos.map((foto) => <FotoPrivada key={foto.id} deportistaId={deportistaId} foto={foto} />)}
+    </Stack> : <Typography variant="body2" color="text.secondary">No hay fotografías de evolución registradas.</Typography>}
+  </Box>;
+}

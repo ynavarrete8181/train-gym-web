@@ -362,7 +362,7 @@ export function PlanesPage() {
                   </TextField>
                 </Box>
                 <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                  <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Generar cobro al contratar" />
+                  {/* La generación de la venta inicial se controla al asignar la membresía al deportista. */}
                   <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
                   <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
@@ -435,64 +435,81 @@ export function PlanesPage() {
               ) : (
                 <>
                   <Box sx={formStyles.seccion}>
-                <Typography sx={formStyles.modalSeccionTitulo}>Duración estándar y tarifas</Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>La fecha fin del contrato se calcula automáticamente desde esta duración.</Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-                  <TextField select label="Tipo de Duración" name="tipo_duracion" value={formData.tipo_duracion} onChange={handleChange} size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'}><MenuItem value="DIAS">Días</MenuItem><MenuItem value="MESES">Meses</MenuItem><MenuItem value="ANIOS">Años</MenuItem></TextField>
-                  <TextField label="Duración" name="duracion" type="number" value={formData.duracion} onChange={handleChange} required size="small" disabled={formData.tipo_producto === 'PASE_DIARIO'} />
-                  <TextField label="Precio Base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" inputProps={{ min: 0, step: '0.01' }} />
-                  {formData.tipo_producto !== 'PASE_DIARIO' ? (
-                    <TextField label="Tarifa de Inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" helperText="Opcional" inputProps={{ min: 0, step: '0.01' }} />
-                  ) : (
-                    <Box />
-                  )}
-                </Box>
-              </Box>
+                    <Typography sx={formStyles.modalSeccionTitulo}>Duración y tarifas</Typography>
+                    <Box sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: formData.tipo_producto === 'PASE_DIARIO' ? 'minmax(0, 1fr) minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', md: formData.tipo_producto === 'PASE_DIARIO' ? 'minmax(0, 220px) minmax(0, 220px)' : 'repeat(4, minmax(0, 1fr))' },
+                      gap: 1.5, alignItems: 'center',
+                    }}>
+                      {formData.tipo_producto === 'PASE_DIARIO' ? (
+                        <Box sx={{ minHeight: 40, display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="body2" color="text.secondary">Vigencia</Typography>
+                          <Chip label="1 día" size="small" variant="outlined" sx={{ fontWeight: 700 }} />
+                        </Box>
+                      ) : (
+                        <>
+                          <TextField select label="Tipo de duración" name="tipo_duracion" value={formData.tipo_duracion} onChange={handleChange} size="small">
+                            <MenuItem value="DIAS">Días</MenuItem>
+                            <MenuItem value="MESES">Meses</MenuItem>
+                            <MenuItem value="ANIOS">Años</MenuItem>
+                          </TextField>
+                          <TextField label="Duración" name="duracion" type="number" value={formData.duracion} onChange={handleChange} required size="small" />
+                        </>
+                      )}
+                      <TextField label="Precio base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" inputProps={{ min: 0, step: '0.01' }} sx={{ ...dbanuStyles.field, minWidth: 0 }} />
+                      {formData.tipo_producto !== 'PASE_DIARIO' && (
+                        <TextField label="Tarifa de inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" inputProps={{ min: 0, step: '0.01' }} />
+                      )}
+                    </Box>
+                  </Box>
 
-              <Box sx={formStyles.seccion}>
-                <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" spacing={1}>
-                  <Box>
+                  <Box sx={formStyles.seccion}>
                     <FormControlLabel
-                      control={
-                        <Switch
-                          name="precio_por_sede"
-                          checked={Boolean(formData.precio_por_sede)}
-                          onChange={handleChange}
-                        />
-                      }
-                      label="Precio diferente por sede"
                       sx={{ m: 0 }}
+                      control={<Switch name="precio_por_sede" checked={Boolean(formData.precio_por_sede)} onChange={handleChange} />}
+                      label={<Typography sx={formStyles.modalSeccionTitulo}>Precio diferente por sede</Typography>}
                     />
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
-                      Si está apagado, todas las sedes usan el precio base del plan.
-                    </Typography>
+                    {formData.precio_por_sede && (
+                      <Box sx={{ mt: 1.5 }}>
+                        {(formData.precios_sede || []).length > 0 ? (
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+                            {(formData.precios_sede || []).map((fila, index) => (
+                              <Box key={index} sx={{ display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 }}>
+                                <TextField select label="Sede" size="small" value={fila.sede_id || ''}
+                                  onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)}
+                                  sx={{ ...dbanuStyles.field, flex: 1, minWidth: 0 }}>
+                                  {sedes.map((sede) => (
+                                    <MenuItem key={sede.id_sede} value={sede.id_sede}
+                                      disabled={(formData.precios_sede || []).some((precio, otroIndice) => otroIndice !== index && String(precio.sede_id) === String(sede.id_sede))}>
+                                      {sede.nombre}
+                                    </MenuItem>
+                                  ))}
+                                </TextField>
+                                <TextField label="Precio ($)" type="number" size="small" value={fila.precio}
+                                  onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)}
+                                  inputProps={{ min: 0, step: '0.01' }}
+                                  sx={{ ...dbanuStyles.field, width: { xs: 104, sm: 130 }, flexShrink: 0 }} />
+                                <Tooltip title="Quitar tarifa">
+                                  <IconButton size="small" onClick={() => handleRemovePrecioSede(index)}
+                                    sx={{ ...dbanuStyles.actionDelete, flexShrink: 0 }} aria-label="Quitar tarifa por sede">
+                                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            ))}
+                          </Box>
+                        ) : (
+                          <Typography variant="caption" color="text.secondary">Sin tarifas especiales. Se aplica el precio base.</Typography>
+                        )}
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+                          <Button startIcon={<AddOutlinedIcon />} onClick={handleAddPrecioSede} sx={dbanuStyles.addButtonRevive}
+                            disabled={(formData.precios_sede || []).length >= sedes.length || (formData.precios_sede || []).some((fila) => !fila.sede_id)}>
+                            Añadir
+                          </Button>
+                        </Box>
+                      </Box>
+                    )}
                   </Box>
-
-                  {formData.precio_por_sede ? (
-                    <Button startIcon={<AddOutlinedIcon />} onClick={handleAddPrecioSede} sx={dbanuStyles.addButtonRevive}>
-                      Añadir
-                    </Button>
-                  ) : null}
-                </Stack>
-
-                {formData.precio_por_sede && (formData.precios_sede || []).length ? (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
-                    {(formData.precios_sede || []).map((fila, index) => (
-                      <Stack key={index} direction="row" spacing={1} alignItems="center">
-                        <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => handleUpdatePrecioSede(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
-                          {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                        </TextField>
-                        <TextField label="Precio ($)" type="number" size="small" value={fila.precio} onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)} sx={{ width: 140 }} />
-                        <Tooltip title="Quitar">
-                          <IconButton size="small" onClick={() => handleRemovePrecioSede(index)} sx={dbanuStyles.actionDelete}>
-                            <DeleteOutlineOutlinedIcon sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Stack>
-                    ))}
-                  </Box>
-                ) : null}
-              </Box>
                 </>
               )}
             </Stack>

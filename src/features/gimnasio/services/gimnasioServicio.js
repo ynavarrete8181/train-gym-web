@@ -1,6 +1,18 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const gimnasioServicio = {
+  diagnosticarIdentidadCliente: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/diagnostico-identidad`);
+    return data;
+  },
+  obtenerFichaInicial: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/ficha-inicial`);
+    return data;
+  },
+  guardarFichaInicial: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/clientes/${id}/ficha-inicial`, payload);
+    return data;
+  },
   obtenerUsuarios: async (parametros = {}) => {
     const esCatalogoDeportistas = String(parametros?.rol || '').toUpperCase() === 'DEPORTISTA';
     const endpoint = esCatalogoDeportistas
@@ -159,6 +171,20 @@ export const gimnasioServicio = {
     return data;
   },
 
+  // --- Beneficios personalizados de membresías ---
+  obtenerDescuentosDeportista: async (deportistaId) => {
+    const { data } = await api.get('/base/gimnasio/descuentos-deportistas', { params: { deportista_id: deportistaId } });
+    return data;
+  },
+  crearDescuentoDeportista: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/descuentos-deportistas', payload);
+    return data;
+  },
+  actualizarDescuentoDeportista: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/descuentos-deportistas/${id}`, payload);
+    return data;
+  },
+
   // --- Membresías ---
   obtenerMembresias: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/gimnasio/membresias', { params });
@@ -178,6 +204,53 @@ export const gimnasioServicio = {
   },
   eliminarMembresia: async (id) => {
     const { data } = await api.delete(`/base/gimnasio/membresias/${id}`);
+    return data;
+  },
+
+  obtenerFotosValoracion: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/fotos-valoracion`);
+    return data;
+  },
+  subirFotoValoracion: async (id, archivo, registroId, vista, fecha, consentimiento) => {
+    const datos = new FormData();
+    datos.append('foto', archivo);
+    datos.append('consentimiento_confirmado', consentimiento ? '1' : '0');
+    datos.append('valoracion_registro_id', String(registroId));
+    datos.append('vista', vista);
+    datos.append('fecha_fotografia', fecha);
+    const { data } = await api.post(`/base/gimnasio/clientes/${id}/fotos-valoracion`, datos);
+    return data;
+  },
+  obtenerReporteValoraciones: async (id, params = {}) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/reporte-valoraciones`, { params });
+    return data;
+  },
+  obtenerInformeProgreso: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/progreso-informe`);
+    return data;
+  },
+  obtenerValoracionesDeportista: async (id, seccion) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/valoraciones`, { params: { seccion } });
+    return data;
+  },
+  crearValoracionDeportista: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/clientes/${id}/valoraciones`, payload);
+    return data;
+  },
+  actualizarValoracionDeportista: async (id, registro, payload) => {
+    const { data } = await api.put(`/base/gimnasio/clientes/${id}/valoraciones/${registro}`, payload);
+    return data;
+  },
+  anularValoracionDeportista: async (id, registro) => {
+    const { data } = await api.delete(`/base/gimnasio/clientes/${id}/valoraciones/${registro}`);
+    return data;
+  },
+  obtenerControlesDeportista: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/valoraciones/controles`);
+    return data;
+  },
+  obtenerControlesValoracionPendientes: async (dias = 7) => {
+    const { data } = await api.get('/base/gimnasio/valoraciones/controles-pendientes', { params: { dias } });
     return data;
   },
 

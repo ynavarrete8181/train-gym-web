@@ -1,6 +1,32 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const entrenamientoServicio = {
+  obtenerDeportistasEvaluaciones: async () => {
+    const { data } = await api.get('/base/entrenamiento/evaluaciones-fisicas/deportistas');
+    return data;
+  },
+  actualizarPruebaRendimiento: async (id, registro, payload) => {
+    const { data } = await api.put(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento/${registro}`, payload);
+    return data;
+  },
+  obtenerPruebasRendimiento: async (id) => {
+    const { data } = await api.get(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento`);
+    return data;
+  },
+  registrarPruebaRendimiento: async (id, payload) => {
+    const { data } = await api.post(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento`, payload);
+    return data;
+  },
+  anularPruebaRendimiento: async (id, registro) => {
+    const { data } = await api.delete(`/base/entrenamiento/deportistas/${id}/pruebas-rendimiento/${registro}`);
+    return data;
+  },
+  subirVideoEjercicio: async (id, archivo) => {
+    const datos = new FormData();
+    datos.append('video', archivo);
+    const { data } = await api.post(`/base/entrenamiento/ejercicios/${id}/video`, datos);
+    return data;
+  },
   obtenerEjercicios: async (params = { page: 1 }) => {
     const { data } = await api.get('/base/entrenamiento/ejercicios', { params });
     return data;

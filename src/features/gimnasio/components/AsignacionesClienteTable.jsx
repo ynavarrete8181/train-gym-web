@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.jsx';
 
@@ -61,6 +62,9 @@ export function AsignacionesClienteTable({
   cargando = false,
   onEditar,
   onInactivar,
+  filtrosColumna = {},
+  onFiltroColumna,
+  opcionesColumna = {},
 }) {
   const ordenadas = [...asignaciones].sort((a, b) => {
     const aActivo = String(a.estado || '').toUpperCase() === 'ACTIVO' ? 1 : 0;
@@ -82,11 +86,15 @@ export function AsignacionesClienteTable({
     >
       <TableHead>
         <TableRow>
-          <TableCell>Entrenador</TableCell>
-          <TableCell>Disponibilidad</TableCell>
-          <TableCell>Sede</TableCell>
-          <TableCell>Vigencia</TableCell>
-          <TableCell>Estado</TableCell>
+          {[
+            ['entrenador', 'Entrenador'], ['disponibilidad', 'Disponibilidad'],
+            ['sede', 'Sede'], ['vigencia', 'Vigencia'], ['estado', 'Estado'],
+          ].map(([campo, titulo]) => <FilterHeaderCell key={campo}
+            value={filtrosColumna[campo] || []}
+            options={opcionesColumna[campo] || []}
+            onChange={onFiltroColumna ? (valores) => onFiltroColumna(campo, valores) : undefined}>
+            {titulo}
+          </FilterHeaderCell>)}
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>

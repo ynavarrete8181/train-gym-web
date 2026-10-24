@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -20,6 +23,7 @@ import {
   Typography,
 } from '@mui/material';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 
@@ -49,6 +53,35 @@ const nuevaModalidad = () => ({
 export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], onAvisar }) {
   const [form, setForm] = useState(nuevaModalidad());
   const [indiceEdicion, setIndiceEdicion] = useState(null);
+  const [vistaInterna, setVistaInterna] = useState('listado');
+  const [busqueda, setBusqueda] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(5);
+  const [filtros, setFiltros] = useState({ nombre: [], frecuencia: [], duracion: [], precio: [], cobro: [], estado: [] });
+
+  const valoresFila = (m) => ({
+    nombre: String(m.nombre || ''),
+    frecuencia: m.uso_ilimitado ? 'Ilimitado' : `${m.usos_por_semana || m.dias_por_semana || 0} uso(s)/sem.`,
+    duracion: `${m.duracion} ${String(m.tipo_duracion || '').toLowerCase()}`,
+    precio: `${Number(m.precio_base || 0).toFixed(2)}`,
+    cobro: m.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo',
+    estado: m.activo ? 'ACTIVA' : 'INACTIVA',
+  });
+  const modalidadesFiltradas = modalidades
+    .map((modalidad, index) => ({ modalidad, index, celdas: valoresFila(modalidad) }))
+    .filter(({ modalidad, celdas }) => {
+      const texto = [modalidad.codigo, ...Object.values(celdas)].join(' ').toLocaleLowerCase('es');
+      return texto.includes(busqueda.trim().toLocaleLowerCase('es'))
+        && Object.entries(filtros).every(([campo, seleccion]) => !seleccion.length || seleccion.includes(celdas[campo]));
+    });
+  const opcionesColumna = (campo) => [...new Set(modalidades.map((m) => valoresFila(m)[campo]))]
+    .sort((a, b) => a.localeCompare(b, 'es'))
+    .map((valor) => ({ value: valor, label: valor }));
+  const cambiarFiltro = (campo, valor) => {
+    setFiltros((actual) => ({ ...actual, [campo]: valor }));
+    setPagina(1);
+  };
+
 
   const avisar = (mensaje, tipo = 'warning') => onAvisar?.(mensaje, tipo);
 
@@ -87,27 +120,35 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     });
   };
 
-  const agregarPrecio = () => setForm((prev) => ({
-    ...prev,
-    precios_sede: [...(prev.precios_sede || []), { sede_id: '', precio: '' }],
-  }));
-
-  const cambiarPrecio = (index, field, value) => {
+  // Solo se persisten excepciones de precio; las demás sedes usan precio_base.
+  const fijarPrecioSede = (sedeId, habilitado) => {
     setForm((prev) => {
-      const precios = [...(prev.precios_sede || [])];
-      precios[index] = { ...precios[index], [field]: value };
-      return { ...prev, precios_sede: precios };
+      const actuales = prev.precios_sede || [];
+      const precios_sede = habilitado
+        ? [...actuales.filter((p) => Number(p.sede_id) !== Number(sedeId)), {
+            sede_id: Number(sedeId), precio: String(prev.precio_base ?? 0),
+          }]
+        : actuales.filter((p) => Number(p.sede_id) !== Number(sedeId));
+      return { ...prev, precios_sede };
     });
   };
 
-  const quitarPrecio = (index) => setForm((prev) => ({
+  const cambiarPrecioSede = (sedeId, precio) => setForm((prev) => ({
     ...prev,
-    precios_sede: (prev.precios_sede || []).filter((_, i) => i !== index),
+    precios_sede: (prev.precios_sede || []).map((p) => Number(p.sede_id) === Number(sedeId)
+      ? { ...p, precio } : p),
   }));
 
   const limpiar = () => {
     setForm(nuevaModalidad());
     setIndiceEdicion(null);
+    setVistaInterna('listado');
+  };
+
+  const iniciarNueva = () => {
+    setForm(nuevaModalidad());
+    setIndiceEdicion(null);
+    setVistaInterna('formulario');
   };
 
   const agregarOActualizar = () => {
@@ -126,13 +167,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       return;
     }
 
-    if (Number(form.precio_base) < 0) {
+    if (form.precio_base === '' || !Number.isFinite(Number(form.precio_base)) || Number(form.precio_base) < 0) {
       avisar('El precio base de la modalidad no puede ser negativo.');
       return;
     }
 
     const precios = form.precio_por_sede ? (form.precios_sede || []) : [];
-    if (precios.some((fila) => !fila.sede_id || fila.precio === '')) {
+    if (precios.some((fila) => !fila.sede_id || fila.precio === '' || !Number.isFinite(Number(fila.precio)) || Number(fila.precio) < 0)) {
       avisar('Completa o elimina las filas incompletas de precios por sede.');
       return;
     }
@@ -173,6 +214,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       precios_sede: modalidad.precios_sede || [],
     });
     setIndiceEdicion(index);
+    setVistaInterna('formulario');
   };
 
   const eliminar = (index) => {
@@ -182,9 +224,18 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
 
   return (
     <Box sx={formStyles.seccion}>
-      <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', mb: 2, gap: 2 }}>
+        <Typography sx={formStyles.modalSeccionTitulo}>Modalidades del plan</Typography>
+        {vistaInterna === 'formulario' && (
+          <Box sx={{ ml: 'auto', flexShrink: 0, display: 'flex', justifyContent: 'flex-end' }}>
+            <BotonVolver onClick={limpiar} />
+          </Box>
+        )}
+      </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.4fr .72fr .72fr .78fr .68fr .8fr .9fr .9fr' }, gap: 1, alignItems: 'start', mt: 1 }}>
+      {vistaInterna === 'formulario' ? (
+        <Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
         <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
         <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 30 }} />
@@ -196,89 +247,114 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         </TextField>
         <TextField label="Cantidad" name="duracion" type="number" value={form.duracion} onChange={cambiar} size="small" inputProps={{ min: 1 }} />
         <TextField label="Precio ($)" name="precio_base" type="number" value={form.precio_base} onChange={cambiar} size="small" inputProps={{ min: 0, step: '0.01' }} />
-        <TextField select label="Modelo de cobro" name="modelo_cobro" value={form.modelo_cobro} onChange={cambiar} size="small">
-          <MenuItem value="FIJO_POR_PERIODO">Fijo</MenuItem>
-          <MenuItem value="PRORRATEO_POR_SEMANAS_UTILIZADAS">Prorrateado</MenuItem>
-        </TextField>
-        <TextField select label="Momento" name="momento_cobro" value={form.momento_cobro} onChange={cambiar} size="small" disabled={form.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS'}>
-          <MenuItem value="ANTICIPADO">Anticipado</MenuItem>
-          <MenuItem value="VENCIDO">Vencido</MenuItem>
-        </TextField>
+        {/* Modelo y momento de cobro se conservan en los datos existentes; no son de uso habitual. */}
       </Box>
 
-      <Box
-        sx={{
-          mt: .75,
-          display: 'grid',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) auto' },
-          alignItems: 'center',
-          width: '100%',
-          columnGap: 1.5,
-          rowGap: 1,
-        }}
-      >
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, minmax(0, 1fr))' },
-            alignItems: 'center',
-            gap: .5,
-            minWidth: 0,
-          }}
-        >
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="extension_automatica" checked={Boolean(form.extension_automatica)} onChange={cambiar} disabled={!form.permite_extension} />} label="Extensión automática" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="permite_rollover" checked={Boolean(form.permite_rollover)} onChange={cambiar} />} label="Rollover" />
-          <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
-        </Box>
-
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 'auto' }}>
-          {indiceEdicion !== null ? (
-            <Chip
-              size="small"
-              label="Editando modalidad"
-              variant="outlined"
-              sx={{ fontWeight: 800 }}
+      <Box sx={{ mt: 1.5, border: '1px solid #dbe5f0', borderRadius: 2, p: 1.5, bgcolor: '#f8fafc' }}>
+        <Stack spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={800}>Tarifas por sede</Typography>
+              <Typography variant="caption" color="text.secondary">Opcional · Precios diferentes por sede</Typography>
+            </Box>
+            <FormControlLabel
+              sx={{ m: 0 }}
+              control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
+              label="Personalizar"
             />
-          ) : null}
-          <Button
-            onClick={agregarOActualizar}
-            startIcon={<AddOutlinedIcon />}
-            sx={dbanuStyles.addButtonRevive}
-          >
-            Añadir
-          </Button>
+          </Stack>
+          {form.precio_por_sede && (
+            <Stack spacing={1}>
+              {sedes.length === 0 && (
+                <Typography color="text.secondary" variant="body2">No se encontraron sedes configuradas.</Typography>
+              )}
+              {sedes.map((sede) => {
+                const especial = (form.precios_sede || []).find((p) => Number(p.sede_id) === Number(sede.id_sede));
+                const habilitado = Boolean(especial);
+                return (
+                  <Box key={sede.id_sede} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(180px, 1fr) minmax(200px, 1fr)' }, alignItems: 'center', gap: 1.5, px: 1.5, py: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: '#fff' }}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={700}>{sede.nombre}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {habilitado ? 'Tarifa específica' : `Precio general: $${Number(form.precio_base || 0).toFixed(2)}`}
+                      </Typography>
+                    </Box>
+                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                      <FormControlLabel
+                        sx={{ m: 0 }}
+                        control={<Switch size="small" checked={habilitado} onChange={(e) => fijarPrecioSede(sede.id_sede, e.target.checked)} />}
+                        label={<Typography variant="caption">Personalizar</Typography>}
+                      />
+                      {habilitado && (
+                        <TextField
+                          label="Precio especial ($)" size="small" type="number"
+                          value={especial.precio}
+                          onChange={(e) => cambiarPrecioSede(sede.id_sede, e.target.value)}
+                          inputProps={{ min: 0, step: '0.01' }}
+                          sx={{ maxWidth: 170 }}
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                );
+              })}
+            </Stack>
+          )}
+
         </Stack>
       </Box>
 
+      <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
+        <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
+          <BotonGuardar onClick={agregarOActualizar} texto="Agregar" />
+        </Box>
+      </Box>
+
+        </Box>
+      ) : (
+        <Box>
       <Box sx={{ mt: 1 }}>
-        <TablaGestion total={modalidades.length} filtrados={modalidades.length} textoResumen={modalidades.length + ' modalidad(es)'}>
+        <GestionToolbar total={modalidadesFiltradas.length} busqueda={busqueda}
+          onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
+          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={iniciarNueva}>Añadir</Button>} />
+        <TablaGestion total={modalidades.length} filtrados={modalidadesFiltradas.length}
+          page={pagina} rowsPerPage={porPagina}
+          onPageChange={setPagina}
+          onRowsPerPageChange={(cantidad) => { setPorPagina(cantidad); setPagina(1); }}>
           <TableHead>
             <TableRow>
-              <TableCell>Modalidad</TableCell>
-              <TableCell>Frecuencia</TableCell>
-              <TableCell>Duración</TableCell>
-              <TableCell>Precio</TableCell>
-              <TableCell>Cobro</TableCell>
-              <TableCell>Estado</TableCell>
+              {[
+                ['nombre', 'Modalidad'], ['frecuencia', 'Frecuencia'], ['duracion', 'Duración'],
+                ['precio', 'Precio'], ['cobro', 'Cobro'], ['estado', 'Estado'],
+              ].map(([campo, titulo]) => (
+                <FilterHeaderCell key={campo} value={filtros[campo]}
+                  onChange={(valor) => cambiarFiltro(campo, valor)}
+                  options={opcionesColumna(campo)}>{titulo}</FilterHeaderCell>
+              ))}
               <TableCell align="center">Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {modalidades.map((modalidad, index) => (
+            {modalidadesFiltradas.slice((pagina - 1) * porPagina, pagina * porPagina).map(({ modalidad, index, celdas }) => (
               <TableRow key={modalidad.id || 'draft-' + index} hover>
                 <TableCell>
-                  <Typography variant="body2" fontWeight={800}>{modalidad.nombre}</Typography>
+                  <Typography variant="body2" fontWeight={700}>{modalidad.nombre}</Typography>
                   <Typography variant="caption" color="text.secondary">{modalidad.codigo || 'Se genera al guardar'}</Typography>
                 </TableCell>
-                <TableCell>{modalidad.uso_ilimitado ? 'Ilimitado' : (modalidad.usos_por_semana || modalidad.dias_por_semana || 0) + ' uso(s)/sem.'}</TableCell>
-                <TableCell>{modalidad.duracion} {String(modalidad.tipo_duracion || '').toLowerCase()}</TableCell>
-                <TableCell>{'$' + Number(modalidad.precio_base || 0).toFixed(2)}</TableCell>
-                <TableCell>{modalidad.modelo_cobro === 'PRORRATEO_POR_SEMANAS_UTILIZADAS' ? 'Prorrateado' : 'Fijo'}</TableCell>
-                <TableCell><Chip size="small" label={modalidad.activo ? 'ACTIVA' : 'INACTIVA'} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
+                <TableCell>{celdas.frecuencia}</TableCell>
+                <TableCell>{celdas.duracion}</TableCell>
+                <TableCell>
+                  <Typography variant="body2">{celdas.precio}</Typography>
+                  {(modalidad.precios_sede || []).length > 0 &&
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      {modalidad.precios_sede.length} tarifa(s) por sede
+                    </Typography>}
+                </TableCell>
+                <TableCell>{celdas.cobro}</TableCell>
+                <TableCell><Chip size="small" label={celdas.estado} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
                 <TableCell align="center">
-                  <Stack direction="row" spacing={.5} justifyContent="center">
+                  <Stack direction="row" spacing={0.5} justifyContent="center">
                     <Tooltip title="Editar modalidad">
                       <IconButton size="small" onClick={() => editar(modalidad, index)} sx={dbanuStyles.actionEdit}>
                         <EditOutlinedIcon sx={{ fontSize: 17 }} />
@@ -293,62 +369,18 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                 </TableCell>
               </TableRow>
             ))}
-            {modalidades.length === 0 ? (
+            {modalidadesFiltradas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
-                  No hay modalidades agregadas.
+                <TableCell colSpan={7} align="center">
+                  {modalidades.length === 0 ? 'No se encontraron modalidades.' : 'No se encontraron resultados.'}
                 </TableCell>
               </TableRow>
-            ) : null}
+            )}
           </TableBody>
         </TablaGestion>
       </Box>
-
-      <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
-          <Box sx={{ flex: 1 }}>
-            <FormControlLabel
-              control={<Switch size="small" name="precio_por_sede" checked={Boolean(form.precio_por_sede)} onChange={cambiar} />}
-              label="Precio diferente por sede"
-              sx={{ m: 0, '& .MuiFormControlLabel-label': { fontWeight: 800, fontSize: 13 } }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: .25 }}>
-              Si está apagado, todas las sedes usan el precio base de la modalidad.
-            </Typography>
-          </Box>
-
-          {form.precio_por_sede ? (
-            <Button startIcon={<AddOutlinedIcon />} onClick={agregarPrecio} sx={dbanuStyles.addButtonRevive}>
-              Añadir
-            </Button>
-          ) : null}
-        </Stack>
-
-        {form.precio_por_sede && (form.precios_sede || []).length ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
-            {(form.precios_sede || []).map((fila, index) => (
-              <Stack key={index} direction="row" spacing={1} alignItems="center">
-                <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => cambiarPrecio(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
-                  {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
-                </TextField>
-                <TextField label="Precio ($)" type="number" size="small" value={fila.precio ?? ''} onChange={(e) => cambiarPrecio(index, 'precio', e.target.value)} sx={{ width: 130 }} />
-                <Tooltip title="Quitar">
-                  <IconButton size="small" onClick={() => quitarPrecio(index)} sx={dbanuStyles.actionDelete}>
-                    <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            ))}
-          </Box>
-        ) : null}
-
-        {indiceEdicion !== null ? (
-          <Stack direction="row" justifyContent="flex-end" spacing={1} sx={{ mt: 1.25 }}>
-            <Button onClick={limpiar} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
-          </Stack>
-        ) : null}
-      </Box>
-
+        </Box>
+      )}
     </Box>
   );
 }
