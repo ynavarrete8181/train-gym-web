@@ -47,15 +47,15 @@ const metaInicial = {
 
 function obtenerMensajeError(error, fallback) {
   const data = error.response?.data;
-  const primerError =
-    data?.errores && Object.values(data.errores).flat().find(Boolean);
-  if (primerError === "validation.unique" && data?.errors?.email) {
+  const errores = data?.errors ?? data?.errores;
+  const primerError = errores && Object.values(errores).flat().find(Boolean);
+  if (primerError === "validation.unique" && errores?.email) {
     return "Este correo ya está registrado en otra cuenta. Revisa el listado de usuarios o utiliza otro correo.";
   }
-  if (primerError === "validation.unique" && data?.errors?.persona_id) {
+  if (primerError === "validation.unique" && errores?.persona_id) {
     return "Esta persona ya tiene una cuenta registrada.";
   }
-  return primerError || data?.mensaje || fallback;
+  return primerError || data?.message || data?.mensaje || fallback;
 }
 
 export function UsuariosPage() {
