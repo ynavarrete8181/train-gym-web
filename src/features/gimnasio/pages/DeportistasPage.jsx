@@ -1532,11 +1532,11 @@ export function DeportistasPage() {
             />
           </Box>
 
-          {!membresiaForm.id && <Box sx={{ minHeight: 40, px: 1.25, border: '1px solid #dbe5f0', borderRadius: 1, display: 'flex', alignItems: 'center', bgcolor: '#f8fafc' }}>
+          <Box sx={{ minHeight: 40, px: 1.25, border: '1px solid #dbe5f0', borderRadius: 1, display: 'flex', alignItems: 'center', bgcolor: '#f8fafc' }}>
             <FormControlLabel control={<Switch size="small" checked={requiereDescuento}
               onChange={(evento) => setRequiereDescuento(evento.target.checked)} />}
               label="Requiere descuento" sx={{ m: 0 }} />
-          </Box>}
+          </Box>
 
           <Box
             sx={{
@@ -1564,7 +1564,7 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
-        {!membresiaForm.id && requiereDescuento && (
+        {requiereDescuento && (
           <Box sx={{ mt: 1 }}>
             <DescuentosDeportistaPanel ocultarInterruptor
               deportistaId={formData.id}
@@ -1582,93 +1582,39 @@ export function DeportistasPage() {
             Configuración comercial
           </Button>
           {mostrarConfiguracionComercial && (
-            <Box sx={{ mt: 1 }}>
-        {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' ? (
-          <Box
-            sx={{
-              mt: 0.75,
-              p: 1.25,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1.5,
-              bgcolor: '#fbfdff',
-            }}
-          >
-            <Typography variant="body2" fontWeight={800}>
-              Venta inicial
-            </Typography>
-            
-          </Box>
-        ) : null}
-
-        {permiteCobroProgramado ? (
-          <Box
-            sx={{
-              mt: 0.75,
-              p: 1.25,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1.5,
-              bgcolor: '#fbfdff',
-            }}
-          >
-            <Typography variant="body2" fontWeight={800}>
-              Configuración de cobro
-            </Typography>
-            
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.15fr' }, gap: 1.5 }}>
-              <TextField
-                label="Día de pago"
-                name="dia_pago"
-                type="number"
-                value={membresiaForm.dia_pago ?? ''}
-                onChange={handleMembresiaChange}
-                size="small"
-                slotProps={{ htmlInput: { min: 1, max: 31 } }}
-                helperText="Día habitual del mes: 1 al 31."
-              />
-
-              <TextField
-                label="Próximo cobro"
-                value={proximoCobroPreview || 'Se calculará al guardar'}
-                size="small"
-                disabled
-                helperText="Calculado automáticamente."
-              />
-
-              <Box
-                sx={{
-                  minHeight: 40,
-                  px: 1.25,
-                  border: '1px solid #dbe5f0',
-                  borderRadius: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  bgcolor: '#f8fafc',
-                }}
-              >
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="generar_venta_automatica"
-                      checked={Boolean(membresiaForm.generar_venta_automatica)}
+            <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+              {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
+                <Typography variant="body2" sx={{ mb: permiteCobroProgramado ? 1.5 : 0 }}>
+                  {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
+                    ? 'Venta inicial pendiente de cobro'
+                    : 'Sin venta inicial automática'}
+                </Typography>
+              )}
+              {permiteCobroProgramado && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, alignItems: 'end' }}>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography component="label" htmlFor="membresia-dia-pago" sx={{ display: 'block', mb: 0.5, fontSize: 12, fontWeight: 600 }}>
+                      Día de pago
+                    </Typography>
+                    <TextField id="membresia-dia-pago" fullWidth type="number" size="small"
+                      name="dia_pago" value={membresiaForm.dia_pago ?? ''}
                       onChange={handleMembresiaChange}
-                      size="small"
-                    />
-                  }
-                  label="Generar renovaciones automáticamente"
-                  sx={{ m: 0 }}
-                />
-              </Box>
-            </Box>
-          </Box>
-        ) : (
-          membresiaForm.plan_id ? (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
-              Cobro inmediato o manual desde Ventas.
-            </Typography>
-          ) : null
-        )}
-
+                      slotProps={{ htmlInput: { min: 1, max: 31 } }} />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography sx={{ display: 'block', mb: 0.5, fontSize: 12, fontWeight: 600 }}>
+                      Próximo cobro
+                    </Typography>
+                    <TextField fullWidth size="small" value={proximoCobroPreview || 'Automático'}
+                      slotProps={{ htmlInput: { 'aria-label': 'Próximo cobro' }, input: { readOnly: true } }} />
+                  </Box>
+                  <Box sx={{ minHeight: 40, display: 'flex', alignItems: 'center', px: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                    <FormControlLabel control={<Switch size="small" name="generar_venta_automatica"
+                      checked={Boolean(membresiaForm.generar_venta_automatica)} onChange={handleMembresiaChange} />}
+                      label="Renovaciones automáticas" sx={{ m: 0 }} />
+                  </Box>
+                </Box>
+              )}
             </Box>
           )}
         </Box>
