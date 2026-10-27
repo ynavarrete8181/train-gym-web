@@ -1694,7 +1694,7 @@ export function DeportistasPage() {
           </Box>
         ) : null}
         <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
-          <BotonGuardar texto={membresiaForm.id ? 'Guardar cambios' : 'Guardar membresía'} onClick={handleGuardarMembresia} />
+          <BotonGuardar onClick={handleGuardarMembresia} />
         </Stack>
       </Box> : null}
       {vistaMembresia === 'listado' && <Box sx={formStyles.seccion}>
