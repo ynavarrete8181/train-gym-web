@@ -308,7 +308,6 @@ export function DeportistasPage() {
   const [tabFicha, setTabFicha] = useState('datos');
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
-  const [requiereDescuento, setRequiereDescuento] = useState(false);
   const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
   const [mostrarConfiguracionComercial, setMostrarConfiguracionComercial] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
@@ -829,13 +828,11 @@ export function DeportistasPage() {
 
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
-    setRequiereDescuento(false);
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
   };
 
   const handleEditarMembresia = (m) => {
-    setRequiereDescuento(false);
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
     setMembresiaForm({
@@ -898,7 +895,7 @@ export function DeportistasPage() {
       };
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
-      if (requiereDescuento) {
+      if (descuentoMembresia.valor !== '' || descuentoMembresia.motivo.trim() !== '') {
         if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
           showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
           return;
@@ -1550,12 +1547,6 @@ export function DeportistasPage() {
             />
           </Box>
 
-          <Box sx={{ minHeight: 40, px: 1.25, border: '1px solid #dbe5f0', borderRadius: 1, display: 'flex', alignItems: 'center', bgcolor: '#f8fafc' }}>
-            <FormControlLabel control={<Switch size="small" checked={requiereDescuento}
-              onChange={(evento) => setRequiereDescuento(evento.target.checked)} />}
-              label="Requiere descuento" sx={{ m: 0 }} />
-          </Box>
-
           <Box
             sx={{
               minHeight: 40,
@@ -1582,8 +1573,25 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
-        {requiereDescuento && (
-          <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+        <Box sx={{ mt: 1 }}>
+          <Button variant="outlined" size="small" startIcon={<SettingsOutlinedIcon />}
+            onClick={() => setMostrarConfiguracionComercial((actual) => !actual)}
+            aria-expanded={mostrarConfiguracionComercial}
+            sx={{ textTransform: 'none', fontWeight: 700 }}>
+            Configuración comercial
+          </Button>
+          {mostrarConfiguracionComercial && (
+            <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+              {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
+                <Typography variant="body2" sx={{ mb: permiteCobroProgramado ? 1.5 : 0 }}>
+                  {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
+                    ? 'Venta inicial pendiente de cobro'
+                    : 'Sin venta inicial automática'}
+                </Typography>
+              )}
+              <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Descuento (opcional)</Typography>
+        <Box sx={{ mt: 1 }}>
+          <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
               <TextField fullWidth size="small" select label="Tipo de descuento"
                 value={descuentoMembresia.tipo}
@@ -1608,24 +1616,7 @@ export function DeportistasPage() {
                 slotProps={{ inputLabel: { shrink: true } }} />
             </Box>
           </Box>
-        )}
-
-        <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" size="small" startIcon={<SettingsOutlinedIcon />}
-            onClick={() => setMostrarConfiguracionComercial((actual) => !actual)}
-            aria-expanded={mostrarConfiguracionComercial}
-            sx={{ textTransform: 'none', fontWeight: 700 }}>
-            Configuración comercial
-          </Button>
-          {mostrarConfiguracionComercial && (
-            <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-              {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
-                <Typography variant="body2" sx={{ mb: permiteCobroProgramado ? 1.5 : 0 }}>
-                  {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
-                    ? 'Venta inicial pendiente de cobro'
-                    : 'Sin venta inicial automática'}
-                </Typography>
-              )}
+        </Box>
               {permiteCobroProgramado && (
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, alignItems: 'end' }}>
                   <Box sx={{ minWidth: 0 }}>
