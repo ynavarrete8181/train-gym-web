@@ -1374,7 +1374,7 @@ export function DeportistasPage() {
           total={asignacionesFiltradas.length}
           busqueda={buscarAsignacion}
           onBusqueda={setBuscarAsignacion}
-          acciones={<Button startIcon={<AddOutlinedIcon />} disabled={!membresiaEntrenadorDisponible} onClick={() => { setAsignacionForm(getInitialAsignacion()); setTurnosEntrenador([]); setVistaAsignacion('formulario'); }}>Añadir</Button>}
+          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setAsignacionForm(getInitialAsignacion()); setTurnosEntrenador([]); setVistaAsignacion('formulario'); }}>Añadir</Button>}
         />
         <AsignacionesClienteTable
           asignaciones={asignacionesFiltradas}
