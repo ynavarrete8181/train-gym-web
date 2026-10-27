@@ -2325,6 +2325,11 @@ export function DeportistasPage() {
           acciones={<BotonVolver onClick={handleCancelarFicha} />}
         />
         <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
+          {formData.codigo_deportista && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 1.5 }}>
+              <Chip size="small" variant="outlined" label={`Código cliente: ${formData.codigo_deportista}`} />
+            </Box>
+          )}
           <PestanasEstandar
             value={tabFicha}
             onChange={(_, valor) => setTabFicha(valor)}
