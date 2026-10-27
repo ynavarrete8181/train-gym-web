@@ -13,7 +13,7 @@ const nuevo = () => ({
 });
 const errorApi = (e) => Object.values(e.response?.data?.errors || {}).flat()[0] || e.response?.data?.mensaje || e.response?.data?.message || 'No se pudo completar la operación.';
 
-export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId }) {
+export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId, ocultarInterruptor = false }) {
   const [lista, setLista] = useState([]);
   const [form, setForm] = useState(nuevo);
   const [cargando, setCargando] = useState(false);
@@ -21,7 +21,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId })
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [autorizado, setAutorizado] = useState(true);
-  const [expandido, setExpandido] = useState(false);
+  const [expandido, setExpandido] = useState(ocultarInterruptor);
   const cambiar = (k, v) => setForm((a) => ({ ...a, [k]: v }));
 
   const recargar = async () => {
@@ -86,11 +86,11 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId })
   return (
     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Stack spacing={2}>
-        <FormControlLabel
+        {!ocultarInterruptor && <FormControlLabel
           sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
           control={<Switch size="small" checked={expandido} onChange={(e) => setExpandido(e.target.checked)} />}
           label="Requiere descuento"
-        />
+        />}
         {expandido && <>
         {cargando && <CircularProgress size={18} />}
         {error && <Typography role="alert" color="error" variant="body2">{error}</Typography>}
