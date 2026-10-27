@@ -27,6 +27,7 @@ export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna
           <FilterHeaderCell value={filtrosColumna.especialidad} onChange={(v) => onFiltroColumna('especialidad', v)}>Especialidad</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.usuario} onChange={(v) => onFiltroColumna('usuario', v)}>Usuario</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.estado} onChange={(v) => onFiltroColumna('estado', v)} options={[{ value: 'ACTIVO', label: 'Activo' }, { value: 'INACTIVO', label: 'Inactivo' }]}>Estado</FilterHeaderCell>
+          <TableCell>Configuración</TableCell>
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>
@@ -52,6 +53,12 @@ export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna
             </TableCell>
             <TableCell>
               <StatusChip estado={String(entrenador.estado).toLowerCase()} />
+            </TableCell>
+            <TableCell>
+              <StatusChip estado={entrenador.configuracion_completa ? 'completado' : 'pendiente'} />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.4 }}>
+                {(entrenador.servicio_ids || []).length} servicio(s) · {Number(entrenador.horarios_vigentes || 0)} horario(s)
+              </Typography>
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
@@ -80,7 +87,7 @@ export function EntrenadoresTable({ entrenadores, meta, cargando, filtrosColumna
           </TableRow>
         ))}
         {entrenadores.length === 0 ? (
-          <TablaEstadoFila colSpan={6} cargando={cargando} texto="No existen entrenadores registrados." />
+          <TablaEstadoFila colSpan={7} cargando={cargando} texto="No existen entrenadores registrados." />
         ) : null}
       </TableBody>
     </TablaGestion>
