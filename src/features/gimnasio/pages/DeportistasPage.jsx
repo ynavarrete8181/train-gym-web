@@ -72,8 +72,8 @@ const getInitialAsignacion = () => ({
 const TABS_FICHA = [
   { value: 'datos', label: 'Datos del cliente', icon: <BadgeOutlinedIcon sx={{ fontSize: 17 }} /> },
   { value: 'ficha_inicial', label: 'Ficha inicial', icon: <MonitorWeightOutlinedIcon sx={{ fontSize: 17 }} /> },
-  { value: 'entrenador', label: 'Entrenador y horario', icon: <SportsIcon sx={{ fontSize: 17 }} /> },
   { value: 'membresia', label: 'Membresía', icon: <CardMembershipOutlinedIcon sx={{ fontSize: 17 }} /> },
+  { value: 'entrenador', label: 'Entrenador y horario', icon: <SportsIcon sx={{ fontSize: 17 }} /> },
   { value: 'progreso', label: 'Progreso', icon: <MonitorWeightOutlinedIcon sx={{ fontSize: 17 }} /> },
   { value: 'entrenamiento', label: 'Entrenamiento', icon: <FitnessCenterOutlinedIcon sx={{ fontSize: 17 }} /> },
 ];
@@ -1199,8 +1199,25 @@ export function DeportistasPage() {
     && Object.entries(filtrosAsignacion).every(([campo, valores]) => !valores.length || valores.includes(textoAsignacion(item, campo)))
   );
 
+  const membresiaEntrenadorDisponible = membresiasCliente.some((membresia) =>
+    booleanoBackend(membresia.requiere_entrenador)
+    && String(membresia.estado || '').toUpperCase() === 'ACTIVA'
+  );
+
   const renderEntrenadorYHorario = () => (
     <Stack spacing={2}>
+      {!membresiaEntrenadorDisponible && (
+        <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap', px: 1.75, py: 1.25, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#f8fafc' }}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {membresiasCliente.length === 0
+              ? 'Primero asigna una membresía al cliente. Si el plan incluye entrenador, podrás configurar aquí su horario.'
+              : 'Las membresías actuales no habilitan entrenador. Un pase diario no requiere esta asignación.'}
+          </Typography>
+          <Button variant="outlined" size="small" onClick={() => { setVistaAsignacion('listado'); setTabFicha('membresia'); }} sx={{ textTransform: 'none', fontWeight: 700 }}>
+            Ir a Membresía
+          </Button>
+        </Box>
+      )}
       {vistaAsignacion === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2, gap: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>Nueva asignación</Typography>
@@ -1335,7 +1352,7 @@ export function DeportistasPage() {
           total={asignacionesFiltradas.length}
           busqueda={buscarAsignacion}
           onBusqueda={setBuscarAsignacion}
-          acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setAsignacionForm(getInitialAsignacion()); setTurnosEntrenador([]); setVistaAsignacion('formulario'); }}>Añadir</Button>}
+          acciones={<Button startIcon={<AddOutlinedIcon />} disabled={!membresiaEntrenadorDisponible} onClick={() => { setAsignacionForm(getInitialAsignacion()); setTurnosEntrenador([]); setVistaAsignacion('formulario'); }}>Añadir</Button>}
         />
         <AsignacionesClienteTable
           asignaciones={asignacionesFiltradas}
