@@ -174,6 +174,7 @@ export function EntrenadoresPage() {
     return (
       <HorarioEntrenadorPersonalizado
         entrenador={entrenadorFicha}
+        onGuardado={(mensaje) => showNotificacion(mensaje, 'success')}
         onVolver={() => { setEntrenadorFicha(null); setVista('lista'); }}
       />
     );
