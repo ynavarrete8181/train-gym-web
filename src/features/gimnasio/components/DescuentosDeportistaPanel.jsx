@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, CircularProgress, Divider, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, Divider, FormControlLabel, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 
@@ -13,7 +13,7 @@ const nuevo = () => ({
 });
 const errorApi = (e) => Object.values(e.response?.data?.errors || {}).flat()[0] || e.response?.data?.mensaje || e.response?.data?.message || 'No se pudo completar la operación.';
 
-export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
+export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId }) {
   const [lista, setLista] = useState([]);
   const [form, setForm] = useState(nuevo);
   const [cargando, setCargando] = useState(false);
@@ -39,17 +39,6 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
   };
 
   useEffect(() => {
-    let vigente = true;
-    setModalidades([]);
-    if (form.alcance === 'MODALIDAD' && form.plan_id) {
-      gimnasioServicio.obtenerModalidadesPlan(form.plan_id)
-        .then((respuesta) => { if (vigente) setModalidades(respuesta.datos || []); })
-        .catch(() => { if (vigente) setError('No se pudieron cargar las modalidades del plan.'); });
-    }
-    return () => { vigente = false; };
-  }, [form.alcance, form.plan_id]);
-
-  useEffect(() => {
     setLista([]); setAutorizado(true); setMensaje(''); setError('');
     if (deportistaId) recargar();
   }, [deportistaId]);
@@ -60,7 +49,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
     if (!Number.isFinite(valor) || valor < 0 || (form.tipo === 'PORCENTAJE' && valor > 100)) {
       setError('El descuento debe ser válido y no superar el 100 % cuando es porcentual.'); return;
     }
-    if (!form.fecha_inicio || !form.motivo.trim()) {
+    if (!planId || !form.fecha_inicio || !form.motivo.trim()) {
       setError('La fecha inicial y el motivo son obligatorios.'); return;
     }
     if (form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
@@ -70,19 +59,13 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
       deportista_id: Number(deportistaId), tipo: form.tipo, valor,
       fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null,
       motivo: form.motivo.trim(),
-      plan_id: form.alcance === 'GENERAL' ? null : Number(form.plan_id) || null,
-      modalidad_id: form.alcance === 'MODALIDAD' ? Number(form.modalidad_id) || null : null,
+      plan_id: Number(planId) || null,
+      modalidad_id: Number(modalidadId) || null,
     };
-    if (form.alcance !== 'GENERAL' && !payload.plan_id) {
-      setError('Selecciona un plan para limitar el beneficio.'); return;
-    }
-    if (form.alcance === 'MODALIDAD' && !payload.modalidad_id) {
-      setError('Selecciona una modalidad para este beneficio.'); return;
-    }
     setGuardando(true);
     try {
       await gimnasioServicio.crearDescuentoDeportista(payload);
-      setMensaje('Beneficio registrado correctamente.');
+      setMensaje('Descuento registrado. Continúa con el guardado de la membresía.');
       setForm(nuevo());
       await recargar();
     } catch (e) { setError(errorApi(e)); }
@@ -104,17 +87,11 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
   return (
     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Stack spacing={2}>
-        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1}>
-          <Box>
-          <Typography variant="subtitle1" fontWeight={700}>¿Aplicar descuento a esta nueva membresía?</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Opcional. Registra primero el beneficio para que Laravel pueda considerarlo al generar una nueva venta. No modifica el precio oficial del plan.
-          </Typography>
-          </Box>
-          <Button variant="outlined" size="small" onClick={() => setExpandido((valor) => !valor)}>
-            {expandido ? "Ocultar descuento" : "Configurar descuento"}
-          </Button>
-        </Stack>
+        <FormControlLabel
+          sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
+          control={<Switch size="small" checked={expandido} onChange={(e) => setExpandido(e.target.checked)} />}
+          label="Requiere descuento"
+        />
         {expandido && <>
         {cargando && <CircularProgress size={18} />}
         {error && <Typography role="alert" color="error" variant="body2">{error}</Typography>}
@@ -140,7 +117,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
           </Stack>
         )}
         <Divider />
-        <Typography variant="subtitle2" fontWeight={600}>Nuevo beneficio</Typography>
+        <Typography variant="subtitle2" fontWeight={600}>Descuento</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField size="small" select label="Tipo" value={form.tipo} onChange={(e) => cambiar('tipo', e.target.value)}>
             <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
@@ -149,25 +126,6 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
           <TextField size="small" type="number" label="Descuento" value={form.valor}
             onChange={(e) => cambiar('valor', e.target.value)}
             inputProps={{ min: 0, max: form.tipo === 'PORCENTAJE' ? 100 : undefined, step: '0.01' }} />
-          <TextField size="small" select label="Aplicar a" value={form.alcance}
-            onChange={(e) => setForm((a) => ({ ...a, alcance: e.target.value, plan_id: '', modalidad_id: '' }))}>
-            <MenuItem value="GENERAL">Todos los planes</MenuItem>
-            <MenuItem value="PLAN">Un plan</MenuItem>
-            <MenuItem value="MODALIDAD">Una modalidad</MenuItem>
-          </TextField>
-          {form.alcance !== 'GENERAL' &&
-            <TextField size="small" select label="Plan" value={form.plan_id}
-              onChange={(e) => cambiar('plan_id', e.target.value)}>
-              {planes.map((p) => <MenuItem key={p.id} value={p.id}>{p.nombre}</MenuItem>)}
-            </TextField>}
-          {form.alcance === 'MODALIDAD' &&
-            <TextField size="small" select label="Modalidad" value={form.modalidad_id}
-              onChange={(e) => cambiar('modalidad_id', e.target.value)}>
-              <MenuItem value="">Selecciona una modalidad</MenuItem>
-              {modalidades.map((m) => (
-                <MenuItem key={m.id} value={m.id}>{m.nombre || m.codigo || `Modalidad #${m.id}`}</MenuItem>
-              ))}
-            </TextField>}
           <Box sx={{ minWidth: 0 }}>
             <Typography component="label" htmlFor="beneficio-fecha-inicio" sx={{ display: 'block', mb: 0.75, fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>
               Inicio de vigencia
