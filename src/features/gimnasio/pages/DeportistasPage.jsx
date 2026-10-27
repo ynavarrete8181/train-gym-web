@@ -2296,8 +2296,8 @@ export function DeportistasPage() {
     return (
       <Box className="page-wrapper">
         <PageHeader
-          titulo={`Ficha de ${nombreCliente}`}
-          descripcion="Consulta y administra los datos personales, valoraciones, membresías, entrenamientos y seguimiento deportivo del cliente."
+          titulo={`Perfil integral de ${nombreCliente}`}
+          descripcion="Consulta y administra su información personal, membresías, valoraciones, entrenamientos y seguimiento deportivo."
           icono={<PeopleAltOutlinedIcon />}
           acciones={<BotonVolver onClick={handleCancelarFicha} />}
         />
