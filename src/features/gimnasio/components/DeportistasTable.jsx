@@ -1,4 +1,4 @@
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined';
 import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -56,9 +56,9 @@ export function DeportistasTable({ deportistas, meta, cargando, filtrosColumna =
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
-                <Tooltip title="Configurar cliente">
-                  <IconButton sx={dbanuStyles.actionEdit} onClick={() => onAbrirFicha && onAbrirFicha(deportista)}>
-                    <SettingsOutlinedIcon sx={{ fontSize: 17 }} />
+                <Tooltip title="Abrir ficha del cliente">
+                  <IconButton aria-label="Abrir ficha del cliente" sx={dbanuStyles.actionView} onClick={() => onAbrirFicha && onAbrirFicha(deportista)}>
+                    <AssignmentIndOutlinedIcon sx={{ fontSize: 19 }} />
                   </IconButton>
                 </Tooltip>
               </Stack>
