@@ -33,7 +33,7 @@ const inicial = {
   contextos: [],
 };
 
-const ROLES_SIN_CONTEXTO_OPERATIVO = ["SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
+const ROLES_SIN_CONTEXTO_OPERATIVO = ["ROOT", "SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
 const ROLES_APP_SIN_PERMISOS_WEB = ["DEPORTISTA", "RESPONSABLE"];
 
 export function UsuarioForm({
@@ -323,7 +323,7 @@ export function UsuarioForm({
                 />
               </Box> : (
                 <Alert severity="info" variant="outlined">
-                  {rolNombre === "SUPERADMINISTRADOR"
+                  {["ROOT", "SUPERADMINISTRADOR"].includes(rolNombre)
                     ? "Este rol tiene alcance global y no requiere una asignación operativa por sede."
                     : "Este rol pertenece a la experiencia de cliente/app y su sede se determina por membresías, reservas o relaciones del negocio; no por una asignación operativa interna."}
                 </Alert>
