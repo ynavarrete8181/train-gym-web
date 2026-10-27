@@ -1611,15 +1611,6 @@ export function DeportistasPage() {
         )}
 
         <Box sx={{ mt: 1 }}>
-            <DescuentosDeportistaPanel ocultarInterruptor
-              deportistaId={formData.id}
-              planId={membresiaForm.plan_id}
-              modalidadId={membresiaForm.modalidad_id}
-            />
-          </Box>
-        )}
-
-        <Box sx={{ mt: 1 }}>
           <Button variant="outlined" size="small" startIcon={<SettingsOutlinedIcon />}
             onClick={() => setMostrarConfiguracionComercial((actual) => !actual)}
             aria-expanded={mostrarConfiguracionComercial}
