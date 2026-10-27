@@ -1532,16 +1532,10 @@ export function DeportistasPage() {
             />
           </Box>
 
-          {!membresiaForm.id && <Box sx={{
-            minHeight: 40, px: 1.25, border: '1px solid #dbe5f0',
-            borderRadius: 1, display: 'flex', alignItems: 'center', bgcolor: '#f8fafc'
-          }}>
-            <FormControlLabel
-              control={<Switch size="small" checked={requiereDescuento}
-                onChange={(evento) => setRequiereDescuento(evento.target.checked)} />}
-              label="Requiere descuento"
-              sx={{ m: 0 }}
-            />
+          {!membresiaForm.id && <Box sx={{ minHeight: 40, px: 1.25, border: '1px solid #dbe5f0', borderRadius: 1, display: 'flex', alignItems: 'center', bgcolor: '#f8fafc' }}>
+            <FormControlLabel control={<Switch size="small" checked={requiereDescuento}
+              onChange={(evento) => setRequiereDescuento(evento.target.checked)} />}
+              label="Requiere descuento" sx={{ m: 0 }} />
           </Box>}
 
           <Box
@@ -1575,9 +1569,13 @@ export function DeportistasPage() {
             <DescuentosDeportistaPanel ocultarInterruptor
               deportistaId={formData.id}
               planId={membresiaForm.plan_id}
-              modalidadId=        <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" size="small"
-            startIcon={<SettingsOutlinedIcon />}
+              modalidadId={membresiaForm.modalidad_id}
+            />
+          </Box>
+        )}
+
+        <Box sx={{ mt: 1 }}>
+          <Button variant="outlined" size="small" startIcon={<SettingsOutlinedIcon />}
             onClick={() => setMostrarConfiguracionComercial((actual) => !actual)}
             aria-expanded={mostrarConfiguracionComercial}
             sx={{ textTransform: 'none', fontWeight: 700 }}>
@@ -1671,15 +1669,9 @@ export function DeportistasPage() {
           ) : null
         )}
 
-
             </Box>
           )}
         </Box>
-
-l desde Ventas.
-            </Typography>
-          ) : null
-        )}
 
         {membresiaForm.congelar_membresia ? (
           <Box
