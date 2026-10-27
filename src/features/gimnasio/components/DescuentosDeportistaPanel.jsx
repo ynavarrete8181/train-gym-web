@@ -168,16 +168,28 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
                 <MenuItem key={m.id} value={m.id}>{m.nombre || m.codigo || `Modalidad #${m.id}`}</MenuItem>
               ))}
             </TextField>}
-          <Stack spacing={0.5}>
-            <Typography variant="caption" component="label">Inicio vigencia</Typography>
-            <TextField size="small" type="date" value={form.fecha_inicio} inputProps={{ 'aria-label': 'Inicio vigencia' }}
-              onChange={(e) => cambiar('fecha_inicio', e.target.value)} />
-          </Stack>
-          <Stack spacing={0.5}>
-            <Typography variant="caption" component="label">Fin vigencia (opcional)</Typography>
-            <TextField size="small" type="date" value={form.fecha_fin} inputProps={{ 'aria-label': 'Fin vigencia' }}
-              onChange={(e) => cambiar('fecha_fin', e.target.value)} />
-          </Stack>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="label" htmlFor="beneficio-fecha-inicio" sx={{ display: 'block', mb: 0.75, fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>
+              Inicio de vigencia
+            </Typography>
+            <Box component="input" id="beneficio-fecha-inicio" type="date" value={form.fecha_inicio}
+              onChange={(e) => cambiar('fecha_inicio', e.target.value)}
+              sx={{ boxSizing: 'border-box', display: 'block', width: '100%', minWidth: 0, height: 40, px: 1.5,
+                border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper',
+                color: 'text.primary', font: 'inherit', fontSize: 13,
+                '&:focus': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-1px' } }} />
+          </Box>
+          <Box sx={{ minWidth: 0 }}>
+            <Typography component="label" htmlFor="beneficio-fecha-fin" sx={{ display: 'block', mb: 0.75, fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>
+              Fin de vigencia (opcional)
+            </Typography>
+            <Box component="input" id="beneficio-fecha-fin" type="date" value={form.fecha_fin}
+              onChange={(e) => cambiar('fecha_fin', e.target.value)}
+              sx={{ boxSizing: 'border-box', display: 'block', width: '100%', minWidth: 0, height: 40, px: 1.5,
+                border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper',
+                color: 'text.primary', font: 'inherit', fontSize: 13,
+                '&:focus': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-1px' } }} />
+          </Box>
           <TextField size="small" label="Motivo / autorización" value={form.motivo}
             onChange={(e) => cambiar('motivo', e.target.value)}
             sx={{ gridColumn: { xs: '1', md: 'span 3' } }} />
