@@ -18,7 +18,6 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId })
   const [form, setForm] = useState(nuevo);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [modalidades, setModalidades] = useState([]);
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [autorizado, setAutorizado] = useState(true);
@@ -50,7 +49,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId })
       setError('El descuento debe ser válido y no superar el 100 % cuando es porcentual.'); return;
     }
     if (!planId || !form.fecha_inicio || !form.motivo.trim()) {
-      setError('La fecha inicial y el motivo son obligatorios.'); return;
+      setError('Selecciona el plan e ingresa la fecha y el motivo.'); return;
     }
     if (form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
       setError('La fecha final debe ser igual o posterior al inicio.'); return;
@@ -96,28 +95,6 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId })
         {cargando && <CircularProgress size={18} />}
         {error && <Typography role="alert" color="error" variant="body2">{error}</Typography>}
         {mensaje && <Typography color="success.main" variant="body2">{mensaje}</Typography>}
-        {lista.length > 0 && (
-          <Stack spacing={1}>
-            {lista.map((item) => (
-              <Stack key={item.id} direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between"
-                sx={{ p: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                <Box>
-                  <Typography variant="body2" fontWeight={600}>
-                    {item.valor}{item.tipo === 'PORCENTAJE' ? '%' : ' USD'} · {item.motivo}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {String(item.fecha_inicio).slice(0, 10)} a {item.fecha_fin ? String(item.fecha_fin).slice(0, 10) : 'indefinido'}
-                    {' · '}{item.activo ? 'Habilitado' : 'Desactivado'}
-                    {' · '}{item.modalidad_id ? 'Modalidad específica' : item.plan_id ? 'Plan específico' : 'Todos los planes'}
-                  </Typography>
-                </Box>
-                {item.activo && <Button size="small" color="error" disabled={guardando} onClick={() => desactivar(item)}>Desactivar</Button>}
-              </Stack>
-            ))}
-          </Stack>
-        )}
-        <Divider />
-        <Typography variant="subtitle2" fontWeight={600}>Descuento</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField size="small" select label="Tipo" value={form.tipo} onChange={(e) => cambiar('tipo', e.target.value)}>
             <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
@@ -153,7 +130,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId })
             sx={{ gridColumn: { xs: '1', md: 'span 3' } }} />
         </Box>
         <Stack direction="row" justifyContent="flex-end">
-          <BotonGuardar texto="Guardar beneficio" guardando={guardando} disabled={cargando} onClick={guardar} />
+          <BotonGuardar texto="Guardar" guardando={guardando} disabled={cargando} onClick={guardar} />
         </Stack>
         </>}
       </Stack>
