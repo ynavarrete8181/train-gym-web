@@ -23,7 +23,6 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
-import { DescuentosDeportistaPanel } from '../components/DescuentosDeportistaPanel.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
 import { PruebasRendimientoDeportista } from '../../entrenamiento/components/PruebasRendimientoDeportista.jsx';
@@ -73,8 +72,8 @@ const getInitialAsignacion = () => ({
 const TABS_FICHA = [
   { value: 'datos', label: 'Datos del cliente', icon: <BadgeOutlinedIcon sx={{ fontSize: 17 }} /> },
   { value: 'ficha_inicial', label: 'Ficha inicial', icon: <MonitorWeightOutlinedIcon sx={{ fontSize: 17 }} /> },
-  { value: 'entrenador', label: 'Entrenador y horario', icon: <SportsIcon sx={{ fontSize: 17 }} /> },
   { value: 'membresia', label: 'Membresía', icon: <CardMembershipOutlinedIcon sx={{ fontSize: 17 }} /> },
+  { value: 'entrenador', label: 'Entrenador y horario', icon: <SportsIcon sx={{ fontSize: 17 }} /> },
   { value: 'progreso', label: 'Progreso', icon: <MonitorWeightOutlinedIcon sx={{ fontSize: 17 }} /> },
   { value: 'entrenamiento', label: 'Entrenamiento', icon: <FitnessCenterOutlinedIcon sx={{ fontSize: 17 }} /> },
 ];
@@ -308,6 +307,8 @@ export function DeportistasPage() {
   const [tabFicha, setTabFicha] = useState('datos');
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
+  const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+  const [requiereDescuento, setRequiereDescuento] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
   const [paginaMembresia, setPaginaMembresia] = useState(1);
   const [porPaginaMembresia, setPorPaginaMembresia] = useState(5);
@@ -588,10 +589,44 @@ export function DeportistasPage() {
     }
   };
 
+  // Cada entrada a una pestaña vuelve a su vista principal y consulta datos vigentes.
+  const handleCambiarTabFicha = async (_evento, siguienteTab) => {
+    setTabFicha(siguienteTab);
+    setVistaMembresia('listado');
+    setVistaAsignacion('listado');
+    setMembresiaForm(getInitialMembresia());
+    setAsignacionForm(getInitialAsignacion());
+    setRequiereDescuento(false);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setTurnosEntrenador([]);
+
+    if (!formData.id) return;
+
+    if (siguienteTab === 'membresia') {
+      try {
+        const respuesta = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
+        setMembresiasCliente(respuesta.datos?.membresias || []);
+      } catch (error) {
+        showNotificacion(error.response?.data?.mensaje || 'No se pudieron actualizar las membresías.', 'error');
+      }
+    } else if (siguienteTab === 'entrenador') {
+      await cargarAsignacionesYEntrenadores(formData.id);
+    } else if (siguienteTab === 'progreso') {
+      await cargarProgresoCliente(formData.id);
+    } else if (siguienteTab === 'entrenamiento') {
+      await cargarEntrenamientoCliente(formData.id);
+    }
+    // Ficha inicial realiza su consulta al montarse en la pestaña.
+  };
+
   const handleAbrirFicha = (deportista) => {
     setDiagnosticoIdentidad(null);
     setFormData({ ...deportista });
     setTabFicha('datos');
+    setVistaMembresia('listado');
+    setVistaAsignacion('listado');
+    setRequiereDescuento(false);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setAsignacionForm(getInitialAsignacion());
     setMembresiaForm(getInitialMembresia());
     setProgresoForm(getInitialProgreso());
@@ -714,7 +749,7 @@ export function DeportistasPage() {
       && String(membresia.estado || '').toUpperCase() === 'ACTIVA'
     );
     if (!membresiaCompatible) {
-      showNotificacion('El cliente necesita una membresía activa y pagada que incluya entrenador.', 'warning');
+      showNotificacion('El cliente no tiene una membresía activa que incluya entrenador. Revisa el plan contratado en Membresía.', 'warning');
       return;
     }
     const horarioSeleccionado = turnosEntrenador.find(
@@ -750,13 +785,28 @@ export function DeportistasPage() {
     }
   };
 
-  const handleInactivarAsignacion = async (asignacion) => {
+  const handleFinalizarAsignacion = async (asignacion) => {
+    const confirmado = await confirmarAccion({
+      titulo: 'Finalizar asignación',
+      texto: 'Se finalizará la asignación de este entrenador, se liberará su cupo y el historial permanecerá disponible.',
+      textoConfirmar: 'Sí, finalizar',
+      icono: 'warning',
+    });
+    if (!confirmado) return;
+
     try {
-      await gimnasioServicio.inactivarAsignacionEntrenador(asignacion.id);
-      showNotificacion('Asignación inactivada. El historial se conserva.', 'success');
-      cargarAsignacionesYEntrenadores(formData.id);
+      await gimnasioServicio.finalizarAsignacionEntrenador(asignacion.id);
+      showNotificacion('Asignación finalizada. El historial se conserva.', 'success');
+      await cargarAsignacionesYEntrenadores(formData.id);
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al inactivar la asignación', 'error');
+      const errores = error.response?.data?.errors || error.response?.data?.errores;
+      showNotificacion(
+        (errores ? Object.values(errores).flat().join(' ') : null)
+          || error.response?.data?.mensaje
+          || error.response?.data?.message
+          || 'No se pudo finalizar la asignación.',
+        'error',
+      );
     }
   };
 
@@ -826,10 +876,12 @@ export function DeportistasPage() {
 
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
   };
 
   const handleEditarMembresia = (m) => {
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
     setMembresiaForm({
       ...m,
@@ -891,6 +943,20 @@ export function DeportistasPage() {
       };
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
+      if (requiereDescuento) {
+        if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
+          showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
+          return;
+        }
+        payload.descuento = {
+          tipo: descuentoMembresia.tipo,
+          valor: Number(descuentoMembresia.valor),
+          motivo: descuentoMembresia.motivo.trim(),
+          fecha_inicio: descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio,
+          fecha_fin: descuentoMembresia.fecha_fin || null,
+        };
+      }
+
 
       if (membresiaForm.id) {
         await gimnasioServicio.actualizarMembresia(membresiaForm.id, payload);
@@ -1182,6 +1248,11 @@ export function DeportistasPage() {
     && Object.entries(filtrosAsignacion).every(([campo, valores]) => !valores.length || valores.includes(textoAsignacion(item, campo)))
   );
 
+  const membresiaEntrenadorDisponible = membresiasCliente.some((membresia) =>
+    booleanoBackend(membresia.requiere_entrenador)
+    && String(membresia.estado || '').toUpperCase() === 'ACTIVA'
+  );
+
   const renderEntrenadorYHorario = () => (
     <Stack spacing={2}>
       {vistaAsignacion === 'formulario' ? <Box sx={formStyles.seccion}>
@@ -1327,7 +1398,7 @@ export function DeportistasPage() {
           opcionesColumna={Object.fromEntries(['entrenador', 'disponibilidad', 'sede', 'vigencia', 'estado']
             .map((campo) => [campo, opcionesExcel(asignaciones, (item) => textoAsignacion(item, campo))]))}
           cargando={cargandoFicha}
-          onInactivar={handleInactivarAsignacion}
+          onFinalizar={handleFinalizarAsignacion}
         />
       </Box>}
     </Stack>
@@ -1390,7 +1461,7 @@ export function DeportistasPage() {
 
   const renderMembresia = () => (
     <Stack spacing={2}>
-      <DescuentosDeportistaPanel deportistaId={formData.id} planes={planes} />
+
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
@@ -1471,36 +1542,7 @@ export function DeportistasPage() {
               <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
             ))}
           </TextField>
-                    {membresiaForm.id ? (
-            <TextField
-              label="Código de membresía"
-              value={membresiaForm.codigo_contrato || ''}
-              size="small"
-              disabled
-              helperText="Generado automáticamente por el sistema."
-            />
-          ) : (
-            <Box
-              sx={{
-                minHeight: 40,
-                px: 1.5,
-                border: '1px solid #dbe5f0',
-                borderRadius: 1,
-                bgcolor: '#f8fafc',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                Código de membresía
-              </Typography>
-              <Typography variant="body2" fontWeight={800}>
-                Se generará automáticamente
-              </Typography>
-            </Box>
-          )}
-          <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''} onChange={handleMembresiaChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                    <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''} onChange={handleMembresiaChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
           <TextField
             label="Fecha fin"
             name="fecha_fin"
@@ -1529,13 +1571,13 @@ export function DeportistasPage() {
             value={membresiaForm.dias_gracia ?? 0}
             onChange={handleMembresiaChange}
             size="small"
-            helperText="Tolerancia adicional después de la fecha de vencimiento."
             slotProps={{ htmlInput: { min: 0, max: 365 } }}
           />
 
           <Box
             sx={{
-              minHeight: 40,
+              height: 40,
+              boxSizing: 'border-box',
               px: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1,
@@ -1560,7 +1602,8 @@ export function DeportistasPage() {
 
           <Box
             sx={{
-              minHeight: 40,
+              height: 40,
+              boxSizing: 'border-box',
               px: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1,
@@ -1584,97 +1627,58 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
-        {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' ? (
-          <Box
-            sx={{
-              mt: 1.5,
-              p: 1.5,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1.5,
-              bgcolor: '#fbfdff',
-            }}
-          >
-            <Typography variant="body2" fontWeight={800}>
-              Venta inicial
-            </Typography>
+        <Box sx={{ mt: 1.25, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.25 }}>
+            Configuración comercial
+          </Typography>
+          {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
               {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
-                ? 'Este plan generará automáticamente una venta pendiente y su cuenta por cobrar.'
-                : 'Este plan no genera una venta inicial según su configuración comercial.'}
+                ? 'Venta inicial pendiente de cobro'
+                : 'Sin venta inicial automática'}
             </Typography>
-          </Box>
-        ) : null}
-
-        {permiteCobroProgramado ? (
-          <Box
-            sx={{
-              mt: 1.5,
-              p: 1.5,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1.5,
-              bgcolor: '#fbfdff',
-            }}
-          >
-            <Typography variant="body2" fontWeight={800}>
-              Configuración de cobro
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
-              Define el día habitual de pago para futuras renovaciones. Esta configuración no controla la venta inicial.
-            </Typography>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.15fr' }, gap: 1.5 }}>
-              <TextField
-                label="Día de pago"
-                name="dia_pago"
-                type="number"
-                value={membresiaForm.dia_pago ?? ''}
-                onChange={handleMembresiaChange}
-                size="small"
-                slotProps={{ htmlInput: { min: 1, max: 31 } }}
-                helperText="Día habitual del mes: 1 al 31."
-              />
-
-              <TextField
-                label="Próximo cobro"
-                value={proximoCobroPreview || 'Se calculará al guardar'}
-                size="small"
-                disabled
-                helperText="Calculado automáticamente."
-              />
-
-              <Box
-                sx={{
-                  minHeight: 40,
-                  px: 1.25,
-                  border: '1px solid #dbe5f0',
-                  borderRadius: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  bgcolor: '#f8fafc',
-                }}
-              >
-                <FormControlLabel
-                  control={
-                    <Switch
-                      name="generar_venta_automatica"
-                      checked={Boolean(membresiaForm.generar_venta_automatica)}
-                      onChange={handleMembresiaChange}
-                      size="small"
-                    />
-                  }
-                  label="Generar renovaciones automáticamente"
-                  sx={{ m: 0 }}
-                />
+          )}
+          {permiteCobroProgramado && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mb: 1.5 }}>
+              <TextField fullWidth size="small" label="Día de pago" name="dia_pago" type="number"
+                value={membresiaForm.dia_pago ?? ''} onChange={handleMembresiaChange}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: 1, max: 31 } }} />
+              <TextField fullWidth size="small" label="Próximo cobro"
+                value={proximoCobroPreview || 'Automático'}
+                slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }} />
+              <Box sx={{ minHeight: 40, px: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', alignItems: 'center' }}>
+                <FormControlLabel control={<Switch size="small" name="generar_venta_automatica"
+                  checked={Boolean(membresiaForm.generar_venta_automatica)} onChange={handleMembresiaChange} />}
+                  label="Renovaciones automáticas" sx={{ m: 0 }} />
               </Box>
             </Box>
-          </Box>
-        ) : (
-          membresiaForm.plan_id ? (
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
-              Este plan no es renovable; su cobro se gestiona de forma inmediata o manual desde Ventas.
-            </Typography>
-          ) : null
-        )}
+          )}
+          <FormControlLabel sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
+            control={<Switch size="small" checked={requiereDescuento}
+              onChange={(e) => setRequiereDescuento(e.target.checked)} />}
+            label="Requiere descuento" />
+          {requiereDescuento && (
+            <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
+              <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, tipo: e.target.value }))}>
+                <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
+                <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
+              </TextField>
+              <TextField fullWidth size="small" type="number" label="Descuento" value={descuentoMembresia.valor}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
+                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : undefined, step: 0.01 } }} />
+              <TextField fullWidth size="small" label="Motivo / autorización" value={descuentoMembresia.motivo}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))} />
+              <TextField fullWidth size="small" type="date" label="Desde"
+                value={descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || ''}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_inicio: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }} />
+              <TextField fullWidth size="small" type="date" label="Hasta (opcional)" value={descuentoMembresia.fecha_fin}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }} />
+            </Box>
+          )}
+        </Box>
 
         {membresiaForm.congelar_membresia ? (
           <Box
@@ -1717,7 +1721,7 @@ export function DeportistasPage() {
           </Box>
         ) : null}
         <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
-          <BotonGuardar texto={membresiaForm.id ? 'Guardar cambios' : 'Guardar membresía'} onClick={handleGuardarMembresia} />
+          <BotonGuardar onClick={handleGuardarMembresia} />
         </Stack>
       </Box> : null}
       {vistaMembresia === 'listado' && <Box sx={formStyles.seccion}>
@@ -2319,8 +2323,8 @@ export function DeportistasPage() {
     return (
       <Box className="page-wrapper">
         <PageHeader
-          titulo={`Ficha de ${nombreCliente}`}
-          descripcion="Consulta y administra los datos personales, valoraciones, membresías, entrenamientos y seguimiento deportivo del cliente."
+          titulo={`Perfil integral de ${nombreCliente}`}
+          descripcion="Consulta y administra su información personal, membresías, valoraciones, entrenamientos y seguimiento deportivo."
           icono={<PeopleAltOutlinedIcon />}
           acciones={<BotonVolver onClick={handleCancelarFicha} />}
         />
@@ -2332,7 +2336,7 @@ export function DeportistasPage() {
           )}
           <PestanasEstandar
             value={tabFicha}
-            onChange={(_, valor) => setTabFicha(valor)}
+            onChange={handleCambiarTabFicha}
             opciones={TABS_FICHA}
           />
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>

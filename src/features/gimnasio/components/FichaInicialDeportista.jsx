@@ -408,24 +408,6 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         </Box>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {vista === 'listado' && <>
-          {seccion === 'evaluacion' && <Alert severity="info" sx={{ mb: 1.5 }}>
-            Para subir fotografías de evolución, primero guarda una evaluación física. Después utiliza «Añadir foto» en su fila.
-          </Alert>}
-          {controles.some((c) => c.seccion === seccion) && <Box sx={{ mb: 2, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-            <Typography sx={{ fontSize: 13, fontWeight: 800, mb: 1 }}>Controles y revisiones</Typography>
-            <Stack spacing={1}>
-              {controles.filter((c) => c.seccion === seccion).slice(0, 8).map((control) => (
-                <Stack key={control.id} direction={{ xs: 'column', sm: 'row' }} alignItems={{ sm: 'center' }} justifyContent="space-between" gap={1} sx={{ py: 0.75, borderBottom: '1px solid', borderColor: 'divider' }}>
-                  <Box>
-                    <Typography sx={{ fontWeight: 700, fontSize: 12 }}>{control.titulo}</Typography>
-                    <Typography variant="caption" color="text.secondary">Programado: {mostrarFecha(control.fecha_programada)} · {control.estado === 'REALIZADO' ? 'Realizado' : control.estado === 'CANCELADO' ? 'Cancelado' : 'Pendiente'}</Typography>
-                  </Box>
-                  {control.estado === 'PROGRAMADO' && <Button size="small" variant="outlined" onClick={() => iniciarRevision(control)} disabled={guardando}>Realizar revisión</Button>}
-                  {control.estado === 'REALIZADO' && <Chip size="small" variant="outlined" label={`Resultado #${control.registro_resultado_id}`} />}
-                </Stack>
-              ))}
-            </Stack>
-          </Box>}
           <GestionToolbar
             total={filtrados.length}
             busqueda={busqueda}

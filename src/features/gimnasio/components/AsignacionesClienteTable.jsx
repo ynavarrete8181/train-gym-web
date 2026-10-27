@@ -1,4 +1,5 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import {
   Chip,
   IconButton,
@@ -13,7 +14,6 @@ import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx'
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.jsx';
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 const CORTO = {
@@ -61,7 +61,7 @@ export function AsignacionesClienteTable({
   asignaciones = [],
   cargando = false,
   onEditar,
-  onInactivar,
+  onFinalizar,
   filtrosColumna = {},
   onFiltroColumna,
   opcionesColumna = {},
@@ -150,18 +150,17 @@ export function AsignacionesClienteTable({
                         </IconButton>
                       </Tooltip>
                     ) : null}
-                    {onInactivar ? (
-                      <EstadoToggleCell
-                        activo
-                        onToggle={() => onInactivar(item)}
-                        tituloActivo="Inactivar asignación"
-                        confirmacion={{
-                          titulo: 'Inactivar asignación',
-                          texto: 'La asignación dejará de estar vigente, pero conservará su ID y quedará en el historial.',
-                          textoConfirmar: 'Sí, inactivar',
-                          icono: 'question',
-                        }}
-                      />
+                    {onFinalizar ? (
+                      <Tooltip title="Finalizar asignación">
+                        <IconButton
+                          size="small"
+                          sx={dbanuStyles.actionEdit}
+                          onClick={() => onFinalizar(item)}
+                          aria-label="Finalizar asignación"
+                        >
+                          <EventBusyOutlinedIcon sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Tooltip>
                     ) : null}
                   </span>
                 ) : (

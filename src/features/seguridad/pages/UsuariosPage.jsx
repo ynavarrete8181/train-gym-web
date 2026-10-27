@@ -214,9 +214,12 @@ export function UsuariosPage() {
   };
 
   const aplicarFunciones = ({ grupos, gruposRol, funcionesUsuario }) => {
+    const codigosRol = obtenerCodigos(gruposRol);
+    const permitidos = new Set(codigosRol);
     setGruposFunciones(grupos);
-    setFuncionesRolBase(obtenerCodigos(gruposRol));
-    setFuncionesSeleccionadas(obtenerCodigosUnicos(funcionesUsuario));
+    setFuncionesRolBase(codigosRol);
+    // Una función antigua o desactivada no debe volver a enviarse al editar.
+    setFuncionesSeleccionadas(obtenerCodigosUnicos(funcionesUsuario).filter((codigo) => permitidos.has(codigo)));
   };
 
   const cargarFuncionesNuevo = async (idRol) => {
@@ -240,7 +243,7 @@ export function UsuariosPage() {
         ...formulario,
         usr_tipo: Number(formulario.usr_tipo),
         usr_estado: Number(formulario.usr_estado),
-        funciones: funcionesSeleccionadas,
+        funciones: funcionesSeleccionadas.filter((codigo) => funcionesRolBase.includes(codigo)),
       };
 
       if (dialogoUsuario.usuario) {
