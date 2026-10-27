@@ -301,7 +301,7 @@ export function DeportistasPage() {
   const [sedes, setSedes] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
-  const [filtrosColumna, setFiltrosColumna] = useState({ codigo: [], nombres: [], telefono: [], sede: [], estado: [] });
+  const [filtrosColumna, setFiltrosColumna] = useState({ cedula: [], nombres: [], telefono: [], sede: [], estado: [] });
   const [cargando, setCargando] = useState(true);
 
   // Ficha del cliente (pestañas: datos / entrenador y horario)
@@ -445,8 +445,8 @@ export function DeportistasPage() {
     if (guardandoCliente) return;
     setGuardandoCliente(true);
     try {
-      if (!formData.codigo_deportista || !String(formData.nombres || '').trim()) {
-        showNotificacion('Ingresa al menos los nombres de la persona y el código del cliente.', 'warning');
+      if (!String(formData.nombres || '').trim()) {
+        showNotificacion('Ingresa al menos los nombres de la persona.', 'warning');
         return;
       }
 
@@ -624,10 +624,6 @@ export function DeportistasPage() {
 
   const handleGuardarDatosFicha = async () => {
     try {
-      if (!formData.codigo_deportista) {
-        showNotificacion('El código del cliente es obligatorio', 'warning');
-        return;
-      }
       await gimnasioServicio.actualizarDeportista(formData.id, {
         ...formData,
         persona: {
@@ -982,14 +978,7 @@ export function DeportistasPage() {
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-          <TextField
-            label="Código Cliente"
-            name="codigo_deportista"
-            value={formData.codigo_deportista}
-            onChange={handleChange}
-            required
-            size="small"
-          />
+
           <TextField
             select
             label="Sede principal"
@@ -2331,11 +2320,16 @@ export function DeportistasPage() {
       <Box className="page-wrapper">
         <PageHeader
           titulo={`Ficha de ${nombreCliente}`}
-          descripcion="Completa los datos del cliente y, desde la pestaña Entrenador y horario, asígnalo a uno de los turnos ya configurados."
+          descripcion="Consulta y administra los datos personales, valoraciones, membresías, entrenamientos y seguimiento deportivo del cliente."
           icono={<PeopleAltOutlinedIcon />}
           acciones={<BotonVolver onClick={handleCancelarFicha} />}
         />
         <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
+          {formData.codigo_deportista && (
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', px: 2, pt: 1.5 }}>
+              <Chip size="small" variant="outlined" label={`Código cliente: ${formData.codigo_deportista}`} />
+            </Box>
+          )}
           <PestanasEstandar
             value={tabFicha}
             onChange={(_, valor) => setTabFicha(valor)}
@@ -2351,29 +2345,6 @@ export function DeportistasPage() {
           </Box>
           {tabFicha === 'datos' && (
             <Stack spacing={1.5}>
-              <Stack direction="row" justifyContent="flex-end">
-                <Button variant="outlined" size="small" onClick={consultarIdentidad} disabled={consultandoIdentidad}>
-                  {consultandoIdentidad ? 'Verificando…' : 'Verificar identidad'}
-                </Button>
-              </Stack>
-              {diagnosticoIdentidad && (
-                <Box sx={{ mx: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-                  <Typography variant="subtitle2">Diagnóstico de identidad · Solo lectura</Typography>
-                  <Typography variant="body2">Cliente: {diagnosticoIdentidad.cliente_id} · Persona vinculada: {diagnosticoIdentidad.persona_id ?? 'Sin vincular'}</Typography>
-                  <Typography variant="body2">Coincidencias por documento: {diagnosticoIdentidad.coincidencias_documento} · Personas encontradas: {(diagnosticoIdentidad.persona_ids_coincidentes || []).join(', ') || 'Ninguna'}</Typography>
-                  <Typography variant="body2">Relación con usuario: {diagnosticoIdentidad.usuario_consistente === null ? 'Sin usuario' : diagnosticoIdentidad.usuario_consistente ? 'Correcta' : 'Inconsistente'}</Typography>
-                  {(diagnosticoIdentidad.perfiles_coincidentes || []).map((perfil) => (
-                    <Typography key={perfil.cliente_id} variant="body2" sx={{ mt: 1 }}>
-                      Cliente #{perfil.cliente_id} · Persona #{perfil.persona_id} · {perfil.estado} · Código {perfil.codigo_deportista || 'Sin código'} · Membresías: {perfil.membresias} · Valoraciones: {perfil.valoraciones}
-                    </Typography>
-                  ))}
-                  {diagnosticoIdentidad.requiere_revision_manual && (
-                    <Typography variant="caption" color="warning.main">
-                      Hay más de un perfil o persona con este documento. No elimines registros: revisa sus relaciones antes de consolidar.
-                    </Typography>
-                  )}
-                </Box>
-              )}
               <AccionesFormulario onGuardar={handleGuardarDatosFicha} onCancelar={handleCancelarFicha} textoCancelar="Volver a la lista" />
             </Stack>
           )}

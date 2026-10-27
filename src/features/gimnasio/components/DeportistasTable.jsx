@@ -21,7 +21,7 @@ export function DeportistasTable({ deportistas, meta, cargando, filtrosColumna =
     >
       <TableHead>
         <TableRow>
-          <FilterHeaderCell value={filtrosColumna.codigo} onChange={(v) => onFiltroColumna('codigo', v)} options={opciones(meta.opciones_filtro?.codigo)}>Código</FilterHeaderCell>
+          <FilterHeaderCell value={filtrosColumna.cedula} onChange={(v) => onFiltroColumna('cedula', v)} options={opciones(meta.opciones_filtro?.cedula)}>Cédula / documento</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.nombres} onChange={(v) => onFiltroColumna('nombres', v)} options={opciones(meta.opciones_filtro?.nombres)}>Cliente</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.telefono} onChange={(v) => onFiltroColumna('telefono', v)} options={opciones(meta.opciones_filtro?.telefono)}>Contacto</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.sede} onChange={(v) => onFiltroColumna('sede', v)} options={opciones(meta.opciones_filtro?.sede)}>Sede</FilterHeaderCell>
@@ -34,7 +34,7 @@ export function DeportistasTable({ deportistas, meta, cargando, filtrosColumna =
           <TableRow key={deportista.id} hover>
             <TableCell>
               <Typography variant="body2" fontWeight="600" color="text.secondary">
-                {deportista.codigo_deportista}
+                {deportista.cedula || 'Sin documento'}
               </Typography>
             </TableCell>
             <TableCell>
