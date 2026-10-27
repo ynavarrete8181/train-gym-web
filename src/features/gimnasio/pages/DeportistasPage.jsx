@@ -24,7 +24,6 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
-import { DescuentosDeportistaPanel } from '../components/DescuentosDeportistaPanel.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
 import { PruebasRendimientoDeportista } from '../../entrenamiento/components/PruebasRendimientoDeportista.jsx';
@@ -310,6 +309,7 @@ export function DeportistasPage() {
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
   const [requiereDescuento, setRequiereDescuento] = useState(false);
+  const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
   const [mostrarConfiguracionComercial, setMostrarConfiguracionComercial] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
   const [paginaMembresia, setPaginaMembresia] = useState(1);
@@ -829,10 +829,14 @@ export function DeportistasPage() {
 
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
+    setRequiereDescuento(false);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
   };
 
   const handleEditarMembresia = (m) => {
+    setRequiereDescuento(false);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
     setMembresiaForm({
       ...m,
@@ -894,6 +898,20 @@ export function DeportistasPage() {
       };
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
+      if (requiereDescuento) {
+        if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
+          showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
+          return;
+        }
+        payload.descuento = {
+          tipo: descuentoMembresia.tipo,
+          valor: Number(descuentoMembresia.valor),
+          motivo: descuentoMembresia.motivo.trim(),
+          fecha_inicio: descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio,
+          fecha_fin: descuentoMembresia.fecha_fin || null,
+        };
+      }
+
 
       if (membresiaForm.id) {
         await gimnasioServicio.actualizarMembresia(membresiaForm.id, payload);
@@ -1565,7 +1583,34 @@ export function DeportistasPage() {
         </Box>
 
         {requiereDescuento && (
-          <Box sx={{ mt: 1 }}>
+          <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
+              <TextField fullWidth size="small" select label="Tipo de descuento"
+                value={descuentoMembresia.tipo}
+                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, tipo: e.target.value }))}>
+                <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
+                <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
+              </TextField>
+              <TextField fullWidth size="small" type="number" label="Descuento"
+                value={descuentoMembresia.valor}
+                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, valor: e.target.value }))}
+                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : undefined, step: 0.01 } }} />
+              <TextField fullWidth size="small" label="Motivo / autorización"
+                value={descuentoMembresia.motivo}
+                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, motivo: e.target.value }))} />
+              <TextField fullWidth size="small" type="date" label="Desde"
+                value={descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || ''}
+                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, fecha_inicio: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }} />
+              <TextField fullWidth size="small" type="date" label="Hasta (opcional)"
+                value={descuentoMembresia.fecha_fin}
+                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, fecha_fin: e.target.value }))}
+                slotProps={{ inputLabel: { shrink: true } }} />
+            </Box>
+          </Box>
+        )}
+
+        <Box sx={{ mt: 1 }}>
             <DescuentosDeportistaPanel ocultarInterruptor
               deportistaId={formData.id}
               planId={membresiaForm.plan_id}
