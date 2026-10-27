@@ -1390,7 +1390,7 @@ export function DeportistasPage() {
 
   const renderMembresia = () => (
     <Stack spacing={2}>
-      <DescuentosDeportistaPanel deportistaId={formData.id} planes={planes} />
+
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
@@ -1583,6 +1583,12 @@ export function DeportistasPage() {
             />
           </Box>
         </Box>
+
+        {!membresiaForm.id && membresiaForm.plan_id ? (
+          <Box sx={{ mt: 1.5 }}>
+            <DescuentosDeportistaPanel deportistaId={formData.id} planes={planes} />
+          </Box>
+        ) : null}
 
         {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' ? (
           <Box
