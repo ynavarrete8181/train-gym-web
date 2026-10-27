@@ -749,7 +749,7 @@ export function DeportistasPage() {
       && String(membresia.estado || '').toUpperCase() === 'ACTIVA'
     );
     if (!membresiaCompatible) {
-      showNotificacion('El cliente necesita una membresía activa y pagada que incluya entrenador.', 'warning');
+      showNotificacion('El cliente no tiene una membresía activa que incluya entrenador. Revisa el plan contratado en Membresía.', 'warning');
       return;
     }
     const horarioSeleccionado = turnosEntrenador.find(
