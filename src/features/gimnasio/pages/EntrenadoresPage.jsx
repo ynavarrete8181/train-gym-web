@@ -159,7 +159,14 @@ export function EntrenadoresPage() {
       showNotificacion(formData.id ? 'Entrenador actualizado' : 'Entrenador creado', 'success');
       setVista('lista');
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al guardar', 'error');
+      const respuesta = error.response?.data;
+      const campos = respuesta?.errors || respuesta?.errores;
+      const detalle = campos ? Object.values(campos).flat().filter(Boolean).join(' ') : '';
+      showNotificacion(
+        detalle || respuesta?.message || respuesta?.mensaje
+          || (error.response?.status ? `No se pudo guardar el entrenador (HTTP ${error.response.status}).` : 'No se pudo conectar con el servidor.'),
+        'error',
+      );
     }
   };
 
