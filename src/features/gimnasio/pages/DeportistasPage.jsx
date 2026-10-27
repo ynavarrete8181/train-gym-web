@@ -1240,18 +1240,6 @@ export function DeportistasPage() {
 
   const renderEntrenadorYHorario = () => (
     <Stack spacing={2}>
-      {!membresiaEntrenadorDisponible && (
-        <Box sx={{ display: 'flex', alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: 1.5, flexWrap: 'wrap', px: 1.75, py: 1.25, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#f8fafc' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {membresiasCliente.length === 0
-              ? 'Primero asigna una membresía al cliente. Si el plan incluye entrenador, podrás configurar aquí su horario.'
-              : 'Las membresías actuales no habilitan entrenador. Un pase diario no requiere esta asignación.'}
-          </Typography>
-          <Button variant="outlined" size="small" onClick={() => { setVistaAsignacion('listado'); setTabFicha('membresia'); }} sx={{ textTransform: 'none', fontWeight: 700 }}>
-            Ir a Membresía
-          </Button>
-        </Box>
-      )}
       {vistaAsignacion === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2, gap: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>Nueva asignación</Typography>
