@@ -6,7 +6,7 @@ import { formStyles } from '../../../styles/formStyles.js'
 import { uiTokens } from '../../../styles/uiTokens.js'
 
 export function FuncionesUsuarioPanel({ grupos, funcionesRolBase = [], seleccionadas, disabled, onToggle, onSincronizar, controlRol = null }) {
-  const todosCodigos = grupos.flatMap((grupo) => grupo.funciones.map((funcion) => funcion.id_menu))
+  const todosCodigos = grupos.flatMap((grupo) => grupo.funciones.map((funcion) => funcion.id_menu)).filter((codigo) => funcionesRolBase.includes(codigo))
   const todosSeleccionados = todosCodigos.length > 0 && todosCodigos.every((codigo) => seleccionadas.includes(codigo))
   const alternarConjunto = (codigos) => {
     const conjuntoCompleto = codigos.every((codigo) => seleccionadas.includes(codigo))
@@ -19,7 +19,7 @@ export function FuncionesUsuarioPanel({ grupos, funcionesRolBase = [], seleccion
         <Box>
           <Typography fontWeight={900}>Permisos del usuario</Typography>
           <Typography sx={{ fontSize: 12.5, color: uiTokens.colores.textoMedio }}>
-            Las opciones del rol aparecen marcadas. Puedes activar permisos adicionales para este usuario.
+            Solo puedes modificar permisos habilitados para este rol. Los demás se configuran desde Seguridad → Roles.
           </Typography>
         </Box>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 1 }}>
@@ -44,7 +44,7 @@ export function FuncionesUsuarioPanel({ grupos, funcionesRolBase = [], seleccion
 
       <Stack spacing={1.5}>
         {grupos.map((grupo) => {
-          const codigosGrupo = grupo.funciones.map((funcion) => funcion.id_menu)
+          const codigosGrupo = grupo.funciones.map((funcion) => funcion.id_menu).filter((codigo) => funcionesRolBase.includes(codigo))
           const grupoCompleto = codigosGrupo.length > 0 && codigosGrupo.every((codigo) => seleccionadas.includes(codigo))
           const grupoParcial = codigosGrupo.some((codigo) => seleccionadas.includes(codigo)) && !grupoCompleto
           return <Box key={grupo.id_usermenu} sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
@@ -52,7 +52,7 @@ export function FuncionesUsuarioPanel({ grupos, funcionesRolBase = [], seleccion
               <Typography variant="subtitle2" fontWeight={900}>{grupo.menu}</Typography>
               <FormControlLabel
                 sx={{ m: 0 }}
-                control={<Checkbox size="small" checked={grupoCompleto} indeterminate={grupoParcial} disabled={disabled} onChange={() => alternarConjunto(codigosGrupo)} />}
+                control={<Checkbox size="small" checked={grupoCompleto} indeterminate={grupoParcial} disabled={disabled || !codigosGrupo.length} onChange={() => alternarConjunto(codigosGrupo)} />}
                 label={<Typography sx={{ fontSize: 11.5, fontWeight: 800 }}>Seleccionar todos</Typography>}
               />
             </Stack>
@@ -81,7 +81,7 @@ export function FuncionesUsuarioPanel({ grupos, funcionesRolBase = [], seleccion
                       control={
                         <Checkbox
                           checked={seleccionadas.includes(funcion.id_menu)}
-                          disabled={disabled}
+                          disabled={disabled || !perteneceAlRol}
                           onChange={() => onToggle(funcion.id_menu)}
                         />
                       }
