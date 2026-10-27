@@ -1517,13 +1517,13 @@ export function DeportistasPage() {
             value={membresiaForm.dias_gracia ?? 0}
             onChange={handleMembresiaChange}
             size="small"
-            helperText="Tolerancia adicional después de la fecha de vencimiento."
             slotProps={{ htmlInput: { min: 0, max: 365 } }}
           />
 
           <Box
             sx={{
-              minHeight: 40,
+              height: 40,
+              boxSizing: 'border-box',
               px: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1,
@@ -1548,7 +1548,8 @@ export function DeportistasPage() {
 
           <Box
             sx={{
-              minHeight: 40,
+              height: 40,
+              boxSizing: 'border-box',
               px: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1,
