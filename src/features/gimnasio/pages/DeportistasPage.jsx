@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
 import { Stack } from '@mui/material';
@@ -309,7 +308,7 @@ export function DeportistasPage() {
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
   const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
-  const [mostrarConfiguracionComercial, setMostrarConfiguracionComercial] = useState(false);
+  const [requiereDescuento, setRequiereDescuento] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
   const [paginaMembresia, setPaginaMembresia] = useState(1);
   const [porPaginaMembresia, setPorPaginaMembresia] = useState(5);
@@ -895,7 +894,7 @@ export function DeportistasPage() {
       };
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
-      if (descuentoMembresia.valor !== '' || descuentoMembresia.motivo.trim() !== '') {
+      if (requiereDescuento) {
         if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
           showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
           return;
@@ -1573,75 +1572,55 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
-        <Box sx={{ mt: 1 }}>
-          <Button variant="outlined" size="small" startIcon={<SettingsOutlinedIcon />}
-            onClick={() => setMostrarConfiguracionComercial((actual) => !actual)}
-            aria-expanded={mostrarConfiguracionComercial}
-            sx={{ textTransform: 'none', fontWeight: 700 }}>
+        <Box sx={{ mt: 1.25, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.25 }}>
             Configuración comercial
-          </Button>
-          {mostrarConfiguracionComercial && (
-            <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-              {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
-                <Typography variant="body2" sx={{ mb: permiteCobroProgramado ? 1.5 : 0 }}>
-                  {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
-                    ? 'Venta inicial pendiente de cobro'
-                    : 'Sin venta inicial automática'}
-                </Typography>
-              )}
-              <Typography variant="body2" fontWeight={700} sx={{ mt: 1 }}>Descuento (opcional)</Typography>
-        <Box sx={{ mt: 1 }}>
-          <Box sx={{ mt: 1, p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
-              <TextField fullWidth size="small" select label="Tipo de descuento"
-                value={descuentoMembresia.tipo}
-                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, tipo: e.target.value }))}>
+          </Typography>
+          {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
+                ? 'Venta inicial pendiente de cobro'
+                : 'Sin venta inicial automática'}
+            </Typography>
+          )}
+          {permiteCobroProgramado && (
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mb: 1.5 }}>
+              <TextField fullWidth size="small" label="Día de pago" name="dia_pago" type="number"
+                value={membresiaForm.dia_pago ?? ''} onChange={handleMembresiaChange}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: 1, max: 31 } }} />
+              <TextField fullWidth size="small" label="Próximo cobro"
+                value={proximoCobroPreview || 'Automático'}
+                slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }} />
+              <Box sx={{ minHeight: 40, px: 1.25, border: '1px solid', borderColor: 'divider', borderRadius: 1, display: 'flex', alignItems: 'center' }}>
+                <FormControlLabel control={<Switch size="small" name="generar_venta_automatica"
+                  checked={Boolean(membresiaForm.generar_venta_automatica)} onChange={handleMembresiaChange} />}
+                  label="Renovaciones automáticas" sx={{ m: 0 }} />
+              </Box>
+            </Box>
+          )}
+          <FormControlLabel sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
+            control={<Switch size="small" checked={requiereDescuento}
+              onChange={(e) => setRequiereDescuento(e.target.checked)} />}
+            label="Requiere descuento" />
+          {requiereDescuento && (
+            <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
+              <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, tipo: e.target.value }))}>
                 <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
                 <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
               </TextField>
-              <TextField fullWidth size="small" type="number" label="Descuento"
-                value={descuentoMembresia.valor}
-                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, valor: e.target.value }))}
+              <TextField fullWidth size="small" type="number" label="Descuento" value={descuentoMembresia.valor}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
                 slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : undefined, step: 0.01 } }} />
-              <TextField fullWidth size="small" label="Motivo / autorización"
-                value={descuentoMembresia.motivo}
-                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, motivo: e.target.value }))} />
+              <TextField fullWidth size="small" label="Motivo / autorización" value={descuentoMembresia.motivo}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))} />
               <TextField fullWidth size="small" type="date" label="Desde"
                 value={descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || ''}
-                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, fecha_inicio: e.target.value }))}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_inicio: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} />
-              <TextField fullWidth size="small" type="date" label="Hasta (opcional)"
-                value={descuentoMembresia.fecha_fin}
-                onChange={(e) => setDescuentoMembresia((actual) => ({ ...actual, fecha_fin: e.target.value }))}
+              <TextField fullWidth size="small" type="date" label="Hasta (opcional)" value={descuentoMembresia.fecha_fin}
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} />
-            </Box>
-          </Box>
-        </Box>
-              {permiteCobroProgramado && (
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, alignItems: 'end' }}>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography component="label" htmlFor="membresia-dia-pago" sx={{ display: 'block', mb: 0.5, fontSize: 12, fontWeight: 600 }}>
-                      Día de pago
-                    </Typography>
-                    <TextField id="membresia-dia-pago" fullWidth type="number" size="small"
-                      name="dia_pago" value={membresiaForm.dia_pago ?? ''}
-                      onChange={handleMembresiaChange}
-                      slotProps={{ htmlInput: { min: 1, max: 31 } }} />
-                  </Box>
-                  <Box sx={{ minWidth: 0 }}>
-                    <Typography sx={{ display: 'block', mb: 0.5, fontSize: 12, fontWeight: 600 }}>
-                      Próximo cobro
-                    </Typography>
-                    <TextField fullWidth size="small" value={proximoCobroPreview || 'Automático'}
-                      slotProps={{ htmlInput: { 'aria-label': 'Próximo cobro' }, input: { readOnly: true } }} />
-                  </Box>
-                  <Box sx={{ minHeight: 40, display: 'flex', alignItems: 'center', px: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                    <FormControlLabel control={<Switch size="small" name="generar_venta_automatica"
-                      checked={Boolean(membresiaForm.generar_venta_automatica)} onChange={handleMembresiaChange} />}
-                      label="Renovaciones automáticas" sx={{ m: 0 }} />
-                  </Box>
-                </Box>
-              )}
             </Box>
           )}
         </Box>
