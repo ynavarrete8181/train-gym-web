@@ -35,6 +35,7 @@ const inicial = {
 
 const ROLES_SIN_CONTEXTO_OPERATIVO = ["ROOT", "SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
 const ROLES_APP_SIN_PERMISOS_WEB = ["DEPORTISTA", "RESPONSABLE"];
+const normalizarRol = (rol) => String(rol ?? "").trim().toUpperCase();
 
 export function UsuarioForm({
   usuario,
@@ -62,7 +63,7 @@ export function UsuarioForm({
   const rolSeleccionado = roles.find(
     (rol) => String(rol.id_userrole) === String(formulario.usr_tipo),
   );
-  const rolNombre = rolSeleccionado?.role || "";
+  const rolNombre = normalizarRol(rolSeleccionado?.role ?? usuario?.rol_nombre);
   const requiereContextoOperativo = !ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNombre);
   const esRolAppSinPermisosWeb = ROLES_APP_SIN_PERMISOS_WEB.includes(rolNombre);
 
@@ -92,7 +93,7 @@ export function UsuarioForm({
     );
     const limpiarContextos =
       campo === "usr_tipo" &&
-      ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNuevo?.role || "");
+      ROLES_SIN_CONTEXTO_OPERATIVO.includes(normalizarRol(rolNuevo?.role));
 
     setFormulario((actual) => {
       const siguiente = {
