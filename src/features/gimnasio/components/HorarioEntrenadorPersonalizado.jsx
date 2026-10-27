@@ -401,6 +401,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         fecha_inicio: esPersonalizado ? form.fecha_inicio : null,
         fecha_fin: esPersonalizado ? form.fecha_fin : null,
         activo: Boolean(form.activo),
+        capacidad: Number(form.capacidad),
         observaciones: form.observaciones || null,
         franjas: esInstitucional
           ? franjasInstitucionales
@@ -438,10 +439,14 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
       setNotificacion({ mensaje: 'Horario del entrenador guardado correctamente.', tipo: 'success' });
       onVolver?.();
     } catch (error) {
-      const errores = error.response?.data?.errores;
-      const mensaje = errores
-        ? Object.values(errores).flat().join(' ')
-        : (error.response?.data?.mensaje || 'No se pudo guardar el horario.');
+      const respuesta = error.response?.data;
+      const errores = respuesta?.errors || respuesta?.errores;
+      const mensaje = (errores ? Object.values(errores).flat().filter(Boolean).join(' ') : '')
+        || respuesta?.message
+        || respuesta?.mensaje
+        || (error.response?.status
+          ? `No se pudo guardar el horario (HTTP ${error.response.status}).`
+          : 'No se pudo conectar al servidor para guardar el horario.');
       setNotificacion({ mensaje, tipo: 'error' });
     }
   };
