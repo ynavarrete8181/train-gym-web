@@ -1555,9 +1555,13 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
-        {!membresiaForm.id && membresiaForm.plan_id ? (
+        {!membresiaForm.id ? (
           <Box sx={{ mt: 1.5 }}>
-            <DescuentosDeportistaPanel deportistaId={formData.id} planes={planes} />
+            <DescuentosDeportistaPanel
+              deportistaId={formData.id}
+              planId={membresiaForm.plan_id}
+              modalidadId={membresiaForm.modalidad_id}
+            />
           </Box>
         ) : null}
 
