@@ -33,8 +33,9 @@ const inicial = {
   contextos: [],
 };
 
-const ROLES_SIN_CONTEXTO_OPERATIVO = ["SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
+const ROLES_SIN_CONTEXTO_OPERATIVO = ["ROOT", "SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
 const ROLES_APP_SIN_PERMISOS_WEB = ["DEPORTISTA", "RESPONSABLE"];
+const normalizarRol = (rol) => String(rol ?? "").trim().toUpperCase();
 
 export function UsuarioForm({
   usuario,
@@ -62,9 +63,10 @@ export function UsuarioForm({
   const rolSeleccionado = roles.find(
     (rol) => String(rol.id_userrole) === String(formulario.usr_tipo),
   );
-  const rolNombre = rolSeleccionado?.role || "";
+  const rolNombre = normalizarRol(rolSeleccionado?.role ?? usuario?.rol_nombre);
   const requiereContextoOperativo = !ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNombre);
   const esRolAppSinPermisosWeb = ROLES_APP_SIN_PERMISOS_WEB.includes(rolNombre);
+  const esRolGlobal = ["ROOT", "SUPERADMINISTRADOR"].includes(rolNombre);
 
   useEffect(() => {
     setEtapa(0);
@@ -92,7 +94,7 @@ export function UsuarioForm({
     );
     const limpiarContextos =
       campo === "usr_tipo" &&
-      ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNuevo?.role || "");
+      ROLES_SIN_CONTEXTO_OPERATIVO.includes(normalizarRol(rolNuevo?.role));
 
     setFormulario((actual) => {
       const siguiente = {
@@ -323,7 +325,7 @@ export function UsuarioForm({
                 />
               </Box> : (
                 <Alert severity="info" variant="outlined">
-                  {rolNombre === "SUPERADMINISTRADOR"
+                  {["ROOT", "SUPERADMINISTRADOR"].includes(rolNombre)
                     ? "Este rol tiene alcance global y no requiere una asignación operativa por sede."
                     : "Este rol pertenece a la experiencia de cliente/app y su sede se determina por membresías, reservas o relaciones del negocio; no por una asignación operativa interna."}
                 </Alert>
@@ -335,12 +337,14 @@ export function UsuarioForm({
             <Stack spacing={2}>
               <Alert severity="info" variant="outlined">
                 <strong>{formulario.nombres} {formulario.apellidos}</strong>{" "}
-                tendrá {funcionesSeleccionadas.length} permiso(s) activo(s).
+                {esRolGlobal
+                  ? " tiene acceso global a todas las funciones activas del sistema, sin depender de permisos individuales."
+                  : ` tendrá ${funcionesSeleccionadas.length} permiso(s) activo(s).`}
                 {esRolAppSinPermisosWeb
                   ? " El acceso administrativo web queda sin permisos."
                   : " Revisa las opciones antes de guardar."}
               </Alert>
-              {esRolAppSinPermisosWeb ? null : gruposFunciones.length ? (
+              {esRolGlobal || esRolAppSinPermisosWeb ? null : gruposFunciones.length ? (
                 <FuncionesUsuarioPanel
                   grupos={gruposFunciones}
                   funcionesRolBase={funcionesRolBase}
