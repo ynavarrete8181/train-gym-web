@@ -217,6 +217,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
     setVistaInterna('formulario');
   };
 
+  const alternarEstado = (index) => {
+    onChange(modalidades.map((modalidad, i) => i === index
+      ? { ...modalidad, activo: !Boolean(modalidad.activo) }
+      : modalidad));
+    avisar('Estado de modalidad actualizado en el formulario. Guarda el plan para confirmar el cambio.');
+  };
+
   const eliminar = (index) => {
     onChange(modalidades.filter((_, i) => i !== index));
     if (indiceEdicion === index) limpiar();
@@ -352,7 +359,13 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                     </Typography>}
                 </TableCell>
                 <TableCell>{celdas.cobro}</TableCell>
-                <TableCell><Chip size="small" label={celdas.estado} variant="outlined" sx={{ fontWeight: 800 }} /></TableCell>
+                <TableCell>
+                  <FormControlLabel
+                    sx={{ m: 0 }}
+                    control={<Switch size="small" checked={Boolean(modalidad.activo)} onChange={() => alternarEstado(index)} />}
+                    label={<Chip size="small" label={celdas.estado} variant="outlined" sx={{ fontWeight: 800 }} />}
+                  />
+                </TableCell>
                 <TableCell align="center">
                   <Stack direction="row" spacing={0.5} justifyContent="center">
                     <Tooltip title="Editar modalidad">
