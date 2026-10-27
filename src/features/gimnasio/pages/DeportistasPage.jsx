@@ -589,10 +589,44 @@ export function DeportistasPage() {
     }
   };
 
+  // Cada entrada a una pestaña vuelve a su vista principal y consulta datos vigentes.
+  const handleCambiarTabFicha = async (_evento, siguienteTab) => {
+    setTabFicha(siguienteTab);
+    setVistaMembresia('listado');
+    setVistaAsignacion('listado');
+    setMembresiaForm(getInitialMembresia());
+    setAsignacionForm(getInitialAsignacion());
+    setRequiereDescuento(false);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setTurnosEntrenador([]);
+
+    if (!formData.id) return;
+
+    if (siguienteTab === 'membresia') {
+      try {
+        const respuesta = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
+        setMembresiasCliente(respuesta.datos?.membresias || []);
+      } catch (error) {
+        showNotificacion(error.response?.data?.mensaje || 'No se pudieron actualizar las membresías.', 'error');
+      }
+    } else if (siguienteTab === 'entrenador') {
+      await cargarAsignacionesYEntrenadores(formData.id);
+    } else if (siguienteTab === 'progreso') {
+      await cargarProgresoCliente(formData.id);
+    } else if (siguienteTab === 'entrenamiento') {
+      await cargarEntrenamientoCliente(formData.id);
+    }
+    // Ficha inicial realiza su consulta al montarse en la pestaña.
+  };
+
   const handleAbrirFicha = (deportista) => {
     setDiagnosticoIdentidad(null);
     setFormData({ ...deportista });
     setTabFicha('datos');
+    setVistaMembresia('listado');
+    setVistaAsignacion('listado');
+    setRequiereDescuento(false);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setAsignacionForm(getInitialAsignacion());
     setMembresiaForm(getInitialMembresia());
     setProgresoForm(getInitialProgreso());
@@ -2299,7 +2333,7 @@ export function DeportistasPage() {
           )}
           <PestanasEstandar
             value={tabFicha}
-            onChange={(_, valor) => setTabFicha(valor)}
+            onChange={handleCambiarTabFicha}
             opciones={TABS_FICHA}
           />
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
