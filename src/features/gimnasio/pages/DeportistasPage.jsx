@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
 import { Stack } from '@mui/material';
@@ -308,6 +309,8 @@ export function DeportistasPage() {
   const [tabFicha, setTabFicha] = useState('datos');
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
+  const [requiereDescuento, setRequiereDescuento] = useState(false);
+  const [mostrarConfiguracionComercial, setMostrarConfiguracionComercial] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
   const [paginaMembresia, setPaginaMembresia] = useState(1);
   const [porPaginaMembresia, setPorPaginaMembresia] = useState(5);
@@ -1529,6 +1532,18 @@ export function DeportistasPage() {
             />
           </Box>
 
+          {!membresiaForm.id && <Box sx={{
+            minHeight: 40, px: 1.25, border: '1px solid #dbe5f0',
+            borderRadius: 1, display: 'flex', alignItems: 'center', bgcolor: '#f8fafc'
+          }}>
+            <FormControlLabel
+              control={<Switch size="small" checked={requiereDescuento}
+                onChange={(evento) => setRequiereDescuento(evento.target.checked)} />}
+              label="Requiere descuento"
+              sx={{ m: 0 }}
+            />
+          </Box>}
+
           <Box
             sx={{
               minHeight: 40,
@@ -1555,21 +1570,26 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
-        {!membresiaForm.id ? (
-          <Box sx={{ mt: 1.5 }}>
-            <DescuentosDeportistaPanel
+        {!membresiaForm.id && requiereDescuento && (
+          <Box sx={{ mt: 1 }}>
+            <DescuentosDeportistaPanel ocultarInterruptor
               deportistaId={formData.id}
               planId={membresiaForm.plan_id}
-              modalidadId={membresiaForm.modalidad_id}
-            />
-          </Box>
-        ) : null}
-
+              modalidadId=        <Box sx={{ mt: 1 }}>
+          <Button variant="outlined" size="small"
+            startIcon={<SettingsOutlinedIcon />}
+            onClick={() => setMostrarConfiguracionComercial((actual) => !actual)}
+            aria-expanded={mostrarConfiguracionComercial}
+            sx={{ textTransform: 'none', fontWeight: 700 }}>
+            Configuración comercial
+          </Button>
+          {mostrarConfiguracionComercial && (
+            <Box sx={{ mt: 1 }}>
         {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' ? (
           <Box
             sx={{
-              mt: 1.5,
-              p: 1.5,
+              mt: 0.75,
+              p: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1.5,
               bgcolor: '#fbfdff',
@@ -1578,19 +1598,15 @@ export function DeportistasPage() {
             <Typography variant="body2" fontWeight={800}>
               Venta inicial
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
-                ? 'Este plan generará automáticamente una venta pendiente y su cuenta por cobrar.'
-                : 'Este plan no genera una venta inicial según su configuración comercial.'}
-            </Typography>
+            
           </Box>
         ) : null}
 
         {permiteCobroProgramado ? (
           <Box
             sx={{
-              mt: 1.5,
-              p: 1.5,
+              mt: 0.75,
+              p: 1.25,
               border: '1px solid #dbe5f0',
               borderRadius: 1.5,
               bgcolor: '#fbfdff',
@@ -1599,9 +1615,7 @@ export function DeportistasPage() {
             <Typography variant="body2" fontWeight={800}>
               Configuración de cobro
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
-              Define el día habitual de pago para futuras renovaciones. Esta configuración no controla la venta inicial.
-            </Typography>
+            
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1.15fr' }, gap: 1.5 }}>
               <TextField
@@ -1652,7 +1666,17 @@ export function DeportistasPage() {
         ) : (
           membresiaForm.plan_id ? (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.25 }}>
-              Este plan no es renovable; su cobro se gestiona de forma inmediata o manual desde Ventas.
+              Cobro inmediato o manual desde Ventas.
+            </Typography>
+          ) : null
+        )}
+
+
+            </Box>
+          )}
+        </Box>
+
+l desde Ventas.
             </Typography>
           ) : null
         )}
