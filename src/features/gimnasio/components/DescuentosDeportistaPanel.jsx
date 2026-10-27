@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, CircularProgress, Divider, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 
 const hoyLocal = () => {
   const d = new Date();
@@ -21,6 +22,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
   const [error, setError] = useState('');
   const [mensaje, setMensaje] = useState('');
   const [autorizado, setAutorizado] = useState(true);
+  const [expandido, setExpandido] = useState(false);
   const cambiar = (k, v) => setForm((a) => ({ ...a, [k]: v }));
 
   const recargar = async () => {
@@ -102,12 +104,18 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
   return (
     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Stack spacing={2}>
-        <Box>
+        <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1}>
+          <Box>
           <Typography variant="subtitle1" fontWeight={700}>Descuentos personalizados</Typography>
           <Typography variant="body2" color="text.secondary">
             El administrador asigna un beneficio por deportista. Se aplica a ventas nuevas dentro de su vigencia; el precio oficial del plan no cambia.
           </Typography>
-        </Box>
+          </Box>
+          <Button variant="outlined" size="small" onClick={() => setExpandido((valor) => !valor)}>
+            {expandido ? "Ocultar beneficios" : "Administrar descuentos"}
+          </Button>
+        </Stack>
+        {expandido && <>
         {cargando && <CircularProgress size={18} />}
         {error && <Typography role="alert" color="error" variant="body2">{error}</Typography>}
         {mensaje && <Typography color="success.main" variant="body2">{mensaje}</Typography>}
@@ -160,17 +168,24 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
                 <MenuItem key={m.id} value={m.id}>{m.nombre || m.codigo || `Modalidad #${m.id}`}</MenuItem>
               ))}
             </TextField>}
-          <TextField size="small" label="Inicio vigencia" type="date" value={form.fecha_inicio}
-            onChange={(e) => cambiar('fecha_inicio', e.target.value)} InputLabelProps={{ shrink: true }} />
-          <TextField size="small" label="Fin vigencia (opcional)" type="date" value={form.fecha_fin}
-            onChange={(e) => cambiar('fecha_fin', e.target.value)} InputLabelProps={{ shrink: true }} />
+          <Stack spacing={0.5}>
+            <Typography variant="caption" component="label">Inicio vigencia</Typography>
+            <TextField size="small" type="date" value={form.fecha_inicio} inputProps={{ 'aria-label': 'Inicio vigencia' }}
+              onChange={(e) => cambiar('fecha_inicio', e.target.value)} />
+          </Stack>
+          <Stack spacing={0.5}>
+            <Typography variant="caption" component="label">Fin vigencia (opcional)</Typography>
+            <TextField size="small" type="date" value={form.fecha_fin} inputProps={{ 'aria-label': 'Fin vigencia' }}
+              onChange={(e) => cambiar('fecha_fin', e.target.value)} />
+          </Stack>
           <TextField size="small" label="Motivo / autorización" value={form.motivo}
             onChange={(e) => cambiar('motivo', e.target.value)}
             sx={{ gridColumn: { xs: '1', md: 'span 3' } }} />
         </Box>
         <Stack direction="row" justifyContent="flex-end">
-          <Button variant="contained" disabled={guardando || cargando} onClick={guardar}>Guardar beneficio</Button>
+          <BotonGuardar texto="Guardar beneficio" guardando={guardando} disabled={cargando} onClick={guardar} />
         </Stack>
+        </>}
       </Stack>
     </Box>
   );
