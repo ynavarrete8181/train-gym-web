@@ -5,6 +5,7 @@ import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stac
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.jsx';
+import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
@@ -27,6 +28,7 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
           <FilterHeaderCell value={filtrosColumna.nombre} onChange={(v) => onFiltroColumna('nombre', v)} options={opciones(meta.opciones_filtro?.nombre)}>Plan</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.estado} onChange={(v) => onFiltroColumna('estado', v)} options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}>Estado</FilterHeaderCell>
           <TableCell>Modalidades</TableCell>
+          <TableCell>Configuración</TableCell>
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>
@@ -35,6 +37,12 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
           <TableRow key={plan.id} hover>
             <TableCell>
               <Typography variant="body2" fontWeight="600">{plan.codigo}</Typography>
+            </TableCell>
+            <TableCell>
+              <StatusChip estado={plan.configuracion_completa ? 'completado' : 'pendiente'} />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.4 }}>
+                {(plan.servicios || []).length} servicio(s) · {(plan.precios_sede || []).length} tarifa(s)
+              </Typography>
             </TableCell>
             <TableCell>
               <Typography variant="body2">{plan.nombre}</Typography>
@@ -88,7 +96,7 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
           </TableRow>
         ))}
         {planes.length === 0 ? (
-          <TablaEstadoFila colSpan={5} cargando={cargando} texto="No hay planes registrados." />
+          <TablaEstadoFila colSpan={6} cargando={cargando} texto="No hay planes registrados." />
         ) : null}
       </TableBody>
     </TablaGestion>

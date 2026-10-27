@@ -31,6 +31,7 @@ const getInitialForm = () => ({
   generar_venta: true,
   requiere_pago: true,
   requiere_entrenador: false,
+  requiere_ficha_inicial: false,
   renovable: true,
   requiere_modalidades: false,
   activo: true,
@@ -213,9 +214,6 @@ export function PlanesPage() {
         siguiente.duracion = 1;
         siguiente.tarifa_inscripcion = 0;
       }
-      if (name === 'requiere_entrenador' && !checked) {
-        siguiente.servicio_ids = [];
-      }
       if (name === 'requiere_modalidades' && checked) {
         siguiente.precio_por_sede = false;
         siguiente.precios_sede = [];
@@ -249,8 +247,8 @@ export function PlanesPage() {
         }
       }
 
-      if (formData.requiere_entrenador && !(formData.servicio_ids || []).length) {
-        showNotificacion('Selecciona al menos un servicio incluido para el plan que requiere entrenador.', 'warning');
+      if (formData.activo && !(formData.servicio_ids || []).length) {
+        showNotificacion('Selecciona al menos un servicio incluido antes de activar el plan.', 'warning');
         return;
       }
 
@@ -293,11 +291,10 @@ export function PlanesPage() {
         generar_venta: Boolean(formData.generar_venta),
         requiere_pago: Boolean(formData.requiere_pago),
         requiere_entrenador: Boolean(formData.requiere_entrenador),
+        requiere_ficha_inicial: Boolean(formData.requiere_ficha_inicial),
         renovable: Boolean(formData.renovable),
         requiere_modalidades: Boolean(formData.requiere_modalidades),
-        servicio_ids: formData.requiere_entrenador
-          ? (formData.servicio_ids || []).map(Number)
-          : [],
+        servicio_ids: (formData.servicio_ids || []).map(Number),
         precios_sede: preciosSedeValidos.map((fila) => ({ sede_id: Number(fila.sede_id), precio: parseFloat(fila.precio) })),
         modalidades: formData.requiere_modalidades
           ? (formData.modalidades || []).map(({ precio_por_sede, ...modalidad }) => ({
@@ -365,6 +362,7 @@ export function PlanesPage() {
                   {/* La generación de la venta inicial se controla al asignar la membresía al deportista. */}
                   <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
                   <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
+                  <FormControlLabel control={<Switch name="requiere_ficha_inicial" checked={Boolean(formData.requiere_ficha_inicial)} onChange={handleChange} />} label="Requiere ficha inicial" />
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
                   <FormControlLabel
                     control={
@@ -380,11 +378,10 @@ export function PlanesPage() {
                 </Stack>
               </Box>
 
-              {formData.requiere_entrenador ? (
-                <Box sx={formStyles.seccion}>
+              <Box sx={formStyles.seccion}>
                   <Typography sx={formStyles.modalSeccionTitulo}>Servicios incluidos</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
-                    Define los servicios que el cliente podrá reservar con este plan. Luego el sistema cruzará estos servicios con los habilitados para cada entrenador.
+                    Define lo que adquiere el cliente. Cuando el plan requiera entrenador, el sistema cruzará estos servicios con los habilitados para cada entrenador.
                   </Typography>
                   <Autocomplete
                     multiple
@@ -423,7 +420,6 @@ export function PlanesPage() {
                     )}
                   />
                 </Box>
-              ) : null}
 
               {formData.requiere_modalidades ? (
                 <PlanModalidadesEditor

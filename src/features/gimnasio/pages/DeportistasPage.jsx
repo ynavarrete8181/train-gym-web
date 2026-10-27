@@ -123,7 +123,6 @@ const getInitialMembresia = () => ({
   estado: 'PENDIENTE_PAGO',
   dias_gracia: 0,
   dia_pago: '',
-  generar_venta: false,
   generar_venta_automatica: false,
   proxima_fecha_cobro: '',
   renovacion_automatica: false,
@@ -714,11 +713,27 @@ export function DeportistasPage() {
       showNotificacion('Selecciona un entrenador y un turno', 'warning');
       return;
     }
+    const membresiaCompatible = membresiasCliente.find((membresia) =>
+      booleanoBackend(membresia.requiere_entrenador)
+      && String(membresia.estado || '').toUpperCase() === 'ACTIVA'
+    );
+    if (!membresiaCompatible) {
+      showNotificacion('El cliente necesita una membresía activa y pagada que incluya entrenador.', 'warning');
+      return;
+    }
+    const horarioSeleccionado = turnosEntrenador.find(
+      (horario) => String(horario.id) === String(asignacionForm.entrenador_horario_id),
+    );
+    const sedeHorario = (horarioSeleccionado?.franjas || []).find(
+      (franja) => String(franja.sede_id) === String(membresiaCompatible.sede_id),
+    )?.sede_id || membresiaCompatible.sede_id;
     try {
       await gimnasioServicio.crearAsignacionEntrenador({
         entrenador_id: Number(asignacionForm.entrenador_id),
         deportista_id: formData.id,
         entrenador_horario_id: Number(asignacionForm.entrenador_horario_id),
+        membresia_id: Number(membresiaCompatible.id),
+        sede_id: Number(sedeHorario),
         observaciones: asignacionForm.observaciones || null,
       });
       showNotificacion('Cliente asignado correctamente', 'success');
@@ -827,7 +842,6 @@ export function DeportistasPage() {
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
       fecha_congelacion_fin: limpiarFechaMembresia(m.fecha_congelacion_fin),
       renovacion_automatica: Boolean(m.renovacion_automatica),
-      generar_venta: Boolean(m.requiere_facturar),
       generar_venta_automatica: Boolean(m.generar_venta_automatica),
       dia_pago: m.dia_pago ?? '',
       proxima_fecha_cobro: limpiarFechaMembresia(m.proxima_fecha_cobro),
@@ -876,9 +890,6 @@ export function DeportistasPage() {
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
-        generar_venta: String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() === 'PASE_DIARIO'
-          ? false
-          : Boolean(membresiaForm.generar_venta),
         proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
@@ -894,9 +905,9 @@ export function DeportistasPage() {
         showNotificacion(
           esPaseDiario
             ? 'Pase diario asignado. La venta se generará cuando se consuma.'
-            : membresiaForm.generar_venta
+            : planSeleccionado?.generar_venta && planSeleccionado?.requiere_pago
               ? 'Membresía creada y venta pendiente generada con éxito'
-              : 'Membresía creada sin venta. Podrá cobrarse manualmente desde Ventas.',
+              : 'Membresía creada correctamente según la configuración comercial del plan.',
           'success',
         );
       }
@@ -1598,20 +1609,10 @@ export function DeportistasPage() {
               Venta inicial
             </Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              Actívalo solo si deseas crear ahora una cuenta pendiente. Si queda apagado, la membresía podrá cobrarse manualmente desde Ventas cuando el cliente llegue a pagar.
+              {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
+                ? 'Este plan generará automáticamente una venta pendiente y su cuenta por cobrar.'
+                : 'Este plan no genera una venta inicial según su configuración comercial.'}
             </Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  name="generar_venta"
-                  checked={Boolean(membresiaForm.generar_venta)}
-                  onChange={handleMembresiaChange}
-                  size="small"
-                />
-              }
-              label="Generar venta al asignar"
-              sx={{ m: 0 }}
-            />
           </Box>
         ) : null}
 
