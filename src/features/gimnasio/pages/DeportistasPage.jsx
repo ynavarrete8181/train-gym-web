@@ -785,13 +785,28 @@ export function DeportistasPage() {
     }
   };
 
-  const handleInactivarAsignacion = async (asignacion) => {
+  const handleFinalizarAsignacion = async (asignacion) => {
+    const confirmado = await confirmarAccion({
+      titulo: 'Finalizar asignación',
+      texto: 'Se finalizará la asignación de este entrenador, se liberará su cupo y el historial permanecerá disponible.',
+      textoConfirmar: 'Sí, finalizar',
+      icono: 'warning',
+    });
+    if (!confirmado) return;
+
     try {
-      await gimnasioServicio.inactivarAsignacionEntrenador(asignacion.id);
-      showNotificacion('Asignación inactivada. El historial se conserva.', 'success');
-      cargarAsignacionesYEntrenadores(formData.id);
+      await gimnasioServicio.finalizarAsignacionEntrenador(asignacion.id);
+      showNotificacion('Asignación finalizada. El historial se conserva.', 'success');
+      await cargarAsignacionesYEntrenadores(formData.id);
     } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al inactivar la asignación', 'error');
+      const errores = error.response?.data?.errors || error.response?.data?.errores;
+      showNotificacion(
+        (errores ? Object.values(errores).flat().join(' ') : null)
+          || error.response?.data?.mensaje
+          || error.response?.data?.message
+          || 'No se pudo finalizar la asignación.',
+        'error',
+      );
     }
   };
 
@@ -1383,7 +1398,7 @@ export function DeportistasPage() {
           opcionesColumna={Object.fromEntries(['entrenador', 'disponibilidad', 'sede', 'vigencia', 'estado']
             .map((campo) => [campo, opcionesExcel(asignaciones, (item) => textoAsignacion(item, campo))]))}
           cargando={cargandoFicha}
-          onInactivar={handleInactivarAsignacion}
+          onFinalizar={handleFinalizarAsignacion}
         />
       </Box>}
     </Stack>
