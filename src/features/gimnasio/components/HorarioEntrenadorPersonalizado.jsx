@@ -62,7 +62,7 @@ const bloqueInicial = {
 
 const hora = (value) => String(value || '').slice(0, 5);
 
-export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
+export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardado }) {
   const [form, setForm] = useState(inicial);
   const [catalogos, setCatalogos] = useState({ sedes: [], jornadas: [], tipos_receso: [] });
   const [bloque, setBloque] = useState(bloqueInicial);
@@ -436,7 +436,12 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver }) {
         await gimnasioServicio.crearHorarioPersonalizadoEntrenador(entrenador.id, payload);
       }
 
-      setNotificacion({ mensaje: 'Horario del entrenador guardado correctamente.', tipo: 'success' });
+      const mensajeExito = form.id ? 'Horario modificado correctamente.' : 'Horario guardado correctamente.';
+      if (onGuardado) {
+        onGuardado(mensajeExito);
+      } else {
+        setNotificacion({ mensaje: mensajeExito, tipo: 'success' });
+      }
       onVolver?.();
     } catch (error) {
       const respuesta = error.response?.data;
