@@ -225,6 +225,36 @@ export function PlanesPage() {
     });
   };
 
+  const handleCambiarEstado = async (plan) => {
+    const nuevoEstado = !Boolean(Number(plan.activo));
+    try {
+      const { configuracion_completa, servicios, precio_por_sede, ...datos } = plan;
+      const payload = {
+        ...datos,
+        activo: nuevoEstado,
+        servicio_ids: (plan.servicio_ids || servicios?.map((servicio) => servicio.id) || []).map(Number),
+        precios_sede: plan.requiere_modalidades ? [] : (plan.precios_sede || []).map(({ sede_id, precio }) => ({
+          sede_id: Number(sede_id), precio: Number(precio),
+        })),
+        modalidades: plan.requiere_modalidades
+          ? (plan.modalidades || []).map(({ precio_por_sede: _precioPorSede, precios_sede = [], ...modalidad }) => ({
+              ...modalidad,
+              precios_sede: precios_sede.map(({ sede_id, precio }) => ({
+                sede_id: Number(sede_id), precio: Number(precio),
+              })),
+            }))
+          : [],
+      };
+      await gimnasioServicio.actualizarPlan(plan.id, payload);
+      showNotificacion(nuevoEstado ? 'Plan activado correctamente.' : 'Plan inactivado correctamente.', 'success');
+      await cargarPlanes();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const primerError = errores ? Object.values(errores)[0]?.[0] : null;
+      showNotificacion(primerError || error.response?.data?.mensaje || error.response?.data?.message || 'No se pudo cambiar el estado del plan.', 'error');
+    }
+  };
+
   const handleGuardar = async () => {
     try {
       if (!String(formData.nombre || '').trim()) {
@@ -522,7 +552,7 @@ export function PlanesPage() {
       <PageHeader titulo="Planes de membresía" descripcion="Administra los productos comerciales, vigencias y formas de cobro de Revive." icono={<ListAltOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || planes.length} busqueda={filtros.busqueda} onBusqueda={(v) => buscar({ ...filtros, busqueda: v })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onModalidades={handleModalidadesPlan} onEliminar={handleEliminar} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
+        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onModalidades={handleModalidadesPlan} onEliminar={handleEliminar} onCambiarEstado={handleCambiarEstado} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
