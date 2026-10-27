@@ -1471,36 +1471,7 @@ export function DeportistasPage() {
               <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
             ))}
           </TextField>
-                    {membresiaForm.id ? (
-            <TextField
-              label="Código de membresía"
-              value={membresiaForm.codigo_contrato || ''}
-              size="small"
-              disabled
-              helperText="Generado automáticamente por el sistema."
-            />
-          ) : (
-            <Box
-              sx={{
-                minHeight: 40,
-                px: 1.5,
-                border: '1px solid #dbe5f0',
-                borderRadius: 1,
-                bgcolor: '#f8fafc',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-              }}
-            >
-              <Typography variant="caption" color="text.secondary" fontWeight={700}>
-                Código de membresía
-              </Typography>
-              <Typography variant="body2" fontWeight={800}>
-                Se generará automáticamente
-              </Typography>
-            </Box>
-          )}
-          <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''} onChange={handleMembresiaChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                    <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''} onChange={handleMembresiaChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
           <TextField
             label="Fecha fin"
             name="fecha_fin"
