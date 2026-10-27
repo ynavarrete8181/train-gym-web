@@ -106,13 +106,13 @@ export function DescuentosDeportistaPanel({ deportistaId, planes = [] }) {
       <Stack spacing={2}>
         <Stack direction={{ xs: "column", sm: "row" }} justifyContent="space-between" alignItems={{ sm: "center" }} gap={1}>
           <Box>
-          <Typography variant="subtitle1" fontWeight={700}>Descuentos personalizados</Typography>
+          <Typography variant="subtitle1" fontWeight={700}>¿Aplicar descuento a esta nueva membresía?</Typography>
           <Typography variant="body2" color="text.secondary">
-            El administrador asigna un beneficio por deportista. Se aplica a ventas nuevas dentro de su vigencia; el precio oficial del plan no cambia.
+            Opcional. Registra primero el beneficio para que Laravel pueda considerarlo al generar una nueva venta. No modifica el precio oficial del plan.
           </Typography>
           </Box>
           <Button variant="outlined" size="small" onClick={() => setExpandido((valor) => !valor)}>
-            {expandido ? "Ocultar beneficios" : "Administrar descuentos"}
+            {expandido ? "Ocultar descuento" : "Configurar descuento"}
           </Button>
         </Stack>
         {expandido && <>
