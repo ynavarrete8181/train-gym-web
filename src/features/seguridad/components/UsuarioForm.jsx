@@ -66,6 +66,7 @@ export function UsuarioForm({
   const rolNombre = normalizarRol(rolSeleccionado?.role ?? usuario?.rol_nombre);
   const requiereContextoOperativo = !ROLES_SIN_CONTEXTO_OPERATIVO.includes(rolNombre);
   const esRolAppSinPermisosWeb = ROLES_APP_SIN_PERMISOS_WEB.includes(rolNombre);
+  const esRolGlobal = ["ROOT", "SUPERADMINISTRADOR"].includes(rolNombre);
 
   useEffect(() => {
     setEtapa(0);
@@ -336,12 +337,14 @@ export function UsuarioForm({
             <Stack spacing={2}>
               <Alert severity="info" variant="outlined">
                 <strong>{formulario.nombres} {formulario.apellidos}</strong>{" "}
-                tendrá {funcionesSeleccionadas.length} permiso(s) activo(s).
+                {esRolGlobal
+                  ? " tiene acceso global a todas las funciones activas del sistema, sin depender de permisos individuales."
+                  : ` tendrá ${funcionesSeleccionadas.length} permiso(s) activo(s).`}
                 {esRolAppSinPermisosWeb
                   ? " El acceso administrativo web queda sin permisos."
                   : " Revisa las opciones antes de guardar."}
               </Alert>
-              {esRolAppSinPermisosWeb ? null : gruposFunciones.length ? (
+              {esRolGlobal || esRolAppSinPermisosWeb ? null : gruposFunciones.length ? (
                 <FuncionesUsuarioPanel
                   grupos={gruposFunciones}
                   funcionesRolBase={funcionesRolBase}
