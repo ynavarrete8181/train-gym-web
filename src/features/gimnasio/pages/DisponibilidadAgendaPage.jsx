@@ -4,7 +4,7 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
-import { Autocomplete, Box, Button, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -154,7 +154,13 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           getOptionLabel={opcion => opcion.nombre || ''}
           isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
           noOptionsText="No hay sedes disponibles"
-          renderInput={params => <TextField {...params} label="Sede" slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><PlaceOutlinedIcon fontSize="small" color="action" /></InputAdornment> } }} />}
+          renderOption={(props, opcion) => (
+            <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+              <PlaceOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
+              <Typography variant="body2">{opcion.nombre}</Typography>
+            </Box>
+          )}
+          renderInput={params => <TextField {...params} label="Sede" />}
         />
         {entrenadorInicial ? (
           <TextField
@@ -173,7 +179,13 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                     getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
                     isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
                     noOptionsText={buscando ? 'Consultando entrenadores...' : 'Sin entrenadores disponibles'}
-                    renderInput={params=><TextField {...params} size="small" label="Entrenador" slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><PersonOutlineOutlinedIcon fontSize="small" color="action" /></InputAdornment> } }} />}
+                    renderOption={(props, opcion) => (
+                      <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+                        <PersonOutlineOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
+                        <Typography variant="body2">{[opcion.nombres, opcion.apellidos].filter(Boolean).join(' ') || opcion.name || ''}</Typography>
+                      </Box>
+                    )}
+                    renderInput={params=><TextField {...params} size="small" label="Entrenador" />}
                   />
           
         )}
@@ -187,7 +199,13 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           getOptionLabel={opcion => `${opcion.nombre || ''} · ${opcion.duracion_minutos || 0} min`}
           isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
           noOptionsText={cargandoServicios ? 'Cargando servicios...' : 'Sin servicios disponibles'}
-          renderInput={params => <TextField {...params} label="Servicio" slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><FitnessCenterOutlinedIcon fontSize="small" color="action" /></InputAdornment> } }} helperText={
+          renderOption={(props, opcion) => (
+            <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+              <FitnessCenterOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
+              <Typography variant="body2">{opcion.nombre} · {opcion.duracion_minutos || 0} min</Typography>
+            </Box>
+          )}
+          renderInput={params => <TextField {...params} label="Servicio" helperText={
             !form.sede_id || !form.entrenador_id
               ? 'Selecciona sede y entrenador'
               : errorServicios || (serviciosDisponibles.length === 0 && !cargandoServicios ? 'No hay servicios habilitados para reserva' : '')
