@@ -300,6 +300,11 @@ export const gimnasioServicio = {
     return data;
   },
 
+  buscarEntrenadoresDisponibilidad: async (params) => {
+    const { data } = await api.get('/base/gimnasio/agenda/entrenadores-disponibilidad', { params });
+    return data;
+  },
+
   // --- Operación de Agenda ---
   obtenerCatalogosAgenda: async () => {
     const { data } = await api.get('/base/gimnasio/agenda/catalogos-operacion');
