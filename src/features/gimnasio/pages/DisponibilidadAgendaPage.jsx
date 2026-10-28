@@ -37,6 +37,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
   const [catalogos,setCatalogos]=useState({sedes:[]});
   const [serviciosDisponibles,setServiciosDisponibles]=useState([]);
   const [cargandoServicios,setCargandoServicios]=useState(false);
+  const [errorServicios,setErrorServicios]=useState('');
   const [form,setForm]=useState({
     sede_id:'',
     entrenador_id: entrenadorInicial?.id || '',
@@ -75,6 +76,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
   useEffect(()=>{
     setForm((a)=>({...a,servicio_id:''}));
     setServiciosDisponibles([]);
+    setErrorServicios('');
 
     if(!form.sede_id || !form.entrenador_id) return undefined;
 
@@ -86,7 +88,10 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
     }).then((r)=>{
       if(activo) setServiciosDisponibles(r.datos||[]);
     }).catch(()=>{
-      if(activo) setServiciosDisponibles([]);
+      if(activo) {
+        setServiciosDisponibles([]);
+        setErrorServicios('No se pudieron consultar los servicios. Comprueba la conexión e inténtalo nuevamente.');
+      }
     }).finally(()=>{
       if(activo) setCargandoServicios(false);
     });
@@ -170,8 +175,10 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           helperText={
             !form.sede_id || !form.entrenador_id
               ? 'Selecciona sede y entrenador'
+              : errorServicios
+                ? errorServicios
               : serviciosDisponibles.length === 0 && !cargandoServicios
-                ? 'El entrenador no tiene servicios habilitados'
+                ? 'No hay servicios disponibles para esta sede y horario vigente'
                 : ''
           }
         >
