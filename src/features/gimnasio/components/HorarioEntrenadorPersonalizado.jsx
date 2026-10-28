@@ -11,6 +11,8 @@ import {
   TextField,
   Tooltip,
   Typography,
+  Alert,
+  Chip,
 } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
@@ -61,6 +63,11 @@ const bloqueInicial = {
 };
 
 const hora = (value) => String(value || '').slice(0, 5);
+const horarioSeCruza = (a, b) => a.dia_semana === b.dia_semana && a.hora_inicio < b.hora_fin && a.hora_fin > b.hora_inicio;
+const calcularMinutos = (inicio, fin) => {
+  const [a, b] = [inicio, fin].map((t) => hora(t).split(':').map(Number));
+  return a.length === 2 && b.length === 2 ? Math.max(0, b[0] * 60 + b[1] - a[0] * 60 - a[1]) : 0;
+};
 
 export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardado }) {
   const [form, setForm] = useState(inicial);
@@ -125,6 +132,29 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
     })),
     [franjasVista, recesosVista],
   );
+
+  const resumenSedes = useMemo(() => (catalogos.sedes || []).map((sede) => {
+    const franjas = franjasVista.filter((f) => String(f.sede_id) === String(sede.id));
+    const minutosSemana = franjas.reduce((total, f) => {
+      const pausas = recesosVista.filter((r) => r.dia_semana === f.dia_semana
+        && r.hora_inicio >= f.hora_inicio && r.hora_fin <= f.hora_fin)
+        .reduce((suma, r) => suma + calcularMinutos(r.hora_inicio, r.hora_fin), 0);
+      return total + Math.max(0, calcularMinutos(f.hora_inicio, f.hora_fin) - pausas);
+    }, 0);
+    return { ...sede, franjas, minutosSemana };
+  }).filter((sede) => sede.franjas.length > 0), [catalogos.sedes, franjasVista, recesosVista]);
+
+  const diasConCruces = useMemo(() => {
+    const dias = new Set();
+    for (let i = 0; i < franjasVista.length; i += 1) {
+      for (let j = i + 1; j < franjasVista.length; j += 1) {
+        if (horarioSeCruza(franjasVista[i], franjasVista[j])) {
+          dias.add(DIAS.find((d) => d.id === franjasVista[i].dia_semana)?.nombre || franjasVista[i].dia_semana);
+        }
+      }
+    }
+    return [...dias];
+  }, [franjasVista]);
 
   const cargar = async () => {
     setCargando(true);
@@ -330,6 +360,12 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
       hora_fin: bloque.hora_fin,
     }));
 
+    const superpuestas = nuevasFranjas.filter((f) => form.franjas.some((existente) => horarioSeCruza(f, existente)));
+    if (superpuestas.length) {
+      setNotificacion({ mensaje: 'Ese bloque se superpone con un horario existente. Ajuste primero la franja del mismo día, incluso si corresponde a otra sede.', tipo: 'warning' });
+      return;
+    }
+
     const nuevosRecesos = bloque.lunch
       ? bloque.dias.map((dia) => ({
           dia_semana: dia,
@@ -377,6 +413,11 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
 
     if (esPersonalizado && !form.franjas.length) {
       setNotificacion({ mensaje: 'Agregue al menos un bloque al horario semanal personalizado.', tipo: 'warning' });
+      return;
+    }
+
+    if (diasConCruces.length) {
+      setNotificacion({ mensaje: `Corrija los cruces de horarios en ${diasConCruces.join(', ')}.`, tipo: 'warning' });
       return;
     }
 
@@ -719,6 +760,10 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
 
             <Box sx={{ ...formStyles.seccion, mt: 1.5 }}>
               <Typography sx={formStyles.modalSeccionTitulo}>Resumen de configuración</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.25 }}>
+                Un entrenador puede trabajar en distintas sedes, sin franjas simultáneas.
+              </Typography>
+              {diasConCruces.length > 0 && <Alert severity="error" sx={{ mb: 1.25 }}>Horarios superpuestos en {diasConCruces.join(', ')}.</Alert>}
 
               <Box
                 sx={{
@@ -731,9 +776,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
                 <ResumenDato
                   icono={<LocationOnOutlinedIcon />}
                   etiqueta="Sedes"
-                  valor={sedeBloque
-                    ? ((catalogos.sedes || []).find((item) => String(item.id) === String(sedeBloque))?.nombre || '1')
-                    : 'Por seleccionar'}
+                  valor={resumenSedes.length ? resumenSedes.map((sede) => sede.nombre).join(' · ') : 'Por seleccionar'}
                 />
                 <ResumenDato
                   icono={<EventAvailableOutlinedIcon />}
@@ -746,6 +789,32 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
                   valor={recesosVista.length}
                 />
               </Box>
+
+              {resumenSedes.length > 0 && (
+                <Box sx={{ mb: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1 }}>
+                  {resumenSedes.map((sede) => (
+                    <Box key={sede.id} sx={{ p: 1.4, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fbfdff' }}>
+                      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                        <LocationOnOutlinedIcon sx={{ fontSize: 19, color: '#144985' }} />
+                        <Typography variant="body2" fontWeight={900}>{sede.nombre}</Typography>
+                        <Box sx={{ flex: 1 }} />
+                        <Chip size="small" variant="outlined" label={`${(sede.minutosSemana / 60).toLocaleString('es-EC', { maximumFractionDigits: 1 })} h/semana`} />
+                      </Stack>
+                      <Stack spacing={0.5}>
+                        {DIAS.filter((dia) => sede.franjas.some((f) => f.dia_semana === dia.id)).map((dia) => (
+                          <Stack key={dia.id} direction="row" spacing={1}>
+                            <Typography variant="caption" sx={{ width: 78, flexShrink: 0, fontWeight: 800 }}>{dia.nombre}</Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {sede.franjas.filter((f) => f.dia_semana === dia.id).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio))
+                                .map((f) => `${hora(f.hora_inicio)}–${hora(f.hora_fin)}`).join(' · ')}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    </Box>
+                  ))}
+                </Box>
+              )}
 
               <Box
                 sx={{
@@ -900,7 +969,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
         <AccionesFormulario
           onGuardar={guardar}
           onCancelar={onVolver}
-          disabled={cargando || !horarioSeleccionado}
+          disabled={cargando || !horarioSeleccionado || diasConCruces.length > 0}
         />
       </Paper>
 
