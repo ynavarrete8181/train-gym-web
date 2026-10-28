@@ -64,19 +64,32 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
 
   useEffect(()=>{
     if (entrenadorInicial) return undefined;
-    const q=busquedaEntrenador.trim();
-    const t=window.setTimeout(async()=>{
+    if (!form.sede_id) {
+      setOpcionesEntrenador([]);
+      return undefined;
+    }
+
+    let activo = true;
+    const t = window.setTimeout(async()=>{
       setBuscando(true);
-      try{
-        const r=await gimnasioServicio.buscarEntrenadoresAgenda({q});
-        setOpcionesEntrenador(r.datos||[]);
-      }catch(e){
-        setOpcionesEntrenador([]);
-        setNotificacion({mensaje:e.response?.data?.mensaje || 'No se pudieron consultar los entrenadores.',tipo:'error'});
-      }finally{setBuscando(false);}
-    },q ? 300 : 0);
-    return ()=>window.clearTimeout(t);
-  },[busquedaEntrenador, entrenadorInicial]);
+      try {
+        const r = await gimnasioServicio.buscarEntrenadoresDisponibilidad({
+          sede_id: form.sede_id,
+          fecha: form.fecha,
+          q: busquedaEntrenador.trim(),
+        });
+        if (activo) setOpcionesEntrenador(r.datos || []);
+      } catch (e) {
+        if (activo) {
+          setOpcionesEntrenador([]);
+          setNotificacion({mensaje:e.response?.data?.mensaje || 'No se pudieron consultar los entrenadores de esta sede.',tipo:'error'});
+        }
+      } finally {
+        if (activo) setBuscando(false);
+      }
+    },busquedaEntrenador.trim() ? 300 : 0);
+    return ()=>{ activo=false; window.clearTimeout(t); };
+  },[form.sede_id,form.fecha,busquedaEntrenador,entrenadorInicial]);
 
   useEffect(()=>{
     setForm((a)=>({...a,servicio_id:''}));
@@ -150,7 +163,11 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           size="small"
           options={catalogos.sedes || []}
           value={(catalogos.sedes || []).find(x => String(x.id) === String(form.sede_id)) || null}
-          onChange={(_, valor) => setForm(actual => ({ ...actual, sede_id: valor?.id || '', servicio_id: '' }))}
+          onChange={(_, valor) => {
+            setBusquedaEntrenador('');
+            setOpcionesEntrenador([]);
+            setForm(actual => ({ ...actual, sede_id: valor?.id || '', entrenador_id: entrenadorInicial?.id || '', servicio_id: '' }));
+          }}
           getOptionLabel={opcion => opcion.nombre || ''}
           isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
           noOptionsText="No hay sedes disponibles"
@@ -173,12 +190,14 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                   <Autocomplete
                     options={opcionesEntrenador}
                     loading={buscando}
+                    disabled={!form.sede_id}
+                    filterOptions={opciones => opciones}
                     value={opcionesEntrenador.find(x=>String(x.id)===String(form.entrenador_id))||null}
-                    onInputChange={(_,v)=>setBusquedaEntrenador(v)}
+                    onInputChange={(_,v,motivo)=>{if(motivo==='input') setBusquedaEntrenador(v);}}
                     onChange={(_,v)=>setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}))}
                     getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
                     isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
-                    noOptionsText={buscando ? 'Consultando entrenadores...' : 'Sin entrenadores disponibles'}
+                    noOptionsText={!form.sede_id ? 'Selecciona una sede' : buscando ? 'Consultando entrenadores...' : 'No hay entrenadores activos con horario en esta sede'}
                     renderOption={(props, opcion) => (
                       <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
                         <PersonOutlineOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
