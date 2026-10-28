@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
-import { Autocomplete, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
+import { Autocomplete, Box, Button, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -67,6 +70,9 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
       try{
         const r=await gimnasioServicio.buscarEntrenadoresAgenda({q});
         setOpcionesEntrenador(r.datos||[]);
+      }catch(e){
+        setOpcionesEntrenador([]);
+        setNotificacion({mensaje:e.response?.data?.mensaje || 'No se pudieron consultar los entrenadores.',tipo:'error'});
       }finally{setBuscando(false);}
     },q ? 300 : 0);
     return ()=>window.clearTimeout(t);
@@ -148,7 +154,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           getOptionLabel={opcion => opcion.nombre || ''}
           isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
           noOptionsText="No hay sedes disponibles"
-          renderInput={params => <TextField {...params} label="Sede" />}
+          renderInput={params => <TextField {...params} label="Sede" slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><PlaceOutlinedIcon fontSize="small" color="action" /></InputAdornment> } }} />}
         />
         {entrenadorInicial ? (
           <TextField
@@ -167,7 +173,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                     getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
                     isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
                     noOptionsText={buscando ? 'Consultando entrenadores...' : 'Sin entrenadores disponibles'}
-                    renderInput={params=><TextField {...params} size="small" label="Entrenador"/>}
+                    renderInput={params=><TextField {...params} size="small" label="Entrenador" slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><PersonOutlineOutlinedIcon fontSize="small" color="action" /></InputAdornment> } }} />}
                   />
           
         )}
@@ -181,7 +187,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           getOptionLabel={opcion => `${opcion.nombre || ''} · ${opcion.duracion_minutos || 0} min`}
           isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
           noOptionsText={cargandoServicios ? 'Cargando servicios...' : 'Sin servicios disponibles'}
-          renderInput={params => <TextField {...params} label="Servicio" helperText={
+          renderInput={params => <TextField {...params} label="Servicio" slotProps={{ input: { ...params.InputProps, startAdornment: <InputAdornment position="start"><FitnessCenterOutlinedIcon fontSize="small" color="action" /></InputAdornment> } }} helperText={
             !form.sede_id || !form.entrenador_id
               ? 'Selecciona sede y entrenador'
               : errorServicios || (serviciosDisponibles.length === 0 && !cargandoServicios ? 'No hay servicios habilitados para reserva' : '')
