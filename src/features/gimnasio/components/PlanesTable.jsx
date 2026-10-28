@@ -39,12 +39,6 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
               <Typography variant="body2" fontWeight="600">{plan.codigo}</Typography>
             </TableCell>
             <TableCell>
-              <StatusChip estado={plan.configuracion_completa ? 'completado' : 'pendiente'} />
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.4 }}>
-                {(plan.servicios || []).length} servicio(s) · {(plan.precios_sede || []).length} tarifa(s)
-              </Typography>
-            </TableCell>
-            <TableCell>
               <Typography variant="body2">{plan.nombre}</Typography>
               <Typography variant="caption" color="text.secondary">{plan.descripcion}</Typography>
             </TableCell>
@@ -76,6 +70,12 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
               ) : (
                 <Typography variant="body2" color="text.secondary">—</Typography>
               )}
+            </TableCell>
+            <TableCell>
+              <StatusChip estado={plan.configuracion_completa ? 'completado' : 'pendiente'} />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.4 }}>
+                {(plan.servicios || []).length} servicio(s) · {(plan.precios_sede || []).length} tarifa(s)
+              </Typography>
             </TableCell>
             <TableCell align="right">
               <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
