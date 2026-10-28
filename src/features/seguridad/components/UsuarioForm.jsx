@@ -35,6 +35,10 @@ const inicial = {
 
 const ROLES_SIN_CONTEXTO_OPERATIVO = ["ROOT", "SUPERADMINISTRADOR", "DEPORTISTA", "RESPONSABLE"];
 const ROLES_APP_SIN_PERMISOS_WEB = ["DEPORTISTA", "RESPONSABLE"];
+const formatearNombrePropio = (valor) =>
+  String(valor ?? "").toLocaleLowerCase("es-EC").replace(/(^|[\\s'-])([\\p{L}])/gu, (_, separador, inicial) =>
+    separador + inicial.toLocaleUpperCase("es-EC")
+  );
 const normalizarRol = (rol) => String(rol ?? "").trim().toUpperCase();
 
 export function UsuarioForm({
@@ -252,8 +256,8 @@ export function UsuarioForm({
                       ))}
                     </TextField>
                   ) : null}
-                  <TextField label="Nombres" value={formulario.nombres} disabled />
-                  <TextField label="Apellidos" value={formulario.apellidos} disabled />
+                  <TextField label="Nombres" value={formatearNombrePropio(formulario.nombres)} disabled />
+                  <TextField label="Apellidos" value={formatearNombrePropio(formulario.apellidos)} disabled />
                   <TextField label="Identificación" value={formulario.cedula} disabled />
                 </Box>
               </Box>
@@ -336,7 +340,7 @@ export function UsuarioForm({
           {etapa === 1 ? (
             <Stack spacing={2}>
               <Alert severity="info" variant="outlined">
-                <strong>{formulario.nombres} {formulario.apellidos}</strong>{" "}
+                <strong>{formatearNombrePropio(formulario.nombres)} {formatearNombrePropio(formulario.apellidos)}</strong>{" "}
                 {esRolGlobal
                   ? " tiene acceso global a todas las funciones activas del sistema, sin depender de permisos individuales."
                   : ` tendrá ${funcionesSeleccionadas.length} permiso(s) activo(s).`}
