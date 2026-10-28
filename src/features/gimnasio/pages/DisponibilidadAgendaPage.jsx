@@ -194,7 +194,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                     filterOptions={opciones => opciones}
                     value={opcionesEntrenador.find(x=>String(x.id)===String(form.entrenador_id))||null}
                     onInputChange={(_,v,motivo)=>{if(motivo==='input') setBusquedaEntrenador(v);}}
-                    onChange={(_,v)=>setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}))}
+                    onChange={(_,v)=>{setBusquedaEntrenador('');setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}));}}
                     getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
                     isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
                     noOptionsText={!form.sede_id ? 'Selecciona una sede' : buscando ? 'Consultando entrenadores...' : 'No hay entrenadores activos con horario en esta sede'}
