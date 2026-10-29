@@ -1084,6 +1084,11 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
         </Typography>
 
+        {tipo === 'MEMBRESIA' && item.tipo_producto === 'PASE_DIARIO' && item.fecha_inicio && (
+          <Typography variant="caption" sx={{ color: '#586779', fontWeight: 750, display: 'block', mb: .6 }}>
+            Válido para el {String(item.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}
+          </Typography>
+        )}
         {tipo === 'MEMBRESIA' && item.precio_final !== undefined && (
           <Box sx={{ mb: .7, p: .6, bgcolor: '#f2fbf5', border: '1px solid #d4eddc', borderRadius: 1 }}>
             <Typography variant="caption" color="success.dark" sx={{ fontWeight: 800, display: 'block' }}>
