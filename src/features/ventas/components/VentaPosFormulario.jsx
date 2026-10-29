@@ -291,6 +291,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
               precio: cotizacionesCliente[item.id]?.datos?.precio_base ?? item.precio,
               precio_final: cotizacionesCliente[item.id]?.datos?.total,
               descuento_aplicado: cotizacionesCliente[item.id]?.datos?.importe_descuento,
+              descuento_programado: cotizacionesCliente[item.id]?.datos?.beneficio_programado,
               error_cotizacion: cotizacionesCliente[item.id]?.error,
             }))
           : [];
@@ -761,6 +762,12 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Descuento</Typography><TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} disabled={Boolean(claveBeneficio)} helperText={claveBeneficio ? 'Automático' : ''} inputProps={{ min: 0 }} /></Box>
                   {cotizandoBeneficio && <Alert severity="info" sx={{ py: 0 }}>Validando precio y descuento del deportista...</Alert>}
                   {errorBeneficio && <Alert severity="warning" sx={{ py: 0 }}>{errorBeneficio}</Alert>}
+                  {beneficioPos?.clave === claveBeneficio && beneficioPos?.beneficio_programado && (
+                    <Alert severity="warning" sx={{ py: .4 }}>
+                      El descuento de la membresía empieza el {String(beneficioPos.beneficio_programado.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}.
+                      No se aplica al cobro actual.
+                    </Alert>
+                  )}
                   {beneficioPos?.clave === claveBeneficio && claveBeneficio && (
                     <Typography variant="caption" color="success.main">
                       Tarifa original {dinero(beneficioPos.precio_base)} · Descuento autorizado {dinero(beneficioPos.importe_descuento)} · Total del pase {dinero(beneficioPos.total)}
@@ -1083,6 +1090,15 @@ function CatalogoCard({ item, tipo, onAgregar }) {
               Descuento: {dinero(item.descuento_aplicado)} · Total a pagar: {dinero(item.precio_final)}
             </Typography>
           </Box>
+        )}
+        {tipo === 'MEMBRESIA' && item.descuento_programado && (
+          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
+            Descuento de {item.descuento_programado.tipo === 'FIJO'
+              ? dinero(item.descuento_programado.valor)
+              : `${Number(item.descuento_programado.valor)} %`}
+            {' '}programado desde el {String(item.descuento_programado.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}.
+            No aplica al cobro de hoy.
+          </Typography>
         )}
         {tipo === 'MEMBRESIA' && item.error_cotizacion && (
           <Typography variant="caption" sx={{ color: '#96660b', display: 'block', mb: .5 }}>
