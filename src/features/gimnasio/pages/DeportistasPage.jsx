@@ -17,6 +17,9 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
+import ContactEmergencyOutlinedIcon from '@mui/icons-material/ContactEmergencyOutlined';
+import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
 import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -73,6 +76,14 @@ const getInitialAsignacion = () => ({
   entrenador_horario_id: '',
   observaciones: '',
 });
+
+const SECCIONES_CLIENTE = [
+  { id: 'persona', nombre: 'Datos de la persona', descripcion: 'Identificación y datos generales', Icono: BadgeOutlinedIcon },
+  { id: 'ubicacion', nombre: 'Ubicación geográfica', descripcion: 'Provincia, cantón, parroquia y mapa', Icono: MapOutlinedIcon },
+  { id: 'cliente', nombre: 'Datos del cliente', descripcion: 'Sede y estado', Icono: PeopleAltOutlinedIcon },
+  { id: 'representante', nombre: 'Representante legal', descripcion: 'Tutor y responsable de pago', Icono: ContactEmergencyOutlinedIcon },
+  { id: 'contacto', nombre: 'Contacto y observaciones', descripcion: 'Emergencias y notas', Icono: ContactPhoneOutlinedIcon },
+];
 
 const TABS_FICHA = [
   { value: 'datos', label: 'Datos del cliente', icon: <BadgeOutlinedIcon sx={{ fontSize: 17 }} /> },
@@ -296,6 +307,7 @@ const pesoSugeridoPorPorcentaje = (rutina, ultimosRm) => {
 export function DeportistasPage() {
   const [vista, setVista] = useState('lista');
   const [formData, setFormData] = useState(getInitialForm());
+  const [seccionCliente, setSeccionCliente] = useState('persona');
   const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [diagnosticoIdentidad, setDiagnosticoIdentidad] = useState(null);
   const [consultandoIdentidad, setConsultandoIdentidad] = useState(false);
@@ -433,6 +445,7 @@ export function DeportistasPage() {
         responsable_pago: false,
       },
     });
+    setSeccionCliente('persona');
     setVista('formulario');
   };
 
@@ -1046,7 +1059,42 @@ export function DeportistasPage() {
   };
 
   const renderCamposDatos = () => (
-    <Stack spacing={2}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+      <Box component="nav" aria-label="Secciones de datos del cliente" sx={{
+        p: 1, border: '1px solid #e5e7eb', borderRadius: 2, bgcolor: '#fff',
+        position: { md: 'sticky' }, top: { md: 16 },
+      }}>
+        <Typography variant="overline" sx={{ display: 'block', px: 1.5, pt: 1, pb: .5, color: 'text.secondary', fontWeight: 850 }}>
+          Datos del cliente
+        </Typography>
+        <Stack spacing={.5}>
+          {SECCIONES_CLIENTE.map(({ id, nombre, descripcion, Icono }) => {
+            const activo = seccionCliente === id;
+            return (
+              <Button key={id} type="button" fullWidth onClick={() => setSeccionCliente(id)}
+                aria-current={activo ? 'step' : undefined}
+                startIcon={<Icono sx={{ fontSize: 19 }} />}
+                sx={{
+                  justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
+                  borderRadius: 1.5, px: 1.2, py: 1.1, minHeight: 54,
+                  color: activo ? '#8b6410' : '#475467',
+                  bgcolor: activo ? '#fff7df' : 'transparent',
+                  borderLeft: activo ? '3px solid #b28a24' : '3px solid transparent',
+                  '&:hover': { bgcolor: activo ? '#fff2cc' : '#f8fafc' },
+                  '& .MuiButton-startIcon': { mr: 1.1 },
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: activo ? 900 : 700, lineHeight: 1.3 }}>{nombre}</Typography>
+                  <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: 'text.secondary' }}>{descripcion}</Typography>
+                </Box>
+              </Button>
+            );
+          })}
+        </Stack>
+      </Box>
+      <Stack spacing={2} sx={{ minWidth: 0 }}>
+          {seccionCliente === 'persona' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>
           Datos de la persona
@@ -1101,6 +1149,8 @@ export function DeportistasPage() {
           </TextField>
         </Box>
       </Box>
+          ) : null}
+          {seccionCliente === 'ubicacion' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Ubicación geográfica</Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
@@ -1151,6 +1201,8 @@ export function DeportistasPage() {
           }))}>Quitar punto del mapa</Button>
         ) : null}
       </Box>
+          ) : null}
+          {seccionCliente === 'cliente' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
@@ -1183,7 +1235,8 @@ export function DeportistasPage() {
           </TextField>
         </Box>
       </Box>
-
+          ) : null}
+          {seccionCliente === 'representante' ? (
       <Box sx={formStyles.seccion}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
           <Box>
@@ -1291,7 +1344,8 @@ export function DeportistasPage() {
           </Box>
         ) : null}
       </Box>
-
+          ) : null}
+          {seccionCliente === 'contacto' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>
           Contacto y observaciones
@@ -1323,7 +1377,10 @@ export function DeportistasPage() {
           />
         </Box>
       </Box>
-    </Stack>
+          ) : null}
+
+      </Stack>
+    </Box>
   );
 
   const horarioAsignacionSeleccionado = turnosEntrenador.find(
