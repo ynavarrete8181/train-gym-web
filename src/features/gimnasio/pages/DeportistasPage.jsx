@@ -1798,6 +1798,7 @@ export function DeportistasPage() {
             required
             size="small"
             disabled={!!membresiaForm.id}
+            helperText={membresiaForm.id ? 'Para cambiar de plan, asigna un contrato nuevo. Así conservamos la trazabilidad.' : ''}
           >
             {planes.map((plan) => {
               const modalidadesActivas = (plan.modalidades || [])
@@ -1852,11 +1853,10 @@ export function DeportistasPage() {
             onChange={handleMembresiaChange}
             required
             size="small"
-            disabled={!!membresiaForm.id}
             helperText={
-              !membresiaForm.id && precioMembresiaPreview !== null
-                ? `Precio aplicado: $${Number(precioMembresiaPreview).toFixed(2)}`
-                : ''
+              precioMembresiaPreview !== null
+                ? `Tarifa de esta sede: ${Number(precioMembresiaPreview).toFixed(2)}. La sede principal puede cambiarse al editar.`
+                : 'Selecciona la sede principal del contrato.'
             }
           >
             {sedes.map((sede) => (
