@@ -40,6 +40,10 @@ const getInitialForm = () => ({
   apellidos: '',
   email: '',
   direccion: '',
+  provincia_codigo: '',
+  canton_codigo: '',
+  parroquia_codigo: '',
+  ubicacion: { latitud: '', longitud: '', referencia: '' },
   codigo_deportista: '',
   fecha_nacimiento: '',
   genero: '',
@@ -298,6 +302,9 @@ export function DeportistasPage() {
 
   const [deportistas, setDeportistas] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [provincias, setProvincias] = useState([]);
+  const [cantones, setCantones] = useState([]);
+  const [parroquias, setParroquias] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({ cedula: [], nombres: [], telefono: [], sede: [], estado: [] });
@@ -368,6 +375,30 @@ export function DeportistasPage() {
   };
 
   useEffect(() => {
+    gimnasioServicio.obtenerProvincias()
+      .then((respuesta) => setProvincias(respuesta.datos || []))
+      .catch(() => setProvincias([]));
+  }, []);
+
+  useEffect(() => {
+    if (!formData.provincia_codigo) { setCantones([]); return undefined; }
+    let activo = true;
+    gimnasioServicio.obtenerCantones(formData.provincia_codigo)
+      .then((res) => { if (activo) setCantones(res.datos || []); })
+      .catch(() => { if (activo) setCantones([]); });
+    return () => { activo = false; };
+  }, [formData.provincia_codigo]);
+
+  useEffect(() => {
+    if (!formData.canton_codigo) { setParroquias([]); return undefined; }
+    let activo = true;
+    gimnasioServicio.obtenerParroquias(formData.canton_codigo)
+      .then((res) => { if (activo) setParroquias(res.datos || []); })
+      .catch(() => { if (activo) setParroquias([]); });
+    return () => { activo = false; };
+  }, [formData.canton_codigo]);
+
+  useEffect(() => {
     if (vista === 'lista') {
       cargarDeportistas();
     } else if (vista === 'formulario') {
@@ -410,6 +441,14 @@ export function DeportistasPage() {
 
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
+    if (name === 'provincia_codigo') {
+      setFormData(prev => ({ ...prev, provincia_codigo: value, canton_codigo: '', parroquia_codigo: '' }));
+      return;
+    }
+    if (name === 'canton_codigo') {
+      setFormData(prev => ({ ...prev, canton_codigo: value, parroquia_codigo: '' }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -472,7 +511,13 @@ export function DeportistasPage() {
           telefono: formData.telefono || null,
           email: formData.email || null,
           direccion: formData.direccion || null,
+          provincia_codigo: formData.provincia_codigo || null,
+          canton_codigo: formData.canton_codigo || null,
+          parroquia_codigo: formData.parroquia_codigo || null,
         },
+        ubicacion: formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== ''
+          ? { latitud: Number(formData.ubicacion.latitud), longitud: Number(formData.ubicacion.longitud), referencia: formData.ubicacion.referencia || null }
+          : null,
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
@@ -563,6 +608,14 @@ export function DeportistasPage() {
         telefono: datos.persona_telefono || datos.telefono || '',
         email: datos.persona_email || '',
         direccion: datos.persona_direccion || '',
+        provincia_codigo: datos.provincia_codigo || '',
+        canton_codigo: datos.canton_codigo || '',
+        parroquia_codigo: datos.parroquia_codigo || '',
+        ubicacion: {
+          latitud: datos.ubicacion?.latitud ?? '',
+          longitud: datos.ubicacion?.longitud ?? '',
+          referencia: datos.ubicacion?.referencia || '',
+        },
         requiere_representante_legal: booleanoBackend(datos.requiere_representante_legal),
         representante_legal: datos.representante_legal
           ? {
@@ -1040,6 +1093,57 @@ export function DeportistasPage() {
             <MenuItem value="OTRO">Otro</MenuItem>
           </TextField>
         </Box>
+      </Box>
+      <Box sx={formStyles.seccion}>
+        <Typography sx={formStyles.modalSeccionTitulo}>Ubicación geográfica</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          La ubicación es opcional. Selecciona los catálogos oficiales del INEC o deja los campos vacíos.
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+          <TextField select size="small" label="Provincia" name="provincia_codigo"
+            value={formData.provincia_codigo || ''} onChange={handleChange}>
+            <MenuItem value="">Sin provincia</MenuItem>
+            {provincias.map((p) => <MenuItem key={p.codigo} value={p.codigo}>{p.nombre}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label="Cantón" name="canton_codigo"
+            value={formData.canton_codigo || ''} onChange={handleChange}
+            disabled={!formData.provincia_codigo}>
+            <MenuItem value="">Sin cantón</MenuItem>
+            {cantones.map((p) => <MenuItem key={p.codigo} value={p.codigo}>{p.nombre}</MenuItem>)}
+          </TextField>
+          <TextField select size="small" label="Parroquia" name="parroquia_codigo"
+            value={formData.parroquia_codigo || ''} onChange={handleChange}
+            disabled={!formData.canton_codigo}>
+            <MenuItem value="">Sin parroquia</MenuItem>
+            {parroquias.map((p) => <MenuItem key={p.codigo} value={p.codigo}>{p.nombre}</MenuItem>)}
+          </TextField>
+        </Box>
+        <Typography variant="body2" fontWeight={700} sx={{ mt: 2, mb: 1 }}>
+          Punto en el mapa (voluntario)
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mb: 1.5 }}>
+          <TextField size="small" type="number" label="Latitud" value={formData.ubicacion?.latitud ?? ''}
+            inputProps={{ min: -5.1, max: 2, step: 0.0000001 }}
+            onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, latitud: e.target.value } }))} />
+          <TextField size="small" type="number" label="Longitud" value={formData.ubicacion?.longitud ?? ''}
+            inputProps={{ min: -81.5, max: -74, step: 0.0000001 }}
+            onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, longitud: e.target.value } }))} />
+          <TextField size="small" label="Referencia opcional" value={formData.ubicacion?.referencia ?? ''}
+            onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, referencia: e.target.value } }))} />
+        </Box>
+        {formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== '' &&
+         Number.isFinite(Number(formData.ubicacion?.latitud)) && Number.isFinite(Number(formData.ubicacion?.longitud)) ? (
+          <Box component="iframe" title="Vista previa de la ubicación"
+            loading="lazy" referrerPolicy="no-referrer"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(formData.ubicacion.longitud) - .01}%2C${Number(formData.ubicacion.latitud) - .01}%2C${Number(formData.ubicacion.longitud) + .01}%2C${Number(formData.ubicacion.latitud) + .01}&layer=mapnik&marker=${formData.ubicacion.latitud}%2C${formData.ubicacion.longitud}`}
+            sx={{ display: 'block', width: '100%', height: 290, border: '1px solid #d8e4f2', borderRadius: 2 }} />
+        ) : (
+          <Box sx={{ px: 2, py: 3, bgcolor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Puedes ingresar coordenadas para visualizar la ubicación en el mapa de OpenStreetMap. No se registra ningún punto mientras permanezcan vacías.
+            </Typography>
+          </Box>
+        )}
       </Box>
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
