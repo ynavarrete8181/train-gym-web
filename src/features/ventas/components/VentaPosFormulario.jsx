@@ -292,6 +292,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
               precio_final: cotizacionesCliente[item.id]?.datos?.total,
               descuento_aplicado: cotizacionesCliente[item.id]?.datos?.importe_descuento,
               descuento_programado: cotizacionesCliente[item.id]?.datos?.beneficio_programado,
+              beneficio_estado: cotizacionesCliente[item.id]?.datos?.beneficio_estado,
               error_cotizacion: cotizacionesCliente[item.id]?.error,
             }))
           : [];
@@ -1095,6 +1096,11 @@ function CatalogoCard({ item, tipo, onAgregar }) {
               Descuento: {dinero(item.descuento_aplicado)} · Total a pagar: {dinero(item.precio_final)}
             </Typography>
           </Box>
+        )}
+        {tipo === 'MEMBRESIA' && item.beneficio_estado === 'SIN_BENEFICIO' && (
+          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
+            No existe un descuento activo para este plan y fecha. Revisa «Aplicar descuento» en la ficha del cliente.
+          </Typography>
         )}
         {tipo === 'MEMBRESIA' && item.descuento_programado && (
           <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
