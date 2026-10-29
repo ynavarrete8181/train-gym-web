@@ -41,7 +41,7 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
     .replace(/(^|[\\s(/-])([a-záéíóúñü])/g, (_, espacio, letra) => espacio + letra.toLocaleUpperCase('es-EC'))
-    .replace(/\\b(De|Del|La|Las|Los|Y)\\b/g, (palabra, offset) => offset === 0 ? palabra : palabra.toLocaleLowerCase('es-EC'));
+    .replace(/\b(De|Del|La|Las|Los|Y)\b/g, (palabra, offset) => offset === 0 ? palabra : palabra.toLocaleLowerCase('es-EC'));
 
 const getInitialForm = () => ({
   id: null,
@@ -1251,9 +1251,6 @@ export function DeportistasPage() {
               <MapaUbicacionPersona
                 latitud={formData.ubicacion?.latitud ?? ''}
                 longitud={formData.ubicacion?.longitud ?? ''}
-                onChange={({ latitud, longitud }) => setFormData(actual => ({
-                  ...actual, ubicacion: { ...actual.ubicacion, latitud, longitud },
-                }))}
               />
               {(formData.ubicacion?.latitud !== '' || formData.ubicacion?.longitud !== '') && (
                 <Button startIcon={<PinDropOutlinedIcon />} size="small" sx={{ alignSelf: 'flex-start' }}
