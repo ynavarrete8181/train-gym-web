@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
@@ -18,6 +18,9 @@ import { NotificacionSnackbar } from '../../../components/common/NotificacionSna
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
+import LocationCityOutlinedIcon from '@mui/icons-material/LocationCityOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import PinDropOutlinedIcon from '@mui/icons-material/PinDropOutlined';
 import ContactEmergencyOutlinedIcon from '@mui/icons-material/ContactEmergencyOutlined';
 import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
 import SportsIcon from '@mui/icons-material/Sports';
@@ -34,6 +37,11 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+
+const nombreGeografico = (valor = '') =>
+  String(valor).trim().toLocaleLowerCase('es-EC')
+    .replace(/(^|[\\s(/-])([a-záéíóúñü])/g, (_, espacio, letra) => espacio + letra.toLocaleUpperCase('es-EC'))
+    .replace(/\\b(De|Del|La|Las|Los|Y)\\b/g, (palabra, offset) => offset === 0 ? palabra : palabra.toLocaleLowerCase('es-EC'));
 
 const getInitialForm = () => ({
   id: null,
@@ -308,6 +316,7 @@ export function DeportistasPage() {
   const [vista, setVista] = useState('lista');
   const [formData, setFormData] = useState(getInitialForm());
   const [seccionCliente, setSeccionCliente] = useState('persona');
+  const [mostrarMapaCliente, setMostrarMapaCliente] = useState(false);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [diagnosticoIdentidad, setDiagnosticoIdentidad] = useState(null);
   const [consultandoIdentidad, setConsultandoIdentidad] = useState(false);
@@ -446,6 +455,7 @@ export function DeportistasPage() {
       },
     });
     setSeccionCliente('persona');
+    setMostrarMapaCliente(false);
     setVista('formulario');
   };
 
@@ -1157,49 +1167,103 @@ export function DeportistasPage() {
           La ubicación es opcional. Selecciona los catálogos oficiales del INEC o deja los campos vacíos.
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-          <TextField select size="small" label="Provincia" name="provincia_codigo"
-            value={formData.provincia_codigo || ''} onChange={handleChange}>
-            <MenuItem value="">Sin provincia</MenuItem>
-            {provincias.map((p) => <MenuItem key={p.codigo} value={p.codigo}>{p.nombre}</MenuItem>)}
-          </TextField>
-          <TextField select size="small" label="Cantón" name="canton_codigo"
-            value={formData.canton_codigo || ''} onChange={handleChange}
-            disabled={!formData.provincia_codigo}>
-            <MenuItem value="">Sin cantón</MenuItem>
-            {cantones.map((p) => <MenuItem key={p.codigo} value={p.codigo}>{p.nombre}</MenuItem>)}
-          </TextField>
-          <TextField select size="small" label="Parroquia" name="parroquia_codigo"
-            value={formData.parroquia_codigo || ''} onChange={handleChange}
-            disabled={!formData.canton_codigo}>
-            <MenuItem value="">Sin parroquia</MenuItem>
-            {parroquias.map((p) => <MenuItem key={p.codigo} value={p.codigo}>{p.nombre}</MenuItem>)}
-          </TextField>
+          {[
+            { key: 'provincia_codigo', titulo: 'Provincia', icono: MapOutlinedIcon, opciones: provincias, disabled: false, placeholder: 'Buscar provincia' },
+            { key: 'canton_codigo', titulo: 'Cantón', icono: LocationCityOutlinedIcon, opciones: cantones, disabled: !formData.provincia_codigo, placeholder: 'Primero selecciona una provincia' },
+            { key: 'parroquia_codigo', titulo: 'Parroquia', icono: PlaceOutlinedIcon, opciones: parroquias, disabled: !formData.canton_codigo, placeholder: 'Primero selecciona un cantón' },
+          ].map(({ key, titulo, icono: Icono, opciones, disabled, placeholder }) => (
+            <Autocomplete
+              key={key}
+              size="small"
+              fullWidth
+              options={opciones}
+              disabled={disabled}
+              value={opciones.find((opcion) => String(opcion.codigo) === String(formData[key])) || null}
+              isOptionEqualToValue={(opcion, valor) => String(opcion.codigo) === String(valor.codigo)}
+              getOptionLabel={(opcion) => nombreGeografico(opcion.nombre)}
+              noOptionsText="No se encontraron resultados"
+              clearText="Limpiar"
+              openText="Mostrar opciones"
+              closeText="Cerrar opciones"
+              onChange={(_, nuevo) => {
+                const codigo = nuevo?.codigo || '';
+                setFormData((anterior) => ({
+                  ...anterior,
+                  [key]: codigo,
+                  ...(key === 'provincia_codigo' ? { canton_codigo: '', parroquia_codigo: '' } : {}),
+                  ...(key === 'canton_codigo' ? { parroquia_codigo: '' } : {}),
+                }));
+              }}
+              renderOption={(props, opcion) => {
+                const { key: optionKey, ...resto } = props;
+                return (
+                  <Box component="li" key={optionKey} {...resto} sx={{ display: 'flex', gap: 1.2, alignItems: 'center', px: 1.5, py: 1, '&:hover': { bgcolor: '#fff8e8' } }}>
+                    <Icono sx={{ color: '#b38a25', fontSize: 19, flexShrink: 0 }} />
+                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{nombreGeografico(opcion.nombre)}</Typography>
+                      <Typography variant="caption" color="text.secondary">DPA: {opcion.codigo}</Typography>
+                    </Box>
+                  </Box>
+                );
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label={titulo} placeholder={placeholder}
+                  slotProps={{
+                    ...params.slotProps,
+                    input: {
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Icono sx={{ color: '#b38a25', fontSize: 19 }} />
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: '#fff' } }}
+                />
+              )}
+            />
+          ))}
         </Box>
-        <Typography variant="body2" fontWeight={700} sx={{ mt: 2, mb: 1 }}>
-          Punto en el mapa (voluntario)
-        </Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mb: 1.5 }}>
-          <TextField size="small" type="number" label="Latitud" value={formData.ubicacion?.latitud ?? ''}
-            inputProps={{ min: -5.1, max: 2, step: 0.0000001 }}
-            onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, latitud: e.target.value } }))} />
-          <TextField size="small" type="number" label="Longitud" value={formData.ubicacion?.longitud ?? ''}
-            inputProps={{ min: -92.1, max: -74, step: 0.0000001 }}
-            onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, longitud: e.target.value } }))} />
-          <TextField size="small" label="Referencia opcional" value={formData.ubicacion?.referencia ?? ''}
-            onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, referencia: e.target.value } }))} />
+        <Box sx={{ mt: 2, border: '1px solid #e2e8f0', borderRadius: 2, p: 1.5, bgcolor: '#fcfcfd' }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+            <Box>
+              <Typography variant="body2" fontWeight={750}>Ubicación exacta en el mapa</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Opcional: no necesitas indicar coordenadas para registrar al cliente.
+              </Typography>
+            </Box>
+            <FormControlLabel control={<Switch checked={mostrarMapaCliente} onChange={(_, valor) => setMostrarMapaCliente(valor)} />}
+              label="Mostrar mapa" sx={{ ml: 0, mr: 0 }} />
+          </Stack>
+          {mostrarMapaCliente && (
+            <Stack spacing={1.5} sx={{ mt: 2 }}>
+              <TextField size="small" label="Referencia (opcional)" value={formData.ubicacion?.referencia ?? ''}
+                onChange={(e) => setFormData(actual => ({ ...actual, ubicacion: { ...actual.ubicacion, referencia: e.target.value } }))} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                <TextField size="small" type="number" label="Latitud" value={formData.ubicacion?.latitud ?? ''}
+                  slotProps={{ htmlInput: { min: -5.1, max: 2, step: 0.0000001 } }}
+                  onChange={(e) => setFormData(actual => ({ ...actual, ubicacion: { ...actual.ubicacion, latitud: e.target.value } }))} />
+                <TextField size="small" type="number" label="Longitud" value={formData.ubicacion?.longitud ?? ''}
+                  slotProps={{ htmlInput: { min: -92.1, max: -74, step: 0.0000001 } }}
+                  onChange={(e) => setFormData(actual => ({ ...actual, ubicacion: { ...actual.ubicacion, longitud: e.target.value } }))} />
+              </Box>
+              <MapaUbicacionPersona
+                latitud={formData.ubicacion?.latitud ?? ''}
+                longitud={formData.ubicacion?.longitud ?? ''}
+                onChange={({ latitud, longitud }) => setFormData(actual => ({
+                  ...actual, ubicacion: { ...actual.ubicacion, latitud, longitud },
+                }))}
+              />
+              {(formData.ubicacion?.latitud !== '' || formData.ubicacion?.longitud !== '') && (
+                <Button startIcon={<PinDropOutlinedIcon />} size="small" sx={{ alignSelf: 'flex-start' }}
+                  onClick={() => setFormData(actual => ({
+                    ...actual, ubicacion: { ...actual.ubicacion, latitud: '', longitud: '' },
+                  }))}>Quitar punto guardado</Button>
+              )}
+            </Stack>
+          )}
         </Box>
-        <MapaUbicacionPersona
-          latitud={formData.ubicacion?.latitud ?? ''}
-          longitud={formData.ubicacion?.longitud ?? ''}
-          onChange={({ latitud, longitud }) => setFormData(actual => ({
-            ...actual, ubicacion: { ...actual.ubicacion, latitud, longitud },
-          }))}
-        />
-        {(formData.ubicacion?.latitud !== '' || formData.ubicacion?.longitud !== '') ? (
-          <Button size="small" variant="text" onClick={() => setFormData(actual => ({
-            ...actual, ubicacion: { ...actual.ubicacion, latitud: '', longitud: '' },
-          }))}>Quitar punto del mapa</Button>
-        ) : null}
       </Box>
           ) : null}
           {seccionCliente === 'cliente' ? (
