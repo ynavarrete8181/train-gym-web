@@ -142,6 +142,7 @@ const getInitialMembresia = () => ({
   plan_id: '',
   modalidad_id: '',
   sede_id: '',
+  sedes_habilitadas: [],
   codigo_contrato: '',
   fecha_inicio: hoyISO(),
   fecha_fin: '',
@@ -955,6 +956,11 @@ export function DeportistasPage() {
         };
       }
 
+      if (name === 'sede_id') {
+        const sedeSeleccionada = Number(nuevoValor);
+        return { ...actual, sede_id: nuevoValor,
+          sedes_habilitadas: Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), sedeSeleccionada])).filter(Boolean) };
+      }
       return { ...actual, [name]: nuevoValor };
     });
   };
@@ -962,14 +968,25 @@ export function DeportistasPage() {
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setRequiereDescuento(false);
     setVistaMembresia('formulario');
   };
 
   const handleEditarMembresia = (m) => {
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    const descuentoActual = m.descuento_vigente;
+    setRequiereDescuento(Boolean(descuentoActual));
+    setDescuentoMembresia(descuentoActual ? {
+      id: descuentoActual.id,
+      tipo: descuentoActual.tipo,
+      valor: descuentoActual.valor,
+      motivo: descuentoActual.motivo || '',
+      fecha_inicio: limpiarFechaMembresia(descuentoActual.fecha_inicio),
+      fecha_fin: limpiarFechaMembresia(descuentoActual.fecha_fin),
+    } : { tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
     setMembresiaForm({
       ...m,
+      sedes_habilitadas: (m.sedes_habilitadas || []).map((item) => Number(item.sede_id || item)),
       fecha_inicio: limpiarFechaMembresia(m.fecha_inicio),
       fecha_fin: limpiarFechaMembresia(m.fecha_fin),
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
@@ -1019,7 +1036,10 @@ export function DeportistasPage() {
           : null,
         deportista_id: formData.id,
         modalidad_id: membresiaForm.modalidad_id ? Number(membresiaForm.modalidad_id) : null,
-        sedes_habilitadas: [Number(membresiaForm.sede_id)],
+        sedes_habilitadas: Array.from(new Set([
+          Number(membresiaForm.sede_id),
+          ...(membresiaForm.sedes_habilitadas || []).map(Number),
+        ])).filter(Boolean),
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
@@ -1043,6 +1063,7 @@ export function DeportistasPage() {
           return;
         }
         payload.descuento = {
+          ...(descuentoMembresia.id ? { id: descuentoMembresia.id } : {}),
           tipo: descuentoMembresia.tipo,
           valor: Number(descuentoMembresia.valor),
           motivo: descuentoMembresia.motivo.trim(),
@@ -1929,6 +1950,33 @@ export function DeportistasPage() {
               sx={{ m: 0 }}
             />
           </Box>
+        </Box>
+
+        <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
+          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            La sede de contratación siempre está incluida. Puedes habilitar otras sedes sin duplicar la membresía.
+            En los pases diarios, la tarifa de cobro se calcula en la sede del cajero.
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {sedes.map((sede) => {
+              const esPrincipal = String(sede.id_sede) === String(membresiaForm.sede_id);
+              const seleccionada = esPrincipal || (membresiaForm.sedes_habilitadas || []).some((id) => String(id) === String(sede.id_sede));
+              return (
+                <FormControlLabel key={sede.id_sede}
+                  control={<Switch size="small" checked={seleccionada} disabled={esPrincipal || !membresiaForm.sede_id}
+                    onChange={(_, checked) => setMembresiaForm((actual) => ({
+                      ...actual,
+                      sedes_habilitadas: checked
+                        ? Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), Number(sede.id_sede)]))
+                        : (actual.sedes_habilitadas || []).filter((id) => String(id) !== String(sede.id_sede)),
+                    }))} />}
+                  label={`${sede.nombre}${esPrincipal ? ' (principal)' : ''}`}
+                  sx={{ m: 0, px: 1.3, py: 0.55, border: '1px solid #dbe5f0', borderRadius: 1.5,
+                    bgcolor: seleccionada ? '#fff7e2' : '#fff', '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }} />
+              );
+            })}
+          </Stack>
         </Box>
 
         <Box sx={{ mt: 1.25, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
