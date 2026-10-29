@@ -40,7 +40,7 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
-    .replace(/(^|[\\s(/-])([a-záéíóúñü])/g, (_, espacio, letra) => espacio + letra.toLocaleUpperCase('es-EC'))
+    .replace(/(^|[\s(/-])([a-záéíóúñü])/g, (_, espacio, letra) => espacio + letra.toLocaleUpperCase('es-EC'))
     .replace(/\b(De|Del|La|Las|Los|Y)\b/g, (palabra, offset) => offset === 0 ? palabra : palabra.toLocaleLowerCase('es-EC'));
 
 const getInitialForm = () => ({
