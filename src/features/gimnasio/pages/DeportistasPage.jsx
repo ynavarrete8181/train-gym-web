@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
@@ -17,12 +17,21 @@ import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import PeopleAltOutlinedIcon from '@mui/icons-material/PeopleAltOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
+import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
+import LocationCityOutlinedIcon from '@mui/icons-material/LocationCityOutlined';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import PinDropOutlinedIcon from '@mui/icons-material/PinDropOutlined';
+import ContactEmergencyOutlinedIcon from '@mui/icons-material/ContactEmergencyOutlined';
+import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
 import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
+import { MapaUbicacionPersona } from '../components/MapaUbicacionPersona.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
 import { PruebasRendimientoDeportista } from '../../entrenamiento/components/PruebasRendimientoDeportista.jsx';
@@ -30,6 +39,11 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+
+const nombreGeografico = (valor = '') =>
+  String(valor).trim().toLocaleLowerCase('es-EC')
+    .replace(/(^|[\s(/-])([a-záéíóúñü])/g, (_, espacio, letra) => espacio + letra.toLocaleUpperCase('es-EC'))
+    .replace(/\b(De|Del|La|Las|Los|Y)\b/g, (palabra, offset) => offset === 0 ? palabra : palabra.toLocaleLowerCase('es-EC'));
 
 const getInitialForm = () => ({
   id: null,
@@ -40,6 +54,10 @@ const getInitialForm = () => ({
   apellidos: '',
   email: '',
   direccion: '',
+  provincia_codigo: '',
+  canton_codigo: '',
+  parroquia_codigo: '',
+  ubicacion: { latitud: '', longitud: '', referencia: '' },
   codigo_deportista: '',
   fecha_nacimiento: '',
   genero: '',
@@ -68,6 +86,14 @@ const getInitialAsignacion = () => ({
   entrenador_horario_id: '',
   observaciones: '',
 });
+
+const SECCIONES_CLIENTE = [
+  { id: 'persona', nombre: 'Datos de la persona', descripcion: 'Identificación y datos generales', Icono: BadgeOutlinedIcon },
+  { id: 'ubicacion', nombre: 'Ubicación geográfica', descripcion: 'Provincia, cantón, parroquia y mapa', Icono: MapOutlinedIcon },
+  { id: 'cliente', nombre: 'Datos del cliente', descripcion: 'Sede y estado', Icono: PeopleAltOutlinedIcon },
+  { id: 'representante', nombre: 'Representante legal', descripcion: 'Tutor y responsable de pago', Icono: ContactEmergencyOutlinedIcon },
+  { id: 'contacto', nombre: 'Contacto y observaciones', descripcion: 'Emergencias y notas', Icono: ContactPhoneOutlinedIcon },
+];
 
 const TABS_FICHA = [
   { value: 'datos', label: 'Datos del cliente', icon: <BadgeOutlinedIcon sx={{ fontSize: 17 }} /> },
@@ -116,6 +142,7 @@ const getInitialMembresia = () => ({
   plan_id: '',
   modalidad_id: '',
   sede_id: '',
+  sedes_habilitadas: [],
   codigo_contrato: '',
   fecha_inicio: hoyISO(),
   fecha_fin: '',
@@ -291,6 +318,8 @@ const pesoSugeridoPorPorcentaje = (rutina, ultimosRm) => {
 export function DeportistasPage() {
   const [vista, setVista] = useState('lista');
   const [formData, setFormData] = useState(getInitialForm());
+  const [seccionCliente, setSeccionCliente] = useState('persona');
+  const [mostrarMapaCliente, setMostrarMapaCliente] = useState(false);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [diagnosticoIdentidad, setDiagnosticoIdentidad] = useState(null);
   const [consultandoIdentidad, setConsultandoIdentidad] = useState(false);
@@ -298,6 +327,9 @@ export function DeportistasPage() {
 
   const [deportistas, setDeportistas] = useState([]);
   const [sedes, setSedes] = useState([]);
+  const [provincias, setProvincias] = useState([]);
+  const [cantones, setCantones] = useState([]);
+  const [parroquias, setParroquias] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({ cedula: [], nombres: [], telefono: [], sede: [], estado: [] });
@@ -368,6 +400,30 @@ export function DeportistasPage() {
   };
 
   useEffect(() => {
+    gimnasioServicio.obtenerProvincias()
+      .then((respuesta) => setProvincias(respuesta.datos || []))
+      .catch(() => setProvincias([]));
+  }, []);
+
+  useEffect(() => {
+    if (!formData.provincia_codigo) { setCantones([]); return undefined; }
+    let activo = true;
+    gimnasioServicio.obtenerCantones(formData.provincia_codigo)
+      .then((res) => { if (activo) setCantones(res.datos || []); })
+      .catch(() => { if (activo) setCantones([]); });
+    return () => { activo = false; };
+  }, [formData.provincia_codigo]);
+
+  useEffect(() => {
+    if (!formData.canton_codigo) { setParroquias([]); return undefined; }
+    let activo = true;
+    gimnasioServicio.obtenerParroquias(formData.canton_codigo)
+      .then((res) => { if (activo) setParroquias(res.datos || []); })
+      .catch(() => { if (activo) setParroquias([]); });
+    return () => { activo = false; };
+  }, [formData.canton_codigo]);
+
+  useEffect(() => {
     if (vista === 'lista') {
       cargarDeportistas();
     } else if (vista === 'formulario') {
@@ -401,6 +457,8 @@ export function DeportistasPage() {
         responsable_pago: false,
       },
     });
+    setSeccionCliente('persona');
+    setMostrarMapaCliente(false);
     setVista('formulario');
   };
 
@@ -410,6 +468,14 @@ export function DeportistasPage() {
 
   const handleChange = (e) => {
     const { name, value, checked, type } = e.target;
+    if (name === 'provincia_codigo') {
+      setFormData(prev => ({ ...prev, provincia_codigo: value, canton_codigo: '', parroquia_codigo: '' }));
+      return;
+    }
+    if (name === 'canton_codigo') {
+      setFormData(prev => ({ ...prev, canton_codigo: value, parroquia_codigo: '' }));
+      return;
+    }
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -472,7 +538,13 @@ export function DeportistasPage() {
           telefono: formData.telefono || null,
           email: formData.email || null,
           direccion: formData.direccion || null,
+          provincia_codigo: formData.provincia_codigo || null,
+          canton_codigo: formData.canton_codigo || null,
+          parroquia_codigo: formData.parroquia_codigo || null,
         },
+        ubicacion: formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== ''
+          ? { latitud: Number(formData.ubicacion.latitud), longitud: Number(formData.ubicacion.longitud), referencia: formData.ubicacion.referencia || null }
+          : null,
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
@@ -563,6 +635,14 @@ export function DeportistasPage() {
         telefono: datos.persona_telefono || datos.telefono || '',
         email: datos.persona_email || '',
         direccion: datos.persona_direccion || '',
+        provincia_codigo: datos.provincia_codigo || '',
+        canton_codigo: datos.canton_codigo || '',
+        parroquia_codigo: datos.parroquia_codigo || '',
+        ubicacion: {
+          latitud: datos.ubicacion?.latitud ?? '',
+          longitud: datos.ubicacion?.longitud ?? '',
+          referencia: datos.ubicacion?.referencia || '',
+        },
         requiere_representante_legal: booleanoBackend(datos.requiere_representante_legal),
         representante_legal: datos.representante_legal
           ? {
@@ -671,7 +751,13 @@ export function DeportistasPage() {
           telefono: formData.telefono || null,
           email: formData.email || null,
           direccion: formData.direccion || null,
+          provincia_codigo: formData.provincia_codigo || null,
+          canton_codigo: formData.canton_codigo || null,
+          parroquia_codigo: formData.parroquia_codigo || null,
         },
+        ubicacion: formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== ''
+          ? { latitud: Number(formData.ubicacion.latitud), longitud: Number(formData.ubicacion.longitud), referencia: formData.ubicacion.referencia || null }
+          : {},
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
@@ -870,6 +956,11 @@ export function DeportistasPage() {
         };
       }
 
+      if (name === 'sede_id') {
+        const sedeSeleccionada = Number(nuevoValor);
+        return { ...actual, sede_id: nuevoValor,
+          sedes_habilitadas: Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), sedeSeleccionada])).filter(Boolean) };
+      }
       return { ...actual, [name]: nuevoValor };
     });
   };
@@ -877,14 +968,25 @@ export function DeportistasPage() {
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setRequiereDescuento(false);
     setVistaMembresia('formulario');
   };
 
   const handleEditarMembresia = (m) => {
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    const descuentoActual = m.descuento_vigente;
+    setRequiereDescuento(Boolean(descuentoActual));
+    setDescuentoMembresia(descuentoActual ? {
+      id: descuentoActual.id,
+      tipo: descuentoActual.tipo,
+      valor: descuentoActual.valor,
+      motivo: descuentoActual.motivo || '',
+      fecha_inicio: limpiarFechaMembresia(descuentoActual.fecha_inicio),
+      fecha_fin: limpiarFechaMembresia(descuentoActual.fecha_fin),
+    } : { tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setVistaMembresia('formulario');
     setMembresiaForm({
       ...m,
+      sedes_habilitadas: (m.sedes_habilitadas || []).map((item) => Number(item.sede_id || item)),
       fecha_inicio: limpiarFechaMembresia(m.fecha_inicio),
       fecha_fin: limpiarFechaMembresia(m.fecha_fin),
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
@@ -934,7 +1036,10 @@ export function DeportistasPage() {
           : null,
         deportista_id: formData.id,
         modalidad_id: membresiaForm.modalidad_id ? Number(membresiaForm.modalidad_id) : null,
-        sedes_habilitadas: [Number(membresiaForm.sede_id)],
+        sedes_habilitadas: Array.from(new Set([
+          Number(membresiaForm.sede_id),
+          ...(membresiaForm.sedes_habilitadas || []).map(Number),
+        ])).filter(Boolean),
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
@@ -944,11 +1049,21 @@ export function DeportistasPage() {
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
       if (requiereDescuento) {
+        if (descuentoInvalido) {
+          showNotificacion(
+            descuentoMembresia.tipo === 'FIJO'
+              ? `El descuento no puede superar el precio del plan (${precioBaseResumen.toFixed(2)}).`
+              : 'El porcentaje de descuento debe estar entre 0 y 100 %.',
+            'warning'
+          );
+          return;
+        }
         if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
           showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
           return;
         }
         payload.descuento = {
+          ...(descuentoMembresia.id ? { id: descuentoMembresia.id } : {}),
           tipo: descuentoMembresia.tipo,
           valor: Number(descuentoMembresia.valor),
           motivo: descuentoMembresia.motivo.trim(),
@@ -959,6 +1074,9 @@ export function DeportistasPage() {
 
 
       if (membresiaForm.id) {
+        if (!requiereDescuento && membresiaForm.descuento_vigente?.id) {
+          payload.descuento_desactivar_id = Number(membresiaForm.descuento_vigente.id);
+        }
         await gimnasioServicio.actualizarMembresia(membresiaForm.id, payload);
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
@@ -978,15 +1096,56 @@ export function DeportistasPage() {
       setVistaMembresia('listado');
       cargarFicha(formData);
     } catch (error) {
+      const estadoHttp = Number(error.response?.status || 0);
       const errores = error.response?.data?.errors;
-      const primerError = errores ? Object.values(errores)[0]?.[0] : null;
-      const mensaje = error.response?.data?.mensaje || primerError || error.response?.data?.message || 'Error al guardar la membresía';
-      showNotificacion(mensaje, 'error');
+      const primerError = errores ? Object.values(errores).flat().find((item) => typeof item === 'string') : null;
+      const mensajeGenerico = error.response?.data?.mensaje;
+      const avisoValidacion = estadoHttp === 422 || estadoHttp === 409;
+      const mensaje = primerError || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
+        ? mensajeGenerico : null) || (avisoValidacion
+          ? 'Revisa los datos de la membresía antes de continuar.'
+          : 'Ocurrió un error al registrar la membresía. Inténtalo nuevamente.');
+      showNotificacion(mensaje, avisoValidacion ? 'warning' : 'error');
     }
   };
 
   const renderCamposDatos = () => (
-    <Stack spacing={2}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+      <Box component="nav" aria-label="Secciones de datos del cliente" sx={{
+        p: 1, border: '1px solid #e5e7eb', borderRadius: 2, bgcolor: '#fff',
+        position: { md: 'sticky' }, top: { md: 16 },
+      }}>
+        <Typography variant="overline" sx={{ display: 'block', px: 1.5, pt: 1, pb: .5, color: 'text.secondary', fontWeight: 850 }}>
+          Datos del cliente
+        </Typography>
+        <Stack spacing={.5}>
+          {SECCIONES_CLIENTE.map(({ id, nombre, descripcion, Icono }) => {
+            const activo = seccionCliente === id;
+            return (
+              <Button key={id} type="button" fullWidth onClick={() => setSeccionCliente(id)}
+                aria-current={activo ? 'step' : undefined}
+                startIcon={<Icono sx={{ fontSize: 19 }} />}
+                sx={{
+                  justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
+                  borderRadius: 1.5, px: 1.2, py: 1.1, minHeight: 54,
+                  color: activo ? '#8b6410' : '#475467',
+                  bgcolor: activo ? '#fff7df' : 'transparent',
+                  borderLeft: activo ? '3px solid #b28a24' : '3px solid transparent',
+                  '&:hover': { bgcolor: activo ? '#fff2cc' : '#f8fafc' },
+                  '& .MuiButton-startIcon': { mr: 1.1 },
+                }}
+              >
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" sx={{ fontWeight: activo ? 900 : 700, lineHeight: 1.3 }}>{nombre}</Typography>
+                  <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: 'text.secondary' }}>{descripcion}</Typography>
+                </Box>
+              </Button>
+            );
+          })}
+        </Stack>
+      </Box>
+      <Stack spacing={2} sx={{ minWidth: 0 }}>
+          {seccionCliente === 'persona' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>
           Datos de la persona
@@ -1041,6 +1200,150 @@ export function DeportistasPage() {
           </TextField>
         </Box>
       </Box>
+          ) : null}
+          {seccionCliente === 'ubicacion' ? (
+      <Box sx={formStyles.seccion}>
+        <Typography sx={formStyles.modalSeccionTitulo}>Ubicación geográfica</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+          La ubicación es opcional. Selecciona los catálogos oficiales del INEC o deja los campos vacíos.
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+          {[
+            { key: 'provincia_codigo', titulo: 'Provincia', icono: MapOutlinedIcon, opciones: provincias, disabled: false, placeholder: 'Seleccionar provincia' },
+            { key: 'canton_codigo', titulo: 'Cantón', icono: LocationCityOutlinedIcon, opciones: cantones, disabled: !formData.provincia_codigo, placeholder: formData.provincia_codigo ? 'Seleccionar cantón' : 'Primero selecciona una provincia' },
+            { key: 'parroquia_codigo', titulo: 'Parroquia', icono: PlaceOutlinedIcon, opciones: parroquias, disabled: !formData.canton_codigo, placeholder: formData.canton_codigo ? 'Seleccionar parroquia' : 'Primero selecciona un cantón' },
+          ].map(({ key, titulo, icono: Icono, opciones, disabled, placeholder }) => (
+            <Autocomplete
+              key={key}
+              size="small"
+              fullWidth
+              openOnFocus
+              autoHighlight
+              forcePopupIcon
+              popupIcon={<KeyboardArrowDownRoundedIcon sx={{ color: '#946c17' }} />}
+              options={opciones}
+              disabled={disabled}
+              value={opciones.find((opcion) => String(opcion.codigo) === String(formData[key])) || null}
+              isOptionEqualToValue={(opcion, valor) => String(opcion.codigo) === String(valor.codigo)}
+              getOptionLabel={(opcion) => nombreGeografico(opcion.nombre)}
+              filterOptions={(items, { inputValue }) => {
+                const buscar = inputValue.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+                if (!buscar) return items;
+                return items.filter((item) =>
+                  nombreGeografico(item.nombre).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(buscar)
+                  || String(item.codigo).includes(buscar)
+                );
+              }}
+              noOptionsText="No se encontraron resultados"
+              clearText="Limpiar selección"
+              openText="Mostrar opciones"
+              closeText="Cerrar opciones"
+              slotProps={{
+                paper: { sx: { mt: 0.6, borderRadius: 2, border: '1px solid #e6dfce', boxShadow: '0 12px 32px rgba(16,24,40,0.12)' } },
+                listbox: { sx: { maxHeight: 285, py: 0.6, '& .MuiAutocomplete-option.Mui-focused': { bgcolor: '#fff7e6' }, '& .MuiAutocomplete-option[aria-selected="true"]': { bgcolor: '#fdf2d2' } } },
+              }}
+              onChange={(_, nuevo) => {
+                const codigo = nuevo?.codigo || '';
+                setFormData((anterior) => ({
+                  ...anterior,
+                  [key]: codigo,
+                  ...(key === 'provincia_codigo' ? { canton_codigo: '', parroquia_codigo: '' } : {}),
+                  ...(key === 'canton_codigo' ? { parroquia_codigo: '' } : {}),
+                }));
+              }}
+              renderOption={(props, opcion, { selected }) => {
+                const { key: optionKey, ...resto } = props;
+                return (
+                  <Box component="li" key={optionKey} {...resto} sx={{
+                    display: 'flex', alignItems: 'center', gap: 1.25,
+                    mx: 0.65, my: 0.2, px: 1.25, py: 1, borderRadius: 1.2,
+                  }}>
+                    <Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 1.1, bgcolor: '#fff6df', flexShrink: 0 }}>
+                      <Icono sx={{ color: '#a57a1a', fontSize: 19 }} />
+                    </Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: selected ? 800 : 600, color: '#26354a' }}>
+                        {nombreGeografico(opcion.nombre)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">Código DPA {opcion.codigo}</Typography>
+                    </Box>
+                    {selected && <CheckRoundedIcon fontSize="small" sx={{ color: '#a57a1a' }} />}
+                  </Box>
+                );
+              }}
+              renderInput={(params) => {
+                // MUI 9 entrega los adornos en slotProps.input; versiones previas
+                // lo hacían en InputProps. Conservar los originales mantiene la
+                // flecha, el botón de limpiar y los handlers del Autocomplete.
+                const inputOriginal = params.slotProps?.input ?? params.InputProps ?? {};
+                return (
+                  <TextField
+                    {...params}
+                    label={titulo}
+                    placeholder={placeholder}
+                    slotProps={{
+                      ...params.slotProps,
+                      input: {
+                        ...inputOriginal,
+                        startAdornment: (
+                          <>
+                            <InputAdornment position="start">
+                              <Icono sx={{ color: disabled ? '#aab3bf' : '#ae851d', fontSize: 20 }} />
+                            </InputAdornment>
+                            {inputOriginal.startAdornment}
+                          </>
+                        ),
+                      },
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': { borderRadius: 1.7, bgcolor: disabled ? '#f9fafb' : '#fff' },
+                      '& .MuiAutocomplete-popupIndicator': { display: 'inline-flex !important' },
+                    }}
+                  />
+                );
+              }}
+            />
+          ))}
+        </Box>
+        <Box sx={{ mt: 2, border: '1px solid #e2e8f0', borderRadius: 2, p: 1.5, bgcolor: '#fcfcfd' }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+            <Box>
+              <Typography variant="body2" fontWeight={750}>Ubicación exacta en el mapa</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Opcional: no necesitas indicar coordenadas para registrar al cliente.
+              </Typography>
+            </Box>
+            <FormControlLabel control={<Switch checked={mostrarMapaCliente} onChange={(_, valor) => setMostrarMapaCliente(valor)} />}
+              label="Mostrar mapa" sx={{ ml: 0, mr: 0 }} />
+          </Stack>
+          {mostrarMapaCliente && (
+            <Stack spacing={1.5} sx={{ mt: 2 }}>
+              <TextField size="small" label="Referencia (opcional)" value={formData.ubicacion?.referencia ?? ''}
+                onChange={(e) => setFormData(actual => ({ ...actual, ubicacion: { ...actual.ubicacion, referencia: e.target.value } }))} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                <TextField size="small" type="number" label="Latitud" value={formData.ubicacion?.latitud ?? ''}
+                  slotProps={{ htmlInput: { min: -5.1, max: 2, step: 0.0000001 } }}
+                  onChange={(e) => setFormData(actual => ({ ...actual, ubicacion: { ...actual.ubicacion, latitud: e.target.value } }))} />
+                <TextField size="small" type="number" label="Longitud" value={formData.ubicacion?.longitud ?? ''}
+                  slotProps={{ htmlInput: { min: -92.1, max: -74, step: 0.0000001 } }}
+                  onChange={(e) => setFormData(actual => ({ ...actual, ubicacion: { ...actual.ubicacion, longitud: e.target.value } }))} />
+              </Box>
+              <MapaUbicacionPersona
+                latitud={formData.ubicacion?.latitud ?? ''}
+                longitud={formData.ubicacion?.longitud ?? ''}
+              />
+              {(formData.ubicacion?.latitud !== '' || formData.ubicacion?.longitud !== '') && (
+                <Button startIcon={<PinDropOutlinedIcon />} size="small" sx={{ alignSelf: 'flex-start' }}
+                  onClick={() => setFormData(actual => ({
+                    ...actual, ubicacion: { ...actual.ubicacion, latitud: '', longitud: '' },
+                  }))}>Quitar punto guardado</Button>
+              )}
+            </Stack>
+          )}
+        </Box>
+      </Box>
+          ) : null}
+          {seccionCliente === 'cliente' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
@@ -1073,7 +1376,8 @@ export function DeportistasPage() {
           </TextField>
         </Box>
       </Box>
-
+          ) : null}
+          {seccionCliente === 'representante' ? (
       <Box sx={formStyles.seccion}>
         <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
           <Box>
@@ -1181,7 +1485,8 @@ export function DeportistasPage() {
           </Box>
         ) : null}
       </Box>
-
+          ) : null}
+          {seccionCliente === 'contacto' ? (
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>
           Contacto y observaciones
@@ -1213,7 +1518,10 @@ export function DeportistasPage() {
           />
         </Box>
       </Box>
-    </Stack>
+          ) : null}
+
+      </Stack>
+    </Box>
   );
 
   const horarioAsignacionSeleccionado = turnosEntrenador.find(
@@ -1439,6 +1747,19 @@ export function DeportistasPage() {
         membresiaForm.sede_id,
       )
     : null;
+  const descuentoNumerico = Number(descuentoMembresia.valor || 0);
+  const precioBaseResumen = Number(precioMembresiaPreview ?? 0);
+  const importeDescuentoPreview = !requiereDescuento || !Number.isFinite(descuentoNumerico)
+    ? 0
+    : descuentoMembresia.tipo === 'PORCENTAJE'
+      ? Math.round(precioBaseResumen * Math.min(100, Math.max(0, descuentoNumerico)) / 100 * 100) / 100
+      : Math.min(precioBaseResumen, Math.max(0, descuentoNumerico));
+  const descuentoInvalido = requiereDescuento && (
+    !Number.isFinite(descuentoNumerico)
+    || descuentoNumerico <= 0
+    || (descuentoMembresia.tipo === 'PORCENTAJE' && descuentoNumerico > 100)
+    || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
+  );
   const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable);
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
@@ -1477,6 +1798,7 @@ export function DeportistasPage() {
             required
             size="small"
             disabled={!!membresiaForm.id}
+            helperText={membresiaForm.id ? 'Para cambiar de plan, asigna un contrato nuevo. Así conservamos la trazabilidad.' : ''}
           >
             {planes.map((plan) => {
               const modalidadesActivas = (plan.modalidades || [])
@@ -1531,18 +1853,25 @@ export function DeportistasPage() {
             onChange={handleMembresiaChange}
             required
             size="small"
-            disabled={!!membresiaForm.id}
             helperText={
-              !membresiaForm.id && precioMembresiaPreview !== null
-                ? `Precio aplicado: $${Number(precioMembresiaPreview).toFixed(2)}`
-                : ''
+              precioMembresiaPreview !== null
+                ? `Tarifa de esta sede: ${Number(precioMembresiaPreview).toFixed(2)}. La sede principal puede cambiarse al editar.`
+                : 'Selecciona la sede principal del contrato.'
             }
           >
             {sedes.map((sede) => (
               <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
             ))}
           </TextField>
-                    <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''} onChange={handleMembresiaChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                    <TextField
+            label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso del pase' : 'Fecha inicio'}
+            name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
+            onChange={handleMembresiaChange} required size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO'
+              ? 'El pase será válido ese día. Puede pagarse antes y el descuento se calcula para la fecha de uso.'
+              : ''}
+          />
           <TextField
             label="Fecha fin"
             name="fecha_fin"
@@ -1553,11 +1882,18 @@ export function DeportistasPage() {
             slotProps={{ inputLabel: { shrink: true } }}
             helperText={
               !membresiaForm.id
-                ? `Calculada automáticamente según la duración de ${modalidadMembresiaSeleccionada ? 'la modalidad' : 'el plan'}.`
+                ? `Calculada automáticamente según la duración ${modalidadMembresiaSeleccionada ? 'de la modalidad' : 'del plan'}.`
                 : 'Calculada automáticamente por el sistema.'
             }
           />
-          <TextField select label="Estado" name="estado" value={membresiaForm.estado || 'PENDIENTE_PAGO'} onChange={handleMembresiaChange} required size="small">
+          <TextField select label="Estado" name="estado"
+            value={!membresiaForm.id
+              ? (planMembresiaSeleccionado?.requiere_pago === false ? 'ACTIVA' : 'PENDIENTE_PAGO')
+              : (membresiaForm.estado || 'PENDIENTE_PAGO')}
+            onChange={handleMembresiaChange} required size="small"
+            disabled={!membresiaForm.id}
+            helperText={!membresiaForm.id ? 'Se determina automáticamente según las reglas de pago del plan.' : ''}
+          >
             <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
             <MenuItem value="ACTIVA">Activa</MenuItem>
             <MenuItem value="VENCIDA">Vencida</MenuItem>
@@ -1627,6 +1963,33 @@ export function DeportistasPage() {
           </Box>
         </Box>
 
+        <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
+          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar</Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+            La sede de contratación siempre está incluida. Puedes habilitar otras sedes sin duplicar la membresía.
+            En los pases diarios, la tarifa de cobro se calcula en la sede del cajero.
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            {sedes.map((sede) => {
+              const esPrincipal = String(sede.id_sede) === String(membresiaForm.sede_id);
+              const seleccionada = esPrincipal || (membresiaForm.sedes_habilitadas || []).some((id) => String(id) === String(sede.id_sede));
+              return (
+                <FormControlLabel key={sede.id_sede}
+                  control={<Switch size="small" checked={seleccionada} disabled={esPrincipal || !membresiaForm.sede_id}
+                    onChange={(_, checked) => setMembresiaForm((actual) => ({
+                      ...actual,
+                      sedes_habilitadas: checked
+                        ? Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), Number(sede.id_sede)]))
+                        : (actual.sedes_habilitadas || []).filter((id) => String(id) !== String(sede.id_sede)),
+                    }))} />}
+                  label={`${sede.nombre}${esPrincipal ? ' (principal)' : ''}`}
+                  sx={{ m: 0, px: 1.3, py: 0.55, border: '1px solid #dbe5f0', borderRadius: 1.5,
+                    bgcolor: seleccionada ? '#fff7e2' : '#fff', '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }} />
+              );
+            })}
+          </Stack>
+        </Box>
+
         <Box sx={{ mt: 1.25, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.25 }}>
             Configuración comercial
@@ -1656,7 +2019,7 @@ export function DeportistasPage() {
           <FormControlLabel sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
             control={<Switch size="small" checked={requiereDescuento}
               onChange={(e) => setRequiereDescuento(e.target.checked)} />}
-            label="Requiere descuento" />
+            label="Aplicar descuento" />
           {requiereDescuento && (
             <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
               <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
@@ -1666,7 +2029,19 @@ export function DeportistasPage() {
               </TextField>
               <TextField fullWidth size="small" type="number" label="Descuento" value={descuentoMembresia.valor}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
-                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : undefined, step: 0.01 } }} />
+                error={false}
+                sx={descuentoInvalido ? {
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d89b25 !important', borderWidth: 1.5 },
+                  '& .MuiFormHelperText-root': { color: '#996515' },
+                } : undefined}
+                helperText={descuentoInvalido
+                  ? descuentoMembresia.tipo === 'FIJO'
+                    ? `Máximo permitido: ${precioBaseResumen.toFixed(2)}`
+                    : 'Ingresa un porcentaje entre 0 y 100.'
+                  : descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null
+                    ? `Hasta ${precioBaseResumen.toFixed(2)}`
+                    : ''}
+                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : (precioMembresiaPreview ?? undefined), step: 0.01 } }} />
               <TextField fullWidth size="small" label="Motivo / autorización" value={descuentoMembresia.motivo}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))} />
               <TextField fullWidth size="small" type="date" label="Desde"
@@ -1676,6 +2051,18 @@ export function DeportistasPage() {
               <TextField fullWidth size="small" type="date" label="Hasta (opcional)" value={descuentoMembresia.fecha_fin}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} />
+            </Box>
+          )}
+          {precioMembresiaPreview !== null && (
+            <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 2,
+              px: 1.5, py: 1.15, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <Typography variant="body2">Precio: <strong>${precioBaseResumen.toFixed(2)}</strong></Typography>
+              <Typography variant="body2">Descuento: <strong>${importeDescuentoPreview.toFixed(2)}</strong></Typography>
+              <Typography variant="body2" sx={{ color: descuentoInvalido ? '#996515' : 'success.dark', fontWeight: 800 }}>
+                {descuentoInvalido
+                  ? 'Corrige el descuento para calcular el total'
+                  : `Total a pagar: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}`}
+              </Typography>
             </Box>
           )}
         </Box>

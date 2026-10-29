@@ -3,7 +3,8 @@ import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
 import LockOpenOutlinedIcon from '@mui/icons-material/LockOpenOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import FactCheckOutlinedIcon from '@mui/icons-material/FactCheckOutlined';
-import { Box, Button, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
+import { Box, Button, ListItemIcon, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -199,8 +200,34 @@ export function TurnosCajaPage() {
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de apertura</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
-                <TextField select label="Caja *" value={formApertura.caja_id} onChange={(e) => setFormApertura((a) => ({ ...a, caja_id: e.target.value }))} size="small">
-                  {(catalogos.cajas || []).map((caja) => <MenuItem key={caja.id} value={caja.id}>{caja.codigo} - {caja.nombre}</MenuItem>)}
+                <TextField
+                  select
+                  label="Caja *"
+                  value={formApertura.caja_id}
+                  onChange={(e) => setFormApertura((a) => ({ ...a, caja_id: e.target.value }))}
+                  size="small"
+                  SelectProps={{
+                    displayEmpty: false,
+                    renderValue: (valor) => {
+                      const caja = (catalogos.cajas || []).find((item) => String(item.id) === String(valor));
+                      return caja ? `${caja.codigo} - ${caja.nombre}` : '';
+                    },
+                    MenuProps: {
+                      PaperProps: { sx: { borderRadius: 1.5, mt: 0.5, boxShadow: '0 10px 28px rgba(15, 23, 42, 0.12)' } },
+                    },
+                  }}
+                >
+                  {(catalogos.cajas || []).map((caja) => (
+                    <MenuItem key={caja.id} value={caja.id} sx={{ gap: 1, py: 1, minHeight: 46, borderRadius: 1, mx: 0.5, my: 0.25 }}>
+                      <ListItemIcon sx={{ minWidth: '32px !important', color: 'primary.main' }}>
+                        <PointOfSaleOutlinedIcon fontSize="small" />
+                      </ListItemIcon>
+                      <Box sx={{ minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 650 }}>{caja.nombre}</Typography>
+                        <Typography variant="caption" color="text.secondary">{caja.codigo}</Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
                 </TextField>
                 <TextField label="Saldo inicial *" type="number" value={formApertura.saldo_inicial} onChange={(e) => setFormApertura((a) => ({ ...a, saldo_inicial: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
                 <TextField label="Observaciones de apertura" value={formApertura.observaciones} onChange={(e) => setFormApertura((a) => ({ ...a, observaciones: e.target.value }))} multiline minRows={2} size="small" sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />

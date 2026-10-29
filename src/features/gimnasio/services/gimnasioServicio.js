@@ -1,6 +1,10 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const gimnasioServicio = {
+  obtenerProvincias: async () => (await api.get('/base/gimnasio/geografia/provincias')).data,
+  obtenerCantones: async (provincia_codigo) => (await api.get('/base/gimnasio/geografia/cantones', { params: { provincia_codigo } })).data,
+  obtenerParroquias: async (canton_codigo) => (await api.get('/base/gimnasio/geografia/parroquias', { params: { canton_codigo } })).data,
+
   diagnosticarIdentidadCliente: async (id) => {
     const { data } = await api.get(`/base/gimnasio/clientes/${id}/diagnostico-identidad`);
     return data;
@@ -297,6 +301,11 @@ export const gimnasioServicio = {
   },
   actualizarAsignacionHorario: async (id, payload) => {
     const { data } = await api.put(`/base/gimnasio/agenda/asignaciones-horario/${id}`, payload);
+    return data;
+  },
+
+  buscarEntrenadoresDisponibilidad: async (params) => {
+    const { data } = await api.get('/base/gimnasio/agenda/entrenadores-disponibilidad', { params });
     return data;
   },
 

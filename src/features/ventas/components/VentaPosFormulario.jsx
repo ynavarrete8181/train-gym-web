@@ -56,6 +56,25 @@ const DORADO_REVIVE_OSCURO = uiTokens.colores.acentoOscuro;
 const NEGRO_REVIVE = uiTokens.colores.textoFuerte;
 const DORADO_SUAVE = uiTokens.colores.acentoSuave;
 
+const inicialesCliente = (nombre = '') => String(nombre)
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((parte) => parte.charAt(0).toLocaleUpperCase('es'))
+  .join('') || 'CL';
+
+const fotoCliente = (cliente) => {
+  const valor = cliente?.foto_url || cliente?.foto_perfil_url || cliente?.avatar_url || null;
+  return typeof valor === 'string' && /^https?:\/\//i.test(valor) ? valor : undefined;
+};
+
+const detalleCliente = (cliente) => [
+  cliente?.identificacion || 'Sin identificación',
+  cliente?.codigo || null,
+  cliente?.telefono || null,
+].filter(Boolean).join(' · ');
+
 export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }) {
   const esCuentaAbierta = Boolean(ventaInicial?.id);
   const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], membresias: [], productos: [] });
@@ -68,6 +87,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [busqueda, setBusqueda] = useState('');
   const [carrito, setCarrito] = useState([]);
   const [descuento, setDescuento] = useState(0);
+  const [beneficioPos, setBeneficioPos] = useState(null);
+  const [cotizacionesCliente, setCotizacionesCliente] = useState({});
+  const [cotizandoBeneficio, setCotizandoBeneficio] = useState(false);
+  const [errorBeneficio, setErrorBeneficio] = useState('');
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
   const [pagos, setPagos] = useState([
@@ -136,6 +159,80 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     cargar();
   }, [ventaInicial?.id]);
 
+  // Al seleccionar al cliente, mostrar en el catálogo sus pases asignados
+  // con el precio y descuento de la sede del turno ANTES de añadir al carrito.
+  useEffect(() => {
+    if (!cliente?.id || !contexto.turno?.id || esCuentaAbierta) {
+      setCotizacionesCliente({});
+      return undefined;
+    }
+    let activo = true;
+    setCotizacionesCliente({});
+    const asignadas = (contexto.membresias || []).filter((m) =>
+      Number(m.cliente_id) === Number(cliente.id));
+    Promise.all(asignadas.map(async (m) => {
+      try {
+        const res = await ventaServicio.cotizarBeneficioPos({
+          cliente_id: cliente.id, plan_id: m.plan_id, membresia_id: m.id,
+        });
+        return [m.id, { datos: res.datos || res }];
+      } catch (error) {
+        const errores = error.response?.data?.errors;
+        return [m.id, { error: (errores ? Object.values(errores).flat()[0] : null)
+          || error.response?.data?.mensaje || 'No se pudo cotizar esta membresía.' }];
+      }
+    })).then((resultados) => {
+      if (activo) setCotizacionesCliente(Object.fromEntries(resultados));
+    });
+    return () => { activo = false; };
+  }, [cliente?.id, contexto.membresias, contexto.turno?.id, esCuentaAbierta]);
+
+  const itemConBeneficio = useMemo(() => carrito.find((item) =>
+    (item.tipo === 'PASE_DIARIO' || (item.tipo === 'MEMBRESIA' && item.membresia_id))
+  ), [carrito]);
+
+  const claveBeneficio = !esCuentaAbierta && itemConBeneficio && cliente
+    ? `${cliente.id}:${itemConBeneficio.referencia_id}:${itemConBeneficio.membresia_id || ''}`
+    : '';
+
+  useEffect(() => {
+    if (!claveBeneficio || (esCuentaAbierta && !itemConBeneficio?.membresia_id)) {
+      setBeneficioPos(null);
+      setErrorBeneficio('');
+      setCotizandoBeneficio(false);
+      if (!esCuentaAbierta) setDescuento(0);
+      return undefined;
+    }
+    let activo = true;
+    setCotizandoBeneficio(true);
+    setBeneficioPos(null);
+    setErrorBeneficio('');
+    setDescuento(0);
+    ventaServicio.cotizarBeneficioPos({
+      cliente_id: cliente.id,
+      plan_id: itemConBeneficio.referencia_id,
+      ...(itemConBeneficio.membresia_id ? { membresia_id: itemConBeneficio.membresia_id } : {}),
+    }).then((res) => {
+      if (!activo) return;
+      const cotizacion = res.datos || {};
+      setBeneficioPos({ ...cotizacion, clave: claveBeneficio });
+      setDescuento(Number(cotizacion.importe_descuento || 0));
+      if (itemConBeneficio.tipo === 'PASE_DIARIO' || itemConBeneficio.tipo === 'MEMBRESIA') {
+        setCarrito((actual) => actual.map((fila) =>
+          fila.clave === itemConBeneficio.clave && Number(fila.precio_unitario) !== Number(cotizacion.precio_base)
+            ? { ...fila, precio_unitario: Number(cotizacion.precio_base), total_linea: Number(cotizacion.precio_base) }
+            : fila
+        ));
+      }
+    }).catch((error) => {
+      if (!activo) return;
+      const errores = error.response?.data?.errors;
+      setErrorBeneficio((errores ? Object.values(errores).flat()[0] : null)
+        || error.response?.data?.mensaje || 'No se pudo validar la tarifa y el descuento.');
+    }).finally(() => { if (activo) setCotizandoBeneficio(false); });
+    return () => { activo = false; };
+  }, [claveBeneficio, esCuentaAbierta]);
+
   const subtotal = useMemo(
     () => carrito.reduce((acumulado, item) => acumulado + Number(item.total_linea || 0), 0),
     [carrito],
@@ -187,7 +284,17 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       if (tipo === 'PRODUCTO') items = contexto.productos || [];
       if (tipo === 'MEMBRESIA') {
         items = cliente
-          ? (contexto.membresias || []).filter((item) => Number(item.cliente_id) === Number(cliente.id))
+          ? (contexto.membresias || [])
+            .filter((item) => Number(item.cliente_id) === Number(cliente.id))
+            .map((item) => ({
+              ...item,
+              precio: cotizacionesCliente[item.id]?.datos?.precio_base ?? item.precio,
+              precio_final: cotizacionesCliente[item.id]?.datos?.total,
+              descuento_aplicado: cotizacionesCliente[item.id]?.datos?.importe_descuento,
+              descuento_programado: cotizacionesCliente[item.id]?.datos?.beneficio_programado,
+              beneficio_estado: cotizacionesCliente[item.id]?.datos?.beneficio_estado,
+              error_cotizacion: cotizacionesCliente[item.id]?.error,
+            }))
           : [];
       }
       if (tipo === 'PASE_DIARIO') items = (contexto.planes || []).filter((item) => item.tipo_producto === 'PASE_DIARIO');
@@ -199,13 +306,27 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         .toLowerCase()
         .includes(texto),
     );
-  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto, cliente]);
+  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto, cliente, cotizacionesCliente]);
 
   const agregar = (item) => {
     const tipoActual = esCuentaAbierta ? 'PRODUCTO' : tipo;
 
     if (tipoActual === 'PASE_DIARIO') {
-      avisar('El pase diario debe asignarse primero desde Membresías para crear correctamente su vigencia.', 'info');
+      if (!cliente) {
+        avisar('Selecciona el deportista antes de agregar el Pase Diario.', 'warning');
+        return;
+      }
+      if (item.requiere_entrenador) {
+        avisar('El Pase Diario Dirigido necesita entrenador y horario. Asígnalo desde Membresías antes de cobrar.', 'warning');
+        return;
+      }
+      if (carrito.length > 0) {
+        avisar('Para crear el acceso de un día, vende el Pase Diario por separado.', 'warning');
+        return;
+      }
+    }
+    if (carrito.some((fila) => fila.tipo === 'PASE_DIARIO')) {
+      avisar('El Pase Diario se vende individualmente. Finaliza este pase antes de añadir otro ítem.', 'warning');
       return;
     }
 
@@ -222,7 +343,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     setCarrito((actual) => {
       const existe = actual.find((fila) => fila.clave === clave);
       if (existe) {
-        if (tipoActual === 'MEMBRESIA') {
+        if (tipoActual === 'MEMBRESIA' || tipoActual === 'PASE_DIARIO') {
           avisar('Esta membresía ya está agregada al carrito.', 'info');
           return actual;
         }
@@ -244,7 +365,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         cantidad: 1,
         precio_unitario: Number(item.precio),
         total_linea: Number(item.precio),
-        bloqueado: tipoActual === 'MEMBRESIA',
+        bloqueado: tipoActual === 'MEMBRESIA' || tipoActual === 'PASE_DIARIO',
       }];
     });
   };
@@ -275,6 +396,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     }
     if (carrito.length === 0) {
       avisar('Agrega al menos un ítem a la venta.', 'warning');
+      return;
+    }
+    if (claveBeneficio && (cotizandoBeneficio || beneficioPos?.clave !== claveBeneficio || errorBeneficio)) {
+      avisar(errorBeneficio || 'Se está verificando la tarifa y el beneficio. Intenta nuevamente.', 'warning');
       return;
     }
     if (cobrar) {
@@ -410,16 +535,45 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   item.telefono,
                 ].filter(Boolean).join(' · ')}
                 isOptionEqualToValue={(a, b) => a.id === b.id}
+                noOptionsText="No se encontraron clientes"
+                ListboxProps={{ sx: { py: 0.75, maxHeight: 360 } }}
+                slotProps={{ paper: { sx: { mt: 0.7, border: '1px solid #e6dfcf', borderRadius: 2, boxShadow: '0 14px 32px rgba(16, 24, 40, .12)' } } }}
                 renderOption={(props, item) => (
-                  <Box component="li" {...props} key={item.id}>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={850}>
+                  <Box
+                    component="li"
+                    {...props}
+                    key={item.id}
+                    sx={{
+                      display: 'flex !important',
+                      alignItems: 'center',
+                      gap: 1.3,
+                      mx: 0.75,
+                      my: 0.3,
+                      px: '10px !important',
+                      py: '9px !important',
+                      borderRadius: '10px',
+                      transition: 'background-color .15s ease',
+                      '&[aria-selected="true"]': { bgcolor: `${DORADO_SUAVE} !important` },
+                      '&:hover': { bgcolor: '#f8f4eb !important' },
+                    }}
+                  >
+                    <Avatar
+                      src={fotoCliente(item)}
+                      alt={item.nombre || 'Cliente'}
+                      sx={{
+                        width: 43, height: 43, flexShrink: 0,
+                        bgcolor: '#f1e6c9', color: '#795a15',
+                        border: '1px solid #e9d8aa', fontSize: 13, fontWeight: 850,
+                      }}
+                    >
+                      {inicialesCliente(item.nombre)}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 850, color: NEGRO_REVIVE, lineHeight: 1.35 }} noWrap>
                         {item.nombre || 'Cliente'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.identificacion || 'Sin identificación'}
-                        {item.codigo ? ` · ${item.codigo}` : ''}
-                        {item.telefono ? ` · ${item.telefono}` : ''}
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3, fontSize: 11.5 }} noWrap>
+                        {detalleCliente(item)}
                       </Typography>
                     </Box>
                   </Box>
@@ -427,14 +581,36 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 renderInput={(params) => <TextField {...params} size="small" placeholder="Buscar por cédula, nombre, código o teléfono" />}
               />
               {cliente ? (
-                <Box sx={{ mt: 1.2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr auto' }, gap: 1, alignItems: 'center', px: 1.3, py: 1, bgcolor: '#f8fafc', border: '1px solid #e1e7ef', borderRadius: 1.5 }}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={900}>{cliente.nombre}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {cliente.identificacion || 'Sin identificación'}{cliente.codigo ? ` · ${cliente.codigo}` : ''} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
+                <Box sx={{
+                  mt: 1.35, display: 'flex', alignItems: 'center', gap: 1.4,
+                  px: 1.5, py: 1.25, bgcolor: '#fffdf8',
+                  border: '1px solid #eadfca', borderRadius: 2,
+                }}>
+                  <Avatar
+                    src={fotoCliente(cliente)}
+                    alt={cliente.nombre || 'Cliente'}
+                    sx={{
+                      width: 50, height: 50, flexShrink: 0, bgcolor: '#f1e6c9',
+                      color: '#795a15', fontWeight: 850, fontSize: 15,
+                      border: '1px solid #e9d8aa',
+                    }}
+                  >
+                    {inicialesCliente(cliente.nombre)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 900, color: NEGRO_REVIVE }} noWrap>
+                      {cliente.nombre || 'Cliente'}
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }} noWrap>
+                      {detalleCliente(cliente)}
+                    </Typography>
+                    {cliente.email ? (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                        {cliente.email}
+                      </Typography>
+                    ) : null}
                   </Box>
-                  <Chip size="small" label="Cliente activo" color="success" variant="outlined" />
+                  <Chip size="small" label="Activo" color="success" variant="outlined" sx={{ fontWeight: 750, flexShrink: 0 }} />
                 </Box>
               ) : (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
@@ -496,7 +672,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 ) : null}
                 {!esCuentaAbierta && tipo === 'PASE_DIARIO' ? (
                   <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
-                    El pase diario debe asignarse primero desde Membresías.
+                    Selecciona el deportista y agrega el Pase Diario Libre. El sistema generará el acceso de hoy al guardar o cobrar. El dirigido necesita entrenador y horario.
                   </Alert>
                 ) : null}
                 <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
@@ -584,7 +760,20 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 <Divider sx={{ my: 1.4 }} />
                 <Stack spacing={.75}>
                   <ResumenFila label="Subtotal" valor={dinero(subtotal)} />
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Descuento</Typography><TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} inputProps={{ min: 0 }} /></Box>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Descuento</Typography><TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} disabled={Boolean(claveBeneficio)} helperText={claveBeneficio ? 'Automático' : ''} inputProps={{ min: 0 }} /></Box>
+                  {cotizandoBeneficio && <Alert severity="info" sx={{ py: 0 }}>Validando precio y descuento del deportista...</Alert>}
+                  {errorBeneficio && <Alert severity="warning" sx={{ py: 0 }}>{errorBeneficio}</Alert>}
+                  {beneficioPos?.clave === claveBeneficio && beneficioPos?.beneficio_programado && (
+                    <Alert severity="warning" sx={{ py: .4 }}>
+                      El descuento de la membresía empieza el {String(beneficioPos.beneficio_programado.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}.
+                      No se aplica al cobro actual.
+                    </Alert>
+                  )}
+                  {beneficioPos?.clave === claveBeneficio && claveBeneficio && (
+                    <Typography variant="caption" color="success.main">
+                      Tarifa original {dinero(beneficioPos.precio_base)} · Descuento autorizado {dinero(beneficioPos.importe_descuento)} · Total del pase {dinero(beneficioPos.total)}
+                    </Typography>
+                  )}
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Impuesto</Typography><TextField size="small" type="number" value={impuesto} onChange={(e) => setImpuesto(e.target.value)} inputProps={{ min: 0 }} /></Box>
                 </Stack>
 
@@ -704,7 +893,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
                   <Button
                     variant="contained"
-                    disabled={guardando || carrito.length === 0 || !turno?.id || totalPagos <= 0 || excedentePagos > 0}
+                    disabled={guardando || cotizandoBeneficio || Boolean(errorBeneficio) || (claveBeneficio && beneficioPos?.clave !== claveBeneficio) || carrito.length === 0 || !turno?.id || totalPagos <= 0 || excedentePagos > 0}
                     onClick={() => guardar(true)}
                     sx={dbanuStyles.addButtonRevive}
                     startIcon={<ReceiptLongOutlinedIcon />}
@@ -713,7 +902,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   </Button>
                   <Button
                     variant="outlined"
-                    disabled={guardando || carrito.length === 0 || !turno?.id}
+                    disabled={guardando || cotizandoBeneficio || Boolean(errorBeneficio) || (claveBeneficio && beneficioPos?.clave !== claveBeneficio) || carrito.length === 0 || !turno?.id}
                     onClick={() => guardar(false)}
                     sx={dbanuStyles.secondaryButtonRevive}
                   >
@@ -896,6 +1085,37 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
         </Typography>
 
+        {tipo === 'MEMBRESIA' && item.tipo_producto === 'PASE_DIARIO' && item.fecha_inicio && (
+          <Typography variant="caption" sx={{ color: '#586779', fontWeight: 750, display: 'block', mb: .6 }}>
+            Válido para el {String(item.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}
+          </Typography>
+        )}
+        {tipo === 'MEMBRESIA' && item.precio_final !== undefined && (
+          <Box sx={{ mb: .7, p: .6, bgcolor: '#f2fbf5', border: '1px solid #d4eddc', borderRadius: 1 }}>
+            <Typography variant="caption" color="success.dark" sx={{ fontWeight: 800, display: 'block' }}>
+              Descuento: {dinero(item.descuento_aplicado)} · Total a pagar: {dinero(item.precio_final)}
+            </Typography>
+          </Box>
+        )}
+        {tipo === 'MEMBRESIA' && item.beneficio_estado === 'SIN_BENEFICIO' && (
+          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
+            No existe un descuento activo para este plan y fecha. Revisa «Aplicar descuento» en la ficha del cliente.
+          </Typography>
+        )}
+        {tipo === 'MEMBRESIA' && item.descuento_programado && (
+          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
+            Descuento de {item.descuento_programado.tipo === 'FIJO'
+              ? dinero(item.descuento_programado.valor)
+              : `${Number(item.descuento_programado.valor)} %`}
+            {' '}programado desde el {String(item.descuento_programado.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}.
+            No aplica al cobro de hoy.
+          </Typography>
+        )}
+        {tipo === 'MEMBRESIA' && item.error_cotizacion && (
+          <Typography variant="caption" sx={{ color: '#96660b', display: 'block', mb: .5 }}>
+            {item.error_cotizacion}
+          </Typography>
+        )}
         <Box sx={{ mt: 'auto', pt: .65 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .65 }}>
             {sinPrecio ? (
@@ -939,7 +1159,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
                 variant="contained"
                 startIcon={<AddShoppingCartOutlinedIcon />}
                 onClick={onAgregar}
-                disabled={sinPrecio || contractual}
+                disabled={sinPrecio || contractual || Boolean(item.error_cotizacion)}
                 sx={{
                   minHeight: 32,
                   borderRadius: 1,

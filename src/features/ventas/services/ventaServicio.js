@@ -16,6 +16,7 @@ export const ventaServicio = {
   obtenerComprobantePdf: async (id) => (await api.get(`/base/ventas/ventas/${id}/comprobante.pdf`, { responseType: 'blob' })).data,
   obtenerCuentasAbiertasPos: async () => (await api.get('/base/ventas/pos/cuentas-abiertas')).data,
   obtenerContextoPos: async () => (await api.get('/base/ventas/pos/contexto')).data,
+  cotizarBeneficioPos: async (params) => (await api.get('/base/ventas/pos/cotizar-beneficio', { params })).data,
   crearVentaPos: async (payload) => (await api.post('/base/ventas/pos', payload)).data,
   actualizarCuentaPos: async (id, payload) => (await api.put(`/base/ventas/pos/${id}`, payload)).data,
   cobrarVentaPos: async (payload) => (await api.post('/base/ventas/pos/cobrar', payload)).data,

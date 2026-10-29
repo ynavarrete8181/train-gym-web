@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
-import { Autocomplete, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
+import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
+import { Autocomplete, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -37,6 +40,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
   const [catalogos,setCatalogos]=useState({sedes:[]});
   const [serviciosDisponibles,setServiciosDisponibles]=useState([]);
   const [cargandoServicios,setCargandoServicios]=useState(false);
+  const [errorServicios,setErrorServicios]=useState('');
   const [form,setForm]=useState({
     sede_id:'',
     entrenador_id: entrenadorInicial?.id || '',
@@ -60,21 +64,37 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
 
   useEffect(()=>{
     if (entrenadorInicial) return undefined;
-    const q=busquedaEntrenador.trim();
-    if(q.length<2) return undefined;
-    const t=window.setTimeout(async()=>{
+    if (!form.sede_id) {
+      setOpcionesEntrenador([]);
+      return undefined;
+    }
+
+    let activo = true;
+    const t = window.setTimeout(async()=>{
       setBuscando(true);
-      try{
-        const r=await gimnasioServicio.buscarEntrenadoresAgenda({q});
-        setOpcionesEntrenador(r.datos||[]);
-      }finally{setBuscando(false);}
-    },300);
-    return ()=>window.clearTimeout(t);
-  },[busquedaEntrenador, entrenadorInicial]);
+      try {
+        const r = await gimnasioServicio.buscarEntrenadoresDisponibilidad({
+          sede_id: form.sede_id,
+          fecha: form.fecha,
+          q: busquedaEntrenador.trim(),
+        });
+        if (activo) setOpcionesEntrenador(r.datos || []);
+      } catch (e) {
+        if (activo) {
+          setOpcionesEntrenador([]);
+          setNotificacion({mensaje:e.response?.data?.mensaje || 'No se pudieron consultar los entrenadores de esta sede.',tipo:'error'});
+        }
+      } finally {
+        if (activo) setBuscando(false);
+      }
+    },busquedaEntrenador.trim() ? 300 : 0);
+    return ()=>{ activo=false; window.clearTimeout(t); };
+  },[form.sede_id,form.fecha,busquedaEntrenador,entrenadorInicial]);
 
   useEffect(()=>{
     setForm((a)=>({...a,servicio_id:''}));
     setServiciosDisponibles([]);
+    setErrorServicios('');
 
     if(!form.sede_id || !form.entrenador_id) return undefined;
 
@@ -86,7 +106,10 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
     }).then((r)=>{
       if(activo) setServiciosDisponibles(r.datos||[]);
     }).catch(()=>{
-      if(activo) setServiciosDisponibles([]);
+      if(activo) {
+        setServiciosDisponibles([]);
+        setErrorServicios('No se pudieron consultar los servicios. Comprueba la conexión e inténtalo nuevamente.');
+      }
     }).finally(()=>{
       if(activo) setCargandoServicios(false);
     });
@@ -136,9 +159,26 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
           alignItems: 'start',
         }}
       >
-        <TextField select size="small" label="Sede" value={form.sede_id} onChange={e=>setForm(a=>({...a,sede_id:e.target.value,servicio_id:''}))}>
-          {(catalogos.sedes||[]).map(x=><MenuItem key={x.id} value={x.id}>{x.nombre}</MenuItem>)}
-        </TextField>
+        <Autocomplete
+          size="small"
+          options={catalogos.sedes || []}
+          value={(catalogos.sedes || []).find(x => String(x.id) === String(form.sede_id)) || null}
+          onChange={(_, valor) => {
+            setBusquedaEntrenador('');
+            setOpcionesEntrenador([]);
+            setForm(actual => ({ ...actual, sede_id: valor?.id || '', entrenador_id: entrenadorInicial?.id || '', servicio_id: '' }));
+          }}
+          getOptionLabel={opcion => opcion.nombre || ''}
+          isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
+          noOptionsText="No hay sedes disponibles"
+          renderOption={(props, opcion) => (
+            <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+              <PlaceOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
+              <Typography variant="body2">{opcion.nombre}</Typography>
+            </Box>
+          )}
+          renderInput={params => <TextField {...params} label="Sede" />}
+        />
         {entrenadorInicial ? (
           <TextField
             size="small"
@@ -150,33 +190,46 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
                   <Autocomplete
                     options={opcionesEntrenador}
                     loading={buscando}
+                    disabled={!form.sede_id}
+                    filterOptions={opciones => opciones}
                     value={opcionesEntrenador.find(x=>String(x.id)===String(form.entrenador_id))||null}
-                    onInputChange={(_,v)=>setBusquedaEntrenador(v)}
-                    onChange={(_,v)=>setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}))}
+                    onInputChange={(_,v,motivo)=>{if(motivo==='input') setBusquedaEntrenador(v);}}
+                    onChange={(_,v)=>{setBusquedaEntrenador('');setForm(a=>({...a,entrenador_id:v?.id||'',servicio_id:''}));}}
                     getOptionLabel={x=>[x.nombres,x.apellidos].filter(Boolean).join(' ')||x.name||''}
                     isOptionEqualToValue={(a,b)=>String(a.id)===String(b.id)}
-                    noOptionsText={busquedaEntrenador.trim().length<2?'Escribe al menos 2 caracteres':'Sin resultados'}
-                    renderInput={params=><TextField {...params} size="small" label="Entrenador"/>}
+                    noOptionsText={!form.sede_id ? 'Selecciona una sede' : buscando ? 'Consultando entrenadores...' : 'No hay entrenadores activos con horario en esta sede'}
+                    renderOption={(props, opcion) => (
+                      <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+                        <PersonOutlineOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
+                        <Typography variant="body2">{[opcion.nombres, opcion.apellidos].filter(Boolean).join(' ') || opcion.name || ''}</Typography>
+                      </Box>
+                    )}
+                    renderInput={params=><TextField {...params} size="small" label="Entrenador" />}
                   />
           
         )}
-        <TextField
-          select
+        <Autocomplete
           size="small"
-          label="Servicio"
-          value={form.servicio_id}
-          onChange={e=>setForm(a=>({...a,servicio_id:e.target.value}))}
+          options={serviciosDisponibles}
+          value={serviciosDisponibles.find(x => String(x.id) === String(form.servicio_id)) || null}
+          onChange={(_, valor) => setForm(actual => ({ ...actual, servicio_id: valor?.id || '' }))}
           disabled={!form.sede_id || !form.entrenador_id || cargandoServicios}
-          helperText={
+          loading={cargandoServicios}
+          getOptionLabel={opcion => `${opcion.nombre || ''} · ${opcion.duracion_minutos || 0} min`}
+          isOptionEqualToValue={(a,b) => String(a.id) === String(b.id)}
+          noOptionsText={cargandoServicios ? 'Cargando servicios...' : 'Sin servicios disponibles'}
+          renderOption={(props, opcion) => (
+            <Box component="li" {...props} key={opcion.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, py: 1 }}>
+              <FitnessCenterOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary' }} />
+              <Typography variant="body2">{opcion.nombre} · {opcion.duracion_minutos || 0} min</Typography>
+            </Box>
+          )}
+          renderInput={params => <TextField {...params} label="Servicio" helperText={
             !form.sede_id || !form.entrenador_id
               ? 'Selecciona sede y entrenador'
-              : serviciosDisponibles.length === 0 && !cargandoServicios
-                ? 'El entrenador no tiene servicios habilitados'
-                : ''
-          }
-        >
-          {serviciosDisponibles.map(x=><MenuItem key={x.id} value={x.id}>{x.nombre} · {x.duracion_minutos} min</MenuItem>)}
-        </TextField>
+              : errorServicios || (serviciosDisponibles.length === 0 && !cargandoServicios ? 'No hay servicios habilitados para reserva' : '')
+          } />}
+        />
         <TextField size="small" type="date" label="Fecha" value={form.fecha} onChange={e=>setForm(a=>({...a,fecha:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/>
         <Button
           startIcon={<SearchOutlinedIcon />}
