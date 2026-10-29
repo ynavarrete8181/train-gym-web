@@ -1074,6 +1074,9 @@ export function DeportistasPage() {
 
 
       if (membresiaForm.id) {
+        if (!requiereDescuento && membresiaForm.descuento_vigente?.id) {
+          payload.descuento_desactivar_id = Number(membresiaForm.descuento_vigente.id);
+        }
         await gimnasioServicio.actualizarMembresia(membresiaForm.id, payload);
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
