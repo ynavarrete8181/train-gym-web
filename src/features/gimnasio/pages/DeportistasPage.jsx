@@ -1850,7 +1850,14 @@ export function DeportistasPage() {
                 : 'Calculada automáticamente por el sistema.'
             }
           />
-          <TextField select label="Estado" name="estado" value={membresiaForm.estado || 'PENDIENTE_PAGO'} onChange={handleMembresiaChange} required size="small">
+          <TextField select label="Estado" name="estado"
+            value={!membresiaForm.id
+              ? (planMembresiaSeleccionado?.requiere_pago === false ? 'ACTIVA' : 'PENDIENTE_PAGO')
+              : (membresiaForm.estado || 'PENDIENTE_PAGO')}
+            onChange={handleMembresiaChange} required size="small"
+            disabled={!membresiaForm.id}
+            helperText={!membresiaForm.id ? 'Se determina automáticamente según las reglas de pago del plan.' : ''}
+          >
             <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
             <MenuItem value="ACTIVA">Activa</MenuItem>
             <MenuItem value="VENCIDA">Vencida</MenuItem>
