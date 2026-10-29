@@ -151,6 +151,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     if (!claveBeneficio || (esCuentaAbierta && !itemConBeneficio?.membresia_id)) {
       setBeneficioPos(null);
       setErrorBeneficio('');
+      setCotizandoBeneficio(false);
       if (!esCuentaAbierta) setDescuento(0);
       return undefined;
     }
@@ -158,6 +159,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     setCotizandoBeneficio(true);
     setBeneficioPos(null);
     setErrorBeneficio('');
+    setDescuento(0);
     ventaServicio.cotizarBeneficioPos({
       cliente_id: cliente.id,
       plan_id: itemConBeneficio.referencia_id,
@@ -167,6 +169,13 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       const cotizacion = res.datos || {};
       setBeneficioPos({ ...cotizacion, clave: claveBeneficio });
       setDescuento(Number(cotizacion.importe_descuento || 0));
+      if (itemConBeneficio.tipo === 'PASE_DIARIO') {
+        setCarrito((actual) => actual.map((fila) =>
+          fila.clave === itemConBeneficio.clave && Number(fila.precio_unitario) !== Number(cotizacion.precio_base)
+            ? { ...fila, precio_unitario: Number(cotizacion.precio_base), total_linea: Number(cotizacion.precio_base) }
+            : fila
+        ));
+      }
     }).catch((error) => {
       if (!activo) return;
       const errores = error.response?.data?.errors;
