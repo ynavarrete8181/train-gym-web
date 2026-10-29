@@ -1029,6 +1029,15 @@ export function DeportistasPage() {
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
       if (requiereDescuento) {
+        if (descuentoInvalido) {
+          showNotificacion(
+            descuentoMembresia.tipo === 'FIJO'
+              ? `El descuento no puede superar el precio del plan (${precioBaseResumen.toFixed(2)}).`
+              : 'El porcentaje de descuento debe estar entre 0 y 100 %.',
+            'warning'
+          );
+          return;
+        }
         if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
           showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
           return;
@@ -1065,7 +1074,9 @@ export function DeportistasPage() {
     } catch (error) {
       const errores = error.response?.data?.errors;
       const primerError = errores ? Object.values(errores)[0]?.[0] : null;
-      const mensaje = error.response?.data?.mensaje || primerError || error.response?.data?.message || 'Error al guardar la membresía';
+      const mensajeGenerico = error.response?.data?.mensaje;
+      const mensaje = primerError || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
+        ? mensajeGenerico : null) || error.response?.data?.message || 'No se pudo guardar la membresía. Revisa los datos e inténtalo nuevamente.';
       showNotificacion(mensaje, 'error');
     }
   };
@@ -1708,6 +1719,19 @@ export function DeportistasPage() {
         membresiaForm.sede_id,
       )
     : null;
+  const descuentoNumerico = Number(descuentoMembresia.valor || 0);
+  const precioBaseResumen = Number(precioMembresiaPreview ?? 0);
+  const importeDescuentoPreview = !requiereDescuento || !Number.isFinite(descuentoNumerico)
+    ? 0
+    : descuentoMembresia.tipo === 'PORCENTAJE'
+      ? Math.round(precioBaseResumen * Math.min(100, Math.max(0, descuentoNumerico)) / 100 * 100) / 100
+      : Math.min(precioBaseResumen, Math.max(0, descuentoNumerico));
+  const descuentoInvalido = requiereDescuento && (
+    !Number.isFinite(descuentoNumerico)
+    || descuentoNumerico <= 0
+    || (descuentoMembresia.tipo === 'PORCENTAJE' && descuentoNumerico > 100)
+    || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
+  );
   const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable);
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
@@ -1822,7 +1846,7 @@ export function DeportistasPage() {
             slotProps={{ inputLabel: { shrink: true } }}
             helperText={
               !membresiaForm.id
-                ? `Calculada automáticamente según la duración de ${modalidadMembresiaSeleccionada ? 'la modalidad' : 'el plan'}.`
+                ? `Calculada automáticamente según la duración ${modalidadMembresiaSeleccionada ? 'de la modalidad' : 'del plan'}.`
                 : 'Calculada automáticamente por el sistema.'
             }
           />
@@ -1925,7 +1949,7 @@ export function DeportistasPage() {
           <FormControlLabel sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
             control={<Switch size="small" checked={requiereDescuento}
               onChange={(e) => setRequiereDescuento(e.target.checked)} />}
-            label="Requiere descuento" />
+            label="Aplicar descuento" />
           {requiereDescuento && (
             <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
               <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
@@ -1935,7 +1959,15 @@ export function DeportistasPage() {
               </TextField>
               <TextField fullWidth size="small" type="number" label="Descuento" value={descuentoMembresia.valor}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
-                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : undefined, step: 0.01 } }} />
+                error={descuentoInvalido}
+                helperText={descuentoInvalido
+                  ? descuentoMembresia.tipo === 'FIJO'
+                    ? `Máximo permitido: ${precioBaseResumen.toFixed(2)}`
+                    : 'Ingresa un porcentaje entre 0 y 100.'
+                  : descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null
+                    ? `Hasta ${precioBaseResumen.toFixed(2)}`
+                    : ''}
+                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : (precioMembresiaPreview ?? undefined), step: 0.01 } }} />
               <TextField fullWidth size="small" label="Motivo / autorización" value={descuentoMembresia.motivo}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))} />
               <TextField fullWidth size="small" type="date" label="Desde"
@@ -1945,6 +1977,16 @@ export function DeportistasPage() {
               <TextField fullWidth size="small" type="date" label="Hasta (opcional)" value={descuentoMembresia.fecha_fin}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} />
+            </Box>
+          )}
+          {precioMembresiaPreview !== null && (
+            <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 2,
+              px: 1.5, py: 1.15, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <Typography variant="body2">Precio: <strong>${precioBaseResumen.toFixed(2)}</strong></Typography>
+              <Typography variant="body2">Descuento: <strong>${importeDescuentoPreview.toFixed(2)}</strong></Typography>
+              <Typography variant="body2" sx={{ color: descuentoInvalido ? 'error.main' : 'success.dark', fontWeight: 800 }}>
+                Total estimado: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}
+              </Typography>
             </Box>
           )}
         </Box>
