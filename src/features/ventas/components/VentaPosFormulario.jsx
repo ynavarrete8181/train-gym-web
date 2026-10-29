@@ -88,6 +88,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [carrito, setCarrito] = useState([]);
   const [descuento, setDescuento] = useState(0);
   const [beneficioPos, setBeneficioPos] = useState(null);
+  const [cotizacionesCliente, setCotizacionesCliente] = useState({});
   const [cotizandoBeneficio, setCotizandoBeneficio] = useState(false);
   const [errorBeneficio, setErrorBeneficio] = useState('');
   const [impuesto, setImpuesto] = useState(0);
@@ -158,6 +159,34 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     cargar();
   }, [ventaInicial?.id]);
 
+  // Al seleccionar al cliente, mostrar en el catálogo sus pases asignados
+  // con el precio y descuento de la sede del turno ANTES de añadir al carrito.
+  useEffect(() => {
+    if (!cliente?.id || !contexto.turno?.id || esCuentaAbierta) {
+      setCotizacionesCliente({});
+      return undefined;
+    }
+    let activo = true;
+    setCotizacionesCliente({});
+    const asignadas = (contexto.membresias || []).filter((m) =>
+      Number(m.cliente_id) === Number(cliente.id));
+    Promise.all(asignadas.map(async (m) => {
+      try {
+        const res = await ventaServicio.cotizarBeneficioPos({
+          cliente_id: cliente.id, plan_id: m.plan_id, membresia_id: m.id,
+        });
+        return [m.id, { datos: res.datos || res }];
+      } catch (error) {
+        const errores = error.response?.data?.errors;
+        return [m.id, { error: (errores ? Object.values(errores).flat()[0] : null)
+          || error.response?.data?.mensaje || 'No se pudo cotizar esta membresía.' }];
+      }
+    })).then((resultados) => {
+      if (activo) setCotizacionesCliente(Object.fromEntries(resultados));
+    });
+    return () => { activo = false; };
+  }, [cliente?.id, contexto.membresias, contexto.turno?.id, esCuentaAbierta]);
+
   const itemConBeneficio = useMemo(() => carrito.find((item) =>
     (item.tipo === 'PASE_DIARIO' || (item.tipo === 'MEMBRESIA' && item.membresia_id))
   ), [carrito]);
@@ -188,7 +217,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       const cotizacion = res.datos || {};
       setBeneficioPos({ ...cotizacion, clave: claveBeneficio });
       setDescuento(Number(cotizacion.importe_descuento || 0));
-      if (itemConBeneficio.tipo === 'PASE_DIARIO') {
+      if (itemConBeneficio.tipo === 'PASE_DIARIO' || itemConBeneficio.tipo === 'MEMBRESIA') {
         setCarrito((actual) => actual.map((fila) =>
           fila.clave === itemConBeneficio.clave && Number(fila.precio_unitario) !== Number(cotizacion.precio_base)
             ? { ...fila, precio_unitario: Number(cotizacion.precio_base), total_linea: Number(cotizacion.precio_base) }
@@ -255,7 +284,15 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       if (tipo === 'PRODUCTO') items = contexto.productos || [];
       if (tipo === 'MEMBRESIA') {
         items = cliente
-          ? (contexto.membresias || []).filter((item) => Number(item.cliente_id) === Number(cliente.id))
+          ? (contexto.membresias || [])
+            .filter((item) => Number(item.cliente_id) === Number(cliente.id))
+            .map((item) => ({
+              ...item,
+              precio: cotizacionesCliente[item.id]?.datos?.precio_base ?? item.precio,
+              precio_final: cotizacionesCliente[item.id]?.datos?.total,
+              descuento_aplicado: cotizacionesCliente[item.id]?.datos?.importe_descuento,
+              error_cotizacion: cotizacionesCliente[item.id]?.error,
+            }))
           : [];
       }
       if (tipo === 'PASE_DIARIO') items = (contexto.planes || []).filter((item) => item.tipo_producto === 'PASE_DIARIO');
@@ -267,7 +304,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         .toLowerCase()
         .includes(texto),
     );
-  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto, cliente]);
+  }, [tipo, contexto, busqueda, esCuentaAbierta, categoriaProducto, cliente, cotizacionesCliente]);
 
   const agregar = (item) => {
     const tipoActual = esCuentaAbierta ? 'PRODUCTO' : tipo;
@@ -1040,6 +1077,18 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
         </Typography>
 
+        {tipo === 'MEMBRESIA' && item.precio_final !== undefined && (
+          <Box sx={{ mb: .7, p: .6, bgcolor: '#f2fbf5', border: '1px solid #d4eddc', borderRadius: 1 }}>
+            <Typography variant="caption" color="success.dark" sx={{ fontWeight: 800, display: 'block' }}>
+              Descuento: {dinero(item.descuento_aplicado)} · Total a pagar: {dinero(item.precio_final)}
+            </Typography>
+          </Box>
+        )}
+        {tipo === 'MEMBRESIA' && item.error_cotizacion && (
+          <Typography variant="caption" sx={{ color: '#96660b', display: 'block', mb: .5 }}>
+            {item.error_cotizacion}
+          </Typography>
+        )}
         <Box sx={{ mt: 'auto', pt: .65 }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .65 }}>
             {sinPrecio ? (
@@ -1083,7 +1132,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
                 variant="contained"
                 startIcon={<AddShoppingCartOutlinedIcon />}
                 onClick={onAgregar}
-                disabled={sinPrecio || contractual}
+                disabled={sinPrecio || contractual || Boolean(item.error_cotizacion)}
                 sx={{
                   minHeight: 32,
                   borderRadius: 1,
