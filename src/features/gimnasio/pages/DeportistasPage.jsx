@@ -1232,29 +1232,37 @@ export function DeportistasPage() {
                   </Box>
                 );
               }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label={titulo}
-                  placeholder={placeholder}
-                  InputProps={{
-                    ...params.InputProps,
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Icono sx={{ color: disabled ? '#aab3bf' : '#ae851d', fontSize: 20 }} />
-                      </InputAdornment>
-                    ),
-                    // Conservar el endAdornment original: incluye la flecha
-                    // desplegable y el botón para limpiar del Autocomplete.
-                    endAdornment: params.InputProps.endAdornment,
-                  }}
-                  sx={{
-                    '& .MuiOutlinedInput-root': { borderRadius: 1.7, bgcolor: disabled ? '#f9fafb' : '#fff', pr: '8px !important' },
-                    '& .MuiAutocomplete-popupIndicator': { display: 'inline-flex !important' },
-                    '& .MuiAutocomplete-endAdornment': { right: 6 },
-                  }}
-                />
-              )}
+              renderInput={(params) => {
+                // MUI 9 entrega los adornos en slotProps.input; versiones previas
+                // lo hacían en InputProps. Conservar los originales mantiene la
+                // flecha, el botón de limpiar y los handlers del Autocomplete.
+                const inputOriginal = params.slotProps?.input ?? params.InputProps ?? {};
+                return (
+                  <TextField
+                    {...params}
+                    label={titulo}
+                    placeholder={placeholder}
+                    slotProps={{
+                      ...params.slotProps,
+                      input: {
+                        ...inputOriginal,
+                        startAdornment: (
+                          <>
+                            <InputAdornment position="start">
+                              <Icono sx={{ color: disabled ? '#aab3bf' : '#ae851d', fontSize: 20 }} />
+                            </InputAdornment>
+                            {inputOriginal.startAdornment}
+                          </>
+                        ),
+                      },
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': { borderRadius: 1.7, bgcolor: disabled ? '#f9fafb' : '#fff' },
+                      '& .MuiAutocomplete-popupIndicator': { display: 'inline-flex !important' },
+                    }}
+                  />
+                );
+              }}
             />
           ))}
         </Box>
