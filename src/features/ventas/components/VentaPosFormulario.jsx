@@ -56,6 +56,25 @@ const DORADO_REVIVE_OSCURO = uiTokens.colores.acentoOscuro;
 const NEGRO_REVIVE = uiTokens.colores.textoFuerte;
 const DORADO_SUAVE = uiTokens.colores.acentoSuave;
 
+const inicialesCliente = (nombre = '') => String(nombre)
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((parte) => parte.charAt(0).toLocaleUpperCase('es'))
+  .join('') || 'CL';
+
+const fotoCliente = (cliente) => {
+  const valor = cliente?.foto_url || cliente?.foto_perfil_url || cliente?.avatar_url || null;
+  return typeof valor === 'string' && /^https?:\/\//i.test(valor) ? valor : undefined;
+};
+
+const detalleCliente = (cliente) => [
+  cliente?.identificacion || 'Sin identificación',
+  cliente?.codigo || null,
+  cliente?.telefono || null,
+].filter(Boolean).join(' · ');
+
 export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }) {
   const esCuentaAbierta = Boolean(ventaInicial?.id);
   const [contexto, setContexto] = useState({ turno: null, clientes: [], servicios: [], planes: [], membresias: [], productos: [] });
@@ -477,16 +496,45 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   item.telefono,
                 ].filter(Boolean).join(' · ')}
                 isOptionEqualToValue={(a, b) => a.id === b.id}
+                noOptionsText="No se encontraron clientes"
+                ListboxProps={{ sx: { py: 0.75, maxHeight: 360 } }}
+                slotProps={{ paper: { sx: { mt: 0.7, border: '1px solid #e6dfcf', borderRadius: 2, boxShadow: '0 14px 32px rgba(16, 24, 40, .12)' } } }}
                 renderOption={(props, item) => (
-                  <Box component="li" {...props} key={item.id}>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={850}>
+                  <Box
+                    component="li"
+                    {...props}
+                    key={item.id}
+                    sx={{
+                      display: 'flex !important',
+                      alignItems: 'center',
+                      gap: 1.3,
+                      mx: 0.75,
+                      my: 0.3,
+                      px: '10px !important',
+                      py: '9px !important',
+                      borderRadius: '10px',
+                      transition: 'background-color .15s ease',
+                      '&[aria-selected="true"]': { bgcolor: `${DORADO_SUAVE} !important` },
+                      '&:hover': { bgcolor: '#f8f4eb !important' },
+                    }}
+                  >
+                    <Avatar
+                      src={fotoCliente(item)}
+                      alt={item.nombre || 'Cliente'}
+                      sx={{
+                        width: 43, height: 43, flexShrink: 0,
+                        bgcolor: '#f1e6c9', color: '#795a15',
+                        border: '1px solid #e9d8aa', fontSize: 13, fontWeight: 850,
+                      }}
+                    >
+                      {inicialesCliente(item.nombre)}
+                    </Avatar>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 850, color: NEGRO_REVIVE, lineHeight: 1.35 }} noWrap>
                         {item.nombre || 'Cliente'}
                       </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {item.identificacion || 'Sin identificación'}
-                        {item.codigo ? ` · ${item.codigo}` : ''}
-                        {item.telefono ? ` · ${item.telefono}` : ''}
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.3, fontSize: 11.5 }} noWrap>
+                        {detalleCliente(item)}
                       </Typography>
                     </Box>
                   </Box>
@@ -494,14 +542,36 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 renderInput={(params) => <TextField {...params} size="small" placeholder="Buscar por cédula, nombre, código o teléfono" />}
               />
               {cliente ? (
-                <Box sx={{ mt: 1.2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr auto' }, gap: 1, alignItems: 'center', px: 1.3, py: 1, bgcolor: '#f8fafc', border: '1px solid #e1e7ef', borderRadius: 1.5 }}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={900}>{cliente.nombre}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {cliente.identificacion || 'Sin identificación'}{cliente.codigo ? ` · ${cliente.codigo}` : ''} · {cliente.telefono || 'Sin teléfono'}{cliente.email ? ` · ${cliente.email}` : ''}
+                <Box sx={{
+                  mt: 1.35, display: 'flex', alignItems: 'center', gap: 1.4,
+                  px: 1.5, py: 1.25, bgcolor: '#fffdf8',
+                  border: '1px solid #eadfca', borderRadius: 2,
+                }}>
+                  <Avatar
+                    src={fotoCliente(cliente)}
+                    alt={cliente.nombre || 'Cliente'}
+                    sx={{
+                      width: 50, height: 50, flexShrink: 0, bgcolor: '#f1e6c9',
+                      color: '#795a15', fontWeight: 850, fontSize: 15,
+                      border: '1px solid #e9d8aa',
+                    }}
+                  >
+                    {inicialesCliente(cliente.nombre)}
+                  </Avatar>
+                  <Box sx={{ minWidth: 0, flex: 1 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 900, color: NEGRO_REVIVE }} noWrap>
+                      {cliente.nombre || 'Cliente'}
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }} noWrap>
+                      {detalleCliente(cliente)}
+                    </Typography>
+                    {cliente.email ? (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>
+                        {cliente.email}
+                      </Typography>
+                    ) : null}
                   </Box>
-                  <Chip size="small" label="Cliente activo" color="success" variant="outlined" />
+                  <Chip size="small" label="Activo" color="success" variant="outlined" sx={{ fontWeight: 750, flexShrink: 0 }} />
                 </Box>
               ) : (
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
