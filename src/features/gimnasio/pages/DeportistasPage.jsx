@@ -1132,7 +1132,7 @@ export function DeportistasPage() {
             inputProps={{ min: -5.1, max: 2, step: 0.0000001 }}
             onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, latitud: e.target.value } }))} />
           <TextField size="small" type="number" label="Longitud" value={formData.ubicacion?.longitud ?? ''}
-            inputProps={{ min: -81.5, max: -74, step: 0.0000001 }}
+            inputProps={{ min: -92.1, max: -74, step: 0.0000001 }}
             onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, longitud: e.target.value } }))} />
           <TextField size="small" label="Referencia opcional" value={formData.ubicacion?.referencia ?? ''}
             onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, referencia: e.target.value } }))} />
