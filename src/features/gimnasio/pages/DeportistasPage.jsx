@@ -1999,8 +1999,10 @@ export function DeportistasPage() {
               px: 1.5, py: 1.15, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
               <Typography variant="body2">Precio: <strong>${precioBaseResumen.toFixed(2)}</strong></Typography>
               <Typography variant="body2">Descuento: <strong>${importeDescuentoPreview.toFixed(2)}</strong></Typography>
-              <Typography variant="body2" sx={{ color: descuentoInvalido ? 'error.main' : 'success.dark', fontWeight: 800 }}>
-                Total a pagar: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}
+              <Typography variant="body2" sx={{ color: descuentoInvalido ? '#996515' : 'success.dark', fontWeight: 800 }}>
+                {descuentoInvalido
+                  ? 'Corrige el descuento para calcular el total'
+                  : `Total a pagar: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}`}
               </Typography>
             </Box>
           )}
