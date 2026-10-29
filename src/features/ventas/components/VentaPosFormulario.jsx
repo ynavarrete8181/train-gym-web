@@ -68,6 +68,9 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [busqueda, setBusqueda] = useState('');
   const [carrito, setCarrito] = useState([]);
   const [descuento, setDescuento] = useState(0);
+  const [beneficioPos, setBeneficioPos] = useState(null);
+  const [cotizandoBeneficio, setCotizandoBeneficio] = useState(false);
+  const [errorBeneficio, setErrorBeneficio] = useState('');
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
   const [pagos, setPagos] = useState([
@@ -135,6 +138,43 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     };
     cargar();
   }, [ventaInicial?.id]);
+
+  const itemConBeneficio = useMemo(() => carrito.find((item) =>
+    (item.tipo === 'PASE_DIARIO' || (item.tipo === 'MEMBRESIA' && item.membresia_id))
+  ), [carrito]);
+
+  const claveBeneficio = itemConBeneficio && cliente
+    ? `${cliente.id}:${itemConBeneficio.referencia_id}:${itemConBeneficio.membresia_id || ''}`
+    : '';
+
+  useEffect(() => {
+    if (!claveBeneficio || (esCuentaAbierta && !itemConBeneficio?.membresia_id)) {
+      setBeneficioPos(null);
+      setErrorBeneficio('');
+      if (!esCuentaAbierta) setDescuento(0);
+      return undefined;
+    }
+    let activo = true;
+    setCotizandoBeneficio(true);
+    setBeneficioPos(null);
+    setErrorBeneficio('');
+    ventaServicio.cotizarBeneficioPos({
+      cliente_id: cliente.id,
+      plan_id: itemConBeneficio.referencia_id,
+      ...(itemConBeneficio.membresia_id ? { membresia_id: itemConBeneficio.membresia_id } : {}),
+    }).then((res) => {
+      if (!activo) return;
+      const cotizacion = res.datos || {};
+      setBeneficioPos({ ...cotizacion, clave: claveBeneficio });
+      setDescuento(Number(cotizacion.importe_descuento || 0));
+    }).catch((error) => {
+      if (!activo) return;
+      const errores = error.response?.data?.errors;
+      setErrorBeneficio((errores ? Object.values(errores).flat()[0] : null)
+        || error.response?.data?.mensaje || 'No se pudo validar la tarifa y el descuento.');
+    }).finally(() => { if (activo) setCotizandoBeneficio(false); });
+    return () => { activo = false; };
+  }, [claveBeneficio, esCuentaAbierta]);
 
   const subtotal = useMemo(
     () => carrito.reduce((acumulado, item) => acumulado + Number(item.total_linea || 0), 0),
@@ -205,7 +245,21 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     const tipoActual = esCuentaAbierta ? 'PRODUCTO' : tipo;
 
     if (tipoActual === 'PASE_DIARIO') {
-      avisar('El pase diario debe asignarse primero desde Membresías para crear correctamente su vigencia.', 'info');
+      if (!cliente) {
+        avisar('Selecciona el deportista antes de agregar el Pase Diario.', 'warning');
+        return;
+      }
+      if (item.requiere_entrenador) {
+        avisar('El Pase Diario Dirigido necesita entrenador y horario. Asígnalo desde Membresías antes de cobrar.', 'warning');
+        return;
+      }
+      if (carrito.length > 0) {
+        avisar('Para crear el acceso de un día, vende el Pase Diario por separado.', 'warning');
+        return;
+      }
+    }
+    if (carrito.some((fila) => fila.tipo === 'PASE_DIARIO')) {
+      avisar('El Pase Diario se vende individualmente. Finaliza este pase antes de añadir otro ítem.', 'warning');
       return;
     }
 
@@ -222,7 +276,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     setCarrito((actual) => {
       const existe = actual.find((fila) => fila.clave === clave);
       if (existe) {
-        if (tipoActual === 'MEMBRESIA') {
+        if (tipoActual === 'MEMBRESIA' || tipoActual === 'PASE_DIARIO') {
           avisar('Esta membresía ya está agregada al carrito.', 'info');
           return actual;
         }
@@ -244,7 +298,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         cantidad: 1,
         precio_unitario: Number(item.precio),
         total_linea: Number(item.precio),
-        bloqueado: tipoActual === 'MEMBRESIA',
+        bloqueado: tipoActual === 'MEMBRESIA' || tipoActual === 'PASE_DIARIO',
       }];
     });
   };
@@ -275,6 +329,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     }
     if (carrito.length === 0) {
       avisar('Agrega al menos un ítem a la venta.', 'warning');
+      return;
+    }
+    if (claveBeneficio && (cotizandoBeneficio || beneficioPos?.clave !== claveBeneficio || errorBeneficio)) {
+      avisar(errorBeneficio || 'Se está verificando la tarifa y el beneficio. Intenta nuevamente.', 'warning');
       return;
     }
     if (cobrar) {
@@ -496,7 +554,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 ) : null}
                 {!esCuentaAbierta && tipo === 'PASE_DIARIO' ? (
                   <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
-                    El pase diario debe asignarse primero desde Membresías.
+                    Selecciona el deportista y agrega el Pase Diario Libre. El sistema generará el acceso de hoy al guardar o cobrar. El dirigido necesita entrenador y horario.
                   </Alert>
                 ) : null}
                 <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
@@ -584,7 +642,14 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 <Divider sx={{ my: 1.4 }} />
                 <Stack spacing={.75}>
                   <ResumenFila label="Subtotal" valor={dinero(subtotal)} />
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Descuento</Typography><TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} inputProps={{ min: 0 }} /></Box>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Descuento</Typography><TextField size="small" type="number" value={descuento} onChange={(e) => setDescuento(e.target.value)} disabled={Boolean(claveBeneficio)} helperText={claveBeneficio ? 'Automático' : ''} inputProps={{ min: 0 }} /></Box>
+                  {cotizandoBeneficio && <Alert severity="info" sx={{ py: 0 }}>Validando precio y descuento del deportista...</Alert>}
+                  {errorBeneficio && <Alert severity="warning" sx={{ py: 0 }}>{errorBeneficio}</Alert>}
+                  {beneficioPos?.clave === claveBeneficio && claveBeneficio && (
+                    <Typography variant="caption" color="success.main">
+                      Tarifa original {dinero(beneficioPos.precio_base)} · Descuento autorizado {dinero(beneficioPos.importe_descuento)} · Total del pase {dinero(beneficioPos.total)}
+                    </Typography>
+                  )}
                   <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 105px', gap: 1, alignItems: 'center' }}><Typography variant="body2" color="text.secondary">Impuesto</Typography><TextField size="small" type="number" value={impuesto} onChange={(e) => setImpuesto(e.target.value)} inputProps={{ min: 0 }} /></Box>
                 </Stack>
 
@@ -704,7 +769,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
                   <Button
                     variant="contained"
-                    disabled={guardando || carrito.length === 0 || !turno?.id || totalPagos <= 0 || excedentePagos > 0}
+                    disabled={guardando || cotizandoBeneficio || Boolean(errorBeneficio) || (claveBeneficio && beneficioPos?.clave !== claveBeneficio) || carrito.length === 0 || !turno?.id || totalPagos <= 0 || excedentePagos > 0}
                     onClick={() => guardar(true)}
                     sx={dbanuStyles.addButtonRevive}
                     startIcon={<ReceiptLongOutlinedIcon />}
@@ -713,7 +778,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   </Button>
                   <Button
                     variant="outlined"
-                    disabled={guardando || carrito.length === 0 || !turno?.id}
+                    disabled={guardando || cotizandoBeneficio || Boolean(errorBeneficio) || (claveBeneficio && beneficioPos?.clave !== claveBeneficio) || carrito.length === 0 || !turno?.id}
                     onClick={() => guardar(false)}
                     sx={dbanuStyles.secondaryButtonRevive}
                   >
