@@ -143,7 +143,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     (item.tipo === 'PASE_DIARIO' || (item.tipo === 'MEMBRESIA' && item.membresia_id))
   ), [carrito]);
 
-  const claveBeneficio = itemConBeneficio && cliente
+  const claveBeneficio = !esCuentaAbierta && itemConBeneficio && cliente
     ? `${cliente.id}:${itemConBeneficio.referencia_id}:${itemConBeneficio.membresia_id || ''}`
     : '';
 
