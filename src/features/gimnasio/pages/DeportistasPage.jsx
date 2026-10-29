@@ -23,6 +23,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
+import { MapaUbicacionPersona } from '../components/MapaUbicacionPersona.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
 import { PruebasRendimientoDeportista } from '../../entrenamiento/components/PruebasRendimientoDeportista.jsx';
@@ -1137,19 +1138,18 @@ export function DeportistasPage() {
           <TextField size="small" label="Referencia opcional" value={formData.ubicacion?.referencia ?? ''}
             onChange={(e) => setFormData(a => ({ ...a, ubicacion: { ...a.ubicacion, referencia: e.target.value } }))} />
         </Box>
-        {formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== '' &&
-         Number.isFinite(Number(formData.ubicacion?.latitud)) && Number.isFinite(Number(formData.ubicacion?.longitud)) ? (
-          <Box component="iframe" title="Vista previa de la ubicación"
-            loading="lazy" referrerPolicy="no-referrer"
-            src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(formData.ubicacion.longitud) - .01}%2C${Number(formData.ubicacion.latitud) - .01}%2C${Number(formData.ubicacion.longitud) + .01}%2C${Number(formData.ubicacion.latitud) + .01}&layer=mapnik&marker=${formData.ubicacion.latitud}%2C${formData.ubicacion.longitud}`}
-            sx={{ display: 'block', width: '100%', height: 290, border: '1px solid #d8e4f2', borderRadius: 2 }} />
-        ) : (
-          <Box sx={{ px: 2, py: 3, bgcolor: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-              Puedes ingresar coordenadas para visualizar la ubicación en el mapa de OpenStreetMap. No se registra ningún punto mientras permanezcan vacías.
-            </Typography>
-          </Box>
-        )}
+        <MapaUbicacionPersona
+          latitud={formData.ubicacion?.latitud ?? ''}
+          longitud={formData.ubicacion?.longitud ?? ''}
+          onChange={({ latitud, longitud }) => setFormData(actual => ({
+            ...actual, ubicacion: { ...actual.ubicacion, latitud, longitud },
+          }))}
+        />
+        {(formData.ubicacion?.latitud !== '' || formData.ubicacion?.longitud !== '') ? (
+          <Button size="small" variant="text" onClick={() => setFormData(actual => ({
+            ...actual, ubicacion: { ...actual.ubicacion, latitud: '', longitud: '' },
+          }))}>Quitar punto del mapa</Button>
+        ) : null}
       </Box>
       <Box sx={formStyles.seccion}>
         <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
