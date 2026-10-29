@@ -1072,12 +1072,16 @@ export function DeportistasPage() {
       setVistaMembresia('listado');
       cargarFicha(formData);
     } catch (error) {
+      const estadoHttp = Number(error.response?.status || 0);
       const errores = error.response?.data?.errors;
-      const primerError = errores ? Object.values(errores)[0]?.[0] : null;
+      const primerError = errores ? Object.values(errores).flat().find((item) => typeof item === 'string') : null;
       const mensajeGenerico = error.response?.data?.mensaje;
+      const avisoValidacion = estadoHttp === 422 || estadoHttp === 409;
       const mensaje = primerError || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
-        ? mensajeGenerico : null) || error.response?.data?.message || 'No se pudo guardar la membresía. Revisa los datos e inténtalo nuevamente.';
-      showNotificacion(mensaje, 'error');
+        ? mensajeGenerico : null) || (avisoValidacion
+          ? 'Revisa los datos de la membresía antes de continuar.'
+          : 'Ocurrió un error al registrar la membresía. Inténtalo nuevamente.');
+      showNotificacion(mensaje, avisoValidacion ? 'warning' : 'error');
     }
   };
 
@@ -1966,7 +1970,11 @@ export function DeportistasPage() {
               </TextField>
               <TextField fullWidth size="small" type="number" label="Descuento" value={descuentoMembresia.valor}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
-                error={descuentoInvalido}
+                error={false}
+                sx={descuentoInvalido ? {
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d89b25 !important', borderWidth: 1.5 },
+                  '& .MuiFormHelperText-root': { color: '#996515' },
+                } : undefined}
                 helperText={descuentoInvalido
                   ? descuentoMembresia.tipo === 'FIJO'
                     ? `Máximo permitido: ${precioBaseResumen.toFixed(2)}`
@@ -1992,7 +2000,7 @@ export function DeportistasPage() {
               <Typography variant="body2">Precio: <strong>${precioBaseResumen.toFixed(2)}</strong></Typography>
               <Typography variant="body2">Descuento: <strong>${importeDescuentoPreview.toFixed(2)}</strong></Typography>
               <Typography variant="body2" sx={{ color: descuentoInvalido ? 'error.main' : 'success.dark', fontWeight: 800 }}>
-                Total estimado: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}
+                Total a pagar: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}
               </Typography>
             </Box>
           )}
