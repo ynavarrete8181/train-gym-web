@@ -724,7 +724,13 @@ export function DeportistasPage() {
           telefono: formData.telefono || null,
           email: formData.email || null,
           direccion: formData.direccion || null,
+          provincia_codigo: formData.provincia_codigo || null,
+          canton_codigo: formData.canton_codigo || null,
+          parroquia_codigo: formData.parroquia_codigo || null,
         },
+        ubicacion: formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== ''
+          ? { latitud: Number(formData.ubicacion.latitud), longitud: Number(formData.ubicacion.longitud), referencia: formData.ubicacion.referencia || null }
+          : null,
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
