@@ -1863,7 +1863,15 @@ export function DeportistasPage() {
               <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
             ))}
           </TextField>
-                    <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''} onChange={handleMembresiaChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
+                    <TextField
+            label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso del pase' : 'Fecha inicio'}
+            name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
+            onChange={handleMembresiaChange} required size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+            helperText={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO'
+              ? 'El pase será válido ese día. Puede pagarse antes y el descuento se calcula para la fecha de uso.'
+              : ''}
+          />
           <TextField
             label="Fecha fin"
             name="fecha_fin"
