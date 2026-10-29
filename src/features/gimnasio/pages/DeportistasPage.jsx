@@ -20,6 +20,8 @@ import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
 import MapOutlinedIcon from '@mui/icons-material/MapOutlined';
 import LocationCityOutlinedIcon from '@mui/icons-material/LocationCityOutlined';
 import PlaceOutlinedIcon from '@mui/icons-material/PlaceOutlined';
+import KeyboardArrowDownRoundedIcon from '@mui/icons-material/KeyboardArrowDownRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
 import PinDropOutlinedIcon from '@mui/icons-material/PinDropOutlined';
 import ContactEmergencyOutlinedIcon from '@mui/icons-material/ContactEmergencyOutlined';
 import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
@@ -1168,23 +1170,39 @@ export function DeportistasPage() {
         </Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           {[
-            { key: 'provincia_codigo', titulo: 'Provincia', icono: MapOutlinedIcon, opciones: provincias, disabled: false, placeholder: 'Buscar provincia' },
-            { key: 'canton_codigo', titulo: 'Cantón', icono: LocationCityOutlinedIcon, opciones: cantones, disabled: !formData.provincia_codigo, placeholder: 'Primero selecciona una provincia' },
-            { key: 'parroquia_codigo', titulo: 'Parroquia', icono: PlaceOutlinedIcon, opciones: parroquias, disabled: !formData.canton_codigo, placeholder: 'Primero selecciona un cantón' },
+            { key: 'provincia_codigo', titulo: 'Provincia', icono: MapOutlinedIcon, opciones: provincias, disabled: false, placeholder: 'Seleccionar provincia' },
+            { key: 'canton_codigo', titulo: 'Cantón', icono: LocationCityOutlinedIcon, opciones: cantones, disabled: !formData.provincia_codigo, placeholder: formData.provincia_codigo ? 'Seleccionar cantón' : 'Primero selecciona una provincia' },
+            { key: 'parroquia_codigo', titulo: 'Parroquia', icono: PlaceOutlinedIcon, opciones: parroquias, disabled: !formData.canton_codigo, placeholder: formData.canton_codigo ? 'Seleccionar parroquia' : 'Primero selecciona un cantón' },
           ].map(({ key, titulo, icono: Icono, opciones, disabled, placeholder }) => (
             <Autocomplete
               key={key}
               size="small"
               fullWidth
+              openOnFocus
+              autoHighlight
+              forcePopupIcon
+              popupIcon={<KeyboardArrowDownRoundedIcon sx={{ color: '#946c17' }} />}
               options={opciones}
               disabled={disabled}
               value={opciones.find((opcion) => String(opcion.codigo) === String(formData[key])) || null}
               isOptionEqualToValue={(opcion, valor) => String(opcion.codigo) === String(valor.codigo)}
               getOptionLabel={(opcion) => nombreGeografico(opcion.nombre)}
+              filterOptions={(items, { inputValue }) => {
+                const buscar = inputValue.trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+                if (!buscar) return items;
+                return items.filter((item) =>
+                  nombreGeografico(item.nombre).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().includes(buscar)
+                  || String(item.codigo).includes(buscar)
+                );
+              }}
               noOptionsText="No se encontraron resultados"
-              clearText="Limpiar"
+              clearText="Limpiar selección"
               openText="Mostrar opciones"
               closeText="Cerrar opciones"
+              slotProps={{
+                paper: { sx: { mt: 0.6, borderRadius: 2, border: '1px solid #e6dfce', boxShadow: '0 12px 32px rgba(16,24,40,0.12)' } },
+                listbox: { sx: { maxHeight: 285, py: 0.6, '& .MuiAutocomplete-option.Mui-focused': { bgcolor: '#fff7e6' }, '& .MuiAutocomplete-option[aria-selected="true"]': { bgcolor: '#fdf2d2' } } },
+              }}
               onChange={(_, nuevo) => {
                 const codigo = nuevo?.codigo || '';
                 setFormData((anterior) => ({
@@ -1194,32 +1212,47 @@ export function DeportistasPage() {
                   ...(key === 'canton_codigo' ? { parroquia_codigo: '' } : {}),
                 }));
               }}
-              renderOption={(props, opcion) => {
+              renderOption={(props, opcion, { selected }) => {
                 const { key: optionKey, ...resto } = props;
                 return (
-                  <Box component="li" key={optionKey} {...resto} sx={{ display: 'flex', gap: 1.2, alignItems: 'center', px: 1.5, py: 1, '&:hover': { bgcolor: '#fff8e8' } }}>
-                    <Icono sx={{ color: '#b38a25', fontSize: 19, flexShrink: 0 }} />
-                    <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{nombreGeografico(opcion.nombre)}</Typography>
-                      <Typography variant="caption" color="text.secondary">DPA: {opcion.codigo}</Typography>
+                  <Box component="li" key={optionKey} {...resto} sx={{
+                    display: 'flex', alignItems: 'center', gap: 1.25,
+                    mx: 0.65, my: 0.2, px: 1.25, py: 1, borderRadius: 1.2,
+                  }}>
+                    <Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', borderRadius: 1.1, bgcolor: '#fff6df', flexShrink: 0 }}>
+                      <Icono sx={{ color: '#a57a1a', fontSize: 19 }} />
                     </Box>
+                    <Box sx={{ minWidth: 0, flex: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: selected ? 800 : 600, color: '#26354a' }}>
+                        {nombreGeografico(opcion.nombre)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">Código DPA {opcion.codigo}</Typography>
+                    </Box>
+                    {selected && <CheckRoundedIcon fontSize="small" sx={{ color: '#a57a1a' }} />}
                   </Box>
                 );
               }}
               renderInput={(params) => (
-                <TextField {...params} label={titulo} placeholder={placeholder}
-                  slotProps={{
-                    ...params.slotProps,
-                    input: {
-                      ...params.InputProps,
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Icono sx={{ color: '#b38a25', fontSize: 19 }} />
-                        </InputAdornment>
-                      ),
-                    },
+                <TextField
+                  {...params}
+                  label={titulo}
+                  placeholder={placeholder}
+                  InputProps={{
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Icono sx={{ color: disabled ? '#aab3bf' : '#ae851d', fontSize: 20 }} />
+                      </InputAdornment>
+                    ),
+                    // Conservar el endAdornment original: incluye la flecha
+                    // desplegable y el botón para limpiar del Autocomplete.
+                    endAdornment: params.InputProps.endAdornment,
                   }}
-                  sx={{ '& .MuiOutlinedInput-root': { borderRadius: 1.5, bgcolor: '#fff' } }}
+                  sx={{
+                    '& .MuiOutlinedInput-root': { borderRadius: 1.7, bgcolor: disabled ? '#f9fafb' : '#fff', pr: '8px !important' },
+                    '& .MuiAutocomplete-popupIndicator': { display: 'inline-flex !important' },
+                    '& .MuiAutocomplete-endAdornment': { right: 6 },
+                  }}
                 />
               )}
             />
