@@ -1188,10 +1188,10 @@ export function DeportistasPage() {
               isOptionEqualToValue={(opcion, valor) => String(opcion.codigo) === String(valor.codigo)}
               getOptionLabel={(opcion) => nombreGeografico(opcion.nombre)}
               filterOptions={(items, { inputValue }) => {
-                const buscar = inputValue.trim().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();
+                const buscar = inputValue.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
                 if (!buscar) return items;
                 return items.filter((item) =>
-                  nombreGeografico(item.nombre).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().includes(buscar)
+                  nombreGeografico(item.nombre).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(buscar)
                   || String(item.codigo).includes(buscar)
                 );
               }}
