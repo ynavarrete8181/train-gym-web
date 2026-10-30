@@ -274,15 +274,15 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
               sx={{
                 justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
                 borderRadius: 1.5, px: 1.2, py: 1.1, minHeight: 54,
-                color: activo ? '#8b6410' : '#475467',
-                bgcolor: activo ? '#fff7df' : 'transparent',
-                borderLeft: activo ? '3px solid #b28a24' : '3px solid transparent',
-                '&:hover': { bgcolor: activo ? '#fff2cc' : '#f8fafc' },
+                color: activo ? '#14243c' : '#475467',
+                bgcolor: activo ? '#d4a017' : 'transparent',
+                borderLeft: activo ? '3px solid #b98500' : '3px solid transparent',
+                '&:hover': { bgcolor: activo ? '#c3920c' : '#f8fafc' },
                 '& .MuiButton-startIcon': { mr: 1.1 },
               }}>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body2" sx={{ fontWeight: activo ? 900 : 700, lineHeight: 1.3 }}>{s.titulo}</Typography>
-                <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: 'text.secondary' }}>
+                <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: activo ? '#27344b' : 'text.secondary' }}>
                   {s.id === 'antecedentes' ? 'Condiciones y precauciones' :
                     s.id === 'evaluacion' ? 'Mediciones y composición corporal' :
                     s.id === 'objetivos' ? 'Metas y seguimiento deportivo' :
