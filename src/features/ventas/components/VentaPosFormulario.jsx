@@ -705,7 +705,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
 
           <Box sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
             <Box sx={{ border: '1px solid #e3e6ea', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 14px 30px rgba(23, 23, 23, .08)' }}>
-              <Box sx={{ p: 2, background: `linear-gradient(135deg, ${NEGRO_REVIVE} 0%, #28230f 58%, ${DORADO_REVIVE_OSCURO} 145%)`, borderBottom: '1px solid rgba(255,255,255,.08)', position: 'relative', overflow: 'hidden', '&::after': { content: '""', position: 'absolute', width: 190, height: 190, right: -75, top: -110, borderRadius: '50%', bgcolor: 'rgba(212,160,23,.10)' } }}>
+              <Box sx={{ p: 2, bgcolor: '#111111', borderBottom: '1px solid rgba(255,255,255,.08)', position: 'relative', overflow: 'hidden', '&::after': { content: '""', position: 'absolute', width: 190, height: 190, right: -75, top: -110, borderRadius: '50%', bgcolor: 'rgba(212,160,23,.10)' } }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2 }}>
                   <Typography variant="h6" sx={{ fontWeight: 950, color: '#fff', letterSpacing: .5, position: 'relative', zIndex: 1 }}>TOTAL</Typography>
                   <Typography variant="h3" fontWeight={950} sx={{ color: '#fff', lineHeight: 1, letterSpacing: -.8, position: 'relative', zIndex: 1 }}>{dinero(total)}</Typography>
