@@ -255,22 +255,44 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       </Box>
       <Chip size="small" variant="outlined" label="Seguimiento continuo" />
     </Stack>
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '224px minmax(0,1fr)' }, gap: 1.5, alignItems: 'start' }}>
-      <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, overflow: 'hidden', p: 0.75 }}>
-        {secciones.map((s) => {
-          const Icono = s.icono;
-          const seleccionado = s.id === seccion;
-          return <Box key={s.id} component="button" type="button" onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); setEditandoId(null); setControlEnCurso(null); limpiarFoto(); }}
-            sx={{ width: '100%', display: 'flex', alignItems: 'center', textAlign: 'left', gap: 1, p: 1.4,
-              fontSize: 12, fontWeight: seleccionado ? 850 : 650, cursor: 'pointer',
-              color: seleccionado ? 'primary.main' : 'text.primary',
-              bgcolor: seleccionado ? uiTokens.colores.primarioSuave : 'transparent',
-              border: 0, borderLeft: seleccionado ? `3px solid ${uiTokens.colores.primario}` : '3px solid transparent',
-              borderRadius: 0.5, '&:hover': { bgcolor: uiTokens.colores.primarioSuave } }}>
-            <Icono sx={{ fontSize: 18, flexShrink: 0 }} />{s.titulo}
-          </Box>;
-        })}
-      </Paper>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+      <Box component="nav" aria-label="Secciones de ficha inicial" sx={{
+        p: 1, border: '1px solid #e5e7eb', borderRadius: 2, bgcolor: '#fff',
+        position: { md: 'sticky' }, top: { md: 16 },
+      }}>
+        <Typography variant="overline" sx={{ display: 'block', px: 1.5, pt: 1, pb: .5, color: 'text.secondary', fontWeight: 850 }}>
+          Ficha inicial
+        </Typography>
+        <Stack spacing={.5}>
+          {secciones.map((s) => {
+            const Icono = s.icono;
+            const activo = s.id === seccion;
+            return <Button key={s.id} type="button" fullWidth
+              aria-current={activo ? 'step' : undefined}
+              onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); setEditandoId(null); setControlEnCurso(null); limpiarFoto(); }}
+              startIcon={<Icono sx={{ fontSize: 19 }} />}
+              sx={{
+                justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
+                borderRadius: 1.5, px: 1.2, py: 1.1, minHeight: 54,
+                color: activo ? '#8b6410' : '#475467',
+                bgcolor: activo ? '#fff7df' : 'transparent',
+                borderLeft: activo ? '3px solid #b28a24' : '3px solid transparent',
+                '&:hover': { bgcolor: activo ? '#fff2cc' : '#f8fafc' },
+                '& .MuiButton-startIcon': { mr: 1.1 },
+              }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" sx={{ fontWeight: activo ? 900 : 700, lineHeight: 1.3 }}>{s.titulo}</Typography>
+                <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: 'text.secondary' }}>
+                  {s.id === 'antecedentes' ? 'Condiciones y precauciones' :
+                    s.id === 'evaluacion' ? 'Mediciones y composición corporal' :
+                    s.id === 'objetivos' ? 'Metas y seguimiento deportivo' :
+                    'Evaluación y observaciones'}
+                </Typography>
+              </Box>
+            </Button>;
+          })}
+        </Stack>
+      </Box>
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
         {vista !== 'listado' && <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
           <Box>
