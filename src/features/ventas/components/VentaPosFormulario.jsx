@@ -169,7 +169,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     let activo = true;
     setCotizacionesCliente({});
     const asignadas = (contexto.membresias || []).filter((m) =>
-      Number(m.cliente_id) === Number(cliente.id));
+      Number(m.cliente_id) === Number(cliente.id) && m.cobro_disponible !== false);
     Promise.all(asignadas.map(async (m) => {
       try {
         const res = await ventaServicio.cotizarBeneficioPos({
@@ -306,6 +306,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
             .filter((item) => Number(item.cliente_id) === Number(cliente.id))
             .map((item) => ({
               ...item,
+              cobro_bloqueado: item.cobro_disponible === false,
               precio: cotizacionesCliente[item.id]?.datos?.precio_base ?? item.precio,
               precio_final: cotizacionesCliente[item.id]?.datos?.total,
               descuento_aplicado: cotizacionesCliente[item.id]?.datos?.importe_descuento,
@@ -348,6 +349,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       return;
     }
 
+    if (tipoActual === 'MEMBRESIA' && item.cobro_disponible === false) {
+      avisar('Esta membresía ya tiene una venta asociada. Consulta la cuenta abierta para continuar el cobro.', 'warning');
+      return;
+    }
     if (tipoActual === 'MEMBRESIA' && !cliente) {
       avisar('Selecciona primero al cliente para consultar sus membresías.', 'warning');
       return;
@@ -534,6 +539,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 onChange={(_, value) => {
                   setCliente(value);
                   setCarrito((actual) => actual.filter((item) => item.tipo !== 'MEMBRESIA'));
+                  setTipo('MEMBRESIA');
+                  setBusqueda('');
 
                   if (value) {
                     const tieneMembresiaPendiente = (contexto.membresias || [])
@@ -684,11 +691,11 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 {!esCuentaAbierta && tipo === 'MEMBRESIA' ? (
                   <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
                     {cliente
-                      ? 'Se muestran las membresías y pases diarios asignados al cliente que estén disponibles para cobrar.'
+                      ? 'Se muestran las membresías y pases diarios asignados. Si ya existe una cuenta, continúa el cobro desde Cuentas abiertas.'
                       : 'Selecciona un cliente para consultar sus membresías y pases diarios asignados.'}
                   </Alert>
                 ) : null}
-                <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
+                <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
                   {disponibles.map((item) => <CatalogoCard key={`${esCuentaAbierta ? 'PRODUCTO' : tipo}-${item.id}`} item={item} tipo={esCuentaAbierta ? 'PRODUCTO' : tipo} onAgregar={() => agregar(item)} />)}
                 </Box>
                 {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
@@ -975,212 +982,102 @@ function SeccionInterna({ titulo, children, sx = {} }) {
 }
 
 function CatalogoCard({ item, tipo, onAgregar }) {
-  const sinPrecio = item.precio === null || item.precio === undefined || Number(item.precio) <= 0;
-  const contractual = tipo === 'PASE_DIARIO';
-  const imagen = item.imagen_url || item.imagen || null;
-  const icono = tipo === 'PRODUCTO'
-    ? <Inventory2OutlinedIcon />
-    : tipo === 'SERVICIO'
-      ? <FitnessCenterOutlinedIcon />
-      : tipo === 'PASE_DIARIO'
-        ? <LocalActivityOutlinedIcon />
-        : <BadgeOutlinedIcon />;
+  const esMembresia = tipo === 'MEMBRESIA';
+  const esPase = esMembresia && item.tipo_producto === 'PASE_DIARIO';
+  const cuentaExistente = esMembresia && item.cobro_bloqueado;
+  const precio = Number(item.precio || 0);
+  const sinPrecio = !Number.isFinite(precio) || precio <= 0;
+  const descuento = Number(item.descuento_aplicado || 0);
+  const total = item.precio_final === undefined || item.precio_final === null
+    ? null : Number(item.precio_final);
+  const bloqueado = sinPrecio || cuentaExistente || Boolean(item.error_cotizacion);
+  const Icono = esMembresia ? BadgeOutlinedIcon : Inventory2OutlinedIcon;
 
   return (
-    <Box
-      sx={{
-        border: '1px solid #dfe4ea',
-        borderRadius: 1.8,
-        overflow: 'hidden',
-        bgcolor: '#fff',
-        minHeight: 206,
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 4px 12px rgba(15,23,42,.045)',
-        transition: 'transform .16s ease, box-shadow .16s ease, border-color .16s ease',
-        '&:hover': {
-          boxShadow: `0 0 0 1px ${DORADO_REVIVE}, 0 10px 22px rgba(15,23,42,.09)`,
-          borderColor: DORADO_REVIVE,
-        },
-      }}
-    >
-      <Box
-        sx={{
-          height: 104,
-          position: 'relative',
-          overflow: 'hidden',
-          bgcolor: '#f3f4f6',
-          borderBottom: '1px solid #e8ebef',
-        }}
-      >
-        {imagen ? (
-          <Box
-            component="img"
-            src={imagen}
-            alt={item.nombre}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 35%', display: 'block' }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              display: 'grid',
-              placeItems: 'center',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f2f3f5 55%, rgba(212,160,23,.14) 100%)',
-            }}
-          >
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: '#fff',
-                color: DORADO_REVIVE_OSCURO,
-                border: '1px solid rgba(212,160,23,.28)',
-                boxShadow: '0 4px 10px rgba(15,23,42,.07)',
-                '& .MuiSvgIcon-root': { fontSize: 22 },
-              }}
-            >
-              {icono}
-            </Box>
-          </Box>
-        )}
+    <Box sx={{
+      bgcolor: '#fff', border: '1px solid #e1e2e5', borderTop: '3px solid #D4A017',
+      borderRadius: 1.8, overflow: 'hidden', minWidth: 0, minHeight: 233,
+      display: 'flex', flexDirection: 'column',
+      boxShadow: '0 3px 10px rgba(0,0,0,.04)',
+      '&:hover': { borderColor: '#D4A017', boxShadow: '0 6px 15px rgba(0,0,0,.08)' },
+    }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.3, pt: 1.4, pb: .6 }}>
+        <Box sx={{
+          width: 35, height: 35, flexShrink: 0, display: 'grid', placeItems: 'center',
+          borderRadius: 1.2, bgcolor: '#fff4d7', color: '#946a00',
+        }}>
+          <Icono sx={{ fontSize: 19 }} />
+        </Box>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="body2" title={item.nombre} sx={{
+            fontSize: 13, fontWeight: 900, color: '#171717', lineHeight: 1.25,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            overflow: 'hidden', minHeight: 32,
+          }}>{item.nombre}</Typography>
+        </Box>
       </Box>
-
-      <Box sx={{ p: .9, display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 950,
-            color: NEGRO_REVIVE,
-            lineHeight: 1.2,
-            minHeight: 28,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-          title={item.nombre}
-        >
-          {item.nombre}
-        </Typography>
-
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{
-            mt: .25,
-            lineHeight: 1.25,
-            minHeight: 26,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {tipo === 'SERVICIO'
-            ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}`
-            : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
-        </Typography>
-
-        {tipo === 'MEMBRESIA' && item.tipo_producto === 'PASE_DIARIO' && item.fecha_inicio && (
-          <Typography variant="caption" sx={{ color: '#586779', fontWeight: 750, display: 'block', mb: .6 }}>
-            Válido para el {String(item.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}
+      <Box sx={{ px: 1.3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{
+          fontSize: 10.5, color: '#696969', lineHeight: 1.35,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{item.codigo || item.descripcion || (esMembresia ? 'Membresía' : 'Producto')}</Typography>
+        {esPase && item.fecha_inicio && (
+          <Typography variant="caption" sx={{ mt: .5, fontSize: 10.5, color: '#555', fontWeight: 700 }}>
+            Uso: {String(item.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}
           </Typography>
         )}
-        {tipo === 'MEMBRESIA' && item.precio_final !== undefined && (
-          <Box sx={{ mb: .7, p: .6, bgcolor: '#f2fbf5', border: '1px solid #d4eddc', borderRadius: 1 }}>
-            <Typography variant="caption" color="success.dark" sx={{ fontWeight: 800, display: 'block' }}>
-              Descuento: {dinero(item.descuento_aplicado)} · Total a pagar: {dinero(item.precio_final)}
-            </Typography>
-          </Box>
-        )}
-        {tipo === 'MEMBRESIA' && item.beneficio_estado === 'SIN_BENEFICIO' && (
-          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
-            No existe un descuento activo para este plan y fecha. Revisa «Aplicar descuento» en la ficha del cliente.
-          </Typography>
-        )}
-        {tipo === 'MEMBRESIA' && item.descuento_programado && (
-          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
-            Descuento de {item.descuento_programado.tipo === 'FIJO'
-              ? dinero(item.descuento_programado.valor)
-              : `${Number(item.descuento_programado.valor)} %`}
-            {' '}programado desde el {String(item.descuento_programado.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}.
-            No aplica al cobro de hoy.
-          </Typography>
-        )}
-        {tipo === 'MEMBRESIA' && item.error_cotizacion && (
-          <Typography variant="caption" sx={{ color: '#96660b', display: 'block', mb: .5 }}>
+        {cuentaExistente ? (
+          <Chip label="Cuenta existente" size="small" sx={{
+            alignSelf: 'flex-start', mt: 1, height: 23, fontWeight: 800,
+            bgcolor: '#f3f3f3', color: '#424242',
+          }} />
+        ) : item.error_cotizacion ? (
+          <Typography variant="caption" sx={{ mt: 1, fontSize: 10.5, color: '#a13516', lineHeight: 1.3 }}>
             {item.error_cotizacion}
           </Typography>
-        )}
-        <Box sx={{ mt: 'auto', pt: .65 }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .65 }}>
-            {sinPrecio ? (
-              <Chip
-                size="small"
-                label="Precio pendiente"
-                variant="outlined"
-                sx={{
-                  height: 24,
-                  fontWeight: 900,
-                  color: DORADO_REVIVE_OSCURO,
-                  borderColor: 'rgba(212,160,23,.45)',
-                  bgcolor: DORADO_SUAVE,
-                  '& .MuiChip-label': { px: .85 },
-                }}
-              />
-            ) : (
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 950,
-                  color: DORADO_REVIVE_OSCURO,
-                  lineHeight: 1,
-                }}
-              >
-                {dinero(item.precio)}
-              </Typography>
-            )}
-            {tipo === 'PRODUCTO' && item.controla_stock ? (
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                Stock {Number(item.stock_actual || 0)}
-              </Typography>
-            ) : null}
+        ) : esMembresia && total !== null ? (
+          <Box sx={{ mt: 1, py: .65, px: .85, bgcolor: '#fff8e9', borderRadius: 1.1 }}>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" sx={{ fontSize: 10.5, color: '#575757' }}>Descuento</Typography>
+              <Typography variant="caption" sx={{ fontSize: 10.5, color: '#171717', fontWeight: 850 }}>− {dinero(descuento)}</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" sx={{ fontSize: 10.5, color: '#575757' }}>Total a pagar</Typography>
+              <Typography variant="caption" sx={{ fontSize: 11.5, color: '#171717', fontWeight: 950 }}>{dinero(total)}</Typography>
+            </Stack>
           </Box>
-
-          <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura el precio comercial para esta sede' : 'Agregar al carrito'}>
-            <span style={{ display: 'block', width: '100%' }}>
-              <Button
-                fullWidth
-                size="small"
-                variant="contained"
-                startIcon={<AddShoppingCartOutlinedIcon />}
-                onClick={onAgregar}
-                disabled={sinPrecio || contractual || Boolean(item.error_cotizacion)}
-                sx={{
-                  minHeight: 32,
-                  borderRadius: 1,
-                  textTransform: 'none',
-                  fontWeight: 900,
-                  bgcolor: DORADO_REVIVE,
-                  color: '#111827',
-                  boxShadow: 'none',
-                  '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' },
-                  '&.Mui-disabled': {
-                    bgcolor: '#e5e7eb',
-                    color: '#9ca3af',
-                  },
-                }}
-              >
-                {contractual ? 'Ver membresía' : 'Agregar'}
-              </Button>
-            </span>
-          </Tooltip>
+        ) : null}
+        {esMembresia && !cuentaExistente && item.descuento_programado && (
+          <Typography variant="caption" sx={{ mt: .4, color: '#845e00', fontSize: 10 }}>
+            Descuento programado para otra fecha.
+          </Typography>
+        )}
+        <Box sx={{ mt: 'auto', pt: 1.2, pb: .8 }}>
+          {sinPrecio ? (
+            <Typography variant="caption" sx={{ color: '#996515', fontWeight: 800 }}>Precio pendiente</Typography>
+          ) : (
+            <Typography variant="h6" sx={{ color: '#171717', fontWeight: 950, fontSize: 19, lineHeight: 1.2 }}>
+              {dinero(precio)}
+            </Typography>
+          )}
         </Box>
+      </Box>
+      <Box sx={{ px: 1.3, pb: 1.3 }}>
+        <Tooltip title={cuentaExistente ? 'La membresía ya tiene una venta asociada; continúa desde Cuentas abiertas.' : sinPrecio ? 'Configura el precio para la sede.' : item.error_cotizacion || 'Agregar al carrito'}>
+          <span style={{ display: 'block' }}>
+            <Button fullWidth size="small" variant="contained"
+              startIcon={<AddShoppingCartOutlinedIcon sx={{ fontSize: 17 }} />}
+              onClick={onAgregar} disabled={bloqueado}
+              sx={{
+                minHeight: 34, borderRadius: 1.15, textTransform: 'none', fontWeight: 850,
+                fontSize: 12, bgcolor: '#D4A017', color: '#171717', boxShadow: 'none',
+                '&:hover': { bgcolor: '#BD8E0F', boxShadow: 'none' },
+                '&.Mui-disabled': { bgcolor: '#eeeeee', color: '#858585' },
+              }}>
+              {cuentaExistente ? 'Ya facturada' : 'Agregar'}
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
     </Box>
   );
