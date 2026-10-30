@@ -146,6 +146,34 @@ export function VentasPage() {
       <PageHeader titulo="Ventas" descripcion="Gestiona cobros pendientes y ventas desde tu caja." icono={<ShoppingCartOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <Box sx={{ px: { xs: 1.5, md: 2.3 }, pt: 2, pb: .65 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.3, mt: 2 }}>
+            {[
+              { label: 'Cuentas abiertas', value: String(cuentasAbiertas.length), icon: <ReceiptLongOutlinedIcon />, dark: false },
+              { label: 'Saldo pendiente', value: dinero(totalPendiente), icon: <AccountBalanceWalletOutlinedIcon />, dark: true },
+              { label: 'Con pago parcial', value: String(pagosParciales), icon: <PointOfSaleOutlinedIcon />, dark: false },
+            ].map(({ label, value, icon, dark }) => (
+              <Box key={label} sx={{
+                borderRadius: 1.7, border: '1px solid', borderColor: dark ? '#171717' : '#e5e5e5',
+                bgcolor: dark ? '#171717' : '#fff', px: 1.7, py: 1.25,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1,
+              }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: dark ? '#f1e2ad' : '#696969', fontWeight: 700 }}>{label}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 950, color: dark ? '#fff' : '#171717', lineHeight: 1.3 }}>{value}</Typography>
+                </Box>
+                <Box sx={{ width: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 1.3, bgcolor: dark ? '#D4A017' : '#fff5d5', color: '#141414' }}>{icon}</Box>
+              </Box>
+            ))}
+          </Box>
+          <Box sx={{ mt: 1.5, px: 1.3, py: .9, borderRadius: 1.4, bgcolor: turnoActual?.id ? '#f5faf4' : '#fff8e8', border: '1px solid', borderColor: turnoActual?.id ? '#cfe4ce' : '#f0dcac' }}>
+            <Typography variant="caption" sx={{ color: '#272727', fontWeight: 750 }}>
+              {turnoActual?.id
+                ? `Caja activa: ${turnoActual.caja_nombre || turnoActual.caja_codigo || 'Caja'} · Puedes abrir cuentas y registrar cobros.`
+                : 'Modo consulta · Para cobrar o registrar nuevas ventas, abre primero un turno de caja propio.'}
+            </Typography>
+          </Box>
+
+          <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #ededed' }}>
           <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={2} sx={{ width: '100%' }}>
             <Box sx={{ flexShrink: 0, minWidth: 0 }}>
               <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616' }}>Cuentas abiertas</Typography>
@@ -184,33 +212,7 @@ export function VentasPage() {
               </Button>
             </Stack>
           </Stack>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.3, mt: 2 }}>
-            {[
-              { label: 'Cuentas abiertas', value: String(cuentasAbiertas.length), icon: <ReceiptLongOutlinedIcon />, dark: false },
-              { label: 'Saldo pendiente', value: dinero(totalPendiente), icon: <AccountBalanceWalletOutlinedIcon />, dark: true },
-              { label: 'Con pago parcial', value: String(pagosParciales), icon: <PointOfSaleOutlinedIcon />, dark: false },
-            ].map(({ label, value, icon, dark }) => (
-              <Box key={label} sx={{
-                borderRadius: 1.7, border: '1px solid', borderColor: dark ? '#171717' : '#e5e5e5',
-                bgcolor: dark ? '#171717' : '#fff', px: 1.7, py: 1.25,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1,
-              }}>
-                <Box>
-                  <Typography variant="caption" sx={{ color: dark ? '#f1e2ad' : '#696969', fontWeight: 700 }}>{label}</Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 950, color: dark ? '#fff' : '#171717', lineHeight: 1.3 }}>{value}</Typography>
-                </Box>
-                <Box sx={{ width: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 1.3, bgcolor: dark ? '#D4A017' : '#fff5d5', color: '#141414' }}>{icon}</Box>
-              </Box>
-            ))}
           </Box>
-          <Box sx={{ mt: 1.5, px: 1.3, py: .9, borderRadius: 1.4, bgcolor: turnoActual?.id ? '#f5faf4' : '#fff8e8', border: '1px solid', borderColor: turnoActual?.id ? '#cfe4ce' : '#f0dcac' }}>
-            <Typography variant="caption" sx={{ color: '#272727', fontWeight: 750 }}>
-              {turnoActual?.id
-                ? `Caja activa: ${turnoActual.caja_nombre || turnoActual.caja_codigo || 'Caja'} · Puedes abrir cuentas y registrar cobros.`
-                : 'Modo consulta · Para cobrar o registrar nuevas ventas, abre primero un turno de caja propio.'}
-            </Typography>
-          </Box>
-
         </Box>
 
         <Box sx={{ p: { xs: 1.5, md: 2 } }}>
