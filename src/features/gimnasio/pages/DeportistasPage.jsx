@@ -1959,34 +1959,47 @@ export function DeportistasPage() {
             Selecciona una o varias sedes a las que podrá ingresar con esta membresía.
             En los pases diarios, la tarifa se calcula según la sede donde se realice el cobro.
           </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
             {sedes.map((sede) => {
               const seleccionada = (membresiaForm.sedes_habilitadas || [])
                 .some((id) => String(id) === String(sede.id_sede));
               return (
-                <FormControlLabel key={sede.id_sede}
-                  control={<Switch size="small" checked={seleccionada}
-                    onChange={(_, checked) => setMembresiaForm((actual) => {
-                      const anteriores = (actual.sedes_habilitadas || []).map(Number).filter(Boolean);
-                      const id = Number(sede.id_sede);
-                      const nuevas = checked
-                        ? Array.from(new Set([...anteriores, id]))
-                        : anteriores.filter((valor) => valor !== id);
-                      if (!nuevas.length) {
-                        showNotificacion('Debes habilitar al menos una sede para la membresía.', 'warning');
-                        return actual;
-                      }
-                      const sedePrincipal = nuevas.includes(Number(actual.sede_id))
-                        ? Number(actual.sede_id)
-                        : nuevas[0];
-                      return { ...actual, sede_id: sedePrincipal, sedes_habilitadas: nuevas };
-                    })} />}
-                  label={sede.nombre}
+                <Button key={sede.id_sede} type="button"
+                  variant={seleccionada ? 'contained' : 'outlined'}
+                  aria-pressed={seleccionada}
+                  startIcon={seleccionada ? <CheckRoundedIcon sx={{ fontSize: 19 }} /> : <LocationCityOutlinedIcon sx={{ fontSize: 19 }} />}
+                  onClick={() => setMembresiaForm((actual) => {
+                    const anteriores = (actual.sedes_habilitadas || []).map(Number).filter(Boolean);
+                    const id = Number(sede.id_sede);
+                    const nuevas = anteriores.includes(id)
+                      ? anteriores.filter((valor) => valor !== id)
+                      : Array.from(new Set([...anteriores, id]));
+                    if (!nuevas.length) {
+                      showNotificacion('Debes habilitar al menos una sede para la membresía.', 'warning');
+                      return actual;
+                    }
+                    const sedePrincipal = nuevas.includes(Number(actual.sede_id))
+                      ? Number(actual.sede_id)
+                      : nuevas[0];
+                    return { ...actual, sede_id: sedePrincipal, sedes_habilitadas: nuevas };
+                  })}
                   sx={{
-                    m: 0, px: 1.3, py: 0.55, border: '1px solid #dbe5f0', borderRadius: 1.5,
-                    bgcolor: seleccionada ? '#fff7e2' : '#fff',
-                    '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 },
-                  }} />
+                    textTransform: 'none', fontSize: 13, fontWeight: 800,
+                    minHeight: 42, minWidth: 145, px: 2, borderRadius: 1.7,
+                    boxShadow: seleccionada ? '0 2px 5px rgba(155, 111, 0, 0.16)' : 'none',
+                    border: '1px solid', borderColor: seleccionada ? '#d3a018' : '#dbe5f0',
+                    bgcolor: seleccionada ? '#d4a017' : '#fff',
+                    color: seleccionada ? '#14243c' : '#475467',
+                    '&:hover': {
+                      bgcolor: seleccionada ? '#bd8e0f' : '#fff8e5',
+                      borderColor: '#d4a017',
+                      boxShadow: seleccionada ? '0 3px 8px rgba(155, 111, 0, 0.2)' : 'none',
+                    },
+                    '&:focus-visible': { outline: '2px solid #14243c', outlineOffset: 2 },
+                  }}
+                >
+                  {sede.nombre}
+                </Button>
               );
             })}
           </Stack>
