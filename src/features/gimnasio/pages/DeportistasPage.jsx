@@ -1136,16 +1136,16 @@ export function DeportistasPage() {
                 sx={{
                   justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
                   borderRadius: 1.5, px: 1.2, py: 1.1, minHeight: 54,
-                  color: activo ? '#8b6410' : '#475467',
-                  bgcolor: activo ? '#fff7df' : 'transparent',
-                  borderLeft: activo ? '3px solid #b28a24' : '3px solid transparent',
-                  '&:hover': { bgcolor: activo ? '#fff2cc' : '#f8fafc' },
+                  color: activo ? '#14243c' : '#475467',
+                  bgcolor: activo ? '#d4a017' : 'transparent',
+                  borderLeft: activo ? '3px solid #b98500' : '3px solid transparent',
+                  '&:hover': { bgcolor: activo ? '#c3920c' : '#f8fafc' },
                   '& .MuiButton-startIcon': { mr: 1.1 },
                 }}
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" sx={{ fontWeight: activo ? 900 : 700, lineHeight: 1.3 }}>{nombre}</Typography>
-                  <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: 'text.secondary' }}>{descripcion}</Typography>
+                  <Typography variant="caption" sx={{ display: 'block', fontSize: 10.5, lineHeight: 1.3, mt: .25, color: activo ? '#27344b' : 'text.secondary' }}>{descripcion}</Typography>
                 </Box>
               </Button>
             );
@@ -1965,7 +1965,7 @@ export function DeportistasPage() {
                 .some((id) => String(id) === String(sede.id_sede));
               return (
                 <Button key={sede.id_sede} type="button"
-                  variant="outlined"
+                  variant={seleccionada ? 'contained' : 'outlined'}
                   aria-pressed={seleccionada}
                   startIcon={seleccionada ? <CheckRoundedIcon sx={{ fontSize: 19 }} /> : <LocationCityOutlinedIcon sx={{ fontSize: 19 }} />}
                   onClick={() => setMembresiaForm((actual) => {
@@ -1986,20 +1986,16 @@ export function DeportistasPage() {
                   sx={{
                     textTransform: 'none', fontSize: 13, fontWeight: 800,
                     minHeight: 42, minWidth: 145, px: 2, borderRadius: 1.7,
-                    boxShadow: 'none',
-                    border: '1px solid',
-                    borderLeft: seleccionada ? '3px solid #b28a24' : '3px solid #dbe5f0',
-                    borderColor: seleccionada ? '#e8cd80' : '#dbe5f0',
-                    borderLeftColor: seleccionada ? '#b28a24' : '#dbe5f0',
-                    bgcolor: seleccionada ? '#fff7df' : '#fff',
-                    color: seleccionada ? '#8b6410' : '#475467',
+                    boxShadow: seleccionada ? '0 2px 5px rgba(155, 111, 0, 0.16)' : 'none',
+                    border: '1px solid', borderColor: seleccionada ? '#d3a018' : '#dbe5f0',
+                    bgcolor: seleccionada ? '#d4a017' : '#fff',
+                    color: seleccionada ? '#14243c' : '#475467',
                     '&:hover': {
-                      bgcolor: seleccionada ? '#fff2cc' : '#f8fafc',
-                      borderColor: seleccionada ? '#b28a24' : '#dbe5f0',
-                      borderLeftColor: seleccionada ? '#b28a24' : '#dbe5f0',
-                      boxShadow: 'none',
+                      bgcolor: seleccionada ? '#bd8e0f' : '#fff8e5',
+                      borderColor: '#d4a017',
+                      boxShadow: seleccionada ? '0 3px 8px rgba(155, 111, 0, 0.2)' : 'none',
                     },
-                    '&:focus-visible': { outline: '2px solid #b28a24', outlineOffset: 2 },
+                    '&:focus-visible': { outline: '2px solid #14243c', outlineOffset: 2 },
                   }}
                 >
                   {sede.nombre}
