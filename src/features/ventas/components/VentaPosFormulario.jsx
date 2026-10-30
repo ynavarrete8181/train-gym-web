@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import AddShoppingCartOutlinedIcon from '@mui/icons-material/AddShoppingCartOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -43,10 +45,8 @@ import { uiTokens } from '../../../styles/uiTokens.js';
 import { ventaServicio } from '../services/ventaServicio.js';
 
 const tipos = [
-  { value: 'SERVICIO', label: 'Servicios', icono: <FitnessCenterOutlinedIcon fontSize="small" /> },
-  { value: 'PRODUCTO', label: 'Productos', icono: <Inventory2OutlinedIcon fontSize="small" /> },
   { value: 'MEMBRESIA', label: 'Membresías', icono: <BadgeOutlinedIcon fontSize="small" /> },
-  { value: 'PASE_DIARIO', label: 'Pase diario', icono: <LocalActivityOutlinedIcon fontSize="small" /> },
+  { value: 'PRODUCTO', label: 'Productos', icono: <Inventory2OutlinedIcon fontSize="small" /> },
 ];
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -81,7 +81,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [cargando, setCargando] = useState(true);
   const [errorContexto, setErrorContexto] = useState('');
   const [guardando, setGuardando] = useState(false);
-  const [tipo, setTipo] = useState('SERVICIO');
+  const [tipo, setTipo] = useState('MEMBRESIA');
   const [categoriaProducto, setCategoriaProducto] = useState('TODAS');
   const [cliente, setCliente] = useState(null);
   const [busqueda, setBusqueda] = useState('');
@@ -94,7 +94,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
   const [pagos, setPagos] = useState([
-    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '', referencia: '', recibido: '' },
+    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', recibido: '0.00', montoManual: false, recibidoManual: false },
   ]);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
@@ -169,7 +169,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     let activo = true;
     setCotizacionesCliente({});
     const asignadas = (contexto.membresias || []).filter((m) =>
-      Number(m.cliente_id) === Number(cliente.id));
+      Number(m.cliente_id) === Number(cliente.id) && m.cobro_disponible !== false);
     Promise.all(asignadas.map(async (m) => {
       try {
         const res = await ventaServicio.cotizarBeneficioPos({
@@ -247,9 +247,25 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const excedentePagos = Math.max(0, totalPagos - saldoCobro);
   const totalItems = carrito.reduce((acc, item) => acc + Number(item.cantidad || 0), 0);
 
+  // La primera forma de pago propone el saldo completo. Al editar manualmente
+  // el monto, se respeta el valor ingresado (pagos divididos).
+  useEffect(() => {
+    setPagos((actual) => {
+      if (actual.length !== 1 || actual[0].montoManual) return actual;
+      const sugerido = saldoCobro.toFixed(2);
+      const recibido = actual[0].recibidoManual ? actual[0].recibido : sugerido;
+      if (actual[0].monto === sugerido && actual[0].recibido === recibido) return actual;
+      return [{ ...actual[0], monto: sugerido, recibido }];
+    });
+  }, [saldoCobro]);
+
   const actualizarPago = (clave, campo, valor) => {
     setPagos((actual) => actual.map((pago) => (
-      pago.clave === clave ? { ...pago, [campo]: valor } : pago
+      pago.clave === clave
+        ? { ...pago, [campo]: valor, ...(campo === 'monto' ? { montoManual: true } : {}),
+            ...(campo === 'recibido' ? { recibidoManual: true } : {}),
+            ...(campo === 'metodo_pago' ? { referencia: '', recibido: pago.monto, recibidoManual: false } : {}) }
+        : pago
     )));
   };
 
@@ -262,6 +278,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         monto: '',
         referencia: '',
         recibido: '',
+        montoManual: true,
+        recibidoManual: false,
       },
     ]);
   };
@@ -288,6 +306,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
             .filter((item) => Number(item.cliente_id) === Number(cliente.id))
             .map((item) => ({
               ...item,
+              cobro_bloqueado: item.cobro_disponible === false,
               precio: cotizacionesCliente[item.id]?.datos?.precio_base ?? item.precio,
               precio_final: cotizacionesCliente[item.id]?.datos?.total,
               descuento_aplicado: cotizacionesCliente[item.id]?.datos?.importe_descuento,
@@ -330,6 +349,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
       return;
     }
 
+    if (tipoActual === 'MEMBRESIA' && item.cobro_disponible === false) {
+      avisar('Esta membresía ya tiene una venta asociada. Consulta la cuenta abierta para continuar el cobro.', 'warning');
+      return;
+    }
     if (tipoActual === 'MEMBRESIA' && !cliente) {
       avisar('Selecciona primero al cliente para consultar sus membresías.', 'warning');
       return;
@@ -437,10 +460,10 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         ...payloadVenta,
         pagos: pagos
           .filter((pago) => Number(pago.monto || 0) > 0)
-          .map((pago) => {
+          .map(({ montoManual, recibidoManual, ...pago }) => {
             const monto = Number(pago.monto || 0);
             const recibidoEfectivo = pago.metodo_pago === 'EFECTIVO'
-              ? Number(pago.recibido || monto)
+              ? (pago.recibido === '' ? monto : Number(pago.recibido))
               : null;
             const cambioEfectivo = pago.metodo_pago === 'EFECTIVO'
               ? Math.max(0, recibidoEfectivo - monto)
@@ -449,6 +472,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
             return {
               metodo_pago: pago.metodo_pago,
               monto,
+              efectivo_recibido: pago.metodo_pago === 'EFECTIVO' ? recibidoEfectivo : null,
+              cambio_entregado: pago.metodo_pago === 'EFECTIVO' ? cambioEfectivo : null,
               referencia: pago.referencia || null,
               observaciones: pago.metodo_pago === 'EFECTIVO'
                 ? `Cobro POS. Recibido ${dinero(recibidoEfectivo)}. Cambio ${dinero(cambioEfectivo)}.`
@@ -516,6 +541,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 onChange={(_, value) => {
                   setCliente(value);
                   setCarrito((actual) => actual.filter((item) => item.tipo !== 'MEMBRESIA'));
+                  setTipo('MEMBRESIA');
+                  setBusqueda('');
 
                   if (value) {
                     const tieneMembresiaPendiente = (contexto.membresias || [])
@@ -666,16 +693,11 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 {!esCuentaAbierta && tipo === 'MEMBRESIA' ? (
                   <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
                     {cliente
-                      ? 'Se muestran las membresías vigentes del cliente que todavía no tienen una venta pendiente.'
-                      : 'Selecciona un cliente para consultar sus membresías vigentes.'}
+                      ? 'Se muestran las membresías y pases diarios asignados. Si ya existe una cuenta, continúa el cobro desde Cuentas abiertas.'
+                      : 'Selecciona un cliente para consultar sus membresías y pases diarios asignados.'}
                   </Alert>
                 ) : null}
-                {!esCuentaAbierta && tipo === 'PASE_DIARIO' ? (
-                  <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
-                    Selecciona el deportista y agrega el Pase Diario Libre. El sistema generará el acceso de hoy al guardar o cobrar. El dirigido necesita entrenador y horario.
-                  </Alert>
-                ) : null}
-                <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
+                <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
                   {disponibles.map((item) => <CatalogoCard key={`${esCuentaAbierta ? 'PRODUCTO' : tipo}-${item.id}`} item={item} tipo={esCuentaAbierta ? 'PRODUCTO' : tipo} onAgregar={() => agregar(item)} />)}
                 </Box>
                 {disponibles.length === 0 ? <Box sx={{ textAlign: 'center', py: 5 }}><Typography variant="body2" color="text.secondary">No hay ítems disponibles para este filtro.</Typography></Box> : null}
@@ -685,7 +707,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
 
           <Box sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
             <Box sx={{ border: '1px solid #e3e6ea', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff', boxShadow: '0 14px 30px rgba(23, 23, 23, .08)' }}>
-              <Box sx={{ p: 2, background: `linear-gradient(135deg, ${NEGRO_REVIVE} 0%, #28230f 58%, ${DORADO_REVIVE_OSCURO} 145%)`, borderBottom: '1px solid rgba(255,255,255,.08)', position: 'relative', overflow: 'hidden', '&::after': { content: '""', position: 'absolute', width: 190, height: 190, right: -75, top: -110, borderRadius: '50%', bgcolor: 'rgba(212,160,23,.10)' } }}>
+              <Box sx={{ p: 2, bgcolor: '#111111', borderBottom: '1px solid rgba(255,255,255,.08)', position: 'relative', overflow: 'hidden' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 2 }}>
                   <Typography variant="h6" sx={{ fontWeight: 950, color: '#fff', letterSpacing: .5, position: 'relative', zIndex: 1 }}>TOTAL</Typography>
                   <Typography variant="h3" fontWeight={950} sx={{ color: '#fff', lineHeight: 1, letterSpacing: -.8, position: 'relative', zIndex: 1 }}>{dinero(total)}</Typography>
@@ -779,115 +801,140 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
 
                 <Box sx={{ mt: 1.3, pt: 1.25, borderTop: '1px solid #dfe4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Typography variant="h6" fontWeight={950} sx={{ color: NEGRO_REVIVE }}>TOTAL</Typography><Typography variant="h4" fontWeight={950} sx={{ color: DORADO_REVIVE_OSCURO }}>{dinero(total)}</Typography></Box>
 
-                <SeccionInterna titulo="Cobro" sx={{ mt: 1.8 }}>
-                  <Stack spacing={1}>
+                <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #e6e6e6' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#171717', fontWeight: 950, mb: 1.2 }}>
+                    Método de pago
+                  </Typography>
+                  <Stack spacing={1.25}>
                     {pagos.map((pago, indice) => {
                       const monto = Number(pago.monto || 0);
-                      const recibidoEfectivo = Number(pago.recibido || monto);
+                      const recibidoEfectivo = pago.recibido === '' ? monto : Number(pago.recibido || 0);
                       const cambioEfectivo = pago.metodo_pago === 'EFECTIVO'
-                        ? Math.max(0, recibidoEfectivo - monto)
-                        : 0;
-
+                        ? Math.max(0, recibidoEfectivo - monto) : 0;
                       return (
-                        <Box
-                          key={pago.clave}
-                          sx={{
-                            border: 1,
-                            borderColor: 'divider',
-                            borderRadius: 0.5,
-                            p: 1,
-                            bgcolor: 'background.paper',
-                          }}
-                        >
-                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1.25fr 1fr auto' }, gap: 1, alignItems: 'center' }}>
-                            <TextField
-                              select
-                              label={`Método ${indice + 1}`}
-                              size="small"
-                              value={pago.metodo_pago}
-                              onChange={(e) => actualizarPago(pago.clave, 'metodo_pago', e.target.value)}
-                              sx={dbanuStyles.field}
-                            >
-                              <MenuItem value="EFECTIVO">Efectivo</MenuItem>
-                              <MenuItem value="TARJETA">Tarjeta</MenuItem>
-                              <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                              <MenuItem value="DEPOSITO">Depósito</MenuItem>
-                              <MenuItem value="OTRO">Otro</MenuItem>
-                            </TextField>
-                            <TextField
-                              label="Monto"
-                              size="small"
-                              type="number"
-                              value={pago.monto}
-                              onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
-                              inputProps={{ min: 0, step: '0.01' }}
-                              sx={dbanuStyles.field}
-                            />
-                            <Tooltip title="Quitar método">
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  disabled={pagos.length === 1}
-                                  onClick={() => quitarPago(pago.clave)}
-                                  sx={dbanuStyles.actionDelete}
-                                >
-                                  <DeleteOutlineOutlinedIcon fontSize="small" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
+                        <Box key={pago.clave} sx={{
+                          border: pagos.length > 1 ? '1px solid #e4e4e4' : 'none',
+                          borderRadius: 1.5, p: pagos.length > 1 ? 1.2 : 0,
+                          bgcolor: '#fff',
+                        }}>
+                          {pagos.length > 1 && (
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 850, color: '#545454' }}>Pago {indice + 1}</Typography>
+                              <IconButton size="small" title="Quitar este pago" onClick={() => quitarPago(pago.clave)}
+                                sx={{ color: '#a32121' }}><DeleteOutlineOutlinedIcon fontSize="small" /></IconButton>
+                            </Stack>
+                          )}
+                          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
+                            {[
+                              { codigo: 'EFECTIVO', etiqueta: 'Efectivo', Icono: PaymentsOutlinedIcon },
+                              { codigo: 'TRANSFERENCIA', etiqueta: 'Transferencia', Icono: AccountBalanceOutlinedIcon },
+                            ].map(({ codigo, etiqueta, Icono }) => {
+                              const activo = pago.metodo_pago === codigo;
+                              return (
+                                <Button key={codigo} type="button" fullWidth
+                                  aria-pressed={activo} variant={activo ? 'contained' : 'outlined'}
+                                  startIcon={<Icono sx={{ fontSize: 19 }} />}
+                                  onClick={() => actualizarPago(pago.clave, 'metodo_pago', codigo)}
+                                  sx={{
+                                    height: 44, px: 1, minWidth: 0, fontSize: 12.5,
+                                    borderRadius: 1.6, fontWeight: 850, textTransform: 'none',
+                                    bgcolor: activo ? '#D4A017' : '#fff',
+                                    color: '#171717', border: '1px solid',
+                                    borderColor: activo ? '#D4A017' : '#d8d8d8',
+                                    boxShadow: 'none',
+                                    '&:hover': { bgcolor: activo ? '#bd8e0f' : '#f7f7f7', boxShadow: 'none' },
+                                  }}>{etiqueta}</Button>
+                              );
+                            })}
                           </Box>
-
-                          {pago.metodo_pago === 'EFECTIVO' ? (
-                            <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                              <TextField
-                                label="Efectivo recibido"
-                                size="small"
-                                type="number"
-                                value={pago.recibido}
-                                onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
-                                inputProps={{ min: 0, step: '0.01' }}
-                                helperText="Opcional; si se omite se asume igual al monto."
-                                sx={dbanuStyles.field}
-                              />
-                              <Box sx={{ px: 1.1, py: .7, border: 1, borderColor: 'divider', borderRadius: 0.5, bgcolor: 'background.default' }}>
-                                <Typography variant="caption" color="text.secondary" display="block">Cambio</Typography>
-                                <Typography variant="body1" fontWeight={900} color="success.main">{dinero(cambioEfectivo)}</Typography>
-                              </Box>
+                          <Box sx={{ mt: 1.4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.3, alignItems: 'start' }}>
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
+                                Valor que se va a cobrar
+                              </Typography>
+                              <TextField size="small" type="number" fullWidth
+                                value={pago.monto} onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
+                                inputProps={{ min: 0, step: '0.01', 'aria-label': 'Valor que se va a cobrar' }}
+                                sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4, bgcolor: '#fff' } }} />
                             </Box>
-                          ) : (
-                            <TextField
-                              label="Referencia / comprobante"
-                              size="small"
-                              fullWidth
-                              value={pago.referencia}
-                              onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
-                              sx={{ ...dbanuStyles.field, mt: 1 }}
-                            />
+                            {pago.metodo_pago === 'EFECTIVO' ? (
+                              <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 900, color: '#171717', display: 'block', mb: .7 }}>
+                                  ¿Cuánto efectivo te entregó el cliente?
+                                </Typography>
+                                <TextField size="small" type="number" fullWidth
+                                  placeholder="Ej.: 5, 10, 20..."
+                                  value={pago.recibido} onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
+                                  inputProps={{ min: 0, step: '0.01', 'aria-label': 'Efectivo recibido del cliente' }}
+                                  sx={{
+                                    ...dbanuStyles.field,
+                                    '& .MuiOutlinedInput-root': {
+                                      borderRadius: 1.4, bgcolor: '#fffdf5',
+                                      '& fieldset': { borderColor: '#D4A017', borderWidth: 2 },
+                                      '&:hover fieldset': { borderColor: '#B78400' },
+                                      '&.Mui-focused fieldset': { borderColor: '#B78400' },
+                                    },
+                                  }} />
+                                <Typography variant="caption" sx={{ display: 'block', mt: .45, color: '#686868', fontSize: 10.5 }}>
+                                  Aquí ingresas el valor del billete o el efectivo recibido.
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
+                                  Referencia de transferencia
+                                </Typography>
+                                <TextField size="small" fullWidth
+                                  placeholder="Número de comprobante"
+                                  value={pago.referencia} onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
+                                  sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                              </Box>
+                            )}
+                          </Box>
+                          {pago.metodo_pago === 'EFECTIVO' && (
+                            <Box sx={{
+                              mt: 1.4, px: 1.5, py: 1.2, border: '1px solid #e7d8a8',
+                              bgcolor: '#fff8e5', borderRadius: 1.4,
+                            }}>
+                              <Typography variant="caption" sx={{ color: '#665224', fontWeight: 800, display: 'block', mb: .4 }}>
+                                CAMBIO A ENTREGAR
+                              </Typography>
+                              <Typography variant="h5" sx={{ color: '#171717', fontWeight: 950, lineHeight: 1.2 }}>
+                                {dinero(cambioEfectivo)}
+                              </Typography>
+                              {recibidoEfectivo < monto && (
+                                <Typography variant="caption" sx={{ display: 'block', mt: .6, color: '#A04418' }}>
+                                  El efectivo recibido es menor que el importe del pago.
+                                </Typography>
+                              )}
+                            </Box>
                           )}
                         </Box>
                       );
                     })}
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<AddOutlinedIcon />}
-                      onClick={agregarPago}
-                      sx={{ ...dbanuStyles.secondaryButtonRevive, alignSelf: 'flex-start' }}
-                    >
-                      Agregar otro método
+                    <Button variant="text" startIcon={<AddOutlinedIcon />} onClick={agregarPago}
+                      sx={{ alignSelf: 'flex-start', textTransform: 'none', color: '#956b00', fontWeight: 850, px: .5 }}>
+                      Dividir pago / agregar otro método
                     </Button>
-
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 0.6, pt: 0.6 }}>
-                      <Typography variant="caption" color="text.secondary">Saldo a cobrar</Typography>
-                      <Typography variant="caption" fontWeight={900}>{dinero(saldoCobro)}</Typography>
-                      <Typography variant="caption" color="text.secondary">Pagos ingresados</Typography>
-                      <Typography variant="caption" fontWeight={900}>{dinero(totalPagos)}</Typography>
-                      <Typography variant="caption" color="text.secondary">Saldo restante</Typography>
-                      <Typography variant="caption" fontWeight={900} color={saldoDespuesPago > 0 ? 'warning.main' : 'success.main'}>{dinero(saldoDespuesPago)}</Typography>
+                    <Box sx={{ pt: 1.2, borderTop: '1px solid #ececec' }}>
+                      <Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}>
+                        <Typography variant="caption" color="text.secondary">Total a cobrar</Typography>
+                        <Typography variant="body2" fontWeight={850}>{dinero(saldoCobro)}</Typography>
+                      </Stack>
+                      <Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}>
+                        <Typography variant="caption" color="text.secondary">Pagos ingresados</Typography>
+                        <Typography variant="body2" fontWeight={850}>{dinero(totalPagos)}</Typography>
+                      </Stack>
+                      {saldoDespuesPago > 0 && (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="caption" color="text.secondary">Saldo restante</Typography>
+                          <Typography variant="body2" fontWeight={900} color="warning.main">{dinero(saldoDespuesPago)}</Typography>
+                        </Stack>
+                      )}
                     </Box>
                     {excedentePagos > 0 ? <Alert severity="warning">Los pagos superan el saldo por {dinero(excedentePagos)}.</Alert> : null}
                   </Stack>
-                </SeccionInterna>
+                </Box>
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
@@ -974,212 +1021,124 @@ function SeccionInterna({ titulo, children, sx = {} }) {
 }
 
 function CatalogoCard({ item, tipo, onAgregar }) {
-  const sinPrecio = item.precio === null || item.precio === undefined || Number(item.precio) <= 0;
-  const contractual = tipo === 'PASE_DIARIO';
-  const imagen = item.imagen_url || item.imagen || null;
-  const icono = tipo === 'PRODUCTO'
-    ? <Inventory2OutlinedIcon />
-    : tipo === 'SERVICIO'
-      ? <FitnessCenterOutlinedIcon />
-      : tipo === 'PASE_DIARIO'
-        ? <LocalActivityOutlinedIcon />
-        : <BadgeOutlinedIcon />;
+  const esMembresia = tipo === 'MEMBRESIA';
+  const imagenProducto = !esMembresia && typeof item.imagen_url === 'string' ? item.imagen_url.trim() : '';
+  const [imagenFallida, setImagenFallida] = useState(false);
+  useEffect(() => { setImagenFallida(false); }, [imagenProducto]);
+  const esPase = esMembresia && item.tipo_producto === 'PASE_DIARIO';
+  const cuentaExistente = esMembresia && item.cobro_bloqueado;
+  const precio = Number(item.precio || 0);
+  const sinPrecio = !Number.isFinite(precio) || precio <= 0;
+  const descuento = Number(item.descuento_aplicado || 0);
+  const total = item.precio_final === undefined || item.precio_final === null
+    ? null : Number(item.precio_final);
+  const bloqueado = sinPrecio || cuentaExistente || Boolean(item.error_cotizacion);
+  const Icono = esMembresia ? BadgeOutlinedIcon : Inventory2OutlinedIcon;
 
   return (
-    <Box
-      sx={{
-        border: '1px solid #dfe4ea',
-        borderRadius: 1.8,
-        overflow: 'hidden',
-        bgcolor: '#fff',
-        minHeight: 206,
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 4px 12px rgba(15,23,42,.045)',
-        transition: 'transform .16s ease, box-shadow .16s ease, border-color .16s ease',
-        '&:hover': {
-          boxShadow: `0 0 0 1px ${DORADO_REVIVE}, 0 10px 22px rgba(15,23,42,.09)`,
-          borderColor: DORADO_REVIVE,
-        },
-      }}
-    >
-      <Box
-        sx={{
-          height: 104,
-          position: 'relative',
-          overflow: 'hidden',
-          bgcolor: '#f3f4f6',
-          borderBottom: '1px solid #e8ebef',
-        }}
-      >
-        {imagen ? (
-          <Box
-            component="img"
-            src={imagen}
-            alt={item.nombre}
-            sx={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 35%', display: 'block' }}
-          />
-        ) : (
-          <Box
-            sx={{
-              width: '100%',
-              height: '100%',
-              display: 'grid',
-              placeItems: 'center',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #f2f3f5 55%, rgba(212,160,23,.14) 100%)',
-            }}
-          >
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                borderRadius: '50%',
-                display: 'grid',
-                placeItems: 'center',
-                bgcolor: '#fff',
-                color: DORADO_REVIVE_OSCURO,
-                border: '1px solid rgba(212,160,23,.28)',
-                boxShadow: '0 4px 10px rgba(15,23,42,.07)',
-                '& .MuiSvgIcon-root': { fontSize: 22 },
-              }}
-            >
-              {icono}
+    <Box sx={{
+      bgcolor: '#fff', border: '1px solid #e1e2e5', borderTop: '3px solid #D4A017',
+      borderRadius: 1.8, overflow: 'hidden', minWidth: 0, minHeight: esMembresia ? 248 : 0,
+      display: 'flex', flexDirection: 'column',
+      boxShadow: '0 3px 10px rgba(0,0,0,.04)',
+      '&:hover': { borderColor: '#D4A017', boxShadow: '0 6px 15px rgba(0,0,0,.08)' },
+    }}>
+      {!esMembresia && (
+        <Box sx={{
+          height: 102, width: '100%', bgcolor: '#fafafa',
+          borderBottom: '1px solid #eeeeee', display: 'grid', placeItems: 'center',
+          overflow: 'hidden', position: 'relative',
+        }}>
+          {imagenProducto && !imagenFallida ? (
+            <Box component="img" src={imagenProducto} alt={item.nombre || 'Producto'}
+              loading="lazy" onError={() => setImagenFallida(true)}
+              sx={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', p: .75 }} />
+          ) : (
+            <Box sx={{ width: 42, height: 42, display: 'grid', placeItems: 'center', bgcolor: '#fff4d7', borderRadius: 1.3 }}>
+              <Inventory2OutlinedIcon sx={{ fontSize: 24, color: '#946a00' }} />
             </Box>
+          )}
+        </Box>
+      )}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.3, pt: esMembresia ? 1.4 : .95, pb: .35 }}>
+        {esMembresia && (
+          <Box sx={{
+            width: 35, height: 35, flexShrink: 0, display: 'grid', placeItems: 'center',
+            borderRadius: 1.2, bgcolor: '#fff4d7', color: '#946a00',
+          }}>
+            <Icono sx={{ fontSize: 19 }} />
           </Box>
         )}
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant="body2" title={item.nombre} sx={{
+            fontSize: 13, fontWeight: 900, color: '#171717', lineHeight: 1.25,
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+            overflow: 'hidden', minHeight: esMembresia ? 32 : 31,
+          }}>{item.nombre}</Typography>
+        </Box>
       </Box>
-
-      <Box sx={{ p: .9, display: 'flex', flexDirection: 'column', flex: 1 }}>
-        <Typography
-          variant="body2"
-          sx={{
-            fontWeight: 950,
-            color: NEGRO_REVIVE,
-            lineHeight: 1.2,
-            minHeight: 28,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-          title={item.nombre}
-        >
-          {item.nombre}
-        </Typography>
-
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{
-            mt: .25,
-            lineHeight: 1.25,
-            minHeight: 26,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}
-        >
-          {tipo === 'SERVICIO'
-            ? `${item.duracion_minutos || 0} min${item.categoria ? ` · ${item.categoria}` : ''}`
-            : item.codigo || item.descripcion || tipos.find((opcion) => opcion.value === tipo)?.label}
-        </Typography>
-
-        {tipo === 'MEMBRESIA' && item.tipo_producto === 'PASE_DIARIO' && item.fecha_inicio && (
-          <Typography variant="caption" sx={{ color: '#586779', fontWeight: 750, display: 'block', mb: .6 }}>
-            Válido para el {String(item.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}
+      <Box sx={{ px: 1.3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="caption" sx={{
+          fontSize: 10.5, color: '#696969', lineHeight: 1.35,
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>{item.codigo || item.descripcion || (esMembresia ? 'Membresía' : 'Producto')}</Typography>
+        {esPase && item.fecha_inicio && (
+          <Typography variant="caption" sx={{ mt: .5, fontSize: 10.5, color: '#555', fontWeight: 700 }}>
+            Uso: {String(item.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}
           </Typography>
         )}
-        {tipo === 'MEMBRESIA' && item.precio_final !== undefined && (
-          <Box sx={{ mb: .7, p: .6, bgcolor: '#f2fbf5', border: '1px solid #d4eddc', borderRadius: 1 }}>
-            <Typography variant="caption" color="success.dark" sx={{ fontWeight: 800, display: 'block' }}>
-              Descuento: {dinero(item.descuento_aplicado)} · Total a pagar: {dinero(item.precio_final)}
-            </Typography>
-          </Box>
-        )}
-        {tipo === 'MEMBRESIA' && item.beneficio_estado === 'SIN_BENEFICIO' && (
-          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
-            No existe un descuento activo para este plan y fecha. Revisa «Aplicar descuento» en la ficha del cliente.
-          </Typography>
-        )}
-        {tipo === 'MEMBRESIA' && item.descuento_programado && (
-          <Typography variant="caption" sx={{ display: 'block', mb: .7, color: '#996515', fontWeight: 700 }}>
-            Descuento de {item.descuento_programado.tipo === 'FIJO'
-              ? dinero(item.descuento_programado.valor)
-              : `${Number(item.descuento_programado.valor)} %`}
-            {' '}programado desde el {String(item.descuento_programado.fecha_inicio).slice(0, 10).split('-').reverse().join('/')}.
-            No aplica al cobro de hoy.
-          </Typography>
-        )}
-        {tipo === 'MEMBRESIA' && item.error_cotizacion && (
-          <Typography variant="caption" sx={{ color: '#96660b', display: 'block', mb: .5 }}>
+        {cuentaExistente ? (
+          <Chip label="Cuenta existente" size="small" sx={{
+            alignSelf: 'flex-start', mt: 1, height: 23, fontWeight: 800,
+            bgcolor: '#f3f3f3', color: '#424242',
+          }} />
+        ) : item.error_cotizacion ? (
+          <Typography variant="caption" sx={{ mt: 1, fontSize: 10.5, color: '#a13516', lineHeight: 1.3 }}>
             {item.error_cotizacion}
           </Typography>
-        )}
-        <Box sx={{ mt: 'auto', pt: .65 }}>
-          <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: .8, mb: .65 }}>
-            {sinPrecio ? (
-              <Chip
-                size="small"
-                label="Precio pendiente"
-                variant="outlined"
-                sx={{
-                  height: 24,
-                  fontWeight: 900,
-                  color: DORADO_REVIVE_OSCURO,
-                  borderColor: 'rgba(212,160,23,.45)',
-                  bgcolor: DORADO_SUAVE,
-                  '& .MuiChip-label': { px: .85 },
-                }}
-              />
-            ) : (
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 950,
-                  color: DORADO_REVIVE_OSCURO,
-                  lineHeight: 1,
-                }}
-              >
-                {dinero(item.precio)}
-              </Typography>
-            )}
-            {tipo === 'PRODUCTO' && item.controla_stock ? (
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                Stock {Number(item.stock_actual || 0)}
-              </Typography>
-            ) : null}
+        ) : esMembresia && total !== null ? (
+          <Box sx={{ mt: 1, py: .65, px: .85, bgcolor: '#fff8e9', borderRadius: 1.1 }}>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" sx={{ fontSize: 10.5, color: '#575757' }}>Descuento</Typography>
+              <Typography variant="caption" sx={{ fontSize: 10.5, color: '#171717', fontWeight: 850 }}>− {dinero(descuento)}</Typography>
+            </Stack>
+            <Stack direction="row" justifyContent="space-between">
+              <Typography variant="caption" sx={{ fontSize: 10.5, color: '#575757' }}>Total a pagar</Typography>
+              <Typography variant="caption" sx={{ fontSize: 11.5, color: '#171717', fontWeight: 950 }}>{dinero(total)}</Typography>
+            </Stack>
           </Box>
-
-          <Tooltip title={contractual ? 'Se asigna desde Membresías' : sinPrecio ? 'Configura el precio comercial para esta sede' : 'Agregar al carrito'}>
-            <span style={{ display: 'block', width: '100%' }}>
-              <Button
-                fullWidth
-                size="small"
-                variant="contained"
-                startIcon={<AddShoppingCartOutlinedIcon />}
-                onClick={onAgregar}
-                disabled={sinPrecio || contractual || Boolean(item.error_cotizacion)}
-                sx={{
-                  minHeight: 32,
-                  borderRadius: 1,
-                  textTransform: 'none',
-                  fontWeight: 900,
-                  bgcolor: DORADO_REVIVE,
-                  color: '#111827',
-                  boxShadow: 'none',
-                  '&:hover': { bgcolor: DORADO_REVIVE_OSCURO, color: '#fff' },
-                  '&.Mui-disabled': {
-                    bgcolor: '#e5e7eb',
-                    color: '#9ca3af',
-                  },
-                }}
-              >
-                {contractual ? 'Ver membresía' : 'Agregar'}
-              </Button>
-            </span>
-          </Tooltip>
+        ) : null}
+        {esMembresia && !cuentaExistente && item.descuento_programado && (
+          <Typography variant="caption" sx={{ mt: .4, color: '#845e00', fontSize: 10 }}>
+            Descuento programado para otra fecha.
+          </Typography>
+        )}
+        <Box sx={{ mt: esMembresia ? 'auto' : .7, pt: esMembresia ? 1.2 : .35, pb: esMembresia ? .8 : .55, textAlign: esMembresia ? 'left' : 'right' }}>
+          {sinPrecio ? (
+            <Typography variant="caption" sx={{ color: '#996515', fontWeight: 800 }}>Precio pendiente</Typography>
+          ) : (
+            <Typography variant="h6" sx={{ color: '#171717', fontWeight: 950, fontSize: 19, lineHeight: 1.2 }}>
+              {dinero(precio)}
+            </Typography>
+          )}
         </Box>
+      </Box>
+      <Box sx={{ px: 1.3, pb: esMembresia ? 1.3 : .9 }}>
+        <Tooltip title={cuentaExistente ? 'La membresía ya tiene una venta asociada; continúa desde Cuentas abiertas.' : sinPrecio ? 'Configura el precio para la sede.' : item.error_cotizacion || 'Agregar al carrito'}>
+          <span style={{ display: 'block' }}>
+            <Button fullWidth size="small" variant="contained"
+              startIcon={<AddShoppingCartOutlinedIcon sx={{ fontSize: 17 }} />}
+              onClick={onAgregar} disabled={bloqueado}
+              sx={{
+                minHeight: 34, borderRadius: 1.15, textTransform: 'none', fontWeight: 850,
+                fontSize: 12, bgcolor: '#D4A017', color: '#171717', boxShadow: 'none',
+                '&:hover': { bgcolor: '#BD8E0F', boxShadow: 'none' },
+                '&.Mui-disabled': { bgcolor: '#eeeeee', color: '#858585' },
+              }}>
+              {cuentaExistente ? 'Ya facturada' : 'Agregar'}
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
     </Box>
   );

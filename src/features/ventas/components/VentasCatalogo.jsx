@@ -365,6 +365,17 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'cliente', header: <TableCell key="cliente">Cliente</TableCell>, render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
     { key: 'cobrador', header: <TableCell key="cobrador">Cobrado por</TableCell>, render: (item) => item.cobrado_por_nombre || 'Sin usuario' },
     { key: 'efectivo', header: <TableCell key="efectivo" align="right">Efectivo</TableCell>, render: (item) => dinero(item.efectivo) },
+    { key: 'cambio', header: <TableCell key="cambio" align="right">Efectivo entregado / Cambio</TableCell>, render: (item) =>
+      Number(item.efectivo || 0) > 0 ? (
+        <Box sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+          <Typography variant="caption" sx={{ color: '#171717', display: 'block', fontWeight: 800 }}>
+            Recibido: {dinero(item.efectivo_recibido)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+            Cambio: {dinero(item.cambio_entregado)}
+          </Typography>
+        </Box>
+      ) : '—' },
     { key: 'transferencia', header: <TableCell key="transferencia" align="right">Transferencia</TableCell>, render: (item) => dinero(item.transferencia) },
     { key: 'tarjeta', header: <TableCell key="tarjeta" align="right">Tarjeta</TableCell>, render: (item) => dinero(item.tarjeta) },
     { key: 'deposito', header: <TableCell key="deposito" align="right">Depósito</TableCell>, render: (item) => dinero(item.deposito) },
