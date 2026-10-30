@@ -1965,7 +1965,7 @@ export function DeportistasPage() {
                 .some((id) => String(id) === String(sede.id_sede));
               return (
                 <Button key={sede.id_sede} type="button"
-                  variant={seleccionada ? 'contained' : 'outlined'}
+                  variant="outlined"
                   aria-pressed={seleccionada}
                   startIcon={seleccionada ? <CheckRoundedIcon sx={{ fontSize: 19 }} /> : <LocationCityOutlinedIcon sx={{ fontSize: 19 }} />}
                   onClick={() => setMembresiaForm((actual) => {
@@ -1986,16 +1986,20 @@ export function DeportistasPage() {
                   sx={{
                     textTransform: 'none', fontSize: 13, fontWeight: 800,
                     minHeight: 42, minWidth: 145, px: 2, borderRadius: 1.7,
-                    boxShadow: seleccionada ? '0 2px 5px rgba(155, 111, 0, 0.16)' : 'none',
-                    border: '1px solid', borderColor: seleccionada ? '#d3a018' : '#dbe5f0',
-                    bgcolor: seleccionada ? '#d4a017' : '#fff',
-                    color: seleccionada ? '#14243c' : '#475467',
+                    boxShadow: 'none',
+                    border: '1px solid',
+                    borderLeft: seleccionada ? '3px solid #b28a24' : '3px solid #dbe5f0',
+                    borderColor: seleccionada ? '#e8cd80' : '#dbe5f0',
+                    borderLeftColor: seleccionada ? '#b28a24' : '#dbe5f0',
+                    bgcolor: seleccionada ? '#fff7df' : '#fff',
+                    color: seleccionada ? '#8b6410' : '#475467',
                     '&:hover': {
-                      bgcolor: seleccionada ? '#bd8e0f' : '#fff8e5',
-                      borderColor: '#d4a017',
-                      boxShadow: seleccionada ? '0 3px 8px rgba(155, 111, 0, 0.2)' : 'none',
+                      bgcolor: seleccionada ? '#fff2cc' : '#f8fafc',
+                      borderColor: seleccionada ? '#b28a24' : '#dbe5f0',
+                      borderLeftColor: seleccionada ? '#b28a24' : '#dbe5f0',
+                      boxShadow: 'none',
                     },
-                    '&:focus-visible': { outline: '2px solid #14243c', outlineOffset: 2 },
+                    '&:focus-visible': { outline: '2px solid #b28a24', outlineOffset: 2 },
                   }}
                 >
                   {sede.nombre}
