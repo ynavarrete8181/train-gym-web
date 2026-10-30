@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import AddShoppingCartOutlinedIcon from '@mui/icons-material/AddShoppingCartOutlined';
+import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import BadgeOutlinedIcon from '@mui/icons-material/BadgeOutlined';
@@ -94,7 +96,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
   const [pagos, setPagos] = useState([
-    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '', referencia: '', recibido: '' },
+    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', recibido: '', montoManual: false },
   ]);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
@@ -247,9 +249,23 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const excedentePagos = Math.max(0, totalPagos - saldoCobro);
   const totalItems = carrito.reduce((acc, item) => acc + Number(item.cantidad || 0), 0);
 
+  // La primera forma de pago propone el saldo completo. Al editar manualmente
+  // el monto, se respeta el valor ingresado (pagos divididos).
+  useEffect(() => {
+    setPagos((actual) => {
+      if (actual.length !== 1 || actual[0].montoManual) return actual;
+      const sugerido = saldoCobro.toFixed(2);
+      if (actual[0].monto === sugerido) return actual;
+      return [{ ...actual[0], monto: sugerido }];
+    });
+  }, [saldoCobro]);
+
   const actualizarPago = (clave, campo, valor) => {
     setPagos((actual) => actual.map((pago) => (
-      pago.clave === clave ? { ...pago, [campo]: valor } : pago
+      pago.clave === clave
+        ? { ...pago, [campo]: valor, ...(campo === 'monto' ? { montoManual: true } : {}),
+            ...(campo === 'metodo_pago' ? { referencia: '', recibido: '' } : {}) }
+        : pago
     )));
   };
 
@@ -262,6 +278,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         monto: '',
         referencia: '',
         recibido: '',
+        montoManual: true,
       },
     ]);
   };
@@ -437,7 +454,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         ...payloadVenta,
         pagos: pagos
           .filter((pago) => Number(pago.monto || 0) > 0)
-          .map((pago) => {
+          .map(({ montoManual, ...pago }) => {
             const monto = Number(pago.monto || 0);
             const recibidoEfectivo = pago.metodo_pago === 'EFECTIVO'
               ? Number(pago.recibido || monto)
@@ -799,21 +816,43 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                             bgcolor: 'background.paper',
                           }}
                         >
-                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1.25fr 1fr auto' }, gap: 1, alignItems: 'center' }}>
-                            <TextField
-                              select
-                              label={`Método ${indice + 1}`}
-                              size="small"
-                              value={pago.metodo_pago}
-                              onChange={(e) => actualizarPago(pago.clave, 'metodo_pago', e.target.value)}
-                              sx={dbanuStyles.field}
-                            >
-                              <MenuItem value="EFECTIVO">Efectivo</MenuItem>
-                              <MenuItem value="TARJETA">Tarjeta</MenuItem>
-                              <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-                              <MenuItem value="DEPOSITO">Depósito</MenuItem>
-                              <MenuItem value="OTRO">Otro</MenuItem>
-                            </TextField>
+                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1.8fr) minmax(0, 1fr) auto' }, gap: 1, alignItems: 'center' }}>
+                            <Box sx={{ minWidth: 0 }}>
+                              <Typography variant="caption" sx={{ display: 'block', fontWeight: 800, color: '#181818', mb: .7 }}>
+                                Método {indice + 1}
+                              </Typography>
+                              <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+                                {[
+                                  { codigo: 'EFECTIVO', etiqueta: 'Efectivo', Icono: PaymentsOutlinedIcon },
+                                  { codigo: 'TRANSFERENCIA', etiqueta: 'Transferencia', Icono: AccountBalanceOutlinedIcon },
+                                ].map(({ codigo, etiqueta, Icono }) => {
+                                  const activo = pago.metodo_pago === codigo;
+                                  return (
+                                    <Button key={codigo} type="button" fullWidth
+                                      variant={activo ? 'contained' : 'outlined'}
+                                      aria-pressed={activo}
+                                      startIcon={<Icono sx={{ fontSize: 18 }} />}
+                                      onClick={() => actualizarPago(pago.clave, 'metodo_pago', codigo)}
+                                      sx={{
+                                        minWidth: 0, minHeight: 40, px: 1.1, borderRadius: 1.5,
+                                        fontWeight: 800, fontSize: 12, textTransform: 'none',
+                                        bgcolor: activo ? '#D4A017' : '#fff',
+                                        color: activo ? '#171717' : '#303030',
+                                        border: '1px solid',
+                                        borderColor: activo ? '#D4A017' : '#d1d5db',
+                                        boxShadow: 'none',
+                                        '&:hover': {
+                                          bgcolor: activo ? '#BF900F' : '#f7f7f7',
+                                          borderColor: activo ? '#BF900F' : '#a0a0a0',
+                                          boxShadow: 'none',
+                                        },
+                                        '&:focus-visible': { outline: '2px solid #171717', outlineOffset: 2 },
+                                      }}
+                                    >{etiqueta}</Button>
+                                  );
+                                })}
+                              </Stack>
+                            </Box>
                             <TextField
                               label="Monto"
                               size="small"
@@ -846,7 +885,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                                 value={pago.recibido}
                                 onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
                                 inputProps={{ min: 0, step: '0.01' }}
-                                helperText="Opcional; si se omite se asume igual al monto."
+                                helperText="Si recibes más efectivo, ingresa el valor y el sistema calcula el cambio."
                                 sx={dbanuStyles.field}
                               />
                               <Box sx={{ px: 1.1, py: .7, border: 1, borderColor: 'divider', borderRadius: 0.5, bgcolor: 'background.default' }}>
