@@ -999,14 +999,14 @@ function CatalogoCard({ item, tipo, onAgregar }) {
   return (
     <Box sx={{
       bgcolor: '#fff', border: '1px solid #e1e2e5', borderTop: '3px solid #D4A017',
-      borderRadius: 1.8, overflow: 'hidden', minWidth: 0, minHeight: esMembresia ? 248 : 305,
+      borderRadius: 1.8, overflow: 'hidden', minWidth: 0, minHeight: esMembresia ? 248 : 0,
       display: 'flex', flexDirection: 'column',
       boxShadow: '0 3px 10px rgba(0,0,0,.04)',
       '&:hover': { borderColor: '#D4A017', boxShadow: '0 6px 15px rgba(0,0,0,.08)' },
     }}>
       {!esMembresia && (
         <Box sx={{
-          height: 116, width: '100%', bgcolor: '#fafafa',
+          height: 102, width: '100%', bgcolor: '#fafafa',
           borderBottom: '1px solid #eeeeee', display: 'grid', placeItems: 'center',
           overflow: 'hidden', position: 'relative',
         }}>
@@ -1021,7 +1021,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
           )}
         </Box>
       )}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.3, pt: 1.4, pb: .6 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.3, pt: esMembresia ? 1.4 : .95, pb: .35 }}>
         {esMembresia && (
           <Box sx={{
             width: 35, height: 35, flexShrink: 0, display: 'grid', placeItems: 'center',
@@ -1034,7 +1034,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
           <Typography variant="body2" title={item.nombre} sx={{
             fontSize: 13, fontWeight: 900, color: '#171717', lineHeight: 1.25,
             display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-            overflow: 'hidden', minHeight: 32,
+            overflow: 'hidden', minHeight: esMembresia ? 32 : 31,
           }}>{item.nombre}</Typography>
         </Box>
       </Box>
@@ -1074,7 +1074,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
             Descuento programado para otra fecha.
           </Typography>
         )}
-        <Box sx={{ mt: 'auto', pt: 1.2, pb: .8 }}>
+        <Box sx={{ mt: esMembresia ? 'auto' : .7, pt: esMembresia ? 1.2 : .35, pb: esMembresia ? .8 : .55, textAlign: esMembresia ? 'left' : 'right' }}>
           {sinPrecio ? (
             <Typography variant="caption" sx={{ color: '#996515', fontWeight: 800 }}>Precio pendiente</Typography>
           ) : (
@@ -1084,7 +1084,7 @@ function CatalogoCard({ item, tipo, onAgregar }) {
           )}
         </Box>
       </Box>
-      <Box sx={{ px: 1.3, pb: 1.3 }}>
+      <Box sx={{ px: 1.3, pb: esMembresia ? 1.3 : .9 }}>
         <Tooltip title={cuentaExistente ? 'La membresía ya tiene una venta asociada; continúa desde Cuentas abiertas.' : sinPrecio ? 'Configura el precio para la sede.' : item.error_cotizacion || 'Agregar al carrito'}>
           <span style={{ display: 'block' }}>
             <Button fullWidth size="small" variant="contained"
