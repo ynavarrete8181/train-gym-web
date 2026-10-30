@@ -845,30 +845,67 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                               );
                             })}
                           </Box>
-                          <Box sx={{ mt: 1.3, display: 'grid',
-                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.15,
-                          }}>
-                            <TextField label="Importe del pago" size="small" type="number"
-                              value={pago.monto} onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
-                              inputProps={{ min: 0, step: '0.01' }}
-                              sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                          <Box sx={{ mt: 1.4, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.3, alignItems: 'start' }}>
+                            <Box>
+                              <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
+                                Valor que se va a cobrar
+                              </Typography>
+                              <TextField size="small" type="number" fullWidth
+                                value={pago.monto} onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
+                                inputProps={{ min: 0, step: '0.01', 'aria-label': 'Valor que se va a cobrar' }}
+                                sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4, bgcolor: '#fff' } }} />
+                            </Box>
                             {pago.metodo_pago === 'EFECTIVO' ? (
-                              <TextField label="Efectivo recibido" size="small" type="number"
-                                value={pago.recibido} onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
-                                inputProps={{ min: 0, step: '0.01' }}
-                                sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                              <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 900, color: '#171717', display: 'block', mb: .7 }}>
+                                  ¿Cuánto efectivo te entregó el cliente?
+                                </Typography>
+                                <TextField size="small" type="number" fullWidth
+                                  placeholder="Ej.: 5, 10, 20..."
+                                  value={pago.recibido} onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
+                                  inputProps={{ min: 0, step: '0.01', 'aria-label': 'Efectivo recibido del cliente' }}
+                                  sx={{
+                                    ...dbanuStyles.field,
+                                    '& .MuiOutlinedInput-root': {
+                                      borderRadius: 1.4, bgcolor: '#fffdf5',
+                                      '& fieldset': { borderColor: '#D4A017', borderWidth: 2 },
+                                      '&:hover fieldset': { borderColor: '#B78400' },
+                                      '&.Mui-focused fieldset': { borderColor: '#B78400' },
+                                    },
+                                  }} />
+                                <Typography variant="caption" sx={{ display: 'block', mt: .45, color: '#686868', fontSize: 10.5 }}>
+                                  Aquí ingresas el valor del billete o el efectivo recibido.
+                                </Typography>
+                              </Box>
                             ) : (
-                              <TextField label="Referencia de transferencia" size="small"
-                                value={pago.referencia} onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
-                                sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                              <Box>
+                                <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
+                                  Referencia de transferencia
+                                </Typography>
+                                <TextField size="small" fullWidth
+                                  placeholder="Número de comprobante"
+                                  value={pago.referencia} onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
+                                  sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                              </Box>
                             )}
                           </Box>
                           {pago.metodo_pago === 'EFECTIVO' && (
-                            <Stack direction="row" justifyContent="space-between" alignItems="center"
-                              sx={{ mt: 1, px: 1.3, py: .9, bgcolor: '#f6f6f6', borderRadius: 1.4 }}>
-                              <Typography variant="body2" sx={{ color: '#444', fontWeight: 700 }}>Cambio a entregar</Typography>
-                              <Typography variant="subtitle1" sx={{ color: '#171717', fontWeight: 950 }}>{dinero(cambioEfectivo)}</Typography>
-                            </Stack>
+                            <Box sx={{
+                              mt: 1.4, px: 1.5, py: 1.2, border: '1px solid #e7d8a8',
+                              bgcolor: '#fff8e5', borderRadius: 1.4,
+                            }}>
+                              <Typography variant="caption" sx={{ color: '#665224', fontWeight: 800, display: 'block', mb: .4 }}>
+                                CAMBIO A ENTREGAR
+                              </Typography>
+                              <Typography variant="h5" sx={{ color: '#171717', fontWeight: 950, lineHeight: 1.2 }}>
+                                {dinero(cambioEfectivo)}
+                              </Typography>
+                              {recibidoEfectivo < monto && (
+                                <Typography variant="caption" sx={{ display: 'block', mt: .6, color: '#A04418' }}>
+                                  El efectivo recibido es menor que el importe del pago.
+                                </Typography>
+                              )}
+                            </Box>
                           )}
                         </Box>
                       );
