@@ -154,7 +154,7 @@ export function VentasPage() {
               </Typography>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-end" alignItems={{ xs: 'stretch', sm: 'center' }}
-              sx={{ ml: { md: 'auto' }, flex: { md: '0 1 auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+              sx={{ ml: { md: 'auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, '& .MuiOutlinedInput-root': { height: 40 } }}>
               <TextField size="small" value={busquedaCuenta} onChange={(e) => setBusquedaCuenta(e.target.value)}
                 placeholder="Buscar nombre, identificación o código"
                 InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> }}
@@ -173,7 +173,7 @@ export function VentasPage() {
                 disabled={!turnoActual?.id}
                 title={!turnoActual?.id ? 'Necesitas un turno de caja propio para registrar una venta.' : ''}
                 sx={{
-                  minWidth: 148, minHeight: 40, flexShrink: 0,
+                  minWidth: 148, height: 40, flexShrink: 0, px: 1.6, py: 0,
                   textTransform: 'none', fontWeight: 900, borderRadius: 1.5,
                   bgcolor: '#D4A017', color: '#171717', boxShadow: 'none',
                   '&:hover': { bgcolor: '#BE8E0D', boxShadow: 'none' },
