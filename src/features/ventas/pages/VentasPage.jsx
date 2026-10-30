@@ -8,7 +8,10 @@ import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
@@ -30,6 +33,16 @@ export function VentasPage() {
   const [detallePdfNombre, setDetallePdfNombre] = useState('Comprobante');
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [detallePdfBlob, setDetallePdfBlob] = useState(null);
+  const cuentasFiltradas = cuentasAbiertas.filter((venta) => {
+    const texto = busquedaCuenta.trim().toLocaleLowerCase('es-EC');
+    if (!texto) return true;
+    return [venta.cliente_nombre, venta.cliente_identificacion, venta.codigo_deportista, venta.numero, venta.sede_nombre]
+      .some((valor) => String(valor || '').toLocaleLowerCase('es-EC').includes(texto));
+  });
+  const totalPendiente = cuentasAbiertas.reduce((total, venta) =>
+    total + Math.max(0, Number(venta.saldo_pendiente ?? venta.total ?? 0)), 0);
+  const pagosParciales = cuentasAbiertas.filter((venta) => String(venta.estado || '').toUpperCase() === 'PARCIAL').length;
+
 
   const cargarCuentas = async () => {
     setCargandoCuentas(true);
@@ -127,34 +140,71 @@ export function VentasPage() {
     <Box className="page-wrapper">
       <PageHeader titulo="Ventas" descripcion="Facturación y punto de venta de servicios, productos y operaciones comerciales." icono={<ShoppingCartOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
-        <Box sx={{ px: { xs: 1.5, md: 2 }, pt: 1.7, pb: 1.2, borderBottom: '1px solid #eceff3' }}>
-          <Box sx={{ display: 'flex', alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', gap: 1.4, flexDirection: { xs: 'column', md: 'row' } }}>
+        <Box sx={{ px: { xs: 1.5, md: 2.3 }, py: 2, bgcolor: '#fff', borderBottom: '1px solid #e9e9e9' }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={2}>
             <Box>
-              <Typography variant="h6" fontWeight={950}>Cuentas abiertas</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {turnoActual?.id
-                  ? `Turno activo: ${turnoActual.caja_nombre || turnoActual.caja_codigo || 'Caja'} · Puedes registrar cobros.`
-                  : 'Modo consulta: puedes revisar las cuentas, pero para cobrar necesitas un turno de caja propio.'}
-              </Typography>
+              <Stack direction="row" spacing={1.2} alignItems="center">
+                <Box sx={{ width: 40, height: 40, bgcolor: '#D4A017', color: '#141414', display: 'grid', placeItems: 'center', borderRadius: 1.5 }}>
+                  <ReceiptLongOutlinedIcon />
+                </Box>
+                <Box>
+                  <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616', lineHeight: 1.2 }}>Cuentas por cobrar</Typography>
+                  <Typography variant="caption" sx={{ color: '#606060', fontWeight: 600 }}>
+                    Consulta las cuentas pendientes y continúa sus cobros desde tu caja.
+                  </Typography>
+                </Box>
+              </Stack>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
               <TextField
                 size="small"
-                placeholder="Buscar cliente por nombre o código"
+                placeholder="Buscar cliente, código o sede"
                 value={busquedaCuenta}
                 onChange={(e) => setBusquedaCuenta(e.target.value)}
-                sx={{ width: { xs: '100%', sm: 300 } }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#A77B08' }} /></InputAdornment> }}
+                sx={{ width: { xs: '100%', sm: 315 }, '& .MuiOutlinedInput-root': { borderRadius: 1.6, bgcolor: '#fff' } }}
               />
               <Button
+                variant="contained"
                 startIcon={<AddOutlinedIcon />}
                 onClick={() => { setCuentaInicial(null); setVista('pos'); }}
                 disabled={!turnoActual?.id}
-                title={!turnoActual?.id ? 'Necesitas un turno de caja propio para registrar una venta directa.' : ''}
-                sx={{ ...dbanuStyles.addButtonRevive, minWidth: 112 }}
+                title={!turnoActual?.id ? 'Necesitas un turno de caja propio para registrar una venta.' : ''}
+                sx={{
+                  minWidth: 147, minHeight: 40, textTransform: 'none', fontWeight: 900,
+                  bgcolor: '#D4A017', color: '#161616', borderRadius: 1.5, boxShadow: 'none',
+                  '&:hover': { bgcolor: '#BF900F', boxShadow: 'none' },
+                }}
               >
-                Añadir
+                Nueva venta
               </Button>
             </Stack>
+          </Stack>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.3, mt: 2 }}>
+            {[
+              { label: 'Cuentas abiertas', value: String(cuentasAbiertas.length), icon: <ReceiptLongOutlinedIcon />, dark: false },
+              { label: 'Saldo pendiente', value: dinero(totalPendiente), icon: <AccountBalanceWalletOutlinedIcon />, dark: true },
+              { label: 'Con pago parcial', value: String(pagosParciales), icon: <PointOfSaleOutlinedIcon />, dark: false },
+            ].map(({ label, value, icon, dark }) => (
+              <Box key={label} sx={{
+                borderRadius: 1.7, border: '1px solid', borderColor: dark ? '#171717' : '#e5e5e5',
+                bgcolor: dark ? '#171717' : '#fff', px: 1.7, py: 1.25,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1,
+              }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: dark ? '#f1e2ad' : '#696969', fontWeight: 700 }}>{label}</Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 950, color: dark ? '#fff' : '#171717', lineHeight: 1.3 }}>{value}</Typography>
+                </Box>
+                <Box sx={{ width: 38, height: 38, display: 'grid', placeItems: 'center', borderRadius: 1.3, bgcolor: dark ? '#D4A017' : '#fff5d5', color: '#141414' }}>{icon}</Box>
+              </Box>
+            ))}
+          </Box>
+          <Box sx={{ mt: 1.5, px: 1.3, py: .9, borderRadius: 1.4, bgcolor: turnoActual?.id ? '#f5faf4' : '#fff8e8', border: '1px solid', borderColor: turnoActual?.id ? '#cfe4ce' : '#f0dcac' }}>
+            <Typography variant="caption" sx={{ color: '#272727', fontWeight: 750 }}>
+              {turnoActual?.id
+                ? `Caja activa: ${turnoActual.caja_nombre || turnoActual.caja_codigo || 'Caja'} · Puedes abrir cuentas y registrar cobros.`
+                : 'Modo consulta · Para cobrar o registrar nuevas ventas, abre primero un turno de caja propio.'}
+            </Typography>
           </Box>
         </Box>
 
@@ -172,15 +222,7 @@ export function VentasPage() {
               alignItems: 'start',
             }}
           >
-            {cuentasAbiertas
-              .filter((venta) => {
-                const texto = busquedaCuenta.trim().toLowerCase();
-                if (!texto) return true;
-                return `${venta.cliente_nombre || ''} ${venta.cliente_identificacion || ''} ${venta.codigo_deportista || ''} ${venta.numero || ''}`
-                  .toLowerCase()
-                  .includes(texto);
-              })
-              .map((venta) => {
+            {cuentasFiltradas.map((venta) => {
                 const saldo = Number(venta.saldo_pendiente ?? venta.total ?? 0);
                 const nombre = venta.cliente_nombre || 'Consumidor final';
                 const estadoParcial = String(venta.estado || '').toUpperCase() === 'PARCIAL';
@@ -286,49 +328,7 @@ export function VentasPage() {
                 );
               })}
 
-            <Box
-              onClick={() => {
-                if (!turnoActual?.id) {
-                  setNotificacion({
-                    mensaje: 'Modo consulta: para registrar una venta directa debes abrir tu propio turno de caja.',
-                    tipo: 'warning',
-                  });
-                  return;
-                }
-                setCuentaInicial(null);
-                setVista('pos');
-              }}
-              sx={{
-                minHeight: 260,
-                border: '1px dashed #d5dae1',
-                borderRadius: 2,
-                bgcolor: '#fff',
-                display: 'grid',
-                placeItems: 'center',
-                cursor: turnoActual?.id ? 'pointer' : 'not-allowed',
-                opacity: turnoActual?.id ? 1 : 0.68,
-                transition: 'border-color .18s ease, background .18s ease',
-                '&:hover': { borderColor: '#b88a00', bgcolor: 'rgba(212,160,23,.035)' },
-              }}
-            >
-              <Box sx={{ textAlign: 'center', px: 2 }}>
-                <Box sx={{ width: 52, height: 52, mx: 'auto', borderRadius: '50%', display: 'grid', placeItems: 'center', bgcolor: 'rgba(212,160,23,.14)', color: '#b88a00' }}>
-                  <AddOutlinedIcon />
-                </Box>
-                <Typography variant="subtitle1" fontWeight={950} sx={{ mt: 1 }}>Nueva venta</Typography>
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: .35 }}>
-                  Registra una venta de servicios, productos o membresías.
-                </Typography>
-                <Button
-                  variant="outlined"
-                  startIcon={<AddOutlinedIcon />}
-                  disabled={!turnoActual?.id}
-                  sx={{ mt: 1.5, textTransform: 'none', fontWeight: 900, borderColor: '#b88a00', color: '#8a6500' }}
-                >
-                  {turnoActual?.id ? 'Añadir' : 'Solo consulta'}
-                </Button>
-              </Box>
-            </Box>
+
           </Box>
 
           {!cargandoCuentas && cuentasAbiertas.length === 0 ? (
