@@ -799,137 +799,103 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
 
                 <Box sx={{ mt: 1.3, pt: 1.25, borderTop: '1px solid #dfe4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><Typography variant="h6" fontWeight={950} sx={{ color: NEGRO_REVIVE }}>TOTAL</Typography><Typography variant="h4" fontWeight={950} sx={{ color: DORADO_REVIVE_OSCURO }}>{dinero(total)}</Typography></Box>
 
-                <SeccionInterna titulo="Cobro" sx={{ mt: 1.8 }}>
-                  <Stack spacing={1}>
+                <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #e6e6e6' }}>
+                  <Typography variant="subtitle2" sx={{ color: '#171717', fontWeight: 950, mb: 1.2 }}>
+                    Método de pago
+                  </Typography>
+                  <Stack spacing={1.25}>
                     {pagos.map((pago, indice) => {
                       const monto = Number(pago.monto || 0);
-                      const recibidoEfectivo = Number(pago.recibido || monto);
+                      const recibidoEfectivo = pago.recibido === '' ? monto : Number(pago.recibido || 0);
                       const cambioEfectivo = pago.metodo_pago === 'EFECTIVO'
-                        ? Math.max(0, recibidoEfectivo - monto)
-                        : 0;
-
+                        ? Math.max(0, recibidoEfectivo - monto) : 0;
                       return (
-                        <Box
-                          key={pago.clave}
-                          sx={{
-                            border: 1,
-                            borderColor: 'divider',
-                            borderRadius: 0.5,
-                            p: 1,
-                            bgcolor: 'background.paper',
-                          }}
-                        >
-                          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1.8fr) minmax(0, 1fr) auto' }, gap: 1, alignItems: 'center' }}>
-                            <Box sx={{ minWidth: 0 }}>
-                              <Typography variant="caption" sx={{ display: 'block', fontWeight: 800, color: '#181818', mb: .7 }}>
-                                Método {indice + 1}
-                              </Typography>
-                              <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
-                                {[
-                                  { codigo: 'EFECTIVO', etiqueta: 'Efectivo', Icono: PaymentsOutlinedIcon },
-                                  { codigo: 'TRANSFERENCIA', etiqueta: 'Transferencia', Icono: AccountBalanceOutlinedIcon },
-                                ].map(({ codigo, etiqueta, Icono }) => {
-                                  const activo = pago.metodo_pago === codigo;
-                                  return (
-                                    <Button key={codigo} type="button" fullWidth
-                                      variant={activo ? 'contained' : 'outlined'}
-                                      aria-pressed={activo}
-                                      startIcon={<Icono sx={{ fontSize: 18 }} />}
-                                      onClick={() => actualizarPago(pago.clave, 'metodo_pago', codigo)}
-                                      sx={{
-                                        minWidth: 0, minHeight: 40, px: 1.1, borderRadius: 1.5,
-                                        fontWeight: 800, fontSize: 12, textTransform: 'none',
-                                        bgcolor: activo ? '#D4A017' : '#fff',
-                                        color: activo ? '#171717' : '#303030',
-                                        border: '1px solid',
-                                        borderColor: activo ? '#D4A017' : '#d1d5db',
-                                        boxShadow: 'none',
-                                        '&:hover': {
-                                          bgcolor: activo ? '#BF900F' : '#f7f7f7',
-                                          borderColor: activo ? '#BF900F' : '#a0a0a0',
-                                          boxShadow: 'none',
-                                        },
-                                        '&:focus-visible': { outline: '2px solid #171717', outlineOffset: 2 },
-                                      }}
-                                    >{etiqueta}</Button>
-                                  );
-                                })}
-                              </Stack>
-                            </Box>
-                            <TextField
-                              label="Monto"
-                              size="small"
-                              type="number"
-                              value={pago.monto}
-                              onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
-                              inputProps={{ min: 0, step: '0.01' }}
-                              sx={dbanuStyles.field}
-                            />
-                            <Tooltip title="Quitar método">
-                              <span>
-                                <IconButton
-                                  size="small"
-                                  disabled={pagos.length === 1}
-                                  onClick={() => quitarPago(pago.clave)}
-                                  sx={dbanuStyles.actionDelete}
-                                >
-                                  <DeleteOutlineOutlinedIcon fontSize="small" />
-                                </IconButton>
-                              </span>
-                            </Tooltip>
+                        <Box key={pago.clave} sx={{
+                          border: pagos.length > 1 ? '1px solid #e4e4e4' : 'none',
+                          borderRadius: 1.5, p: pagos.length > 1 ? 1.2 : 0,
+                          bgcolor: '#fff',
+                        }}>
+                          {pagos.length > 1 && (
+                            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                              <Typography variant="caption" sx={{ fontWeight: 850, color: '#545454' }}>Pago {indice + 1}</Typography>
+                              <IconButton size="small" title="Quitar este pago" onClick={() => quitarPago(pago.clave)}
+                                sx={{ color: '#a32121' }}><DeleteOutlineOutlinedIcon fontSize="small" /></IconButton>
+                            </Stack>
+                          )}
+                          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
+                            {[
+                              { codigo: 'EFECTIVO', etiqueta: 'Efectivo', Icono: PaymentsOutlinedIcon },
+                              { codigo: 'TRANSFERENCIA', etiqueta: 'Transferencia', Icono: AccountBalanceOutlinedIcon },
+                            ].map(({ codigo, etiqueta, Icono }) => {
+                              const activo = pago.metodo_pago === codigo;
+                              return (
+                                <Button key={codigo} type="button" fullWidth
+                                  aria-pressed={activo} variant={activo ? 'contained' : 'outlined'}
+                                  startIcon={<Icono sx={{ fontSize: 19 }} />}
+                                  onClick={() => actualizarPago(pago.clave, 'metodo_pago', codigo)}
+                                  sx={{
+                                    height: 44, px: 1, minWidth: 0, fontSize: 12.5,
+                                    borderRadius: 1.6, fontWeight: 850, textTransform: 'none',
+                                    bgcolor: activo ? '#D4A017' : '#fff',
+                                    color: '#171717', border: '1px solid',
+                                    borderColor: activo ? '#D4A017' : '#d8d8d8',
+                                    boxShadow: 'none',
+                                    '&:hover': { bgcolor: activo ? '#bd8e0f' : '#f7f7f7', boxShadow: 'none' },
+                                  }}>{etiqueta}</Button>
+                              );
+                            })}
                           </Box>
-
-                          {pago.metodo_pago === 'EFECTIVO' ? (
-                            <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
-                              <TextField
-                                label="Efectivo recibido"
-                                size="small"
-                                type="number"
-                                value={pago.recibido}
-                                onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
+                          <Box sx={{ mt: 1.3, display: 'grid',
+                            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.15,
+                          }}>
+                            <TextField label="Importe del pago" size="small" type="number"
+                              value={pago.monto} onChange={(e) => actualizarPago(pago.clave, 'monto', e.target.value)}
+                              inputProps={{ min: 0, step: '0.01' }}
+                              sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                            {pago.metodo_pago === 'EFECTIVO' ? (
+                              <TextField label="Efectivo recibido" size="small" type="number"
+                                value={pago.recibido} onChange={(e) => actualizarPago(pago.clave, 'recibido', e.target.value)}
                                 inputProps={{ min: 0, step: '0.01' }}
-                                helperText="Si recibes más efectivo, ingresa el valor y el sistema calcula el cambio."
-                                sx={dbanuStyles.field}
-                              />
-                              <Box sx={{ px: 1.1, py: .7, border: 1, borderColor: 'divider', borderRadius: 0.5, bgcolor: 'background.default' }}>
-                                <Typography variant="caption" color="text.secondary" display="block">Cambio</Typography>
-                                <Typography variant="body1" fontWeight={900} color="success.main">{dinero(cambioEfectivo)}</Typography>
-                              </Box>
-                            </Box>
-                          ) : (
-                            <TextField
-                              label="Referencia / comprobante"
-                              size="small"
-                              fullWidth
-                              value={pago.referencia}
-                              onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
-                              sx={{ ...dbanuStyles.field, mt: 1 }}
-                            />
+                                sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                            ) : (
+                              <TextField label="Referencia de transferencia" size="small"
+                                value={pago.referencia} onChange={(e) => actualizarPago(pago.clave, 'referencia', e.target.value)}
+                                sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                            )}
+                          </Box>
+                          {pago.metodo_pago === 'EFECTIVO' && (
+                            <Stack direction="row" justifyContent="space-between" alignItems="center"
+                              sx={{ mt: 1, px: 1.3, py: .9, bgcolor: '#f6f6f6', borderRadius: 1.4 }}>
+                              <Typography variant="body2" sx={{ color: '#444', fontWeight: 700 }}>Cambio a entregar</Typography>
+                              <Typography variant="subtitle1" sx={{ color: '#171717', fontWeight: 950 }}>{dinero(cambioEfectivo)}</Typography>
+                            </Stack>
                           )}
                         </Box>
                       );
                     })}
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<AddOutlinedIcon />}
-                      onClick={agregarPago}
-                      sx={{ ...dbanuStyles.secondaryButtonRevive, alignSelf: 'flex-start' }}
-                    >
-                      Agregar otro método
+                    <Button variant="text" startIcon={<AddOutlinedIcon />} onClick={agregarPago}
+                      sx={{ alignSelf: 'flex-start', textTransform: 'none', color: '#956b00', fontWeight: 850, px: .5 }}>
+                      Dividir pago / agregar otro método
                     </Button>
-
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 0.6, pt: 0.6 }}>
-                      <Typography variant="caption" color="text.secondary">Saldo a cobrar</Typography>
-                      <Typography variant="caption" fontWeight={900}>{dinero(saldoCobro)}</Typography>
-                      <Typography variant="caption" color="text.secondary">Pagos ingresados</Typography>
-                      <Typography variant="caption" fontWeight={900}>{dinero(totalPagos)}</Typography>
-                      <Typography variant="caption" color="text.secondary">Saldo restante</Typography>
-                      <Typography variant="caption" fontWeight={900} color={saldoDespuesPago > 0 ? 'warning.main' : 'success.main'}>{dinero(saldoDespuesPago)}</Typography>
+                    <Box sx={{ pt: 1.2, borderTop: '1px solid #ececec' }}>
+                      <Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}>
+                        <Typography variant="caption" color="text.secondary">Total a cobrar</Typography>
+                        <Typography variant="body2" fontWeight={850}>{dinero(saldoCobro)}</Typography>
+                      </Stack>
+                      <Stack direction="row" justifyContent="space-between" sx={{ mb: .6 }}>
+                        <Typography variant="caption" color="text.secondary">Pagos ingresados</Typography>
+                        <Typography variant="body2" fontWeight={850}>{dinero(totalPagos)}</Typography>
+                      </Stack>
+                      {saldoDespuesPago > 0 && (
+                        <Stack direction="row" justifyContent="space-between">
+                          <Typography variant="caption" color="text.secondary">Saldo restante</Typography>
+                          <Typography variant="body2" fontWeight={900} color="warning.main">{dinero(saldoDespuesPago)}</Typography>
+                        </Stack>
+                      )}
                     </Box>
                     {excedentePagos > 0 ? <Alert severity="warning">Los pagos superan el saldo por {dinero(excedentePagos)}.</Alert> : null}
                   </Stack>
-                </SeccionInterna>
+                </Box>
 
                 <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
                 <Stack spacing={1} sx={{ mt: 1.4 }}>
