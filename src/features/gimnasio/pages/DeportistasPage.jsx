@@ -986,7 +986,10 @@ export function DeportistasPage() {
     setVistaMembresia('formulario');
     setMembresiaForm({
       ...m,
-      sedes_habilitadas: (m.sedes_habilitadas || []).map((item) => Number(item.sede_id || item)),
+      sedes_habilitadas: Array.from(new Set([
+        ...(m.sedes_habilitadas || []).map((item) => Number(item.sede_id || item)),
+        Number(m.sede_id),
+      ].filter(Boolean))),
       fecha_inicio: limpiarFechaMembresia(m.fecha_inicio),
       fecha_fin: limpiarFechaMembresia(m.fecha_fin),
       fecha_congelacion_inicio: limpiarFechaMembresia(m.fecha_congelacion_inicio),
@@ -1001,8 +1004,13 @@ export function DeportistasPage() {
 
   const handleGuardarMembresia = async () => {
     try {
-      if (!membresiaForm.plan_id || !membresiaForm.sede_id || !membresiaForm.fecha_inicio) {
+      if (!membresiaForm.plan_id || !membresiaForm.fecha_inicio) {
         showNotificacion('Completa los campos obligatorios de la membresía', 'warning');
+        return;
+      }
+
+      if (!(membresiaForm.sedes_habilitadas || []).length) {
+        showNotificacion('Selecciona al menos una sede autorizada.', 'warning');
         return;
       }
 
@@ -1036,10 +1044,10 @@ export function DeportistasPage() {
           : null,
         deportista_id: formData.id,
         modalidad_id: membresiaForm.modalidad_id ? Number(membresiaForm.modalidad_id) : null,
-        sedes_habilitadas: Array.from(new Set([
-          Number(membresiaForm.sede_id),
-          ...(membresiaForm.sedes_habilitadas || []).map(Number),
-        ])).filter(Boolean),
+        sede_id: (membresiaForm.sedes_habilitadas || []).map(Number).includes(Number(membresiaForm.sede_id))
+          ? Number(membresiaForm.sede_id)
+          : Number(membresiaForm.sedes_habilitadas?.[0] || 0),
+        sedes_habilitadas: Array.from(new Set((membresiaForm.sedes_habilitadas || []).map(Number))).filter(Boolean),
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
@@ -1845,24 +1853,6 @@ export function DeportistasPage() {
             </TextField>
           ) : null}
 
-          <TextField
-            select
-            label="Sede"
-            name="sede_id"
-            value={membresiaForm.sede_id || ''}
-            onChange={handleMembresiaChange}
-            required
-            size="small"
-            helperText={
-              precioMembresiaPreview !== null
-                ? `Tarifa de esta sede: ${Number(precioMembresiaPreview).toFixed(2)}. La sede principal puede cambiarse al editar.`
-                : 'Selecciona la sede principal del contrato.'
-            }
-          >
-            {sedes.map((sede) => (
-              <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
-            ))}
-          </TextField>
                     <TextField
             label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso del pase' : 'Fecha inicio'}
             name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
@@ -1964,27 +1954,39 @@ export function DeportistasPage() {
         </Box>
 
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
-          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar</Typography>
+          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar *</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            La sede de contratación siempre está incluida. Puedes habilitar otras sedes sin duplicar la membresía.
-            En los pases diarios, la tarifa de cobro se calcula en la sede del cajero.
+            Selecciona una o varias sedes a las que podrá ingresar con esta membresía.
+            En los pases diarios, la tarifa se calcula según la sede donde se realice el cobro.
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {sedes.map((sede) => {
-              const esPrincipal = String(sede.id_sede) === String(membresiaForm.sede_id);
-              const seleccionada = esPrincipal || (membresiaForm.sedes_habilitadas || []).some((id) => String(id) === String(sede.id_sede));
+              const seleccionada = (membresiaForm.sedes_habilitadas || [])
+                .some((id) => String(id) === String(sede.id_sede));
               return (
                 <FormControlLabel key={sede.id_sede}
-                  control={<Switch size="small" checked={seleccionada} disabled={esPrincipal || !membresiaForm.sede_id}
-                    onChange={(_, checked) => setMembresiaForm((actual) => ({
-                      ...actual,
-                      sedes_habilitadas: checked
-                        ? Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), Number(sede.id_sede)]))
-                        : (actual.sedes_habilitadas || []).filter((id) => String(id) !== String(sede.id_sede)),
-                    }))} />}
-                  label={`${sede.nombre}${esPrincipal ? ' (principal)' : ''}`}
-                  sx={{ m: 0, px: 1.3, py: 0.55, border: '1px solid #dbe5f0', borderRadius: 1.5,
-                    bgcolor: seleccionada ? '#fff7e2' : '#fff', '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }} />
+                  control={<Switch size="small" checked={seleccionada}
+                    onChange={(_, checked) => setMembresiaForm((actual) => {
+                      const anteriores = (actual.sedes_habilitadas || []).map(Number).filter(Boolean);
+                      const id = Number(sede.id_sede);
+                      const nuevas = checked
+                        ? Array.from(new Set([...anteriores, id]))
+                        : anteriores.filter((valor) => valor !== id);
+                      if (!nuevas.length) {
+                        showNotificacion('Debes habilitar al menos una sede para la membresía.', 'warning');
+                        return actual;
+                      }
+                      const sedePrincipal = nuevas.includes(Number(actual.sede_id))
+                        ? Number(actual.sede_id)
+                        : nuevas[0];
+                      return { ...actual, sede_id: sedePrincipal, sedes_habilitadas: nuevas };
+                    })} />}
+                  label={sede.nombre}
+                  sx={{
+                    m: 0, px: 1.3, py: 0.55, border: '1px solid #dbe5f0', borderRadius: 1.5,
+                    bgcolor: seleccionada ? '#fff7e2' : '#fff',
+                    '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 },
+                  }} />
               );
             })}
           </Stack>
