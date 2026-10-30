@@ -463,7 +463,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
           .map(({ montoManual, recibidoManual, ...pago }) => {
             const monto = Number(pago.monto || 0);
             const recibidoEfectivo = pago.metodo_pago === 'EFECTIVO'
-              ? Number(pago.recibido || monto)
+              ? (pago.recibido === '' ? monto : Number(pago.recibido))
               : null;
             const cambioEfectivo = pago.metodo_pago === 'EFECTIVO'
               ? Math.max(0, recibidoEfectivo - monto)
@@ -472,6 +472,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
             return {
               metodo_pago: pago.metodo_pago,
               monto,
+              efectivo_recibido: pago.metodo_pago === 'EFECTIVO' ? recibidoEfectivo : null,
+              cambio_entregado: pago.metodo_pago === 'EFECTIVO' ? cambioEfectivo : null,
               referencia: pago.referencia || null,
               observaciones: pago.metodo_pago === 'EFECTIVO'
                 ? `Cobro POS. Recibido ${dinero(recibidoEfectivo)}. Cambio ${dinero(cambioEfectivo)}.`
