@@ -205,14 +205,15 @@ export function VentasPage() {
         </Box>
 
         <Box sx={{ px: { xs: 1.5, md: 2.3 }, pt: 2, pb: .65 }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={1.5}>
-            <Box>
+          <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={2} sx={{ width: '100%' }}>
+            <Box sx={{ flexShrink: 0, minWidth: 0 }}>
               <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616' }}>Cuentas abiertas</Typography>
               <Typography variant="caption" sx={{ color: '#5c5c5c' }}>
                 {cargandoCuentas ? 'Consultando cuentas...' : `${cuentasFiltradas.length} de ${cuentasAbiertas.length} cuentas`}
               </Typography>
             </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-end" alignItems={{ xs: 'stretch', sm: 'center' }}
+              sx={{ ml: { md: 'auto' }, flex: { md: '0 1 auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
               <TextField size="small" value={busquedaCuenta} onChange={(e) => setBusquedaCuenta(e.target.value)}
                 placeholder="Buscar nombre, identificación o código"
                 InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> }}
@@ -220,7 +221,7 @@ export function VentasPage() {
               <TextField select size="small" value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}
                 aria-label="Filtrar por sede"
                 InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltOutlinedIcon sx={{ color: '#B18510', fontSize: 19 }} /></InputAdornment> }}
-                sx={{ minWidth: { xs: '100%', sm: 185 }, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
+                sx={{ width: { xs: '100%', sm: 195 }, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
                 <MenuItem value="TODAS">Todas las sedes</MenuItem>
                 {sedesDisponibles.map((sede) => <MenuItem key={sede} value={sede}>{sede}</MenuItem>)}
               </TextField>
