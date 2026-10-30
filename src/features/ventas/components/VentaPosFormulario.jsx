@@ -45,10 +45,8 @@ import { uiTokens } from '../../../styles/uiTokens.js';
 import { ventaServicio } from '../services/ventaServicio.js';
 
 const tipos = [
-  { value: 'SERVICIO', label: 'Servicios', icono: <FitnessCenterOutlinedIcon fontSize="small" /> },
-  { value: 'PRODUCTO', label: 'Productos', icono: <Inventory2OutlinedIcon fontSize="small" /> },
   { value: 'MEMBRESIA', label: 'Membresías', icono: <BadgeOutlinedIcon fontSize="small" /> },
-  { value: 'PASE_DIARIO', label: 'Pase diario', icono: <LocalActivityOutlinedIcon fontSize="small" /> },
+  { value: 'PRODUCTO', label: 'Productos', icono: <Inventory2OutlinedIcon fontSize="small" /> },
 ];
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -83,7 +81,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [cargando, setCargando] = useState(true);
   const [errorContexto, setErrorContexto] = useState('');
   const [guardando, setGuardando] = useState(false);
-  const [tipo, setTipo] = useState('SERVICIO');
+  const [tipo, setTipo] = useState('MEMBRESIA');
   const [categoriaProducto, setCategoriaProducto] = useState('TODAS');
   const [cliente, setCliente] = useState(null);
   const [busqueda, setBusqueda] = useState('');
@@ -686,13 +684,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                 {!esCuentaAbierta && tipo === 'MEMBRESIA' ? (
                   <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
                     {cliente
-                      ? 'Se muestran las membresías vigentes del cliente que todavía no tienen una venta pendiente.'
-                      : 'Selecciona un cliente para consultar sus membresías vigentes.'}
-                  </Alert>
-                ) : null}
-                {!esCuentaAbierta && tipo === 'PASE_DIARIO' ? (
-                  <Alert severity="info" sx={{ mt: 1.15, py: .15 }}>
-                    Selecciona el deportista y agrega el Pase Diario Libre. El sistema generará el acceso de hoy al guardar o cobrar. El dirigido necesita entrenador y horario.
+                      ? 'Se muestran las membresías y pases diarios asignados al cliente que estén disponibles para cobrar.'
+                      : 'Selecciona un cliente para consultar sus membresías y pases diarios asignados.'}
                   </Alert>
                 ) : null}
                 <Box sx={{ mt: 1.65, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(148px, 168px))', gap: 1.15, justifyContent: 'start', maxHeight: { lg: 'calc(100vh - 355px)', xs: 520 }, overflowY: 'auto', pr: .5 }}>
