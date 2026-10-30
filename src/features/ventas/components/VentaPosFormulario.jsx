@@ -96,7 +96,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
   const [pagos, setPagos] = useState([
-    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', recibido: '', montoManual: false },
+    { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', recibido: '0.00', montoManual: false, recibidoManual: false },
   ]);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
@@ -255,8 +255,9 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     setPagos((actual) => {
       if (actual.length !== 1 || actual[0].montoManual) return actual;
       const sugerido = saldoCobro.toFixed(2);
-      if (actual[0].monto === sugerido) return actual;
-      return [{ ...actual[0], monto: sugerido }];
+      const recibido = actual[0].recibidoManual ? actual[0].recibido : sugerido;
+      if (actual[0].monto === sugerido && actual[0].recibido === recibido) return actual;
+      return [{ ...actual[0], monto: sugerido, recibido }];
     });
   }, [saldoCobro]);
 
@@ -264,7 +265,8 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
     setPagos((actual) => actual.map((pago) => (
       pago.clave === clave
         ? { ...pago, [campo]: valor, ...(campo === 'monto' ? { montoManual: true } : {}),
-            ...(campo === 'metodo_pago' ? { referencia: '', recibido: '' } : {}) }
+            ...(campo === 'recibido' ? { recibidoManual: true } : {}),
+            ...(campo === 'metodo_pago' ? { referencia: '', recibido: pago.monto, recibidoManual: false } : {}) }
         : pago
     )));
   };
@@ -279,6 +281,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         referencia: '',
         recibido: '',
         montoManual: true,
+        recibidoManual: false,
       },
     ]);
   };
@@ -454,7 +457,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         ...payloadVenta,
         pagos: pagos
           .filter((pago) => Number(pago.monto || 0) > 0)
-          .map(({ montoManual, ...pago }) => {
+          .map(({ montoManual, recibidoManual, ...pago }) => {
             const monto = Number(pago.monto || 0);
             const recibidoEfectivo = pago.metodo_pago === 'EFECTIVO'
               ? Number(pago.recibido || monto)
