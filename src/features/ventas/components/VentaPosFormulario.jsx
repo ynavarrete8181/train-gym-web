@@ -983,6 +983,9 @@ function SeccionInterna({ titulo, children, sx = {} }) {
 
 function CatalogoCard({ item, tipo, onAgregar }) {
   const esMembresia = tipo === 'MEMBRESIA';
+  const imagenProducto = !esMembresia && typeof item.imagen_url === 'string' ? item.imagen_url.trim() : '';
+  const [imagenFallida, setImagenFallida] = useState(false);
+  useEffect(() => { setImagenFallida(false); }, [imagenProducto]);
   const esPase = esMembresia && item.tipo_producto === 'PASE_DIARIO';
   const cuentaExistente = esMembresia && item.cobro_bloqueado;
   const precio = Number(item.precio || 0);
@@ -996,18 +999,37 @@ function CatalogoCard({ item, tipo, onAgregar }) {
   return (
     <Box sx={{
       bgcolor: '#fff', border: '1px solid #e1e2e5', borderTop: '3px solid #D4A017',
-      borderRadius: 1.8, overflow: 'hidden', minWidth: 0, minHeight: 233,
+      borderRadius: 1.8, overflow: 'hidden', minWidth: 0, minHeight: esMembresia ? 248 : 305,
       display: 'flex', flexDirection: 'column',
       boxShadow: '0 3px 10px rgba(0,0,0,.04)',
       '&:hover': { borderColor: '#D4A017', boxShadow: '0 6px 15px rgba(0,0,0,.08)' },
     }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.3, pt: 1.4, pb: .6 }}>
+      {!esMembresia && (
         <Box sx={{
-          width: 35, height: 35, flexShrink: 0, display: 'grid', placeItems: 'center',
-          borderRadius: 1.2, bgcolor: '#fff4d7', color: '#946a00',
+          height: 116, width: '100%', bgcolor: '#fafafa',
+          borderBottom: '1px solid #eeeeee', display: 'grid', placeItems: 'center',
+          overflow: 'hidden', position: 'relative',
         }}>
-          <Icono sx={{ fontSize: 19 }} />
+          {imagenProducto && !imagenFallida ? (
+            <Box component="img" src={imagenProducto} alt={item.nombre || 'Producto'}
+              loading="lazy" onError={() => setImagenFallida(true)}
+              sx={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: 'center', p: .75 }} />
+          ) : (
+            <Box sx={{ width: 42, height: 42, display: 'grid', placeItems: 'center', bgcolor: '#fff4d7', borderRadius: 1.3 }}>
+              <Inventory2OutlinedIcon sx={{ fontSize: 24, color: '#946a00' }} />
+            </Box>
+          )}
         </Box>
+      )}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1.3, pt: 1.4, pb: .6 }}>
+        {esMembresia && (
+          <Box sx={{
+            width: 35, height: 35, flexShrink: 0, display: 'grid', placeItems: 'center',
+            borderRadius: 1.2, bgcolor: '#fff4d7', color: '#946a00',
+          }}>
+            <Icono sx={{ fontSize: 19 }} />
+          </Box>
+        )}
         <Box sx={{ minWidth: 0, flex: 1 }}>
           <Typography variant="body2" title={item.nombre} sx={{
             fontSize: 13, fontWeight: 900, color: '#171717', lineHeight: 1.25,
