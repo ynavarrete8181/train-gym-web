@@ -145,22 +145,27 @@ export function VentasPage() {
     <Box className="page-wrapper">
       <PageHeader titulo="Ventas" descripcion="Gestiona cobros pendientes y ventas desde tu caja." icono={<ShoppingCartOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
-        <Box sx={{ px: { xs: 1.5, md: 2.3 }, py: 2, bgcolor: '#fff', borderBottom: '1px solid #e9e9e9' }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={2}>
-            <Box>
-              <Stack direction="row" spacing={1.2} alignItems="center">
-                <Box sx={{ width: 40, height: 40, bgcolor: '#D4A017', color: '#141414', display: 'grid', placeItems: 'center', borderRadius: 1.5 }}>
-                  <ReceiptLongOutlinedIcon />
-                </Box>
-                <Box>
-                  <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616', lineHeight: 1.2 }}>Cuentas por cobrar</Typography>
-                  <Typography variant="caption" sx={{ color: '#606060', fontWeight: 600 }}>
-                    Consulta las cuentas pendientes y continúa sus cobros desde tu caja.
-                  </Typography>
-                </Box>
-              </Stack>
+        <Box sx={{ px: { xs: 1.5, md: 2.3 }, pt: 2, pb: .65 }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={2} sx={{ width: '100%' }}>
+            <Box sx={{ flexShrink: 0, minWidth: 0 }}>
+              <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616' }}>Cuentas abiertas</Typography>
+              <Typography variant="caption" sx={{ color: '#5c5c5c' }}>
+                {cargandoCuentas ? 'Consultando cuentas...' : `${cuentasFiltradas.length} de ${cuentasAbiertas.length} cuentas`}
+              </Typography>
             </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-end" alignItems={{ xs: 'stretch', sm: 'center' }}
+              sx={{ ml: { md: 'auto' }, flex: { md: '0 1 auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
+              <TextField size="small" value={busquedaCuenta} onChange={(e) => setBusquedaCuenta(e.target.value)}
+                placeholder="Buscar nombre, identificación o código"
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> }}
+                sx={{ width: { xs: '100%', sm: 315 }, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }} />
+              <TextField select size="small" value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}
+                aria-label="Filtrar por sede"
+                InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltOutlinedIcon sx={{ color: '#B18510', fontSize: 19 }} /></InputAdornment> }}
+                sx={{ width: { xs: '100%', sm: 195 }, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
+                <MenuItem value="TODAS">Todas las sedes</MenuItem>
+                {sedesDisponibles.map((sede) => <MenuItem key={sede} value={sede}>{sede}</MenuItem>)}
+              </TextField>
               <Button
                 variant="contained"
                 startIcon={<AddOutlinedIcon />}
@@ -168,12 +173,15 @@ export function VentasPage() {
                 disabled={!turnoActual?.id}
                 title={!turnoActual?.id ? 'Necesitas un turno de caja propio para registrar una venta.' : ''}
                 sx={{
-                  minWidth: 150, minHeight: 42, textTransform: 'none', fontWeight: 900,
-                  bgcolor: '#D4A017', color: '#171717', borderRadius: 1.5, boxShadow: 'none',
+                  minWidth: 148, minHeight: 40, flexShrink: 0,
+                  textTransform: 'none', fontWeight: 900, borderRadius: 1.5,
+                  bgcolor: '#D4A017', color: '#171717', boxShadow: 'none',
                   '&:hover': { bgcolor: '#BE8E0D', boxShadow: 'none' },
                   '&.Mui-disabled': { bgcolor: '#e5e5e5', color: '#787878' },
                 }}
-              >Nueva venta</Button>
+              >
+                Nueva venta
+              </Button>
             </Stack>
           </Stack>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.3, mt: 2 }}>
@@ -202,31 +210,7 @@ export function VentasPage() {
                 : 'Modo consulta · Para cobrar o registrar nuevas ventas, abre primero un turno de caja propio.'}
             </Typography>
           </Box>
-        </Box>
 
-        <Box sx={{ px: { xs: 1.5, md: 2.3 }, pt: 2, pb: .65 }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={2} sx={{ width: '100%' }}>
-            <Box sx={{ flexShrink: 0, minWidth: 0 }}>
-              <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616' }}>Cuentas abiertas</Typography>
-              <Typography variant="caption" sx={{ color: '#5c5c5c' }}>
-                {cargandoCuentas ? 'Consultando cuentas...' : `${cuentasFiltradas.length} de ${cuentasAbiertas.length} cuentas`}
-              </Typography>
-            </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-end" alignItems={{ xs: 'stretch', sm: 'center' }}
-              sx={{ ml: { md: 'auto' }, flex: { md: '0 1 auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' } }}>
-              <TextField size="small" value={busquedaCuenta} onChange={(e) => setBusquedaCuenta(e.target.value)}
-                placeholder="Buscar nombre, identificación o código"
-                InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> }}
-                sx={{ width: { xs: '100%', sm: 315 }, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }} />
-              <TextField select size="small" value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}
-                aria-label="Filtrar por sede"
-                InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltOutlinedIcon sx={{ color: '#B18510', fontSize: 19 }} /></InputAdornment> }}
-                sx={{ width: { xs: '100%', sm: 195 }, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
-                <MenuItem value="TODAS">Todas las sedes</MenuItem>
-                {sedesDisponibles.map((sede) => <MenuItem key={sede} value={sede}>{sede}</MenuItem>)}
-              </TextField>
-            </Stack>
-          </Stack>
         </Box>
 
         <Box sx={{ p: { xs: 1.5, md: 2 } }}>
