@@ -755,9 +755,10 @@ export function DeportistasPage() {
           canton_codigo: formData.canton_codigo || null,
           parroquia_codigo: formData.parroquia_codigo || null,
         },
-        ubicacion: formData.ubicacion?.latitud !== '' && formData.ubicacion?.longitud !== ''
+        ubicacion: formData.ubicacion?.latitud != null && formData.ubicacion.latitud !== ''
+          && formData.ubicacion?.longitud != null && formData.ubicacion.longitud !== ''
           ? { latitud: Number(formData.ubicacion.latitud), longitud: Number(formData.ubicacion.longitud), referencia: formData.ubicacion.referencia || null }
-          : {},
+          : null,
         requiere_representante_legal: Boolean(formData.requiere_representante_legal),
         representante_legal: formData.requiere_representante_legal
           ? {
@@ -799,7 +800,14 @@ export function DeportistasPage() {
     } catch (error) {
       const errores = error.response?.data?.errors || error.response?.data?.errores;
       const detalle = errores ? Object.values(errores).flat().join(' ') : null;
-      showNotificacion(detalle || error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar el cliente', 'error');
+      const mensajeServidor = error.response?.data?.mensaje || error.response?.data?.message;
+      const estado = error.response?.status;
+      showNotificacion(
+        detalle || mensajeServidor || (estado
+          ? `No se pudo actualizar el cliente (HTTP ${estado}). Revisa el registro de Laravel.`
+          : 'No se pudo conectar con el servidor al guardar el cliente.'),
+        'error',
+      );
     }
   };
 
