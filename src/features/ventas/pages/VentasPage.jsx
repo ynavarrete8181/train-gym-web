@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
+import FilterAltOutlinedIcon from '@mui/icons-material/FilterAltOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import PrintOutlinedIcon from '@mui/icons-material/PrintOutlined';
@@ -28,12 +30,16 @@ export function VentasPage() {
   const [cargandoCuentas, setCargandoCuentas] = useState(true);
   const [cuentaInicial, setCuentaInicial] = useState(null);
   const [busquedaCuenta, setBusquedaCuenta] = useState('');
+  const [filtroSede, setFiltroSede] = useState('TODAS');
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const [detallePdfUrl, setDetallePdfUrl] = useState('');
   const [detallePdfNombre, setDetallePdfNombre] = useState('Comprobante');
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [detallePdfBlob, setDetallePdfBlob] = useState(null);
+  const sedesDisponibles = Array.from(new Set(cuentasAbiertas.map((cuenta) => String(cuenta.sede_nombre || '').trim()).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, 'es-EC'));
   const cuentasFiltradas = cuentasAbiertas.filter((venta) => {
+    if (filtroSede !== 'TODAS' && String(venta.sede_nombre || '') !== filtroSede) return false;
     const texto = busquedaCuenta.trim().toLocaleLowerCase('es-EC');
     if (!texto) return true;
     return [venta.cliente_nombre, venta.cliente_identificacion, venta.codigo_deportista, venta.numero, venta.sede_nombre]
@@ -138,7 +144,7 @@ export function VentasPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader titulo="Ventas" descripcion="Facturación y punto de venta de servicios, productos y operaciones comerciales." icono={<ShoppingCartOutlinedIcon />} />
+      <PageHeader titulo="Ventas" descripcion="Gestiona cobros pendientes y ventas desde tu caja." icono={<ShoppingCartOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <Box sx={{ px: { xs: 1.5, md: 2.3 }, py: 2, bgcolor: '#fff', borderBottom: '1px solid #e9e9e9' }}>
           <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={2}>
@@ -156,14 +162,6 @@ export function VentasPage() {
               </Stack>
             </Box>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
-              <TextField
-                size="small"
-                placeholder="Buscar cliente, código o sede"
-                value={busquedaCuenta}
-                onChange={(e) => setBusquedaCuenta(e.target.value)}
-                InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#A77B08' }} /></InputAdornment> }}
-                sx={{ width: { xs: '100%', sm: 315 }, '& .MuiOutlinedInput-root': { borderRadius: 1.6, bgcolor: '#fff' } }}
-              />
               <Button
                 variant="contained"
                 startIcon={<AddOutlinedIcon />}
@@ -171,13 +169,12 @@ export function VentasPage() {
                 disabled={!turnoActual?.id}
                 title={!turnoActual?.id ? 'Necesitas un turno de caja propio para registrar una venta.' : ''}
                 sx={{
-                  minWidth: 147, minHeight: 40, textTransform: 'none', fontWeight: 900,
-                  bgcolor: '#D4A017', color: '#161616', borderRadius: 1.5, boxShadow: 'none',
-                  '&:hover': { bgcolor: '#BF900F', boxShadow: 'none' },
+                  minWidth: 150, minHeight: 42, textTransform: 'none', fontWeight: 900,
+                  bgcolor: '#D4A017', color: '#171717', borderRadius: 1.5, boxShadow: 'none',
+                  '&:hover': { bgcolor: '#BE8E0D', boxShadow: 'none' },
+                  '&.Mui-disabled': { bgcolor: '#e5e5e5', color: '#787878' },
                 }}
-              >
-                Nueva venta
-              </Button>
+              >Nueva venta</Button>
             </Stack>
           </Stack>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.3, mt: 2 }}>
@@ -208,6 +205,30 @@ export function VentasPage() {
           </Box>
         </Box>
 
+        <Box sx={{ px: { xs: 1.5, md: 2.3 }, pt: 2, pb: .65 }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={1.5}>
+            <Box>
+              <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616' }}>Cuentas abiertas</Typography>
+              <Typography variant="caption" sx={{ color: '#5c5c5c' }}>
+                {cargandoCuentas ? 'Consultando cuentas...' : `${cuentasFiltradas.length} de ${cuentasAbiertas.length} cuentas`}
+              </Typography>
+            </Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'stretch', sm: 'center' }}>
+              <TextField size="small" value={busquedaCuenta} onChange={(e) => setBusquedaCuenta(e.target.value)}
+                placeholder="Buscar nombre, identificación o código"
+                InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> }}
+                sx={{ width: { xs: '100%', sm: 315 }, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }} />
+              <TextField select size="small" value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}
+                aria-label="Filtrar por sede"
+                InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltOutlinedIcon sx={{ color: '#B18510', fontSize: 19 }} /></InputAdornment> }}
+                sx={{ minWidth: { xs: '100%', sm: 185 }, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
+                <MenuItem value="TODAS">Todas las sedes</MenuItem>
+                {sedesDisponibles.map((sede) => <MenuItem key={sede} value={sede}>{sede}</MenuItem>)}
+              </TextField>
+            </Stack>
+          </Stack>
+        </Box>
+
         <Box sx={{ p: { xs: 1.5, md: 2 } }}>
           <Box
             sx={{
@@ -227,102 +248,77 @@ export function VentasPage() {
                 const nombre = venta.cliente_nombre || 'Consumidor final';
                 const estadoParcial = String(venta.estado || '').toUpperCase() === 'PARCIAL';
                 return (
-                  <Box
-                    key={venta.id}
-                    sx={{
-                      border: '1px solid #e5e7eb',
-                      borderRadius: 2,
-                      bgcolor: '#fff',
-                      p: 1.7,
-                      boxShadow: '0 7px 20px rgba(15,23,42,.05)',
-                      transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        borderColor: 'rgba(184,138,0,.34)',
-                        boxShadow: '0 13px 28px rgba(15,23,42,.085)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ minHeight: 54 }}>
-                      <Typography variant="subtitle1" fontWeight={950} sx={{ lineHeight: 1.08 }} title={nombre}>
-                        {nombre}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {venta.cliente_identificacion || 'Sin identificación'}
-                      </Typography>
-                    </Box>
-
-                    <Stack spacing={0.85} sx={{ mt: 1.05 }}>
-                      <Stack direction="row" spacing={0.75} alignItems="center">
-                        <LocationOnOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
-                        <Typography variant="body2" color="text.secondary" fontWeight={700} noWrap>
-                          {venta.sede_nombre || 'Sede no asignada'}
+                  <Box key={venta.id} sx={{
+                    position: 'relative', minWidth: 0, overflow: 'hidden',
+                    border: '1px solid #e5e5e5', borderTop: '4px solid #D4A017', borderRadius: 2,
+                    bgcolor: '#fff', p: 1.7, display: 'flex', flexDirection: 'column', minHeight: 298,
+                    boxShadow: '0 5px 16px rgba(0,0,0,.055)',
+                    transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+                    '&:hover': { transform: 'translateY(-2px)', borderColor: '#D4A017', boxShadow: '0 9px 22px rgba(0,0,0,.11)' },
+                  }}>
+                    <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
+                      <Box sx={{
+                        width: 45, height: 45, flexShrink: 0, display: 'grid', placeItems: 'center',
+                        bgcolor: '#fff1c9', color: '#171717', borderRadius: '50%',
+                        border: '1px solid #eed89f', fontWeight: 950, fontSize: 15,
+                      }}>
+                        {nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte[0].toUpperCase()).join('')}
+                      </Box>
+                      <Box sx={{ minWidth: 0, flex: 1 }}>
+                        <Typography variant="subtitle2" sx={{ color: '#171717', fontWeight: 900, lineHeight: 1.25 }} title={nombre}>
+                          {nombre}
                         </Typography>
-                      </Stack>
-                      <Stack direction="row" spacing={0.75} alignItems="center">
-                        <CalendarMonthOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
-                        <Typography variant="body2" color="text.secondary" fontWeight={700}>
-                          {fecha(venta.fecha_venta)}
+                        <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: .2 }}>
+                          {venta.cliente_identificacion || venta.codigo_deportista || 'Sin identificación'}
                         </Typography>
+                      </Box>
+                    </Stack>
+                    <Stack spacing={.85} sx={{ mt: 1.6, mb: 1.4 }}>
+                      <Stack direction="row" alignItems="center" spacing={.8}>
+                        <LocationOnOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
+                        <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }}>{venta.sede_nombre || 'Sede no asignada'}</Typography>
                       </Stack>
-                      <Stack direction="row" spacing={0.75} alignItems="center">
-                        <PersonOutlineOutlinedIcon sx={{ fontSize: 18, color: '#111827' }} />
-                        <Typography variant="body2" color="text.secondary" fontWeight={700} noWrap>
+                      <Stack direction="row" alignItems="center" spacing={.8}>
+                        <CalendarMonthOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
+                        <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }}>{fecha(venta.fecha_venta)}</Typography>
+                      </Stack>
+                      <Stack direction="row" alignItems="center" spacing={.8}>
+                        <PersonOutlineOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
+                        <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }} noWrap>
                           Generada por: {venta.generado_por_nombre || 'Sistema'}
                         </Typography>
                       </Stack>
                     </Stack>
-
-                    <Divider sx={{ my: 1.35, borderColor: '#e8ebef' }} />
-
-                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 1, alignItems: 'end' }}>
+                    <Divider sx={{ mt: 'auto', mb: 1.2, borderColor: '#ededed' }} />
+                    <Stack direction="row" alignItems="end" justifyContent="space-between" gap={1}>
                       <Box>
-                        <Typography variant="caption" color="text.secondary" display="block">Saldo pendiente</Typography>
-                        <Typography variant="h5" fontWeight={950} sx={{ lineHeight: 1.05 }}>
-                          {dinero(saldo)}
-                        </Typography>
+                        <Typography variant="caption" sx={{ color: '#666', fontWeight: 700 }}>Saldo pendiente</Typography>
+                        <Typography variant="h5" sx={{ color: '#171717', fontWeight: 950, lineHeight: 1.25 }}>{dinero(saldo)}</Typography>
                       </Box>
-                      <Chip
-                        size="small"
-                        label={estadoParcial ? 'Pago parcial' : 'Pendiente'}
+                      <Chip size="small" label={estadoParcial ? 'Pago parcial' : 'Pendiente'} sx={{
+                        bgcolor: estadoParcial ? '#fff0e6' : '#fff0c6',
+                        color: estadoParcial ? '#9b4212' : '#805b00',
+                        border: '1px solid', borderColor: estadoParcial ? '#ebaf85' : '#e6c46c',
+                        fontWeight: 850,
+                      }} />
+                    </Stack>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: .9, mt: 1.45 }}>
+                      <Button variant="contained" size="small" startIcon={<PointOfSaleOutlinedIcon />}
+                        onClick={() => abrirCuenta(venta)} disabled={!turnoActual?.id}
+                        title={!turnoActual?.id ? 'Abre tu turno de caja para cobrar.' : ''}
                         sx={{
-                          height: 30,
-                          px: .5,
-                          fontWeight: 900,
-                          color: estadoParcial ? '#b42318' : '#8a6500',
-                          bgcolor: estadoParcial ? '#fee4e2' : '#fff3cf',
-                          border: '1px solid',
-                          borderColor: estadoParcial ? '#fecdca' : '#efd786',
-                          '& .MuiChip-label': { px: .9 },
-                        }}
-                      />
-                    </Box>
-
-                    <Box sx={{ mt: 1.35, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: .8 }}>
-                      <Button
-                        variant="contained"
-                        startIcon={<PointOfSaleOutlinedIcon />}
-                        onClick={() => abrirCuenta(venta)}
-                        disabled={!turnoActual?.id}
-                        title={!turnoActual?.id ? 'Solo consulta: abre tu propio turno de caja para cobrar.' : ''}
-                        sx={{
-                          ...dbanuStyles.addButtonRevive,
-                          minHeight: 38,
-                          textTransform: 'none',
-                          fontWeight: 950,
-                          borderRadius: 0.5,
-                        }}
-                      >
-                        Abrir cuenta
-                      </Button>
-                      <Button
-                        variant="outlined"
-                        startIcon={<VisibilityOutlinedIcon />}
+                          minHeight: 39, textTransform: 'none', fontWeight: 850, borderRadius: 1.3,
+                          bgcolor: '#D4A017', color: '#171717', boxShadow: 'none',
+                          '&:hover': { bgcolor: '#BE8E0D', boxShadow: 'none' },
+                          '&.Mui-disabled': { bgcolor: '#ebebeb', color: '#8a8a8a' },
+                        }}>Abrir cuenta</Button>
+                      <Button variant="outlined" size="small" startIcon={<VisibilityOutlinedIcon />}
                         onClick={() => abrirDetalle(venta)}
-                        sx={dbanuStyles.secondaryButtonRevive}
-                      >
-                        Ver detalle
-                      </Button>
+                        sx={{
+                          minHeight: 39, textTransform: 'none', fontWeight: 850, borderRadius: 1.3,
+                          borderColor: '#D4A017', color: '#171717', bgcolor: '#fff',
+                          '&:hover': { borderColor: '#B58500', bgcolor: '#fff8e6' },
+                        }}>Ver detalle</Button>
                     </Box>
                   </Box>
                 );
@@ -331,10 +327,10 @@ export function VentasPage() {
 
           </Box>
 
-          {!cargandoCuentas && cuentasAbiertas.length === 0 ? (
+          {!cargandoCuentas && cuentasFiltradas.length === 0 ? (
             <Box sx={{ py: 6, textAlign: 'center' }}>
               <ShoppingCartOutlinedIcon sx={{ fontSize: 38, opacity: .25 }} />
-              <Typography variant="body2" fontWeight={850} color="text.secondary" sx={{ mt: .5 }}>No hay cuentas abiertas.</Typography>
+              <Typography variant="body2" fontWeight={850} color="text.secondary" sx={{ mt: .5 }}>{cuentasAbiertas.length === 0 ? 'No hay cuentas abiertas.' : 'No se encontraron cuentas con estos filtros.'}</Typography>
               <Typography variant="caption" color="text.secondary">Las membresías, pases y ventas pendientes aparecerán aquí.</Typography>
             </Box>
           ) : null}
