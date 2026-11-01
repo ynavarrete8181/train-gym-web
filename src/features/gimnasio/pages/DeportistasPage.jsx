@@ -39,7 +39,7 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { CalendarioCuotasPreview, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
+import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 
 const nombreGeografico = (valor = '') =>
@@ -2095,22 +2095,14 @@ export function DeportistasPage() {
             <CalendarioCuotasPreview filas={calendarioContratoPreview} precioPeriodo={precioMembresiaPreview} />
           </Box>
         ) : null}
+        {membresiaForm.id && membresiaForm.cuotas?.length ? (
+          <CalendarioCuotasRegistradas
+            periodos={membresiaForm.periodos || []}
+            cuotas={membresiaForm.cuotas}
+          />
+        ) : null}
         {membresiaForm.id ? (
           <CondicionesHistoricasContrato membresia={membresiaForm} />
-        ) : null}
-        {membresiaForm.id && membresiaForm.cuotas?.length ? (
-          <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>Cuotas registradas</Typography>
-            <Stack direction={{ xs: 'column', md: 'row' }} flexWrap="wrap" useFlexGap gap={1}>
-              {membresiaForm.cuotas.map((cuota) => (
-                <Box key={cuota.id} sx={{ p: 1.25, minWidth: 180, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="body2" fontWeight={700}>{`Cuota ${cuota.numero_cuota} · ${Number(cuota.monto).toFixed(2)}`}</Typography>
-                  <Typography variant="caption" display="block">Vence: {limpiarFechaMembresia(cuota.fecha_vencimiento)}</Typography>
-                  <Typography variant="caption" color="text.secondary">{cuota.venta_estado || cuota.estado} · Pagado: {`${Number(cuota.monto_pagado || 0).toFixed(2)}`}</Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Box>
         ) : null}
         {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
