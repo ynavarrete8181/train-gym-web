@@ -145,7 +145,7 @@ const getInitialMembresia = () => ({
   modalidad_id: '',
   cantidad_periodos_contratados: 1,
   fecha_fin_solicitada: '',
-  fecha_primer_pago: hoyISO(),
+  fecha_primer_pago: '',
   sede_id: '',
   sedes_habilitadas: [],
   codigo_contrato: '',
@@ -1065,13 +1065,14 @@ export function DeportistasPage() {
       if (contratoNuevo && !cantidadCalculada) {
         showNotificacion('Ingresa una fecha fin válida, dentro de los 36 períodos permitidos.', 'warning'); return;
       }
-      if (contratoNuevo && (!membresiaForm.fecha_primer_pago || membresiaForm.fecha_primer_pago < membresiaForm.fecha_inicio)) {
-        showNotificacion('La fecha del primer pago debe ser igual o posterior a la fecha de inicio.', 'warning'); return;
+      if (contratoNuevo && (!Number.isInteger(Number(membresiaForm.dia_pago))
+        || Number(membresiaForm.dia_pago) < 1 || Number(membresiaForm.dia_pago) > 31)) {
+        showNotificacion('Ingresa un día de pago válido, del 1 al 31.', 'warning'); return;
       }
       if (contratoNuevo) {
         const cuotasPropuestas = generarVistaPreviaCuotas({
           inicio: membresiaForm.fecha_inicio,
-          primerPago: membresiaForm.fecha_primer_pago,
+          diaPago: membresiaForm.dia_pago,
           cantidad: cantidadCalculada,
           tipo: modalidadSeleccionada?.tipo_duracion || planSeleccionado?.tipo_duracion,
           duracion: modalidadSeleccionada?.duracion || planSeleccionado?.duracion,
@@ -1084,6 +1085,7 @@ export function DeportistasPage() {
       const payload = {
         ...membresiaForm,
         fecha_fin_solicitada: undefined,
+        fecha_primer_pago: contratoNuevo ? undefined : membresiaForm.fecha_primer_pago,
         cantidad_periodos_contratados: contratoNuevo ? cantidadCalculada : membresiaForm.cantidad_periodos_contratados,
         // El servidor fija fecha_fin según los períodos completos.
         fecha_fin: contratoNuevo ? undefined : membresiaForm.fecha_fin,
@@ -1847,7 +1849,7 @@ export function DeportistasPage() {
     && (!booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) || modalidadMembresiaSeleccionada)
     ? generarVistaPreviaCuotas({
     inicio: membresiaForm.fecha_inicio,
-    primerPago: membresiaForm.fecha_primer_pago,
+    diaPago: membresiaForm.dia_pago,
     cantidad: periodosCalculados || 0,
     tipo: modalidadMembresiaSeleccionada?.tipo_duracion || planMembresiaSeleccionado?.tipo_duracion,
     duracion: modalidadMembresiaSeleccionada?.duracion || planMembresiaSeleccionado?.duracion,
@@ -1862,7 +1864,8 @@ export function DeportistasPage() {
       : Boolean(
         membresiaForm.fecha_inicio
         && membresiaForm.fecha_fin_solicitada
-        && membresiaForm.fecha_primer_pago
+        && Number(membresiaForm.dia_pago) >= 1
+        && Number(membresiaForm.dia_pago) <= 31
         && calendarioContratoPreview.length
       )
   );
@@ -1965,9 +1968,10 @@ export function DeportistasPage() {
                 onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
               />
-              <TextField label="Fecha de pago" name="fecha_primer_pago" type="date" required size="small"
-                value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
-                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
+              <TextField label="Día de pago" name="dia_pago" type="number" required size="small"
+                value={membresiaForm.dia_pago ?? ''} onChange={handleMembresiaChange}
+                slotProps={{ htmlInput: { min: 1, max: 31, step: 1 } }}
+                placeholder="Ej. 5"
               />
             </>
           ) : (
@@ -2067,7 +2071,7 @@ export function DeportistasPage() {
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
  
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              {calendarioContratoPreview.length} {calendarioContratoPreview.length === 1 ? 'período' : 'períodos'} · {calendarioContratoPreview.length} cuotas · Pago el día {Number(String(membresiaForm.fecha_primer_pago).slice(8, 10))} de cada mes
+              {calendarioContratoPreview.length} {calendarioContratoPreview.length === 1 ? 'período' : 'períodos'} · {calendarioContratoPreview.length} cuotas · Pago el día {Number(membresiaForm.dia_pago)} de cada mes
             </Typography>
             {calendarioContratoPreview.length > 0 && calendarioContratoPreview[calendarioContratoPreview.length - 1].fin !== membresiaForm.fecha_fin_solicitada && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
