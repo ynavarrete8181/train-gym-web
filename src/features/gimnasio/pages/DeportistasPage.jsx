@@ -1965,6 +1965,7 @@ export function DeportistasPage() {
             </Box>
           </Box>
         ) : (
+          <>
         <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos del contrato</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) ? 'minmax(0, 1fr) minmax(0, 2fr)' : 'minmax(0, 1fr)' }, gap: 1.5 }}>
           <TextField
@@ -2047,6 +2048,7 @@ export function DeportistasPage() {
           )}
         </Box>
         )}
+          </>
         )}
         {membresiaForm.id && (
           <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 1.5, mb: 0.25 }}>
