@@ -120,3 +120,65 @@ export function CalendarioCuotasPreview({ filas, precioPeriodo = null }) {
     </Box>
   );
 }
+
+
+/**
+ * Tabla de consulta del contrato guardado, NO simulación. Fuente de verdad:
+ * membresia_periodos y membresia_cuotas, con pagos confirmados por Laravel.
+ */
+export function CalendarioCuotasRegistradas({ periodos = [], cuotas = [] }) {
+  if (!cuotas.length) return null;
+  const mapaPeriodos = new Map(periodos.map((periodo) => [String(periodo.id), periodo]));
+  const moneda = (valor) => new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(Number(valor || 0));
+  const fechaGuardada = (valor) => String(valor || '').slice(0, 10) || '—';
+
+  return (
+    <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden', bgcolor: 'background.paper' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}
+        sx={{ px: 1.5, py: 1.25, bgcolor: 'action.hover' }}>
+        <Typography variant="subtitle2" fontWeight={800}>Contrato y calendario de cuotas</Typography>
+        <Chip size="small" variant="outlined" label={`${cuotas.length} ${cuotas.length === 1 ? 'cuota' : 'cuotas'} registradas`} />
+      </Stack>
+      <Divider />
+      <Box sx={{ overflowX: 'auto' }}>
+        <Box component="table" sx={{
+          width: '100%', borderCollapse: 'collapse', fontSize: 13,
+          '& th, & td': { px: 1.5, py: 1, textAlign: 'left', borderBottom: '1px solid', borderColor: 'divider', whiteSpace: 'nowrap' },
+          '& th': { color: 'text.secondary', fontWeight: 700 },
+        }}>
+          <thead>
+            <tr>
+              <th>Cuota</th><th>Inicio del período</th><th>Fin del período</th>
+              <th>Emisión de venta</th><th>Vencimiento</th><th>Importe</th><th>Pagado</th><th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cuotas.map((cuota) => {
+              const periodo = mapaPeriodos.get(String(cuota.periodo_id));
+              const pagado = Number(cuota.monto_pagado || 0);
+              const emitida = Boolean(cuota.venta_id);
+              const estado = emitida
+                ? (pagado >= Number(cuota.monto) ? 'Pagada' : pagado > 0 ? 'Parcial' : 'Pendiente')
+                : cuota.estado === 'ANULADA' ? 'Anulada' : 'Programada';
+              return (
+                <tr key={cuota.id}>
+                  <td>{cuota.numero_cuota}</td>
+                  <td>{fechaGuardada(periodo?.fecha_inicio)}</td>
+                  <td>{fechaGuardada(periodo?.fecha_fin)}</td>
+                  <td>{fechaGuardada(cuota.fecha_programada_emision)}</td>
+                  <td>{fechaGuardada(cuota.fecha_vencimiento)}</td>
+                  <td>{moneda(cuota.monto)}</td>
+                  <td>{moneda(cuota.monto_pagado)}</td>
+                  <td>{estado}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </Box>
+      </Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 1 }}>
+        Fechas e importes guardados en el contrato; la edición no los recalcula.
+      </Typography>
+    </Box>
+  );
+}

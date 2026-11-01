@@ -28,6 +28,7 @@ import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
 import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
@@ -39,7 +40,7 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { CalendarioCuotasPreview, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
+import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 
 const nombreGeografico = (valor = '') =>
@@ -360,6 +361,7 @@ export function DeportistasPage() {
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
   const [membresiaForm, setMembresiaForm] = useState(getInitialMembresia());
+  const [historialMembresiaSeleccionada, setHistorialMembresiaSeleccionada] = useState(null);
   const [progresosCliente, setProgresosCliente] = useState([]);
   const [progresoForm, setProgresoForm] = useState(getInitialProgreso());
   const [planesEntrenamiento, setPlanesEntrenamiento] = useState([]);
@@ -986,6 +988,7 @@ export function DeportistasPage() {
   };
 
   const handleNuevaMembresia = () => {
+    setHistorialMembresiaSeleccionada(null);
     setMembresiaForm(getInitialMembresia());
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setRequiereDescuento(false);
@@ -993,6 +996,7 @@ export function DeportistasPage() {
   };
 
   const handleEditarMembresia = (m) => {
+    setHistorialMembresiaSeleccionada(null);
     const descuentoActual = m.descuento_vigente;
     setRequiereDescuento(Boolean(descuentoActual));
     setDescuentoMembresia(descuentoActual ? {
@@ -1115,9 +1119,14 @@ export function DeportistasPage() {
         delete payload.estado; // Lo establece Laravel según las reglas del plan y del pago.
       }
       if (membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null) {
+        // Contrato existente: no enviar condiciones inmutables al endpoint
+        // administrativo. Laravel conserva el calendario y las ventas emitidas.
         delete payload.fecha_inicio;
+        delete payload.modalidad_id;
         delete payload.dia_pago;
         delete payload.generar_venta_automatica;
+        delete payload.cantidad_periodos_contratados;
+        delete payload.fecha_primer_pago;
       }
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
@@ -1171,10 +1180,22 @@ export function DeportistasPage() {
     } catch (error) {
       const estadoHttp = Number(error.response?.status || 0);
       const errores = error.response?.data?.errors;
+      const primerCampoInvalido = errores ? Object.keys(errores)[0] : null;
       const primerError = errores ? Object.values(errores).flat().find((item) => typeof item === 'string') : null;
+      const camposLegibles = {
+        fecha_inicio: 'fecha de inicio', estado: 'estado', modalidad_id: 'modalidad',
+        sedes_habilitadas: 'sedes autorizadas', dia_pago: 'día de pago',
+        fecha_congelacion_inicio: 'inicio de congelación',
+        fecha_congelacion_fin: 'fin de congelación',
+      };
+      const mensajeValidacion = primerError === 'validation.required'
+        ? `Es obligatorio completar ${camposLegibles[primerCampoInvalido] || primerCampoInvalido || 'un campo'}.`
+        : primerError === 'validation.prohibited'
+          ? `No es posible modificar ${camposLegibles[primerCampoInvalido] || primerCampoInvalido || 'este campo'} en un contrato vigente.`
+          : primerError;
       const mensajeGenerico = error.response?.data?.mensaje;
       const avisoValidacion = estadoHttp === 422 || estadoHttp === 409;
-      const mensaje = primerError || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
+      const mensaje = mensajeValidacion || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
         ? mensajeGenerico : null) || (avisoValidacion
           ? 'Revisa los datos de la membresía antes de continuar.'
           : 'Ocurrió un error al registrar la membresía. Inténtalo nuevamente.');
@@ -1901,7 +1922,12 @@ export function DeportistasPage() {
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
-          <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => { setVistaMembresia('listado'); setMembresiaForm(getInitialMembresia()); }} /></Box>
+          <Box sx={{ ml: 'auto' }}>
+            <BotonVolver onClick={() => {
+              setVistaMembresia('listado');
+              setMembresiaForm(getInitialMembresia());
+            }} />
+          </Box>
         </Stack>
         <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos del contrato</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) ? 'minmax(0, 1fr) minmax(0, 2fr)' : 'minmax(0, 1fr)' }, gap: 1.5 }}>
@@ -2095,22 +2121,11 @@ export function DeportistasPage() {
             <CalendarioCuotasPreview filas={calendarioContratoPreview} precioPeriodo={precioMembresiaPreview} />
           </Box>
         ) : null}
-        {membresiaForm.id ? (
-          <CondicionesHistoricasContrato membresia={membresiaForm} />
-        ) : null}
         {membresiaForm.id && membresiaForm.cuotas?.length ? (
-          <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>Cuotas registradas</Typography>
-            <Stack direction={{ xs: 'column', md: 'row' }} flexWrap="wrap" useFlexGap gap={1}>
-              {membresiaForm.cuotas.map((cuota) => (
-                <Box key={cuota.id} sx={{ p: 1.25, minWidth: 180, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-                  <Typography variant="body2" fontWeight={700}>{`Cuota ${cuota.numero_cuota} · ${Number(cuota.monto).toFixed(2)}`}</Typography>
-                  <Typography variant="caption" display="block">Vence: {limpiarFechaMembresia(cuota.fecha_vencimiento)}</Typography>
-                  <Typography variant="caption" color="text.secondary">{cuota.venta_estado || cuota.estado} · Pagado: {`${Number(cuota.monto_pagado || 0).toFixed(2)}`}</Typography>
-                </Box>
-              ))}
-            </Stack>
-          </Box>
+          <CalendarioCuotasRegistradas
+            periodos={membresiaForm.periodos || []}
+            cuotas={membresiaForm.cuotas}
+          />
         ) : null}
         {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
@@ -2301,7 +2316,7 @@ export function DeportistasPage() {
               options={opcionesExcel(membresiasCliente, (m) => textoMembresia(m, campo))}>
               {{ plan: 'Plan', vigencia: 'Vigencia', precio: 'Precio', estado: 'Estado' }[campo]}
             </FilterHeaderCell>)}
-            <TableCell align="right">Acciones</TableCell>
+            <TableCell align="center" sx={{ minWidth: 150 }}>Acciones</TableCell>
           </TableRow></TableHead>
           <TableBody>
             {membresiasFiltradas.slice((paginaMembresia - 1) * porPaginaMembresia, paginaMembresia * porPaginaMembresia).map((m) => <TableRow key={m.id} hover>
@@ -2310,15 +2325,58 @@ export function DeportistasPage() {
               <TableCell>{textoMembresia(m, 'vigencia')}</TableCell>
               <TableCell>{textoMembresia(m, 'precio')}</TableCell>
               <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
-              <TableCell align="right">
-                <Tooltip title="Editar membresía"><IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarMembresia(m)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-                <Tooltip title="Eliminar membresía"><IconButton sx={dbanuStyles.actionDelete} onClick={() => handleEliminarMembresia(m)}><DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+              <TableCell align="center" sx={{ width: 150, minWidth: 150, whiteSpace: 'nowrap' }}>
+                <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ flexWrap: 'nowrap' }}>
+                  <Tooltip title="Editar membresía">
+                    <IconButton aria-label="Editar membresía" sx={{ ...dbanuStyles.actionEdit, m: 0, flexShrink: 0 }}
+                      onClick={() => handleEditarMembresia(m)}>
+                      <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Ver historial del contrato">
+                    <IconButton aria-label="Ver historial de membresía" sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
+                      onClick={() => {
+                        setHistorialMembresiaSeleccionada(m);
+                        setVistaMembresia('historial');
+                      }}>
+                      <HistoryOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar membresía">
+                    <IconButton aria-label="Eliminar membresía" sx={{ ...dbanuStyles.actionDelete, m: 0, flexShrink: 0 }}
+                      onClick={() => handleEliminarMembresia(m)}>
+                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
               </TableCell>
             </TableRow>)}
             {!membresiasFiltradas.length && !cargandoFicha && <TableRow><TableCell colSpan={5} align="center">No se encontraron membresías.</TableCell></TableRow>}
           </TableBody>
         </TablaGestion>
       </Box>}
+      {vistaMembresia === 'historial' && historialMembresiaSeleccionada && (
+        <Box sx={{ ...formStyles.seccion, mt: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 2, width: '100%', mb: 2 }}>
+            <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>
+              <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 0.5 }}>
+                Historial del contrato
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+                {historialMembresiaSeleccionada.codigo_contrato
+                  || historialMembresiaSeleccionada.plan_nombre
+                  || 'Membresía'} · Consulta de condiciones y modificaciones
+              </Typography>
+            </Box>
+            <BotonVolver sx={{ flex: '0 0 auto', ml: 'auto' }} onClick={() => {
+              setHistorialMembresiaSeleccionada(null);
+              setVistaMembresia('listado');
+            }} />
+          </Box>
+          <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} sedes={sedes} />
+        </Box>
+      )}
     </Stack>
   );
 
