@@ -1997,15 +1997,17 @@ export function DeportistasPage() {
             <MenuItem value="CONGELADA">Congelada</MenuItem>
             <MenuItem value="CANCELADA">Cancelada</MenuItem>
           </TextField>
-          <TextField
-            label="Días de gracia"
-            name="dias_gracia"
-            type="number"
-            value={membresiaForm.dias_gracia ?? 0}
-            onChange={handleMembresiaChange}
-            size="small"
-            slotProps={{ htmlInput: { min: 0, max: 365 } }}
-          />
+          {membresiaForm.id && (
+            <TextField
+              label="Días de gracia"
+              name="dias_gracia"
+              type="number"
+              value={membresiaForm.dias_gracia ?? 0}
+              onChange={handleMembresiaChange}
+              size="small"
+              slotProps={{ htmlInput: { min: 0, max: 365 } }}
+            />
+          )}
 
           {membresiaForm.id && !membresiaForm.cantidad_periodos_contratados ? (
             <>
