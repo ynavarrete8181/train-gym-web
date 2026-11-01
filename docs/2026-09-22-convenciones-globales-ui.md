@@ -96,3 +96,17 @@ La interfaz debe conservar:
 - mínimo contenido repetido;
 - navegación interna consistente;
 - estilos compartidos en lugar de estilos aislados por módulo.
+
+## Identidad cromática oficial (logo REVIVE SPORTS, octubre 2026)
+
+La fuente visual de marca es el logo de fondo negro, tipografía blanca y detalles amarillo deportivo. Los valores operativos se centralizan en `src/styles/uiTokens.js` y `src/styles/colors.js`:
+
+- Negro principal: `#111111` (negro puro `#000000` para contrastes y soporte de logotipo).
+- Blanco: `#FFFFFF` (superficie y texto sobre fondos oscuros).
+- Amarillo de marca aproximado desde el logo JPEG: `#FFC400`. Es acento para acciones destacadas, selección y señalización comercial.
+- Fondos y bordes: neutros sin dominante azul, definidos en `uiTokens`.
+- Rojo y verde no son colores de identidad de marca: se conservan **solo como colores semánticos** para acciones destructivas/errores y confirmaciones/éxitos, respectivamente.
+
+No reintroducir azul como elemento principal ni repetir valores hexadecimales locales; usar tokens y `theme.palette` de Material UI. El componente `Editar Plan` mantiene su propio menú de secciones y usa negro/amarillo de la marca.
+
+Los cambios cromáticos globales requieren revisar contraste, tema oscuro, encabezados, botones y estados de todas las vistas antes de desplegar a producción.
