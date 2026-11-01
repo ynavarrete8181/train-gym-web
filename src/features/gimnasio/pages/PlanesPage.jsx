@@ -43,6 +43,7 @@ const getInitialForm = () => ({
 
 export function PlanesPage() {
   const [vista, setVista] = useState('lista');
+  const [seccionPlan, setSeccionPlan] = useState('generales');
   const [formData, setFormData] = useState(getInitialForm());
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const [planes, setPlanes] = useState([]);
@@ -93,6 +94,7 @@ export function PlanesPage() {
 
   const handleNuevo = () => {
     setFormData(getInitialForm());
+    setSeccionPlan('generales');
     setVista('formulario');
   };
 
@@ -200,6 +202,7 @@ export function PlanesPage() {
       servicio_ids: (plan.servicio_ids || plan.servicios?.map((servicio) => servicio.id) || []).map(Number),
       modalidades: plan.modalidades || [],
     });
+    setSeccionPlan('generales');
     setVista('formulario');
   };
 
@@ -352,13 +355,58 @@ export function PlanesPage() {
     }
   };
 
+  const seccionesPlan = [
+    { id: 'generales', titulo: 'Datos generales', descripcion: 'Identificación y descripción' },
+    { id: 'comercial', titulo: 'Comportamiento comercial', descripcion: 'Producto y condiciones del plan' },
+    { id: 'servicios', titulo: 'Servicios incluidos', descripcion: 'Cobertura deportiva' },
+    { id: 'tarifas', titulo: 'Modalidades y tarifas', descripcion: 'Duración y precios por sede' },
+  ];
+
   if (vista === 'formulario') {
     return (
       <Box className="page-wrapper">
         <PageHeader titulo={formData.id ? 'Editar Plan' : 'Nuevo Plan'} descripcion="Define producto, cobro, duración estándar y tarifas. La vigencia real se calcula al crear la membresía." icono={<LocalOfferOutlinedIcon />} acciones={<BotonVolver onClick={() => setVista('lista')} />} />
         <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
-          <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
-            <Stack spacing={2}>
+          <Box sx={{ bgcolor: '#fff', p: { xs: 1.5, md: 2.5 } }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '220px minmax(0, 1fr)' }, gap: { xs: 2, md: 2.5 }, alignItems: 'start' }}>
+              <Box component="nav" aria-label="Secciones del plan" sx={{
+                p: 1, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc',
+                position: { md: 'sticky' }, top: { md: 16 },
+                display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 0.75,
+                overflowX: { xs: 'auto', md: 'visible' },
+              }}>
+                {seccionesPlan.map((seccion) => {
+                  const seleccionada = seccionPlan === seccion.id;
+                  return (
+                    <Button key={seccion.id} type="button" onClick={() => setSeccionPlan(seccion.id)}
+                      aria-current={seleccionada ? 'step' : undefined}
+                      sx={{
+                        justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
+                        flexShrink: 0, minWidth: { xs: 155, md: 0 }, px: 1.5, py: 1.2,
+                        color: seleccionada ? '#144985' : '#475569',
+                        bgcolor: seleccionada ? '#e8f0fa' : 'transparent',
+                        borderLeft: { md: seleccionada ? '3px solid #144985' : '3px solid transparent' },
+                        borderRadius: 1.5,
+                        '&:hover': { bgcolor: seleccionada ? '#dbeafe' : '#eaf0f6' },
+                      }}>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: seleccionada ? 800 : 600, lineHeight: 1.35 }}>{seccion.titulo}</Typography>
+                        <Typography variant="caption" sx={{ color: '#64748b', display: { xs: 'none', md: 'block' }, lineHeight: 1.3 }}>{seccion.descripcion}</Typography>
+                      </Box>
+                    </Button>
+                  );
+                })}
+              </Box>
+              <Stack spacing={2} sx={{ minWidth: 0 }}>
+                <Box sx={{ mb: 0.5 }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#144985' }}>
+                    {seccionesPlan.find((seccion) => seccion.id === seccionPlan)?.titulo}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {seccionesPlan.find((seccion) => seccion.id === seccionPlan)?.descripcion}
+                  </Typography>
+                </Box>
+              <Box sx={{ display: seccionPlan === 'generales' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Datos del plan</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 1.5 }}>
@@ -374,6 +422,8 @@ export function PlanesPage() {
                 <TextField fullWidth label="Descripción / Beneficios" name="descripcion" value={formData.descripcion || ''} onChange={handleChange} multiline rows={2} size="small" sx={{ mt: 1.5 }} />
               </Box>
 
+              </Box>
+              <Box sx={{ display: seccionPlan === 'comercial' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Comportamiento comercial</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
@@ -408,6 +458,8 @@ export function PlanesPage() {
                 </Stack>
               </Box>
 
+              </Box>
+              <Box sx={{ display: seccionPlan === 'servicios' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
                   <Typography sx={formStyles.modalSeccionTitulo}>Servicios incluidos</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
@@ -451,6 +503,8 @@ export function PlanesPage() {
                   />
                 </Box>
 
+              </Box>
+              <Box sx={{ display: seccionPlan === 'tarifas' ? 'block' : 'none' }}>
               {formData.requiere_modalidades ? (
                 <PlanModalidadesEditor
                   modalidades={formData.modalidades || []}
@@ -538,7 +592,9 @@ export function PlanesPage() {
                   </Box>
                 </>
               )}
-            </Stack>
+              </Box>
+              </Stack>
+            </Box>
           </Box>
           <AccionesFormulario onGuardar={handleGuardar} onCancelar={() => setVista('lista')} />
         </Paper>
