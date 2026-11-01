@@ -40,6 +40,7 @@ import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
+import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
@@ -2020,6 +2021,9 @@ export function DeportistasPage() {
             </Box>
             <CalendarioCuotasPreview filas={calendarioContratoPreview} />
           </Box>
+        ) : null}
+        {membresiaForm.id ? (
+          <CondicionesHistoricasContrato membresia={membresiaForm} />
         ) : null}
         {membresiaForm.id && membresiaForm.cuotas?.length ? (
           <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
