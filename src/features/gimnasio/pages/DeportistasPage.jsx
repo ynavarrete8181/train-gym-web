@@ -1921,12 +1921,13 @@ export function DeportistasPage() {
     <Stack spacing={2}>
 
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={2}
-          sx={{ mb: 2, px: membresiaForm.id ? 1.5 : 0, py: membresiaForm.id ? 1.25 : 0,
+        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          gap: 2, width: '100%', boxSizing: 'border-box',
+          mb: 2, px: membresiaForm.id ? 1.5 : 0, py: membresiaForm.id ? 1.25 : 0,
             borderRadius: membresiaForm.id ? 1.5 : 0,
             bgcolor: membresiaForm.id ? uiTokens.colores.acentoSuave : 'transparent',
             border: membresiaForm.id ? `1px solid ${uiTokens.colores.acentoBorde}` : 'none' }}>
-          <Box sx={{ minWidth: 0 }}>
+          <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>
             <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: membresiaForm.id ? 0.25 : 0,
               color: membresiaForm.id ? uiTokens.colores.acentoTexto : uiTokens.colores.textoFuerte }}>
               {membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}
@@ -1937,13 +1938,13 @@ export function DeportistasPage() {
               </Typography>
             )}
           </Box>
-          <Box sx={{ ml: 'auto', flexShrink: 0 }}>
+          <Box sx={{ ml: 'auto', flex: '0 0 auto', display: 'flex', justifyContent: 'flex-end' }}>
             <BotonVolver onClick={() => {
               setVistaMembresia('listado');
               setMembresiaForm(getInitialMembresia());
             }} />
           </Box>
-        </Stack>
+        </Box>
         {membresiaForm.id ? (
           <Box sx={{ mb: 2, border: 1, borderColor: 'divider', borderRadius: 1.5, p: { xs: 1.5, md: 2 }, bgcolor: 'background.paper' }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Contrato registrado</Typography>
