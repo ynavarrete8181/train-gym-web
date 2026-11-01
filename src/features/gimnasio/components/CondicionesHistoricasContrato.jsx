@@ -51,7 +51,15 @@ const etiquetas = {
   descuentos: 'Descuentos',
 };
 
-const presentarValor = (valor, campo) => {
+const presentarValor = (valor, campo, sedesPorId = {}) => {
+  const sedeConNombre = (id) => sedesPorId[String(id)] || `Sede no disponible (ID ${id})`;
+  if (campo === 'sede_id') {
+    return valor === null || valor === undefined || valor === '' ? 'No registrada' : sedeConNombre(valor);
+  }
+  if (campo === 'sedes_autorizadas') {
+    if (!Array.isArray(valor) || valor.length === 0) return 'Ninguna';
+    return valor.map((id) => sedeConNombre(id)).join(', ');
+  }
   if (valor === null || valor === undefined || valor === '') return 'No registrado';
   if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
   if (['fecha_inicio', 'fecha_fin', 'fecha_congelacion_inicio', 'fecha_congelacion_fin'].includes(campo)) return fecha(valor);
@@ -72,7 +80,7 @@ const dato = (titulo, valor) => (
   </Box>
 );
 
-export function CondicionesHistoricasContrato({ membresia }) {
+export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
   const [detallesAbiertos, setDetallesAbiertos] = useState(false);
   if (!membresia?.id) return null;
 
@@ -81,6 +89,7 @@ export function CondicionesHistoricasContrato({ membresia }) {
     try { condiciones = JSON.parse(condiciones); } catch { condiciones = null; }
   }
   const original = condiciones && typeof condiciones === 'object' ? condiciones : null;
+  const sedesPorId = Object.fromEntries(sedes.map((sede) => [String(sede.id_sede), sede.nombre]));
   const historial = Array.isArray(membresia.historial_condiciones)
     ? [...membresia.historial_condiciones].sort((a, b) => Number(b.version) - Number(a.version))
     : [];
@@ -225,10 +234,10 @@ export function CondicionesHistoricasContrato({ membresia }) {
                             <Typography variant="caption" fontWeight={800}>{etiquetas[campo] || campo}</Typography>
                             <Box sx={{ mt: 0.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25 }}>
                               <Box sx={{ p: 1.1, bgcolor: 'action.hover', borderRadius: 1 }}>
-                                {dato('Anterior', presentarValor(cambio.antes, campo))}
+                                {dato('Anterior', presentarValor(cambio.antes, campo, sedesPorId))}
                               </Box>
                               <Box sx={{ p: 1.1, border: 1, borderColor: 'divider', borderRadius: 1 }}>
-                                {dato('Nuevo', presentarValor(cambio.despues, campo))}
+                                {dato('Nuevo', presentarValor(cambio.despues, campo, sedesPorId))}
                               </Box>
                             </Box>
                           </Box>
