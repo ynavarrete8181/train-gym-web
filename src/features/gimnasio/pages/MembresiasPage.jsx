@@ -386,8 +386,14 @@ export function MembresiasPage() {
       };
 
       if (formData.id) {
+        const datosActualizacion = { ...comun };
+        // Los contratos a plazo fijo tienen calendario inmutable: editar
+        // condiciones exige un proceso contractual auditado en el backend.
+        if (formData.cantidad_periodos_contratados != null) {
+          delete datosActualizacion.fecha_inicio;
+        }
         await gimnasioServicio.actualizarMembresia(formData.id, {
-          ...comun,
+          ...datosActualizacion,
           estado: normalizarEstado(formData.estado),
           generar_venta: Boolean(formData.requiere_facturar),
           fecha_congelacion_inicio: formData.fecha_congelacion_inicio || null,
