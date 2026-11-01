@@ -2043,7 +2043,7 @@ export function DeportistasPage() {
                 La modalidad se contrata por períodos completos. La vigencia real termina el {calendarioContratoPreview[calendarioContratoPreview.length - 1].fin}.
               </Typography>
             )}
-            <CalendarioCuotasPreview filas={calendarioContratoPreview} />
+            <CalendarioCuotasPreview filas={calendarioContratoPreview} precioPeriodo={precioMembresiaPreview} />
           </Box>
         ) : null}
         {membresiaForm.id ? (
