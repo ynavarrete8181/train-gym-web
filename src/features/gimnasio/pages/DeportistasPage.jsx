@@ -1777,13 +1777,20 @@ export function DeportistasPage() {
   const modalidadMembresiaSeleccionada = modalidadesMembresiaDisponibles.find(
     (modalidad) => String(modalidad.id) === String(membresiaForm.modalidad_id),
   );
-  const precioMembresiaPreview = membresiaForm.plan_id && membresiaForm.sede_id
-    ? precioAplicableMembresia(
-        planMembresiaSeleccionado,
-        modalidadMembresiaSeleccionada,
-        membresiaForm.sede_id,
-      )
+  // En edición no reinterpretar la tarifa histórica con los precios
+  // actuales del catálogo, que pueden haber cambiado.
+  const precioHistorico = membresiaForm.id
+    ? (membresiaForm.condiciones_contratadas?.precio_periodo ?? membresiaForm.precio_aplicado)
     : null;
+  const precioMembresiaPreview = membresiaForm.id && precioHistorico != null
+    ? Number(precioHistorico)
+    : membresiaForm.plan_id && membresiaForm.sede_id
+      ? precioAplicableMembresia(
+          planMembresiaSeleccionado,
+          modalidadMembresiaSeleccionada,
+          membresiaForm.sede_id,
+        )
+      : null;
   const descuentoNumerico = Number(descuentoMembresia.valor || 0);
   const precioBaseResumen = Number(precioMembresiaPreview ?? 0);
   const importeDescuentoPreview = !requiereDescuento || !Number.isFinite(descuentoNumerico)
