@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
@@ -28,6 +28,7 @@ import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
 import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
@@ -360,6 +361,7 @@ export function DeportistasPage() {
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
   const [membresiaForm, setMembresiaForm] = useState(getInitialMembresia());
+  const [historialMembresiaAbierto, setHistorialMembresiaAbierto] = useState(false);
   const [progresosCliente, setProgresosCliente] = useState([]);
   const [progresoForm, setProgresoForm] = useState(getInitialProgreso());
   const [planesEntrenamiento, setPlanesEntrenamiento] = useState([]);
@@ -986,6 +988,7 @@ export function DeportistasPage() {
   };
 
   const handleNuevaMembresia = () => {
+    setHistorialMembresiaAbierto(false);
     setMembresiaForm(getInitialMembresia());
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setRequiereDescuento(false);
@@ -993,6 +996,7 @@ export function DeportistasPage() {
   };
 
   const handleEditarMembresia = (m) => {
+    setHistorialMembresiaAbierto(false);
     const descuentoActual = m.descuento_vigente;
     setRequiereDescuento(Boolean(descuentoActual));
     setDescuentoMembresia(descuentoActual ? {
@@ -1918,7 +1922,20 @@ export function DeportistasPage() {
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
-          <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => { setVistaMembresia('listado'); setMembresiaForm(getInitialMembresia()); }} /></Box>
+          <Stack direction="row" spacing={1} sx={{ ml: 'auto', alignItems: 'center' }}>
+            {membresiaForm.id && (
+              <Button variant="outlined" size="small" startIcon={<HistoryOutlinedIcon />}
+                onClick={() => setHistorialMembresiaAbierto(true)}
+                sx={{ textTransform: 'none', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                Ver historial
+              </Button>
+            )}
+            <BotonVolver onClick={() => {
+              setHistorialMembresiaAbierto(false);
+              setVistaMembresia('listado');
+              setMembresiaForm(getInitialMembresia());
+            }} />
+          </Stack>
         </Stack>
         <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos del contrato</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) ? 'minmax(0, 1fr) minmax(0, 2fr)' : 'minmax(0, 1fr)' }, gap: 1.5 }}>
@@ -2118,9 +2135,25 @@ export function DeportistasPage() {
             cuotas={membresiaForm.cuotas}
           />
         ) : null}
-        {membresiaForm.id ? (
-          <CondicionesHistoricasContrato membresia={membresiaForm} />
-        ) : null}
+        {membresiaForm.id && (
+          <Dialog open={historialMembresiaAbierto}
+            onClose={() => setHistorialMembresiaAbierto(false)}
+            fullWidth maxWidth="lg" scroll="paper">
+            <DialogTitle sx={{ pb: 1, fontWeight: 800 }}>
+              Historial del contrato
+              <Typography variant="body2" color="text.secondary">
+                {membresiaForm.codigo_contrato || membresiaForm.plan_nombre || 'Membresía'} · Condiciones originales y modificaciones registradas
+              </Typography>
+            </DialogTitle>
+            <DialogContent dividers sx={{ p: { xs: 1.5, md: 2 } }}>
+              <CondicionesHistoricasContrato membresia={membresiaForm} />
+            </DialogContent>
+            <DialogActions sx={{ px: 2, py: 1.5 }}>
+              <Button variant="outlined" onClick={() => setHistorialMembresiaAbierto(false)}
+                sx={{ textTransform: 'none' }}>Cerrar</Button>
+            </DialogActions>
+          </Dialog>
+        )}
         {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas *</Typography>
