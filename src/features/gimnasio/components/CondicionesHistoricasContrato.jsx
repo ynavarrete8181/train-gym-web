@@ -35,6 +35,9 @@ export function CondicionesHistoricasContrato({ membresia }) {
     ['Inicio del contrato', fecha(condiciones.fecha_inicio)],
     ['Fin del contrato', fecha(membresia.fecha_fin)],
     ['Primera fecha de pago', fecha(condiciones.fecha_primer_pago)],
+    ['Vencimiento mensual', condiciones.programacion_vencimientos === 'DIA_FIJO_MENSUAL'
+      ? `Día ${condiciones.dia_pago} de cada mes`
+      : 'Según condiciones originales'],
   ] : [
     ['Plan registrado', membresia.plan_nombre],
     ['Modalidad registrada', membresia.modalidad_nombre || '—'],
