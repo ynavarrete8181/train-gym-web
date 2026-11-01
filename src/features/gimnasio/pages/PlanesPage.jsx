@@ -11,6 +11,7 @@ import { NotificacionSnackbar } from '../../../components/common/NotificacionSna
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { uiTokens } from '../../../styles/uiTokens.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
@@ -370,7 +371,7 @@ export function PlanesPage() {
           <Box sx={{ bgcolor: '#fff', p: { xs: 1.5, md: 2.5 } }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '220px minmax(0, 1fr)' }, gap: { xs: 2, md: 2.5 }, alignItems: 'start' }}>
               <Box component="nav" aria-label="Secciones del plan" sx={{
-                p: 1, border: '1px solid #e2e8f0', borderRadius: 2, bgcolor: '#f8fafc',
+                p: 1, border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.default',
                 position: { md: 'sticky' }, top: { md: 16 },
                 display: 'flex', flexDirection: { xs: 'row', md: 'column' }, gap: 0.75,
                 overflowX: { xs: 'auto', md: 'visible' },
@@ -383,15 +384,15 @@ export function PlanesPage() {
                       sx={{
                         justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
                         flexShrink: 0, minWidth: { xs: 155, md: 0 }, px: 1.5, py: 1.2,
-                        color: seleccionada ? '#144985' : '#475569',
-                        bgcolor: seleccionada ? '#e8f0fa' : 'transparent',
-                        borderLeft: { md: seleccionada ? '3px solid #144985' : '3px solid transparent' },
+                        color: seleccionada ? 'primary.main' : 'text.secondary',
+                        bgcolor: seleccionada ? ((theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : uiTokens.colores.primarioSuave) : 'transparent',
+                        borderLeft: { md: seleccionada ? `3px solid ${uiTokens.colores.primario}` : '3px solid transparent' },
                         borderRadius: 1.5,
-                        '&:hover': { bgcolor: seleccionada ? '#dbeafe' : '#eaf0f6' },
+                        '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : (seleccionada ? uiTokens.colores.primarioSuave : uiTokens.colores.bordeSuave) },
                       }}>
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: seleccionada ? 800 : 600, lineHeight: 1.35 }}>{seccion.titulo}</Typography>
-                        <Typography variant="caption" sx={{ color: '#64748b', display: { xs: 'none', md: 'block' }, lineHeight: 1.3 }}>{seccion.descripcion}</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: { xs: 'none', md: 'block' }, lineHeight: 1.3 }}>{seccion.descripcion}</Typography>
                       </Box>
                     </Button>
                   );
@@ -399,7 +400,7 @@ export function PlanesPage() {
               </Box>
               <Stack spacing={2} sx={{ minWidth: 0 }}>
                 <Box sx={{ mb: 0.5 }}>
-                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#144985' }}>
+                  <Typography variant="subtitle1" sx={{ fontWeight: 800, color: 'primary.main' }}>
                     {seccionesPlan.find((seccion) => seccion.id === seccionPlan)?.titulo}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
