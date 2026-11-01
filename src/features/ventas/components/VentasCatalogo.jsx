@@ -382,7 +382,20 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.codigo_cobro || item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
     { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero || '—' },
     { key: 'cliente', header: <TableCell key="cliente">Cliente</TableCell>, render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
-    { key: 'cobrador', header: <TableCell key="cobrador">Cobrado por</TableCell>, render: (item) => item.cobrado_por_nombre || 'Sin usuario' },
+    { key: 'cobrador', header: <TableCell key="cobrador">Responsables</TableCell>, render: (item) => (
+      <Box sx={{ minWidth: 160 }}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Venta generada por</Typography>
+        <Typography variant="body2" fontWeight={650}>
+          {item.generado_por_nombre || 'Sin usuario'}
+          {item.generado_por_rol ? ` · ${item.generado_por_rol}` : ''}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>Cobró</Typography>
+        <Typography variant="body2" fontWeight={650}>
+          {item.cobrado_por_nombre || 'Sin usuario'}
+          {item.cobrado_por_rol ? ` · ${item.cobrado_por_rol}` : ''}
+        </Typography>
+      </Box>
+    ) },
     { key: 'efectivo', header: <TableCell key="efectivo" align="right">Efectivo</TableCell>, render: (item) => dinero(item.efectivo) },
     { key: 'cambio', header: <TableCell key="cambio" align="right">Efectivo entregado / Cambio</TableCell>, render: (item) =>
       Number(item.efectivo || 0) > 0 ? (
