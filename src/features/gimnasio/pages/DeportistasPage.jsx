@@ -39,6 +39,7 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
 
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
@@ -141,6 +142,8 @@ const getInitialMembresia = () => ({
   id: null,
   plan_id: '',
   modalidad_id: '',
+  cantidad_periodos_contratados: 1,
+  fecha_primer_pago: hoyISO(),
   sede_id: '',
   sedes_habilitadas: [],
   codigo_contrato: '',
@@ -946,6 +949,9 @@ export function DeportistasPage() {
     setMembresiaForm((actual) => {
       const nuevoValor = type === 'checkbox' ? checked : value;
 
+      if (name === 'fecha_inicio' && (!actual.fecha_primer_pago || actual.fecha_primer_pago === actual.fecha_inicio)) {
+        return { ...actual, fecha_inicio: nuevoValor, fecha_primer_pago: nuevoValor };
+      }
       if (name === 'congelar_membresia') {
         return {
           ...actual,
@@ -1028,19 +1034,26 @@ export function DeportistasPage() {
         return;
       }
 
-      if (membresiaForm.generar_venta_automatica && !membresiaForm.dia_pago) {
+      if (membresiaForm.id && membresiaForm.generar_venta_automatica && !membresiaForm.dia_pago) {
         showNotificacion('Selecciona el día habitual de pago para generar la venta automáticamente', 'warning');
         return;
       }
 
       if (
-        membresiaForm.congelar_membresia
+        membresiaForm.id && membresiaForm.congelar_membresia
         && (!membresiaForm.fecha_congelacion_inicio || !membresiaForm.fecha_congelacion_fin)
       ) {
         showNotificacion('Completa el período de congelación de la membresía', 'warning');
         return;
       }
 
+      const contratoNuevo = !membresiaForm.id && String(planSeleccionado?.tipo_producto || '').toUpperCase() !== 'PASE_DIARIO';
+      if (contratoNuevo && (!Number.isInteger(Number(membresiaForm.cantidad_periodos_contratados)) || Number(membresiaForm.cantidad_periodos_contratados) < 1 || Number(membresiaForm.cantidad_periodos_contratados) > 36)) {
+        showNotificacion('Ingresa entre 1 y 36 períodos.', 'warning'); return;
+      }
+      if (contratoNuevo && (!membresiaForm.fecha_primer_pago || membresiaForm.fecha_primer_pago < membresiaForm.fecha_inicio)) {
+        showNotificacion('La fecha del primer pago debe ser igual o posterior a la fecha de inicio.', 'warning'); return;
+      }
       const payload = {
         ...membresiaForm,
         congelar_membresia: undefined,
@@ -1058,10 +1071,18 @@ export function DeportistasPage() {
         sedes_habilitadas: Array.from(new Set((membresiaForm.sedes_habilitadas || []).map(Number))).filter(Boolean),
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
-        generar_venta_automatica: Boolean(membresiaForm.generar_venta_automatica),
+        generar_venta_automatica: contratoNuevo ? false : Boolean(membresiaForm.generar_venta_automatica),
+        cantidad_periodos_contratados: contratoNuevo ? Number(membresiaForm.cantidad_periodos_contratados) : undefined,
+        fecha_primer_pago: contratoNuevo ? membresiaForm.fecha_primer_pago : undefined,
         proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
+      if (!membresiaForm.id) { delete payload.fecha_congelacion_inicio; delete payload.fecha_congelacion_fin; }
+      if (membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null) {
+        delete payload.fecha_inicio;
+        delete payload.dia_pago;
+        delete payload.generar_venta_automatica;
+      }
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
       if (requiereDescuento) {
@@ -1776,7 +1797,15 @@ export function DeportistasPage() {
     || (descuentoMembresia.tipo === 'PORCENTAJE' && descuentoNumerico > 100)
     || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
   );
-  const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable);
+  const contratoNuevoVisible = !membresiaForm.id && String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() !== 'PASE_DIARIO';
+  const calendarioContratoPreview = contratoNuevoVisible ? generarVistaPreviaCuotas({
+    inicio: membresiaForm.fecha_inicio,
+    primerPago: membresiaForm.fecha_primer_pago,
+    cantidad: membresiaForm.cantidad_periodos_contratados,
+    tipo: modalidadMembresiaSeleccionada?.tipo_duracion || planMembresiaSeleccionado?.tipo_duracion,
+    duracion: modalidadMembresiaSeleccionada?.duracion || planMembresiaSeleccionado?.duracion,
+  }) : [];
+  const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable) && !contratoNuevoVisible;
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
 
@@ -1874,7 +1903,7 @@ export function DeportistasPage() {
             label="Fecha fin"
             name="fecha_fin"
             type="date"
-            value={membresiaForm.fecha_fin || ''}
+            value={calendarioContratoPreview.length ? calendarioContratoPreview[calendarioContratoPreview.length - 1].fin : (membresiaForm.fecha_fin || '')}
             size="small"
             disabled
             slotProps={{ inputLabel: { shrink: true } }}
@@ -1908,6 +1937,8 @@ export function DeportistasPage() {
             slotProps={{ htmlInput: { min: 0, max: 365 } }}
           />
 
+          {membresiaForm.id && !membresiaForm.cantidad_periodos_contratados ? (
+            <>
           <Box
             sx={{
               height: 40,
@@ -1959,8 +1990,42 @@ export function DeportistasPage() {
               sx={{ m: 0 }}
             />
           </Box>
+            </>
+          ) : null}
         </Box>
 
+        {contratoNuevoVisible ? (
+          <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+              Los importes y la vigencia se confirman en Laravel. Los días de gracia no modifican la fecha de vencimiento del pago.
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5, mb: 1.5 }}>
+              <TextField label="Períodos contratados" name="cantidad_periodos_contratados" type="number" required size="small"
+                value={membresiaForm.cantidad_periodos_contratados || ''} onChange={handleMembresiaChange}
+                slotProps={{ htmlInput: { min: 1, max: 36, step: 1 } }} helperText="Entre 1 y 36 períodos." />
+              <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" required size="small"
+                value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
+                helperText="Vencimiento de la primera cuota." />
+            </Box>
+            <CalendarioCuotasPreview filas={calendarioContratoPreview} />
+          </Box>
+        ) : null}
+        {membresiaForm.id && membresiaForm.cuotas?.length ? (
+          <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>Cuotas registradas</Typography>
+            <Stack direction={{ xs: 'column', md: 'row' }} flexWrap="wrap" useFlexGap gap={1}>
+              {membresiaForm.cuotas.map((cuota) => (
+                <Box key={cuota.id} sx={{ p: 1.25, minWidth: 180, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                  <Typography variant="body2" fontWeight={700}>{`Cuota ${cuota.numero_cuota} · ${Number(cuota.monto).toFixed(2)}`}</Typography>
+                  <Typography variant="caption" display="block">Vence: {limpiarFechaMembresia(cuota.fecha_vencimiento)}</Typography>
+                  <Typography variant="caption" color="text.secondary">{cuota.venta_estado || cuota.estado} · Pagado: {`${Number(cuota.monto_pagado || 0).toFixed(2)}`}</Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Box>
+        ) : null}
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar *</Typography>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
@@ -2024,7 +2089,7 @@ export function DeportistasPage() {
                 : 'Sin venta inicial automática'}
             </Typography>
           )}
-          {permiteCobroProgramado && (
+          {permiteCobroProgramado && !membresiaForm.cantidad_periodos_contratados && (
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mb: 1.5 }}>
               <TextField fullWidth size="small" label="Día de pago" name="dia_pago" type="number"
                 value={membresiaForm.dia_pago ?? ''} onChange={handleMembresiaChange}
@@ -2090,7 +2155,7 @@ export function DeportistasPage() {
           )}
         </Box>
 
-        {membresiaForm.congelar_membresia ? (
+        {membresiaForm.id && !membresiaForm.cantidad_periodos_contratados && membresiaForm.congelar_membresia ? (
           <Box
             sx={{
               mt: 1.5,
