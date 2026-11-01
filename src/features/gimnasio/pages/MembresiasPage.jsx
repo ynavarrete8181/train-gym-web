@@ -30,6 +30,7 @@ import { configuracionServicio } from '../../configuracion/services/configuracio
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
 import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
+import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
@@ -608,9 +609,13 @@ export function MembresiasPage() {
                   </Box>
                   <CalendarioCuotasPreview filas={calendario} />
                 </Box>
-              ) : formData.cuotas?.length ? (
+              ) : (
                 <Box sx={formStyles.seccion}>
-                  <Typography sx={formStyles.modalSeccionTitulo}>Calendario contractual registrado</Typography>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Historial del contrato</Typography>
+                  <CondicionesHistoricasContrato membresia={formData} />
+                  {formData.cuotas?.length ? (
+                    <>
+                      <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 2, mb: 1 }}>Calendario contractual registrado</Typography>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mt: 1 }}>
                     {formData.cuotas.map((cuota) => (
                       <Box key={cuota.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 1.5 }}>
@@ -620,8 +625,10 @@ export function MembresiasPage() {
                       </Box>
                     ))}
                   </Box>
+                    </>
+                  ) : null}
                 </Box>
-              ) : null}
+              )}
 
               {requiereEntrenador ? (
                 <Box sx={formStyles.seccion}>
