@@ -1109,7 +1109,11 @@ export function DeportistasPage() {
         proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
-      if (!membresiaForm.id) { delete payload.fecha_congelacion_inicio; delete payload.fecha_congelacion_fin; }
+      if (!membresiaForm.id) {
+        delete payload.fecha_congelacion_inicio;
+        delete payload.fecha_congelacion_fin;
+        delete payload.estado; // Lo establece Laravel según las reglas del plan y del pago.
+      }
       if (membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null) {
         delete payload.fecha_inicio;
         delete payload.dia_pago;
@@ -1981,22 +1985,20 @@ export function DeportistasPage() {
           )}
         </Box>
         )}
-        {modalidadLista && (
+        {membresiaForm.id && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
-          <TextField select label="Estado inicial" name="estado"
-            value={!membresiaForm.id
-              ? (planMembresiaSeleccionado?.requiere_pago === false ? 'ACTIVA' : 'PENDIENTE_PAGO')
-              : (membresiaForm.estado || 'PENDIENTE_PAGO')}
-            onChange={handleMembresiaChange} required size="small"
-            disabled={!membresiaForm.id}
-            helperText=""
-          >
-            <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
-            <MenuItem value="ACTIVA">Activa</MenuItem>
-            <MenuItem value="VENCIDA">Vencida</MenuItem>
-            <MenuItem value="CONGELADA">Congelada</MenuItem>
-            <MenuItem value="CANCELADA">Cancelada</MenuItem>
-          </TextField>
+          {membresiaForm.id && (
+            <TextField select label="Estado" name="estado"
+              value={membresiaForm.estado || 'PENDIENTE_PAGO'}
+              onChange={handleMembresiaChange} required size="small"
+            >
+              <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
+              <MenuItem value="ACTIVA">Activa</MenuItem>
+              <MenuItem value="VENCIDA">Vencida</MenuItem>
+              <MenuItem value="CONGELADA">Congelada</MenuItem>
+              <MenuItem value="CANCELADA">Cancelada</MenuItem>
+            </TextField>
+          )}
           {membresiaForm.id && (
             <TextField
               label="Días de gracia"
