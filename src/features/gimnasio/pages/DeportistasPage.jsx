@@ -39,7 +39,7 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { CalendarioCuotasPreview, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
+import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 
 const nombreGeografico = (valor = '') =>
@@ -144,7 +144,6 @@ const getInitialMembresia = () => ({
   plan_id: '',
   modalidad_id: '',
   cantidad_periodos_contratados: 1,
-  fecha_cobertura_deseada: '',
   fecha_primer_pago: hoyISO(),
   sede_id: '',
   sedes_habilitadas: [],
@@ -969,7 +968,6 @@ export function DeportistasPage() {
           plan_id: nuevoValor,
           modalidad_id: '',
           fecha_fin: '',
-          fecha_cobertura_deseada: '',
           cantidad_periodos_contratados: 1,
         };
       }
@@ -980,29 +978,11 @@ export function DeportistasPage() {
           sedes_habilitadas: Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), sedeSeleccionada])).filter(Boolean) };
       }
       if (name === 'cantidad_periodos_contratados') {
-        return { ...actual, cantidad_periodos_contratados: nuevoValor, fecha_cobertura_deseada: '' };
+        return { ...actual, cantidad_periodos_contratados: nuevoValor };
       }
       return { ...actual, [name]: nuevoValor };
     });
   };
-
-  // Al elegir "hasta cuándo" se calculan los períodos completos.
-  // La fecha fin exacta la devuelve el calendario, sin fracciones de cuota.
-  useEffect(() => {
-    if (membresiaForm.id || !membresiaForm.fecha_cobertura_deseada) return;
-    const plan = planes.find((p) => String(p.id) === String(membresiaForm.plan_id));
-    const modalidad = (plan?.modalidades || []).find((m) => String(m.id) === String(membresiaForm.modalidad_id));
-    if (!plan || (booleanoBackend(plan.requiere_modalidades) && !modalidad)) return;
-    const cantidad = periodosParaCubrirFecha({
-      inicio: membresiaForm.fecha_inicio,
-      objetivo: membresiaForm.fecha_cobertura_deseada,
-      tipo: modalidad?.tipo_duracion || plan.tipo_duracion,
-      duracion: modalidad?.duracion || plan.duracion,
-    });
-    if (cantidad && Number(membresiaForm.cantidad_periodos_contratados) !== cantidad) {
-      setMembresiaForm((actual) => ({ ...actual, cantidad_periodos_contratados: cantidad }));
-    }
-  }, [membresiaForm.id, membresiaForm.fecha_cobertura_deseada, membresiaForm.fecha_inicio, membresiaForm.plan_id, membresiaForm.modalidad_id, planes]);
 
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
@@ -1079,28 +1059,9 @@ export function DeportistasPage() {
       if (contratoNuevo && (!membresiaForm.fecha_primer_pago || membresiaForm.fecha_primer_pago < membresiaForm.fecha_inicio)) {
         showNotificacion('La fecha del primer pago debe ser igual o posterior a la fecha de inicio.', 'warning'); return;
       }
-      if (contratoNuevo && membresiaForm.fecha_cobertura_deseada) {
-        const plan = planes.find((item) => String(item.id) === String(membresiaForm.plan_id));
-        const modalidad = (plan?.modalidades || []).find((item) => String(item.id) === String(membresiaForm.modalidad_id));
-        const numero = periodosParaCubrirFecha({
-          inicio: membresiaForm.fecha_inicio,
-          objetivo: membresiaForm.fecha_cobertura_deseada,
-          tipo: modalidad?.tipo_duracion || plan?.tipo_duracion,
-          duracion: modalidad?.duracion || plan?.duracion,
-        });
-        if (!numero) {
-          showNotificacion('La fecha solicitada no puede cubrirse con 1 a 36 períodos completos.', 'warning');
-          return;
-        }
-        if (Number(membresiaForm.cantidad_periodos_contratados) !== numero) {
-          showNotificacion('Revisa los períodos calculados antes de guardar.', 'warning');
-          return;
-        }
-      }
       const payload = {
         ...membresiaForm,
         congelar_membresia: undefined,
-        fecha_cobertura_deseada: undefined,
         fecha_congelacion_inicio: membresiaForm.congelar_membresia
           ? (membresiaForm.fecha_congelacion_inicio || null)
           : null,
@@ -1959,14 +1920,8 @@ export function DeportistasPage() {
               helperText=""
             />
           ) : null}
-          {contratoNuevoVisible && (
-            <TextField label="Quiero cubrir hasta" name="fecha_cobertura_deseada" type="date"
-              value={membresiaForm.fecha_cobertura_deseada || ''}
-              onChange={handleMembresiaChange} size="small"
-              slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }} />
-          )}
           <TextField
-            label="Fecha fin calculada"
+            label="Fecha fin del contrato"
             name="fecha_fin"
             type="date"
             value={calendarioContratoPreview.length ? calendarioContratoPreview[calendarioContratoPreview.length - 1].fin : (membresiaForm.fecha_fin || '')}
