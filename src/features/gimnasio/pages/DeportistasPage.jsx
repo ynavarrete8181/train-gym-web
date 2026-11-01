@@ -40,6 +40,7 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 
@@ -1920,15 +1921,52 @@ export function DeportistasPage() {
     <Stack spacing={2}>
 
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-          <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
-          <Box sx={{ ml: 'auto' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          gap: 2, width: '100%', boxSizing: 'border-box',
+          mb: 2, px: membresiaForm.id ? 1.5 : 0, py: membresiaForm.id ? 1.25 : 0,
+            borderRadius: membresiaForm.id ? 1.5 : 0,
+            bgcolor: membresiaForm.id ? uiTokens.colores.acentoSuave : 'transparent',
+            border: membresiaForm.id ? `1px solid ${uiTokens.colores.acentoBorde}` : 'none' }}>
+          <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>
+            <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: membresiaForm.id ? 0.25 : 0,
+              color: membresiaForm.id ? uiTokens.colores.acentoTexto : uiTokens.colores.textoFuerte }}>
+              {membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}
+            </Typography>
+            {membresiaForm.id && (
+              <Typography variant="caption" sx={{ color: uiTokens.colores.acentoTexto }}>
+                Modifica únicamente los datos administrativos permitidos; las cuotas pactadas se conservan.
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ ml: 'auto', flex: '0 0 auto', display: 'flex', justifyContent: 'flex-end' }}>
             <BotonVolver onClick={() => {
               setVistaMembresia('listado');
               setMembresiaForm(getInitialMembresia());
             }} />
           </Box>
-        </Stack>
+        </Box>
+        {membresiaForm.id ? (
+          <Box sx={{ mb: 2, border: 1, borderColor: 'divider', borderRadius: 1.5, p: { xs: 1.5, md: 2 }, bgcolor: 'background.paper' }}>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Contrato registrado</Typography>
+            <Box sx={{ display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.75 }}>
+              {[
+                ['Plan', membresiaForm.plan_nombre || planMembresiaSeleccionado?.nombre || '—'],
+                ['Modalidad', membresiaForm.modalidad_nombre || 'Sin modalidad'],
+                ['Inicio', fechaMembresia(membresiaForm.fecha_inicio)],
+                ['Fin', fechaMembresia(membresiaForm.fecha_fin)],
+                ['Día de pago', membresiaForm.dia_pago ? `Día ${membresiaForm.dia_pago} de cada mes` : '—'],
+                ['Períodos', membresiaForm.cantidad_periodos_contratados ?? '—'],
+              ].map(([etiqueta, valor]) => (
+                <Box key={etiqueta} sx={{ minWidth: 0 }}>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{etiqueta}</Typography>
+                  <Typography variant="body2" fontWeight={750} sx={{ overflowWrap: 'anywhere' }}>{valor}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        ) : (
+          <>
         <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos del contrato</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) ? 'minmax(0, 1fr) minmax(0, 2fr)' : 'minmax(0, 1fr)' }, gap: 1.5 }}>
           <TextField
@@ -2010,6 +2048,13 @@ export function DeportistasPage() {
             />
           )}
         </Box>
+        )}
+          </>
+        )}
+        {membresiaForm.id && (
+          <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 1.5, mb: 0.25 }}>
+            Configuración administrativa
+          </Typography>
         )}
         {membresiaForm.id && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
@@ -2183,7 +2228,7 @@ export function DeportistasPage() {
           <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.25 }}>
             Configuración comercial
           </Typography>
-          {membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
+          {!membresiaForm.id && membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
               {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
                 ? 'Venta inicial pendiente de cobro'
@@ -2242,7 +2287,7 @@ export function DeportistasPage() {
                 slotProps={{ inputLabel: { shrink: true } }} />
             </Box>
           )}
-          {precioMembresiaPreview !== null && (
+          {!membresiaForm.id && precioMembresiaPreview !== null && (
             <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 2,
               px: 1.5, py: 1.15, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
               <Typography variant="body2">Precio: <strong>${precioBaseResumen.toFixed(2)}</strong></Typography>
