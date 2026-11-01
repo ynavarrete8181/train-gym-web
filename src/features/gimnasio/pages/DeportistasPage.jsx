@@ -2374,7 +2374,7 @@ export function DeportistasPage() {
               setVistaMembresia('listado');
             }} />
           </Box>
-          <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} />
+          <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} sedes={sedes} />
         </Box>
       )}
     </Stack>
