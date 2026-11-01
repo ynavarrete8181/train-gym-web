@@ -604,7 +604,7 @@ export function MembresiasPage() {
                   </Typography>
                   <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mb: 2 }}>
                     <TextField label="Períodos contratados" name="cantidad_periodos_contratados" type="number" size="small" required value={formData.cantidad_periodos_contratados} onChange={handleChange} slotProps={{ htmlInput: { min: 1, max: 36, step: 1 } }} helperText="Entre 1 y 36 períodos." />
-                    <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" size="small" required value={formData.fecha_primer_pago || ''} onChange={handleChange} slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: formData.fecha_inicio || undefined } }} helperText="Vencimiento de la primera cuota." />
+                    <TextField label="Fecha de pago" name="fecha_primer_pago" type="date" size="small" required value={formData.fecha_primer_pago || ''} onChange={handleChange} slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: formData.fecha_inicio || undefined } }} helperText="Este día se repite en cada mes calendario." />
                     <TextField label="Total de cuotas" size="small" disabled value={calendario.length ? calendario.length : '—'} helperText="El importe total se confirma al guardar." />
                   </Box>
                   <CalendarioCuotasPreview filas={calendario} />
