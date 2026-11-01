@@ -2067,7 +2067,7 @@ export function DeportistasPage() {
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
  
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              {calendarioContratoPreview.length} {calendarioContratoPreview.length === 1 ? 'período' : 'períodos'} · {calendarioContratoPreview.length} cuotas programadas
+              {calendarioContratoPreview.length} {calendarioContratoPreview.length === 1 ? 'período' : 'períodos'} · {calendarioContratoPreview.length} cuotas · Pago el día {Number(String(membresiaForm.fecha_primer_pago).slice(8, 10))} de cada mes
             </Typography>
             {calendarioContratoPreview.length > 0 && calendarioContratoPreview[calendarioContratoPreview.length - 1].fin !== membresiaForm.fecha_fin_solicitada && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
