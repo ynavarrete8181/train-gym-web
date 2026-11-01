@@ -262,6 +262,7 @@ export function PlanesPage() {
   const handleGuardar = async () => {
     try {
       if (!String(formData.nombre || '').trim()) {
+        setSeccionPlan('generales');
         showNotificacion('Ingresa el nombre del plan.', 'warning');
         return;
       }
@@ -282,11 +283,13 @@ export function PlanesPage() {
       }
 
       if (formData.activo && !(formData.servicio_ids || []).length) {
+        setSeccionPlan('servicios');
         showNotificacion('Selecciona al menos un servicio incluido antes de activar el plan.', 'warning');
         return;
       }
 
       if (formData.requiere_modalidades && !(formData.modalidades || []).length) {
+        setSeccionPlan('tarifas');
         showNotificacion('Agrega al menos una modalidad antes de guardar este plan.', 'warning');
         return;
       }
@@ -358,7 +361,9 @@ export function PlanesPage() {
 
   const seccionesPlan = [
     { id: 'generales', titulo: 'Datos generales', descripcion: 'Identificación y descripción' },
-    { id: 'comercial', titulo: 'Comportamiento comercial', descripcion: 'Producto y condiciones del plan' },
+    { id: 'cobro', titulo: 'Política de cobro', descripcion: 'Producto, generación de venta y cobro' },
+    { id: 'acceso', titulo: 'Condiciones de acceso', descripcion: 'Requisitos para utilizar el plan' },
+    { id: 'renovaciones', titulo: 'Renovaciones', descripcion: 'Continuidad del contrato' },
     { id: 'servicios', titulo: 'Servicios incluidos', descripcion: 'Cobertura deportiva' },
     { id: 'tarifas', titulo: 'Modalidades y tarifas', descripcion: 'Duración y precios por sede' },
   ];
@@ -424,9 +429,9 @@ export function PlanesPage() {
               </Box>
 
               </Box>
-              <Box sx={{ display: seccionPlan === 'comercial' ? 'block' : 'none' }}>
+              <Box sx={{ display: seccionPlan === 'cobro' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
-                <Typography sx={formStyles.modalSeccionTitulo}>Comportamiento comercial</Typography>
+                <Typography sx={formStyles.modalSeccionTitulo}>Política de cobro</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
                   <TextField select label="Tipo de producto" name="tipo_producto" value={formData.tipo_producto || 'MEMBRESIA'} onChange={handleChange} size="small">
                     <MenuItem value="MEMBRESIA">Membresía</MenuItem>
@@ -439,27 +444,51 @@ export function PlanesPage() {
                     <MenuItem value="RECURRENTE">Recurrente</MenuItem>
                   </TextField>
                 </Box>
-                <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mt: 1 }}>
-                  {/* La generación de la venta inicial se controla al asignar la membresía al deportista. */}
-                  <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
-                  <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
-                  <FormControlLabel control={<Switch name="requiere_ficha_inicial" checked={Boolean(formData.requiere_ficha_inicial)} onChange={handleChange} />} label="Requiere ficha inicial" />
-                  <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Renovable" />
+                <Box sx={{ mt: 2, p: 1.5, borderRadius: 1.5, border: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
                   <FormControlLabel
-                    control={
-                      <Switch
-                        name="requiere_modalidades"
-                        checked={Boolean(formData.requiere_modalidades)}
-                        onChange={handleChange}
-                        disabled={formData.tipo_producto === 'PASE_DIARIO'}
-                      />
-                    }
-                    label="Requiere modalidades"
+                    control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />}
+                    label="Generar venta al asignar la membresía"
                   />
-                </Stack>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 6 }}>
+                    Para planes que requieren pago, registra la obligación comercial pendiente al contratar. La venta y el cobro son operaciones diferentes.
+                  </Typography>
+                  {formData.requiere_pago && !formData.generar_venta && (
+                    <Typography variant="body2" sx={{ mt: 1, color: 'warning.dark', fontWeight: 700 }}>
+                      Atención: el plan exige pago para activar, pero tiene deshabilitada la generación de venta. Revisa esta combinación antes de guardar.
+                    </Typography>
+                  )}
+                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                  La fecha límite de pago y la autorización de pago posterior son condiciones del contrato de cada deportista; se definirán en Asignar membresía.
+                </Typography>
+              </Box>
               </Box>
 
+              <Box sx={{ display: seccionPlan === 'acceso' ? 'block' : 'none' }}>
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Condiciones de acceso</Typography>
+                  <Stack spacing={1}>
+                    <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
+                    <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
+                    <FormControlLabel control={<Switch name="requiere_ficha_inicial" checked={Boolean(formData.requiere_ficha_inicial)} onChange={handleChange} />} label="Requiere ficha inicial" />
+                    <FormControlLabel control={<Switch name="requiere_modalidades" checked={Boolean(formData.requiere_modalidades)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Requiere modalidades" />
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                    Una autorización excepcional para entrenar antes de pagar debe quedar registrada en la membresía del deportista, no aplicada a todos los usuarios del plan.
+                  </Typography>
+                </Box>
               </Box>
+
+              <Box sx={{ display: seccionPlan === 'renovaciones' ? 'block' : 'none' }}>
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Renovaciones</Typography>
+                  <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Permitir renovar este plan" />
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
+                    La renovación automática, el día habitual de cobro y las obligaciones de los siguientes períodos se configuran en la membresía del deportista. Activar «Renovable» no significa realizar cobros automáticos.
+                  </Typography>
+                </Box>
+              </Box>
+
               <Box sx={{ display: seccionPlan === 'servicios' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
                   <Typography sx={formStyles.modalSeccionTitulo}>Servicios incluidos</Typography>
