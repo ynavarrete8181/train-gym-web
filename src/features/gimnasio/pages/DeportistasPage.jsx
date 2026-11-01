@@ -1068,6 +1068,19 @@ export function DeportistasPage() {
       if (contratoNuevo && (!membresiaForm.fecha_primer_pago || membresiaForm.fecha_primer_pago < membresiaForm.fecha_inicio)) {
         showNotificacion('La fecha del primer pago debe ser igual o posterior a la fecha de inicio.', 'warning'); return;
       }
+      if (contratoNuevo) {
+        const cuotasPropuestas = generarVistaPreviaCuotas({
+          inicio: membresiaForm.fecha_inicio,
+          primerPago: membresiaForm.fecha_primer_pago,
+          cantidad: cantidadCalculada,
+          tipo: modalidadSeleccionada?.tipo_duracion || planSeleccionado?.tipo_duracion,
+          duracion: modalidadSeleccionada?.duracion || planSeleccionado?.duracion,
+        });
+        if (cuotasPropuestas.some((cuota) => cuota.vencimiento > cuota.fin)) {
+          showNotificacion('Una cuota vence después de su período. Ajusta la fecha de pago o selecciona una modalidad mensual.', 'warning');
+          return;
+        }
+      }
       const payload = {
         ...membresiaForm,
         fecha_fin_solicitada: undefined,
@@ -1839,6 +1852,7 @@ export function DeportistasPage() {
     tipo: modalidadMembresiaSeleccionada?.tipo_duracion || planMembresiaSeleccionado?.tipo_duracion,
     duracion: modalidadMembresiaSeleccionada?.duracion || planMembresiaSeleccionado?.duracion,
   }) : [];
+  const cuotaFueraDePeriodo = calendarioContratoPreview.find((cuota) => cuota.vencimiento > cuota.fin);
   // Flujo de asignación progresivo: plan → modalidad → fechas → cuotas → sedes → descuento.
   const modalidadLista = Boolean(membresiaForm.plan_id)
     && (!booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) || Boolean(modalidadMembresiaSeleccionada));
@@ -2060,6 +2074,17 @@ export function DeportistasPage() {
                 La modalidad se contrata por períodos completos. La vigencia real termina el {calendarioContratoPreview[calendarioContratoPreview.length - 1].fin}.
               </Typography>
             )}
+            {cuotaFueraDePeriodo && (
+              <Typography variant="caption" color="error" sx={{ display: 'block', mb: 1 }}>
+                La cuota {cuotaFueraDePeriodo.numero} vence después de su período. Ajusta la fecha de pago o usa una modalidad de 1 mes.
+              </Typography>
+            )}
+            {String(modalidadMembresiaSeleccionada?.tipo_duracion || planMembresiaSeleccionado?.tipo_duracion) === 'SEMANAS'
+              && Number(modalidadMembresiaSeleccionada?.duracion || planMembresiaSeleccionado?.duracion) === 4 && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+                  4 semanas son 28 días; no equivalen a 1 mes calendario.
+                </Typography>
+              )}
             <CalendarioCuotasPreview filas={calendarioContratoPreview} precioPeriodo={precioMembresiaPreview} />
           </Box>
         ) : null}
