@@ -15,8 +15,15 @@ const columnas = [
     render: (item) => (
       <Box>
         <Typography variant="body2" fontWeight={700}>{item.venta_numero}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
           {item.plan_nombre || item.concepto}
+        </Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+          Generada por: {item.generado_por_tipo === 'SISTEMA'
+            ? 'Sistema'
+            : (item.generado_por_nombre || 'Sin usuario')}
+          {item.generado_por_tipo !== 'SISTEMA' && item.generado_por_rol
+            ? ` · ${item.generado_por_rol}` : ''}
         </Typography>
       </Box>
     ),
@@ -54,7 +61,7 @@ const columnas = [
     label: 'Saldo',
     render: (item) => <Typography fontWeight={900}>{dinero(item.saldo_pendiente)}</Typography>,
   },
-  { key: 'responsable', label: 'Responsable', render: (item) => item.responsable_nombre || 'Sin asignar' },
+  { key: 'responsable', label: 'Responsable de cobranza', render: (item) => item.responsable_nombre || 'Sin asignar' },
   {
     key: 'estado',
     label: 'Estado',
@@ -149,7 +156,7 @@ export function CarteraTabla({
             options={opciones(meta.catalogos?.responsables, 'id', 'name')}
             multiple
           >
-            Responsable
+            Responsable de cobranza
           </FilterHeaderCell>
           <FilterHeaderCell
             value={filtrosColumna.prioridad || []}
