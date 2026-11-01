@@ -951,8 +951,8 @@ export function DeportistasPage() {
     setMembresiaForm((actual) => {
       const nuevoValor = type === 'checkbox' ? checked : value;
 
-      if (name === 'fecha_inicio' && (!actual.fecha_primer_pago || actual.fecha_primer_pago === actual.fecha_inicio)) {
-        return { ...actual, fecha_inicio: nuevoValor, fecha_primer_pago: nuevoValor };
+      if (name === 'fecha_inicio') {
+        return { ...actual, fecha_inicio: nuevoValor };
       }
       if (name === 'congelar_membresia') {
         return {
@@ -1105,8 +1105,7 @@ export function DeportistasPage() {
         dias_gracia: Number(membresiaForm.dias_gracia || 0),
         dia_pago: membresiaForm.dia_pago ? Number(membresiaForm.dia_pago) : null,
         generar_venta_automatica: contratoNuevo ? false : Boolean(membresiaForm.generar_venta_automatica),
-        cantidad_periodos_contratados: contratoNuevo ? Number(membresiaForm.cantidad_periodos_contratados) : undefined,
-        fecha_primer_pago: contratoNuevo ? membresiaForm.fecha_primer_pago : undefined,
+
         proxima_fecha_cobro: undefined,
         renovacion_automatica: Boolean(membresiaForm.renovacion_automatica),
       };
