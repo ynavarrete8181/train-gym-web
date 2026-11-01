@@ -1843,6 +1843,12 @@ export function DeportistasPage() {
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
           <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => { setVistaMembresia('listado'); setMembresiaForm(getInitialMembresia()); }} /></Box>
         </Stack>
+        <Box sx={{ mb: 1.5 }}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>Plan y vigencia del contrato</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Selecciona el plan, la modalidad y cuántos períodos contratará el deportista. La fecha final se actualizará automáticamente.
+          </Typography>
+        </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField
             select
@@ -1909,21 +1915,35 @@ export function DeportistasPage() {
               ? 'El pase será válido ese día. Puede pagarse antes y el descuento se calcula para la fecha de uso.'
               : ''}
           />
+          {contratoNuevoVisible ? (
+            <TextField
+              label="Períodos contratados"
+              name="cantidad_periodos_contratados"
+              type="number"
+              value={membresiaForm.cantidad_periodos_contratados ?? ''}
+              onChange={handleMembresiaChange}
+              required size="small"
+              slotProps={{ htmlInput: { min: 1, max: 36, step: 1 } }}
+              helperText={modalidadMembresiaSeleccionada
+                ? `Cada período dura ${modalidadMembresiaSeleccionada.duracion} ${String(modalidadMembresiaSeleccionada.tipo_duracion || '').toLowerCase()}.`
+                : 'Define la duración total del contrato (1 a 36 períodos).'}
+            />
+          ) : null}
           <TextField
             label="Fecha fin"
             name="fecha_fin"
             type="date"
             value={calendarioContratoPreview.length ? calendarioContratoPreview[calendarioContratoPreview.length - 1].fin : (membresiaForm.fecha_fin || '')}
             size="small"
-            disabled
-            slotProps={{ inputLabel: { shrink: true } }}
+            slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }}
+            sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'action.hover' } }}
             helperText={
               !membresiaForm.id
                 ? `Calculada automáticamente según la duración ${modalidadMembresiaSeleccionada ? 'de la modalidad' : 'del plan'}.`
                 : 'Calculada automáticamente por el sistema.'
             }
           />
-          <TextField select label="Estado" name="estado"
+          <TextField select label="Estado inicial" name="estado"
             value={!membresiaForm.id
               ? (planMembresiaSeleccionado?.requiere_pago === false ? 'ACTIVA' : 'PENDIENTE_PAGO')
               : (membresiaForm.estado || 'PENDIENTE_PAGO')}
@@ -2008,12 +2028,9 @@ export function DeportistasPage() {
           <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-              Los importes y la vigencia se confirman en Laravel. Los días de gracia no modifican la fecha de vencimiento del pago.
+              Vista previa de las cuotas programadas y sus vencimientos. El importe definitivo se confirma en Laravel; los días de gracia no modifican el vencimiento del pago.
             </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5, mb: 1.5 }}>
-              <TextField label="Períodos contratados" name="cantidad_periodos_contratados" type="number" required size="small"
-                value={membresiaForm.cantidad_periodos_contratados || ''} onChange={handleMembresiaChange}
-                slotProps={{ htmlInput: { min: 1, max: 36, step: 1 } }} helperText="Entre 1 y 36 períodos." />
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' }, gap: 1.5, mb: 1.5 }}>
               <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" required size="small"
                 value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
