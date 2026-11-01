@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
@@ -2316,7 +2316,7 @@ export function DeportistasPage() {
               options={opcionesExcel(membresiasCliente, (m) => textoMembresia(m, campo))}>
               {{ plan: 'Plan', vigencia: 'Vigencia', precio: 'Precio', estado: 'Estado' }[campo]}
             </FilterHeaderCell>)}
-            <TableCell align="right">Acciones</TableCell>
+            <TableCell align="center" sx={{ minWidth: 150 }}>Acciones</TableCell>
           </TableRow></TableHead>
           <TableBody>
             {membresiasFiltradas.slice((paginaMembresia - 1) * porPaginaMembresia, paginaMembresia * porPaginaMembresia).map((m) => <TableRow key={m.id} hover>
@@ -2325,41 +2325,58 @@ export function DeportistasPage() {
               <TableCell>{textoMembresia(m, 'vigencia')}</TableCell>
               <TableCell>{textoMembresia(m, 'precio')}</TableCell>
               <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
-              <TableCell align="right">
-                <Tooltip title="Editar membresía"><IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarMembresia(m)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-                <Tooltip title="Ver historial del contrato">
-                  <IconButton aria-label="Ver historial de membresía"
-                    onClick={() => setHistorialMembresiaSeleccionada(m)}
-                    sx={{ color: '#144985', '&:hover': { bgcolor: 'rgba(20,73,133,0.08)' } }}>
-                    <HistoryOutlinedIcon sx={{ fontSize: 19 }} />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Eliminar membresía"><IconButton sx={dbanuStyles.actionDelete} onClick={() => handleEliminarMembresia(m)}><DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+              <TableCell align="center" sx={{ width: 150, minWidth: 150, whiteSpace: 'nowrap' }}>
+                <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ flexWrap: 'nowrap' }}>
+                  <Tooltip title="Editar membresía">
+                    <IconButton aria-label="Editar membresía" sx={{ ...dbanuStyles.actionEdit, m: 0, flexShrink: 0 }}
+                      onClick={() => handleEditarMembresia(m)}>
+                      <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Ver historial del contrato">
+                    <IconButton aria-label="Ver historial de membresía" sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
+                      onClick={() => {
+                        setHistorialMembresiaSeleccionada(m);
+                        setVistaMembresia('historial');
+                      }}>
+                      <HistoryOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Eliminar membresía">
+                    <IconButton aria-label="Eliminar membresía" sx={{ ...dbanuStyles.actionDelete, m: 0, flexShrink: 0 }}
+                      onClick={() => handleEliminarMembresia(m)}>
+                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
               </TableCell>
             </TableRow>)}
             {!membresiasFiltradas.length && !cargandoFicha && <TableRow><TableCell colSpan={5} align="center">No se encontraron membresías.</TableCell></TableRow>}
           </TableBody>
         </TablaGestion>
       </Box>}
-      <Dialog open={Boolean(historialMembresiaSeleccionada)}
-        onClose={() => setHistorialMembresiaSeleccionada(null)}
-        fullWidth maxWidth="lg" scroll="paper">
-        <DialogTitle sx={{ pb: 1, fontWeight: 800 }}>
-          Historial del contrato
-          <Typography variant="body2" color="text.secondary">
-            {historialMembresiaSeleccionada?.codigo_contrato
-              || historialMembresiaSeleccionada?.plan_nombre
-              || 'Membresía'} · Condiciones originales y modificaciones registradas
-          </Typography>
-        </DialogTitle>
-        <DialogContent dividers sx={{ p: { xs: 1.5, md: 2 } }}>
+      {vistaMembresia === 'historial' && historialMembresiaSeleccionada && (
+        <Box sx={{ ...formStyles.seccion, mt: 2 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }}
+            justifyContent="space-between" spacing={1.5} sx={{ mb: 2 }}>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={formStyles.modalSeccionTitulo}>Historial del contrato</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {historialMembresiaSeleccionada.codigo_contrato
+                  || historialMembresiaSeleccionada.plan_nombre
+                  || 'Membresía'} · Condiciones originales y modificaciones
+              </Typography>
+            </Box>
+            <Box sx={{ flexShrink: 0, alignSelf: { xs: 'flex-end', sm: 'center' } }}>
+              <BotonVolver onClick={() => {
+                setHistorialMembresiaSeleccionada(null);
+                setVistaMembresia('listado');
+              }} />
+            </Box>
+          </Stack>
           <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} />
-        </DialogContent>
-        <DialogActions sx={{ px: 2, py: 1.5 }}>
-          <Button variant="outlined" onClick={() => setHistorialMembresiaSeleccionada(null)}
-            sx={{ textTransform: 'none' }}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      )}
     </Stack>
   );
 
