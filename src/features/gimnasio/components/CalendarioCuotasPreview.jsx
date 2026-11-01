@@ -50,7 +50,15 @@ export const generarVistaPreviaCuotas = ({ inicio, primerPago, diaPago, cantidad
   if (!desde || !pago || !Number.isInteger(n) || n < 1 || n > 36 || !Number.isInteger(d) || d < 1 || pago < desde) return [];
   // El primer vencimiento determina el día fijo de cada mes.
   // Calcular desde esa fecha, nunca desde el vencimiento anterior.
-  const vencimientoMensual = (indice) => meses(pago, indice);
+  const diaFijo = diaPago === undefined || diaPago === null || diaPago === ''
+    ? pago.getUTCDate()
+    : Number(diaPago);
+  const vencimientoMensual = (indice) => {
+    const mes = new Date(Date.UTC(pago.getUTCFullYear(), pago.getUTCMonth() + indice, 1));
+    const ultimo = new Date(Date.UTC(mes.getUTCFullYear(), mes.getUTCMonth() + 1, 0)).getUTCDate();
+    mes.setUTCDate(Math.min(diaFijo, ultimo));
+    return mes;
+  };
   const filas = [];
   let cursor = desde;
   for (let i = 1; i <= n; i++) {
