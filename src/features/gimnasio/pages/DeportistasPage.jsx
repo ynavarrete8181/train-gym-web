@@ -39,7 +39,7 @@ import { AsignacionesClienteTable } from '../components/AsignacionesClienteTable
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { entrenamientoServicio } from '../../entrenamiento/services/entrenamientoServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
+import { CalendarioCuotasPreview, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 
 const nombreGeografico = (valor = '') =>
@@ -144,6 +144,7 @@ const getInitialMembresia = () => ({
   plan_id: '',
   modalidad_id: '',
   cantidad_periodos_contratados: 1,
+  fecha_cobertura_deseada: '',
   fecha_primer_pago: hoyISO(),
   sede_id: '',
   sedes_habilitadas: [],
@@ -968,6 +969,8 @@ export function DeportistasPage() {
           plan_id: nuevoValor,
           modalidad_id: '',
           fecha_fin: '',
+          fecha_cobertura_deseada: '',
+          cantidad_periodos_contratados: 1,
         };
       }
 
@@ -976,9 +979,30 @@ export function DeportistasPage() {
         return { ...actual, sede_id: nuevoValor,
           sedes_habilitadas: Array.from(new Set([...(actual.sedes_habilitadas || []).map(Number), sedeSeleccionada])).filter(Boolean) };
       }
+      if (name === 'cantidad_periodos_contratados') {
+        return { ...actual, cantidad_periodos_contratados: nuevoValor, fecha_cobertura_deseada: '' };
+      }
       return { ...actual, [name]: nuevoValor };
     });
   };
+
+  // Al elegir "hasta cuándo" se calculan los períodos completos.
+  // La fecha fin exacta la devuelve el calendario, sin fracciones de cuota.
+  useEffect(() => {
+    if (membresiaForm.id || !membresiaForm.fecha_cobertura_deseada) return;
+    const plan = planes.find((p) => String(p.id) === String(membresiaForm.plan_id));
+    const modalidad = (plan?.modalidades || []).find((m) => String(m.id) === String(membresiaForm.modalidad_id));
+    if (!plan || (booleanoBackend(plan.requiere_modalidades) && !modalidad)) return;
+    const cantidad = periodosParaCubrirFecha({
+      inicio: membresiaForm.fecha_inicio,
+      objetivo: membresiaForm.fecha_cobertura_deseada,
+      tipo: modalidad?.tipo_duracion || plan.tipo_duracion,
+      duracion: modalidad?.duracion || plan.duracion,
+    });
+    if (cantidad && Number(membresiaForm.cantidad_periodos_contratados) !== cantidad) {
+      setMembresiaForm((actual) => ({ ...actual, cantidad_periodos_contratados: cantidad }));
+    }
+  }, [membresiaForm.id, membresiaForm.fecha_cobertura_deseada, membresiaForm.fecha_inicio, membresiaForm.plan_id, membresiaForm.modalidad_id, planes]);
 
   const handleNuevaMembresia = () => {
     setMembresiaForm(getInitialMembresia());
@@ -1843,12 +1867,7 @@ export function DeportistasPage() {
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
           <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => { setVistaMembresia('listado'); setMembresiaForm(getInitialMembresia()); }} /></Box>
         </Stack>
-        <Box sx={{ mb: 1.5 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 800, color: 'text.primary' }}>Plan y vigencia del contrato</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Selecciona el plan, la modalidad y cuántos períodos contratará el deportista. La fecha final se actualizará automáticamente.
-          </Typography>
-        </Box>
+        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos del contrato</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField
             select
@@ -1859,7 +1878,7 @@ export function DeportistasPage() {
             required
             size="small"
             disabled={!!membresiaForm.id}
-            helperText={membresiaForm.id ? 'Para cambiar de plan, asigna un contrato nuevo. Así conservamos la trazabilidad.' : ''}
+            helperText={membresiaForm.id ? 'Plan del contrato original' : ''}
           >
             {planes.map((plan) => {
               const modalidadesActivas = (plan.modalidades || [])
@@ -1882,13 +1901,7 @@ export function DeportistasPage() {
               required
               size="small"
               disabled={!!membresiaForm.id}
-              helperText={
-                modalidadMembresiaSeleccionada
-                  ? `${modalidadMembresiaSeleccionada.uso_ilimitado
-                    ? 'Uso ilimitado'
-                    : `${modalidadMembresiaSeleccionada.usos_por_semana || modalidadMembresiaSeleccionada.dias_por_semana} uso(s)/sem.`} · ${modalidadMembresiaSeleccionada.duracion} ${String(modalidadMembresiaSeleccionada.tipo_duracion || '').toLowerCase()}`
-                  : 'Selecciona la frecuencia contratada.'
-              }
+              helperText=""
             >
               {modalidadesMembresiaDisponibles.map((modalidad) => (
                 <MenuItem key={modalidad.id} value={modalidad.id}>
@@ -1924,24 +1937,24 @@ export function DeportistasPage() {
               onChange={handleMembresiaChange}
               required size="small"
               slotProps={{ htmlInput: { min: 1, max: 36, step: 1 } }}
-              helperText={modalidadMembresiaSeleccionada
-                ? `Cada período dura ${modalidadMembresiaSeleccionada.duracion} ${String(modalidadMembresiaSeleccionada.tipo_duracion || '').toLowerCase()}.`
-                : 'Define la duración total del contrato (1 a 36 períodos).'}
+              helperText=""
             />
           ) : null}
+          {contratoNuevoVisible && (
+            <TextField label="Quiero cubrir hasta" name="fecha_cobertura_deseada" type="date"
+              value={membresiaForm.fecha_cobertura_deseada || ''}
+              onChange={handleMembresiaChange} size="small"
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }} />
+          )}
           <TextField
-            label="Fecha fin"
+            label="Fecha fin calculada"
             name="fecha_fin"
             type="date"
             value={calendarioContratoPreview.length ? calendarioContratoPreview[calendarioContratoPreview.length - 1].fin : (membresiaForm.fecha_fin || '')}
             size="small"
             slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }}
             sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'action.hover' } }}
-            helperText={
-              !membresiaForm.id
-                ? `Calculada automáticamente según la duración ${modalidadMembresiaSeleccionada ? 'de la modalidad' : 'del plan'}.`
-                : 'Calculada automáticamente por el sistema.'
-            }
+            helperText=""
           />
           <TextField select label="Estado inicial" name="estado"
             value={!membresiaForm.id
@@ -1949,7 +1962,7 @@ export function DeportistasPage() {
               : (membresiaForm.estado || 'PENDIENTE_PAGO')}
             onChange={handleMembresiaChange} required size="small"
             disabled={!membresiaForm.id}
-            helperText={!membresiaForm.id ? 'Se determina automáticamente según las reglas de pago del plan.' : ''}
+            helperText=""
           >
             <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
             <MenuItem value="ACTIVA">Activa</MenuItem>
@@ -2027,14 +2040,12 @@ export function DeportistasPage() {
         {contratoNuevoVisible ? (
           <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-              Vista previa de las cuotas programadas y sus vencimientos. El importe definitivo se confirma en Laravel; los días de gracia no modifican el vencimiento del pago.
-            </Typography>
+ 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' }, gap: 1.5, mb: 1.5 }}>
               <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" required size="small"
                 value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
-                helperText="Vencimiento de la primera cuota." />
+                helperText="" />
             </Box>
             <CalendarioCuotasPreview filas={calendarioContratoPreview} />
           </Box>
@@ -2058,10 +2069,7 @@ export function DeportistasPage() {
         ) : null}
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar *</Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-            Selecciona una o varias sedes a las que podrá ingresar con esta membresía.
-            En los pases diarios, la tarifa se calcula según la sede donde se realice el cobro.
-          </Typography>
+ 
           <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
             {sedes.map((sede) => {
               const seleccionada = (membresiaForm.sedes_habilitadas || [])
