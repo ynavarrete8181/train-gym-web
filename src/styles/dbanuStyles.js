@@ -47,7 +47,7 @@ export const dbanuStyles = {
     borderRadius: 0.5,
     overflow: 'hidden',
     bgcolor: 'background.paper',
-    boxShadow: '0 12px 30px rgba(15, 58, 107, 0.08)',
+    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.08)',
   },
   actionEdit: {
     width: 28,
@@ -57,7 +57,7 @@ export const dbanuStyles = {
     bgcolor: 'background.paper',
     color: uiTokens.colores.acento,
     mr: 0.75,
-    '&:hover': { bgcolor: 'rgba(212, 160, 23, 0.08)', borderColor: uiTokens.colores.acento },
+    '&:hover': { bgcolor: 'rgba(255, 196, 0, 0.12)', borderColor: uiTokens.colores.acento },
   },
   actionDelete: {
     width: 28,
@@ -88,7 +88,7 @@ export const dbanuStyles = {
     bgcolor: 'background.paper',
     color: uiTokens.colores.primario,
     mr: 0.75,
-    '&:hover': { bgcolor: 'rgba(20, 73, 133, 0.08)', borderColor: uiTokens.colores.primario },
+    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.06)', borderColor: uiTokens.colores.primario },
   },
   actionState: {
     width: 28,
@@ -98,7 +98,7 @@ export const dbanuStyles = {
     bgcolor: 'background.paper',
     color: uiTokens.colores.primario,
     mr: 0.75,
-    '&:hover': { bgcolor: 'rgba(20, 73, 133, 0.08)', borderColor: uiTokens.colores.primario },
+    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.06)', borderColor: uiTokens.colores.primario },
   },
   addButton: {
     minHeight: 38,
@@ -108,7 +108,7 @@ export const dbanuStyles = {
     borderRadius: 0.5,
     textTransform: 'none',
     fontWeight: 900,
-    boxShadow: '0 10px 20px rgba(20, 73, 133, 0.18)',
+    boxShadow: '0 10px 20px rgba(0, 0, 0, 0.18)',
     '&:hover': { bgcolor: uiTokens.colores.primarioOscuro },
   },
   addButtonRevive: {
@@ -139,7 +139,7 @@ export const dbanuStyles = {
     '&:hover': {
       bgcolor: uiTokens.colores.acentoOscuro,
       borderColor: uiTokens.colores.acentoOscuro,
-      boxShadow: '0 8px 18px rgba(184,136,15,0.14)',
+      boxShadow: '0 8px 18px rgba(229,174,0,0.14)',
     },
     '&.Mui-disabled': {
       borderColor: uiTokens.colores.borde,
@@ -181,7 +181,7 @@ export const dbanuStyles = {
     fontWeight: 900,
     borderColor: uiTokens.colores.primario,
     color: uiTokens.colores.primario,
-    '&:hover': { bgcolor: 'rgba(20, 73, 133, 0.08)', borderColor: uiTokens.colores.primarioOscuro },
+    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.06)', borderColor: uiTokens.colores.primarioOscuro },
   },
   cancelButton: {
     minHeight: 38,
