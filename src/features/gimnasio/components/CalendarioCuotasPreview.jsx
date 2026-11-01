@@ -32,7 +32,9 @@ export const generarVistaPreviaCuotas = ({ inicio, primerPago, cantidad, tipo, d
   const n = Number(cantidad);
   const d = Number(duracion);
   if (!desde || !pago || !Number.isInteger(n) || n < 1 || n > 36 || !Number.isInteger(d) || d < 1 || pago < desde) return [];
-  const desfase = Math.round((pago.getTime() - desde.getTime()) / 86400000);
+  // El primer vencimiento determina el día fijo de cada mes.
+  // Calcular desde esa fecha, nunca desde el vencimiento anterior.
+  const vencimientoMensual = (indice) => meses(pago, indice);
   const filas = [];
   let cursor = desde;
   for (let i = 1; i <= n; i++) {
@@ -43,7 +45,7 @@ export const generarVistaPreviaCuotas = ({ inicio, primerPago, cantidad, tipo, d
       inicio: iso(cursor),
       fin: iso(dias(siguiente, -1)),
       emision: iso(cursor),
-      vencimiento: iso(dias(cursor, desfase)),
+      vencimiento: iso(vencimientoMensual(i - 1)),
     });
     cursor = siguiente;
   }
@@ -89,7 +91,7 @@ export function CalendarioCuotasPreview({ filas, precioPeriodo = null }) {
         </Box>
       </Box>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 1 }}>
-        Fechas e importes estimados. Laravel confirma el calendario y descuentos al guardar.
+        Vencimientos mensuales en el día elegido; en meses cortos se usa el último día. Laravel confirma los importes al guardar.
       </Typography>
     </Box>
   );
