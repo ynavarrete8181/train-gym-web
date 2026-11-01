@@ -1934,7 +1934,7 @@ export function DeportistasPage() {
                 onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
               />
-              <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" required size="small"
+              <TextField label="Fecha de pago" name="fecha_primer_pago" type="date" required size="small"
                 value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
               />
