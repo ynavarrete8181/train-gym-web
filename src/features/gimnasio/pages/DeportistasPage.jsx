@@ -1919,14 +1919,13 @@ export function DeportistasPage() {
             </TextField>
           ) : null}
 
-                    <TextField
-            label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso del pase' : 'Fecha inicio'}
+        </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
+          <TextField
+            label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso' : 'Fecha inicio'}
             name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
             onChange={handleMembresiaChange} required size="small"
             slotProps={{ inputLabel: { shrink: true } }}
-            helperText={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO'
-              ? 'El pase será válido ese día. Puede pagarse antes y el descuento se calcula para la fecha de uso.'
-              : ''}
           />
           {contratoNuevoVisible ? (
             <>
@@ -1935,10 +1934,9 @@ export function DeportistasPage() {
                 onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
               />
-              <TextField label="Períodos a cancelar" size="small"
-                value={periodosCalculados || ''}
-                slotProps={{ input: { readOnly: true } }}
-                sx={{ '& .MuiOutlinedInput-root': { bgcolor: 'action.hover' } }}
+              <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" required size="small"
+                value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
+                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
               />
             </>
           ) : (
@@ -1947,6 +1945,8 @@ export function DeportistasPage() {
               slotProps={{ inputLabel: { shrink: true }, input: { readOnly: true } }}
             />
           )}
+        </Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
           <TextField select label="Estado inicial" name="estado"
             value={!membresiaForm.id
               ? (planMembresiaSeleccionado?.requiere_pago === false ? 'ACTIVA' : 'PENDIENTE_PAGO')
@@ -2032,12 +2032,11 @@ export function DeportistasPage() {
           <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
  
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' }, gap: 1.5, mb: 1.5 }}>
-              <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" required size="small"
-                value={membresiaForm.fecha_primer_pago || ''} onChange={handleMembresiaChange}
-                slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
-                helperText="" />
-            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              {calendarioContratoPreview.length
+                ? `${calendarioContratoPreview.length} período(s) programado(s) · Fechas de pago e importes estimados`
+                : 'Selecciona las fechas para ver los períodos y pagos.'}
+            </Typography>
             {calendarioContratoPreview.length > 0 && calendarioContratoPreview[calendarioContratoPreview.length - 1].fin !== membresiaForm.fecha_fin_solicitada && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
                 La modalidad se contrata por períodos completos. La vigencia real termina el {calendarioContratoPreview[calendarioContratoPreview.length - 1].fin}.
