@@ -6,15 +6,16 @@ export function crearTema(modo = 'light') {
   return createTheme({
     palette: {
       mode: modo,
-      primary: { main: colores.primario },
+      primary: { main: colores.primario, contrastText: '#ffffff' },
       secondary: { main: colores.secundario },
+      warning: { main: colores.acento, contrastText: '#111111' },
       success: { main: colores.exito },
       background: {
         default: modo === 'dark' ? colores.fondoOscuro : colores.fondoClaro,
         paper: modo === 'dark' ? colores.superficieOscura : colores.superficieClara,
       },
       text: {
-        primary: modo === 'dark' ? '#f8fafc' : '#1f2937',
+        primary: modo === 'dark' ? '#f8fafc' : uiTokens.colores.textoFuerte,
         secondary: modo === 'dark' ? '#cbd5e1' : colores.neutro,
       },
     },
@@ -37,10 +38,10 @@ export function crearTema(modo = 'light') {
           body: { backgroundColor: modo === 'dark' ? colores.fondoOscuro : colores.fondoClaro },
           '.page-header-container, .page-content-container': {
             backgroundColor: modo === 'dark' ? colores.superficieOscura : colores.superficieClara,
-            borderColor: modo === 'dark' ? '#334155' : '#dbe3f0',
+            borderColor: modo === 'dark' ? '#3b3b3b' : uiTokens.colores.borde,
           },
-          '.page-header-title': { color: modo === 'dark' ? '#f8fafc' : '#0b1f3a' },
-          '.page-header-subtitle': { color: modo === 'dark' ? '#cbd5e1' : '#64748b' },
+          '.page-header-title': { color: modo === 'dark' ? '#f8fafc' : uiTokens.colores.textoFuerte },
+          '.page-header-subtitle': { color: modo === 'dark' ? '#cbd5e1' : uiTokens.colores.textoMedio },
         },
       },
       MuiPaper: {
@@ -142,17 +143,17 @@ export function crearTema(modo = 'light') {
             '&:hover': {
               backgroundColor: modo === 'dark'
                 ? 'rgba(255,255,255,0.06)'
-                : 'rgba(20, 73, 133, 0.055)',
+                : 'rgba(0, 0, 0, 0.055)',
             },
             '&.Mui-selected': {
               backgroundColor: modo === 'dark'
                 ? 'rgba(255,255,255,0.09)'
-                : 'rgba(20, 73, 133, 0.085)',
+                : 'rgba(0, 0, 0, 0.085)',
             },
             '&.Mui-selected:hover': {
               backgroundColor: modo === 'dark'
                 ? 'rgba(255,255,255,0.12)'
-                : 'rgba(20, 73, 133, 0.12)',
+                : 'rgba(0, 0, 0, 0.12)',
             },
             '& .MuiListItemIcon-root': {
               minWidth: '32px !important',
@@ -234,7 +235,7 @@ export function crearTema(modo = 'light') {
               color: uiTokens.colores.primario,
               backgroundColor: modo === 'dark' ? '#111827' : '#fff',
               '&:hover': {
-                backgroundColor: modo === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(20, 73, 133, 0.06)',
+                backgroundColor: modo === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0, 0, 0, 0.06)',
               },
               '&:has([data-testid="EditOutlinedIcon"])': {
                 color: uiTokens.colores.acento,
@@ -291,7 +292,7 @@ export function crearTema(modo = 'light') {
         styleOverrides: {
           root: {
             '&.MuiTableRow-hover:hover': {
-              backgroundColor: modo === 'dark' ? 'rgba(255,255,255,0.04)' : '#f8fbff',
+              backgroundColor: modo === 'dark' ? 'rgba(255,255,255,0.04)' : uiTokens.colores.primarioSuave,
             },
           },
         },
@@ -373,7 +374,7 @@ export function crearTema(modo = 'light') {
         styleOverrides: {
           root: {
             '&.active': {
-              backgroundColor: 'rgba(21, 94, 117, 0.12)',
+              backgroundColor: uiTokens.colores.primarioSuave,
             },
           },
         },

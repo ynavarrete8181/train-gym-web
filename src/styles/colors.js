@@ -1,13 +1,13 @@
 export const colores = {
-  primario: '#004987',
+  primario: '#111111',
   secundario: '#FF0000',
   neutro: '#4A4A49',
-  acento: '#D4A017',
+  acento: '#FFC400',
   advertencia: '#b45309',
   error: '#b91c1c',
   exito: '#15803d',
-  fondoClaro: '#f5f7fa',
-  fondoOscuro: '#111827',
+  fondoClaro: '#f7f7f7',
+  fondoOscuro: '#080808',
   superficieClara: '#ffffff',
-  superficieOscura: '#1f2937',
+  superficieOscura: '#171717',
 }

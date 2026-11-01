@@ -271,7 +271,9 @@ export function VentasPage() {
                       <Stack direction="row" alignItems="center" spacing={.8}>
                         <PersonOutlineOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
                         <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }} noWrap>
-                          Generada por: {venta.generado_por_nombre || 'Sistema'}
+                          Generada por: {venta.generado_por_tipo === 'SISTEMA' ? 'Sistema' : (venta.generado_por_nombre || 'Sin usuario')}
+                          {venta.generado_por_tipo !== 'SISTEMA' && venta.generado_por_rol
+                            ? ` · ${venta.generado_por_rol}` : ''}
                         </Typography>
                       </Stack>
                     </Stack>
