@@ -54,7 +54,14 @@ export function TurnosCajaPage() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
-  const [formApertura, setFormApertura] = useState({ caja_id: '', saldo_inicial: 0, observaciones: '' });
+  const [formApertura, setFormApertura] = useState({ sede_id: '', caja_id: '', saldo_inicial: 0, observaciones: '' });
+  const sedesApertura = catalogos.sedes || [];
+  const sedeApertura = sedesApertura.length === 1
+    ? String(sedesApertura[0].id)
+    : String(formApertura.sede_id || '');
+  const cajasApertura = (catalogos.cajas || []).filter(
+    (caja) => String(caja.sede_id) === sedeApertura
+  );
   const [turnoCerrar, setTurnoCerrar] = useState(null);
   const [formCierre, setFormCierre] = useState({ efectivo_contado: '', observaciones: '' });
 
@@ -91,11 +98,27 @@ export function TurnosCajaPage() {
   };
 
   const abrirFormulario = () => {
-    setFormApertura({ caja_id: '', saldo_inicial: 0, observaciones: '' });
+    const sedeUnica = (catalogos.sedes || []).length === 1
+      ? String(catalogos.sedes[0].id) : '';
+    const cajasSede = (catalogos.cajas || []).filter((caja) => String(caja.sede_id) === sedeUnica);
+    setFormApertura({
+      sede_id: sedeUnica,
+      caja_id: cajasSede.length === 1 ? String(cajasSede[0].id) : '',
+      saldo_inicial: 0,
+      observaciones: '',
+    });
     setVista('abrir');
   };
 
   const abrirTurno = async () => {
+    if (!sedeApertura) {
+      showNotificacion('Selecciona la sede donde vas a abrir caja.', 'warning');
+      return;
+    }
+    if (formApertura.caja_id && !cajasApertura.some((caja) => String(caja.id) === String(formApertura.caja_id))) {
+      showNotificacion('Selecciona una caja de la sede autorizada.', 'warning');
+      return;
+    }
     if (!formApertura.caja_id) {
       showNotificacion('Selecciona una caja.', 'warning');
       return;
@@ -200,16 +223,33 @@ export function TurnosCajaPage() {
             <Box sx={formStyles.seccion}>
               <Typography sx={formStyles.modalSeccionTitulo}>Datos de apertura</Typography>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
+                {sedesApertura.length > 1 ? (
+                  <TextField select label="Sede *" size="small" value={sedeApertura}
+                    onChange={(e) => {
+                      const sedeId = e.target.value;
+                      const cajas = (catalogos.cajas || []).filter((caja) => String(caja.sede_id) === String(sedeId));
+                      setFormApertura((prev) => ({
+                        ...prev, sede_id: sedeId,
+                        caja_id: cajas.length === 1 ? String(cajas[0].id) : '',
+                      }));
+                    }}>
+                    {sedesApertura.map((sede) => <MenuItem key={sede.id} value={String(sede.id)}>{sede.nombre}</MenuItem>)}
+                  </TextField>
+                ) : (
+                  <TextField label="Sede" size="small" value={sedesApertura[0]?.nombre || 'Sin sede autorizada'}
+                    slotProps={{ input: { readOnly: true } }} />
+                )}
                 <TextField
                   select
                   label="Caja *"
+                  disabled={!sedeApertura}
                   value={formApertura.caja_id}
                   onChange={(e) => setFormApertura((a) => ({ ...a, caja_id: e.target.value }))}
                   size="small"
                   SelectProps={{
                     displayEmpty: false,
                     renderValue: (valor) => {
-                      const caja = (catalogos.cajas || []).find((item) => String(item.id) === String(valor));
+                      const caja = cajasApertura.find((item) => String(item.id) === String(valor));
                       return caja ? `${caja.codigo} - ${caja.nombre}` : '';
                     },
                     MenuProps: {
@@ -217,7 +257,7 @@ export function TurnosCajaPage() {
                     },
                   }}
                 >
-                  {(catalogos.cajas || []).map((caja) => (
+                  {cajasApertura.map((caja) => (
                     <MenuItem key={caja.id} value={caja.id} sx={{ gap: 1, py: 1, minHeight: 46, borderRadius: 1, mx: 0.5, my: 0.25 }}>
                       <ListItemIcon sx={{ minWidth: '32px !important', color: 'primary.main' }}>
                         <PointOfSaleOutlinedIcon fontSize="small" />
