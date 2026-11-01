@@ -361,7 +361,7 @@ export function DeportistasPage() {
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
   const [membresiaForm, setMembresiaForm] = useState(getInitialMembresia());
-  const [historialMembresiaAbierto, setHistorialMembresiaAbierto] = useState(false);
+  const [historialMembresiaSeleccionada, setHistorialMembresiaSeleccionada] = useState(null);
   const [progresosCliente, setProgresosCliente] = useState([]);
   const [progresoForm, setProgresoForm] = useState(getInitialProgreso());
   const [planesEntrenamiento, setPlanesEntrenamiento] = useState([]);
@@ -988,7 +988,7 @@ export function DeportistasPage() {
   };
 
   const handleNuevaMembresia = () => {
-    setHistorialMembresiaAbierto(false);
+    setHistorialMembresiaSeleccionada(null);
     setMembresiaForm(getInitialMembresia());
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setRequiereDescuento(false);
@@ -996,7 +996,7 @@ export function DeportistasPage() {
   };
 
   const handleEditarMembresia = (m) => {
-    setHistorialMembresiaAbierto(false);
+    setHistorialMembresiaSeleccionada(null);
     const descuentoActual = m.descuento_vigente;
     setRequiereDescuento(Boolean(descuentoActual));
     setDescuentoMembresia(descuentoActual ? {
@@ -1922,20 +1922,12 @@ export function DeportistasPage() {
       {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
         <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>{membresiaForm.id ? 'Editar membresía' : 'Nueva membresía'}</Typography>
-          <Stack direction="row" spacing={1} sx={{ ml: 'auto', alignItems: 'center' }}>
-            {membresiaForm.id && (
-              <Button variant="outlined" size="small" startIcon={<HistoryOutlinedIcon />}
-                onClick={() => setHistorialMembresiaAbierto(true)}
-                sx={{ textTransform: 'none', fontWeight: 700, whiteSpace: 'nowrap' }}>
-                Ver historial
-              </Button>
-            )}
+          <Box sx={{ ml: 'auto' }}>
             <BotonVolver onClick={() => {
-              setHistorialMembresiaAbierto(false);
               setVistaMembresia('listado');
               setMembresiaForm(getInitialMembresia());
             }} />
-          </Stack>
+          </Box>
         </Stack>
         <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos del contrato</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) ? 'minmax(0, 1fr) minmax(0, 2fr)' : 'minmax(0, 1fr)' }, gap: 1.5 }}>
@@ -2135,25 +2127,6 @@ export function DeportistasPage() {
             cuotas={membresiaForm.cuotas}
           />
         ) : null}
-        {membresiaForm.id && (
-          <Dialog open={historialMembresiaAbierto}
-            onClose={() => setHistorialMembresiaAbierto(false)}
-            fullWidth maxWidth="lg" scroll="paper">
-            <DialogTitle sx={{ pb: 1, fontWeight: 800 }}>
-              Historial del contrato
-              <Typography variant="body2" color="text.secondary">
-                {membresiaForm.codigo_contrato || membresiaForm.plan_nombre || 'Membresía'} · Condiciones originales y modificaciones registradas
-              </Typography>
-            </DialogTitle>
-            <DialogContent dividers sx={{ p: { xs: 1.5, md: 2 } }}>
-              <CondicionesHistoricasContrato membresia={membresiaForm} />
-            </DialogContent>
-            <DialogActions sx={{ px: 2, py: 1.5 }}>
-              <Button variant="outlined" onClick={() => setHistorialMembresiaAbierto(false)}
-                sx={{ textTransform: 'none' }}>Cerrar</Button>
-            </DialogActions>
-          </Dialog>
-        )}
         {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas *</Typography>
@@ -2354,6 +2327,13 @@ export function DeportistasPage() {
               <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
               <TableCell align="right">
                 <Tooltip title="Editar membresía"><IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarMembresia(m)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+                <Tooltip title="Ver historial del contrato">
+                  <IconButton aria-label="Ver historial de membresía"
+                    onClick={() => setHistorialMembresiaSeleccionada(m)}
+                    sx={{ color: '#144985', '&:hover': { bgcolor: 'rgba(20,73,133,0.08)' } }}>
+                    <HistoryOutlinedIcon sx={{ fontSize: 19 }} />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Eliminar membresía"><IconButton sx={dbanuStyles.actionDelete} onClick={() => handleEliminarMembresia(m)}><DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
               </TableCell>
             </TableRow>)}
@@ -2361,6 +2341,25 @@ export function DeportistasPage() {
           </TableBody>
         </TablaGestion>
       </Box>}
+      <Dialog open={Boolean(historialMembresiaSeleccionada)}
+        onClose={() => setHistorialMembresiaSeleccionada(null)}
+        fullWidth maxWidth="lg" scroll="paper">
+        <DialogTitle sx={{ pb: 1, fontWeight: 800 }}>
+          Historial del contrato
+          <Typography variant="body2" color="text.secondary">
+            {historialMembresiaSeleccionada?.codigo_contrato
+              || historialMembresiaSeleccionada?.plan_nombre
+              || 'Membresía'} · Condiciones originales y modificaciones registradas
+          </Typography>
+        </DialogTitle>
+        <DialogContent dividers sx={{ p: { xs: 1.5, md: 2 } }}>
+          <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} />
+        </DialogContent>
+        <DialogActions sx={{ px: 2, py: 1.5 }}>
+          <Button variant="outlined" onClick={() => setHistorialMembresiaSeleccionada(null)}
+            sx={{ textTransform: 'none' }}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 
