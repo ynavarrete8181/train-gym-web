@@ -1798,7 +1798,9 @@ export function DeportistasPage() {
     || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
   );
   const contratoNuevoVisible = !membresiaForm.id && String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() !== 'PASE_DIARIO';
-  const calendarioContratoPreview = contratoNuevoVisible ? generarVistaPreviaCuotas({
+  const calendarioContratoPreview = contratoNuevoVisible
+    && (!booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) || modalidadMembresiaSeleccionada)
+    ? generarVistaPreviaCuotas({
     inicio: membresiaForm.fecha_inicio,
     primerPago: membresiaForm.fecha_primer_pago,
     cantidad: membresiaForm.cantidad_periodos_contratados,
