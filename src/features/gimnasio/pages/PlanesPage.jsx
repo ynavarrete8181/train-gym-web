@@ -367,8 +367,8 @@ export function PlanesPage() {
     return (
       <Box className="page-wrapper">
         <PageHeader titulo={formData.id ? 'Editar Plan' : 'Nuevo Plan'} descripcion="Define producto, cobro, duración estándar y tarifas. La vigencia real se calcula al crear la membresía." icono={<LocalOfferOutlinedIcon />} acciones={<BotonVolver onClick={() => setVista('lista')} />} />
-        <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
-          <Box sx={{ bgcolor: '#fff', p: { xs: 1.5, md: 2.5 } }}>
+        <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: 1, borderColor: 'divider', borderRadius: 2 }}>
+          <Box sx={{ bgcolor: 'background.paper', p: { xs: 1.5, md: 2.5 } }}>
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '220px minmax(0, 1fr)' }, gap: { xs: 2, md: 2.5 }, alignItems: 'start' }}>
               <Box component="nav" aria-label="Secciones del plan" sx={{
                 p: 1, border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.default',
@@ -385,10 +385,10 @@ export function PlanesPage() {
                         justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
                         flexShrink: 0, minWidth: { xs: 155, md: 0 }, px: 1.5, py: 1.2,
                         color: seleccionada ? 'primary.main' : 'text.secondary',
-                        bgcolor: seleccionada ? ((theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : uiTokens.colores.primarioSuave) : 'transparent',
-                        borderLeft: { md: seleccionada ? `3px solid ${uiTokens.colores.primario}` : '3px solid transparent' },
+                        bgcolor: seleccionada ? ((theme) => theme.palette.mode === 'dark' ? 'rgba(255,196,0,0.12)' : uiTokens.colores.acentoSuave) : 'transparent',
+                        borderLeft: { md: seleccionada ? `3px solid ${uiTokens.colores.acento}` : '3px solid transparent' },
                         borderRadius: 1.5,
-                        '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : (seleccionada ? uiTokens.colores.primarioSuave : uiTokens.colores.bordeSuave) },
+                        '&:hover': { bgcolor: (theme) => theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : (seleccionada ? uiTokens.colores.acentoSuave : uiTokens.colores.bordeSuave) },
                       }}>
                       <Box>
                         <Typography variant="body2" sx={{ fontWeight: seleccionada ? 800 : 600, lineHeight: 1.35 }}>{seccion.titulo}</Typography>
