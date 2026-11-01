@@ -69,7 +69,7 @@ export const periodosParaCubrirFecha = ({ inicio, objetivo, tipo, duracion, maxi
   return null;
 };
 
-export function CalendarioCuotasPreview({ filas }) {
+export function CalendarioCuotasPreview({ filas, precioPeriodo = null }) {
   if (!filas?.length) return null;
   return (
     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden', bgcolor: 'background.paper' }}>
@@ -80,16 +80,16 @@ export function CalendarioCuotasPreview({ filas }) {
       <Divider />
       <Box sx={{ overflowX: 'auto' }}>
         <Box component="table" sx={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, '& th, & td': { px: 1.5, py: 1, textAlign: 'left', borderBottom: '1px solid', borderColor: 'divider', whiteSpace: 'nowrap' }, '& th': { color: 'text.secondary', fontWeight: 700 } }}>
-          <thead><tr><th>Cuota</th><th>Inicio del período</th><th>Fin del período</th><th>Emisión de venta</th><th>Vencimiento</th></tr></thead>
+          <thead><tr><th>Cuota</th><th>Inicio del período</th><th>Fin del período</th><th>Emisión de venta</th><th>Vencimiento</th><th>Importe estimado</th></tr></thead>
           <tbody>{filas.map((fila) => (
             <tr key={fila.numero}>
-              <td>{fila.numero}</td><td>{fila.inicio}</td><td>{fila.fin}</td><td>{fila.emision}</td><td>{fila.vencimiento}</td>
+              <td>{fila.numero}</td><td>{fila.inicio}</td><td>{fila.fin}</td><td>{fila.emision}</td><td>{fila.vencimiento}</td><td>{precioPeriodo == null || !Number.isFinite(Number(precioPeriodo)) ? '—' : `${Number(precioPeriodo).toFixed(2)}`}</td>
             </tr>
           ))}</tbody>
         </Box>
       </Box>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 1 }}>
-        Fechas estimadas. Laravel confirma el calendario al guardar.
+        Fechas e importes estimados. Laravel confirma el calendario y descuentos al guardar.
       </Typography>
     </Box>
   );
