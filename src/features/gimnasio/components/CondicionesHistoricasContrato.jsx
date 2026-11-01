@@ -24,6 +24,19 @@ export function CondicionesHistoricasContrato({ membresia }) {
     ? (() => { try { return JSON.parse(membresia.condiciones_contratadas); } catch { return null; } })()
     : membresia.condiciones_contratadas;
   const registrada = condiciones && typeof condiciones === 'object';
+  const historial = Array.isArray(membresia.historial_condiciones)
+    ? [...membresia.historial_condiciones].sort((a, b) => Number(b.version) - Number(a.version))
+    : [];
+  const etiquetasCambio = {
+    estado: 'Estado', dias_gracia: 'Días de gracia',
+    sede_id: 'Sede principal', sedes_autorizadas: 'Sedes autorizadas',
+    fecha_inicio: 'Fecha inicio', fecha_fin: 'Fecha fin',
+    dia_pago: 'Día de pago', renovacion_automatica: 'Renovación automática',
+    modalidad_id: 'Modalidad', precio_aplicado: 'Precio aplicado',
+    fecha_congelacion_inicio: 'Inicio de congelación',
+    fecha_congelacion_fin: 'Fin de congelación',
+    descuentos: 'Descuentos',
+  };
   const elementos = registrada ? [
     ['Plan contratado', condiciones.plan_nombre],
     ['Modalidad contratada', condiciones.modalidad_nombre || 'Sin modalidad específica'],
@@ -80,6 +93,43 @@ export function CondicionesHistoricasContrato({ membresia }) {
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.75, pb: 1.5 }}>
           Cambios futuros de precios o modalidades no modifican estas condiciones originales. Los pagos y descuentos efectivos se consultan en Ventas y Cartera.
         </Typography>
+      )}
+      {historial.length > 0 && (
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', px: 1.75, py: 1.5 }}>
+          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1 }}>
+            Historial de modificaciones · {historial.length} {historial.length === 1 ? 'registro' : 'registros'}
+          </Typography>
+          <Stack gap={1}>
+            {historial.map((registro) => {
+              const cambios = Object.keys(registro.condiciones?.cambios || {})
+                .map((campo) => etiquetasCambio[campo] || campo);
+              return (
+                <Box key={registro.id || registro.version} sx={{ border: '1px solid', borderColor: 'divider', p: 1.25, borderRadius: 1 }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" gap={0.5}>
+                    <Typography variant="body2" fontWeight={700}>
+                      Versión {registro.version} · {registro.accion === 'EDICION_ADMINISTRATIVA' ? 'Modificación administrativa' : 'Registro inicial'}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {registro.autor_nombre || 'Sistema'} · {registro.registrado_at
+                        ? new Date(registro.registrado_at).toLocaleString('es-EC')
+                        : 'Fecha no disponible'}
+                    </Typography>
+                  </Stack>
+                  {cambios.length > 0 && (
+                    <Typography variant="caption" color="text.secondary">
+                      Campos modificados: {cambios.join(', ')}
+                    </Typography>
+                  )}
+                  {registro.motivo && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      Motivo: {registro.motivo}
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })}
+          </Stack>
+        </Box>
       )}
     </Box>
   );
