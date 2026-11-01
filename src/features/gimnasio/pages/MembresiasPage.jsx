@@ -29,6 +29,7 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
+import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 
 const hoyISO = () => new Date().toISOString().slice(0, 10);
@@ -46,6 +47,9 @@ const formInicial = () => ({
   id: null,
   deportista_id: '',
   plan_id: '',
+  modalidad_id: '',
+  cantidad_periodos_contratados: 1,
+  fecha_primer_pago: hoyISO(),
   sede_id: '',
   sedes_habilitadas: [],
   asignaciones_entrenador: [],
@@ -83,6 +87,7 @@ export function MembresiasPage() {
   const [membresias, setMembresias] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [planes, setPlanes] = useState([]);
+  const [modalidades, setModalidades] = useState([]);
   const [sedes, setSedes] = useState([]);
   const [entrenadoresPorSede, setEntrenadoresPorSede] = useState({});
   const [horariosPorAsignacion, setHorariosPorAsignacion] = useState({});
@@ -170,6 +175,15 @@ export function MembresiasPage() {
     if (nuevaFechaFin) setFormData((actual) => ({ ...actual, fecha_fin: nuevaFechaFin }));
   }, [formData.fecha_inicio, formData.plan_id, formData.id, planes]);
 
+  useEffect(() => {
+    if (!formData.plan_id) { setModalidades([]); return; }
+    let vigente = true;
+    gimnasioServicio.obtenerModalidadesPlan(formData.plan_id)
+      .then((respuesta) => { if (vigente) setModalidades((respuesta.datos || []).filter((m) => m.activo !== false)); })
+      .catch(() => { if (vigente) { setModalidades([]); showNotificacion('No se pudieron consultar las modalidades del plan.', 'error'); } });
+    return () => { vigente = false; };
+  }, [formData.plan_id]);
+
   const buscar = (parametros) => {
     const nuevos = { ...parametros, page: 1 };
     setFiltros(nuevos);
@@ -215,6 +229,7 @@ export function MembresiasPage() {
       asignaciones_entrenador: asignaciones,
       estado: normalizarEstado(membresia.estado_valor || membresia.estado),
       fecha_inicio: limpiarFecha(membresia.fecha_inicio),
+      fecha_primer_pago: limpiarFecha(membresia.cuotas?.[0]?.fecha_vencimiento || membresia.fecha_inicio),
       fecha_fin: limpiarFecha(membresia.fecha_fin),
       fecha_congelacion_inicio: limpiarFecha(membresia.fecha_congelacion_inicio),
       fecha_congelacion_fin: limpiarFecha(membresia.fecha_congelacion_fin),
@@ -236,7 +251,13 @@ export function MembresiasPage() {
     setFormData((actual) => {
       const siguiente = { ...actual, [name]: type === 'checkbox' ? checked : value };
 
+      if (name === 'fecha_inicio' && (!actual.fecha_primer_pago || actual.fecha_primer_pago === actual.fecha_inicio)) {
+        siguiente.fecha_primer_pago = value;
+      }
+
       if (name === 'plan_id') {
+        siguiente.modalidad_id = '';
+        setModalidades([]);
         const plan = planes.find((item) => String(item.id) === String(value));
         if (!plan?.requiere_entrenador) siguiente.asignaciones_entrenador = [];
         if (!(plan?.generar_venta ?? true)) siguiente.requiere_facturar = false;
@@ -334,6 +355,19 @@ export function MembresiasPage() {
         }
       }
 
+      if (!formData.id && (!Number.isInteger(Number(formData.cantidad_periodos_contratados)) || Number(formData.cantidad_periodos_contratados) < 1 || Number(formData.cantidad_periodos_contratados) > 36)) {
+        showNotificacion('Selecciona entre 1 y 36 períodos contratados.', 'warning');
+        return;
+      }
+      if (!formData.id && (!formData.fecha_primer_pago || formData.fecha_primer_pago < formData.fecha_inicio)) {
+        showNotificacion('La primera fecha de pago debe ser igual o posterior al inicio.', 'warning');
+        return;
+      }
+      if (!formData.id && planSeleccionado?.requiere_modalidades && !formData.modalidad_id) {
+        showNotificacion('Selecciona una modalidad del plan.', 'warning');
+        return;
+      }
+
       setGuardando(true);
 
       const comun = {
@@ -365,6 +399,9 @@ export function MembresiasPage() {
           ...comun,
           deportista_id: formData.deportista_id,
           plan_id: formData.plan_id,
+          modalidad_id: formData.modalidad_id || null,
+          cantidad_periodos_contratados: Number(formData.cantidad_periodos_contratados),
+          fecha_primer_pago: formData.fecha_primer_pago,
           generar_venta: Boolean(formData.requiere_facturar && (planSeleccionado?.generar_venta ?? true)),
         });
 
@@ -436,6 +473,16 @@ export function MembresiasPage() {
     const puedeGenerarVenta = Boolean(planSeleccionado?.generar_venta ?? true);
     const esRenovable = Boolean(planSeleccionado?.renovable ?? true);
     const requiereEntrenador = Boolean(planSeleccionado?.requiere_entrenador);
+    const modalidadSeleccionada = modalidades.find((m) => String(m.id) === String(formData.modalidad_id));
+    const tipoDuracion = modalidadSeleccionada?.tipo_duracion || planSeleccionado?.tipo_duracion;
+    const duracion = modalidadSeleccionada?.duracion || planSeleccionado?.duracion;
+    const calendario = !esEdicion ? generarVistaPreviaCuotas({
+      inicio: formData.fecha_inicio,
+      primerPago: formData.fecha_primer_pago,
+      cantidad: formData.cantidad_periodos_contratados,
+      tipo: tipoDuracion,
+      duracion,
+    }) : [];
     const estadoInicial = estadosMembresia.find((estado) => estado.es_inicial) || estadosMembresia.find((estado) => estado.valor_interno === 'PENDIENTE_PAGO');
 
     return (
@@ -518,8 +565,16 @@ export function MembresiasPage() {
                     </Typography>
                   </Box>
 
+                  {planSeleccionado?.requiere_modalidades ? (
+                    <TextField select label="Modalidad" name="modalidad_id" value={formData.modalidad_id || ''} onChange={handleChange} required size="small" disabled={esEdicion} helperText="La modalidad determina la duración y tarifa del período.">
+                      <MenuItem value="">Selecciona una modalidad</MenuItem>
+                      {modalidades.map((m) => <MenuItem key={m.id} value={m.id}>{m.nombre}</MenuItem>)}
+                      {esEdicion && formData.modalidad_id && !modalidades.some((m) => String(m.id) === String(formData.modalidad_id)) ? <MenuItem value={formData.modalidad_id}>{formData.modalidad_nombre || 'Modalidad asignada'}</MenuItem> : null}
+                    </TextField>
+                  ) : null}
+
                   <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField label="Fecha fin" type="date" value={formData.fecha_fin || ''} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Calculada automáticamente según la duración del plan." />
+                  <TextField label="Fecha fin" type="date" value={!esEdicion && calendario.length ? calendario[calendario.length - 1].fin : (formData.fecha_fin || '')} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Fecha prevista; Laravel calculará la vigencia contractual definitiva." />
 
                   {esEdicion ? (
                     <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
@@ -533,6 +588,34 @@ export function MembresiasPage() {
                   <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
                 </Box>
               </Box>
+
+              {!esEdicion ? (
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Contrato y calendario de pagos</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                    Contrata uno o varios períodos en una sola membresía. Cada cuota tendrá su propia fecha de vencimiento, independiente de los días de gracia de acceso.
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mb: 2 }}>
+                    <TextField label="Períodos contratados" name="cantidad_periodos_contratados" type="number" size="small" required value={formData.cantidad_periodos_contratados} onChange={handleChange} slotProps={{ htmlInput: { min: 1, max: 36, step: 1 } }} helperText="Entre 1 y 36 períodos." />
+                    <TextField label="Fecha del primer pago" name="fecha_primer_pago" type="date" size="small" required value={formData.fecha_primer_pago || ''} onChange={handleChange} slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: formData.fecha_inicio || undefined } }} helperText="Vencimiento de la primera cuota." />
+                    <TextField label="Total de cuotas" size="small" disabled value={calendario.length ? calendario.length : '—'} helperText="El importe total se confirma al guardar." />
+                  </Box>
+                  <CalendarioCuotasPreview filas={calendario} />
+                </Box>
+              ) : formData.cuotas?.length ? (
+                <Box sx={formStyles.seccion}>
+                  <Typography sx={formStyles.modalSeccionTitulo}>Calendario contractual registrado</Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5, mt: 1 }}>
+                    {formData.cuotas.map((cuota) => (
+                      <Box key={cuota.id} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, p: 1.5 }}>
+                        <Typography variant="subtitle2" fontWeight={700}>Cuota {cuota.numero_cuota} · ${Number(cuota.monto).toFixed(2)}</Typography>
+                        <Typography variant="caption" display="block" color="text.secondary">Vence: {limpiarFecha(cuota.fecha_vencimiento)}</Typography>
+                        <Typography variant="caption" display="block" color="text.secondary">{cuota.venta_estado || cuota.estado} · Pagado: ${Number(cuota.monto_pagado || 0).toFixed(2)}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Box>
+              ) : null}
 
               {requiereEntrenador ? (
                 <Box sx={formStyles.seccion}>
@@ -640,10 +723,10 @@ export function MembresiasPage() {
                   <Switch
                     checked={Boolean(formData.requiere_facturar)}
                     onChange={(e) => setFormData((actual) => ({ ...actual, requiere_facturar: e.target.checked }))}
-                    disabled={!puedeGenerarVenta || guardando}
+                    disabled={true}
                   />
                 }
-                label={puedeGenerarVenta ? '¿Requiere facturar?' : 'Este plan no genera venta'}
+                label="La primera venta se genera automáticamente al contratar"
               />
               <BotonCancelar onClick={handleCancelarFormulario} disabled={guardando} />
               <BotonGuardar onClick={handleGuardar} guardando={guardando} />
