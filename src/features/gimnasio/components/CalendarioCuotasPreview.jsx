@@ -50,6 +50,25 @@ export const generarVistaPreviaCuotas = ({ inicio, primerPago, cantidad, tipo, d
   return filas;
 };
 
+/**
+ * Encuentra el número mínimo de períodos completos que cubre la fecha indicada.
+ * No genera períodos parciales ni modifica el calendario calculado en Laravel.
+ */
+export const periodosParaCubrirFecha = ({ inicio, objetivo, tipo, duracion, maximo = 36 }) => {
+  const desde = parseFecha(inicio);
+  const hasta = parseFecha(objetivo);
+  const d = Number(duracion);
+  if (!desde || !hasta || hasta < desde || !Number.isInteger(d) || d < 1) return null;
+  let cursor = desde;
+  for (let numero = 1; numero <= maximo; numero++) {
+    const siguiente = avanzar(cursor, tipo, d);
+    if (!siguiente || siguiente <= cursor) return null;
+    if (dias(siguiente, -1) >= hasta) return numero;
+    cursor = siguiente;
+  }
+  return null;
+};
+
 export function CalendarioCuotasPreview({ filas }) {
   if (!filas?.length) return null;
   return (
@@ -70,7 +89,7 @@ export function CalendarioCuotasPreview({ filas }) {
         </Box>
       </Box>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 1 }}>
-        Fechas orientativas; Laravel confirma la vigencia y los importes según el plan, la modalidad y la sede. La primera venta se genera al contratar; las demás se programan.
+        Fechas estimadas. Laravel confirma el calendario al guardar.
       </Typography>
     </Box>
   );
