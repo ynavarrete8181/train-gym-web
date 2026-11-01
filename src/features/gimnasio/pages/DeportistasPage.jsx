@@ -1079,9 +1079,28 @@ export function DeportistasPage() {
       if (contratoNuevo && (!membresiaForm.fecha_primer_pago || membresiaForm.fecha_primer_pago < membresiaForm.fecha_inicio)) {
         showNotificacion('La fecha del primer pago debe ser igual o posterior a la fecha de inicio.', 'warning'); return;
       }
+      if (contratoNuevo && membresiaForm.fecha_cobertura_deseada) {
+        const plan = planes.find((item) => String(item.id) === String(membresiaForm.plan_id));
+        const modalidad = (plan?.modalidades || []).find((item) => String(item.id) === String(membresiaForm.modalidad_id));
+        const numero = periodosParaCubrirFecha({
+          inicio: membresiaForm.fecha_inicio,
+          objetivo: membresiaForm.fecha_cobertura_deseada,
+          tipo: modalidad?.tipo_duracion || plan?.tipo_duracion,
+          duracion: modalidad?.duracion || plan?.duracion,
+        });
+        if (!numero) {
+          showNotificacion('La fecha solicitada no puede cubrirse con 1 a 36 períodos completos.', 'warning');
+          return;
+        }
+        if (Number(membresiaForm.cantidad_periodos_contratados) !== numero) {
+          showNotificacion('Revisa los períodos calculados antes de guardar.', 'warning');
+          return;
+        }
+      }
       const payload = {
         ...membresiaForm,
         congelar_membresia: undefined,
+        fecha_cobertura_deseada: undefined,
         fecha_congelacion_inicio: membresiaForm.congelar_membresia
           ? (membresiaForm.fecha_congelacion_inicio || null)
           : null,
