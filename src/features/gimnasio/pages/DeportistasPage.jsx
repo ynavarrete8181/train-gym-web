@@ -1839,6 +1839,22 @@ export function DeportistasPage() {
     tipo: modalidadMembresiaSeleccionada?.tipo_duracion || planMembresiaSeleccionado?.tipo_duracion,
     duracion: modalidadMembresiaSeleccionada?.duracion || planMembresiaSeleccionado?.duracion,
   }) : [];
+  // Flujo de asignación progresivo: plan → modalidad → fechas → cuotas → sedes → descuento.
+  const modalidadLista = Boolean(membresiaForm.plan_id)
+    && (!booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) || Boolean(modalidadMembresiaSeleccionada));
+  const fechasListas = modalidadLista && (
+    !contratoNuevoVisible
+      ? Boolean(membresiaForm.fecha_inicio)
+      : Boolean(
+        membresiaForm.fecha_inicio
+        && membresiaForm.fecha_fin_solicitada
+        && membresiaForm.fecha_primer_pago
+        && calendarioContratoPreview.length
+      )
+  );
+  const sedesListas = (membresiaForm.sedes_habilitadas || []).length > 0;
+  const mostrarSedes = Boolean(membresiaForm.id) || fechasListas;
+  const mostrarComercial = Boolean(membresiaForm.id) || (fechasListas && sedesListas);
   const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable) && !contratoNuevoVisible;
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
@@ -1920,6 +1936,7 @@ export function DeportistasPage() {
           ) : null}
 
         </Box>
+        {modalidadLista && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
           <TextField
             label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso' : 'Fecha inicio'}
@@ -1946,6 +1963,8 @@ export function DeportistasPage() {
             />
           )}
         </Box>
+        )}
+        {modalidadLista && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
           <TextField select label="Estado inicial" name="estado"
             value={!membresiaForm.id
@@ -2027,15 +2046,14 @@ export function DeportistasPage() {
             </>
           ) : null}
         </Box>
+        )}
 
-        {contratoNuevoVisible ? (
+        {contratoNuevoVisible && fechasListas ? (
           <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper' }}>
             <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Contrato y calendario de cuotas</Typography>
  
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-              {calendarioContratoPreview.length
-                ? `${calendarioContratoPreview.length} período(s) programado(s) · Fechas de pago e importes estimados`
-                : 'Selecciona las fechas para ver los períodos y pagos.'}
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+              {calendarioContratoPreview.length} {calendarioContratoPreview.length === 1 ? 'período' : 'períodos'} · {calendarioContratoPreview.length} cuotas programadas
             </Typography>
             {calendarioContratoPreview.length > 0 && calendarioContratoPreview[calendarioContratoPreview.length - 1].fin !== membresiaForm.fecha_fin_solicitada && (
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
@@ -2062,8 +2080,9 @@ export function DeportistasPage() {
             </Stack>
           </Box>
         ) : null}
+        {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
-          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas para ingresar *</Typography>
+          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas *</Typography>
  
           <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
             {sedes.map((sede) => {
@@ -2110,7 +2129,9 @@ export function DeportistasPage() {
             })}
           </Stack>
         </Box>
+        )}
 
+        {mostrarComercial && (
         <Box sx={{ mt: 1.25, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
           <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 1.25 }}>
             Configuración comercial
@@ -2187,6 +2208,7 @@ export function DeportistasPage() {
             </Box>
           )}
         </Box>
+        )}
 
         {membresiaForm.id && !membresiaForm.cantidad_periodos_contratados && membresiaForm.congelar_membresia ? (
           <Box
@@ -2228,9 +2250,11 @@ export function DeportistasPage() {
             </Typography>
           </Box>
         ) : null}
-        <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
-          <BotonGuardar onClick={handleGuardarMembresia} />
-        </Stack>
+        {(membresiaForm.id || mostrarComercial) && (
+          <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
+            <BotonGuardar onClick={handleGuardarMembresia} />
+          </Stack>
+        )}
       </Box> : null}
       {vistaMembresia === 'listado' && <Box sx={formStyles.seccion}>
         <GestionToolbar total={membresiasFiltradas.length} busqueda={buscarMembresia}
