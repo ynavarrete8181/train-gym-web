@@ -1115,9 +1115,14 @@ export function DeportistasPage() {
         delete payload.estado; // Lo establece Laravel según las reglas del plan y del pago.
       }
       if (membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null) {
+        // Contrato existente: no enviar condiciones inmutables al endpoint
+        // administrativo. Laravel conserva el calendario y las ventas emitidas.
         delete payload.fecha_inicio;
+        delete payload.modalidad_id;
         delete payload.dia_pago;
         delete payload.generar_venta_automatica;
+        delete payload.cantidad_periodos_contratados;
+        delete payload.fecha_primer_pago;
       }
       if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
       if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
@@ -1171,10 +1176,22 @@ export function DeportistasPage() {
     } catch (error) {
       const estadoHttp = Number(error.response?.status || 0);
       const errores = error.response?.data?.errors;
+      const primerCampoInvalido = errores ? Object.keys(errores)[0] : null;
       const primerError = errores ? Object.values(errores).flat().find((item) => typeof item === 'string') : null;
+      const camposLegibles = {
+        fecha_inicio: 'fecha de inicio', estado: 'estado', modalidad_id: 'modalidad',
+        sedes_habilitadas: 'sedes autorizadas', dia_pago: 'día de pago',
+        fecha_congelacion_inicio: 'inicio de congelación',
+        fecha_congelacion_fin: 'fin de congelación',
+      };
+      const mensajeValidacion = primerError === 'validation.required'
+        ? `Es obligatorio completar ${camposLegibles[primerCampoInvalido] || primerCampoInvalido || 'un campo'}.`
+        : primerError === 'validation.prohibited'
+          ? `No es posible modificar ${camposLegibles[primerCampoInvalido] || primerCampoInvalido || 'este campo'} en un contrato vigente.`
+          : primerError;
       const mensajeGenerico = error.response?.data?.mensaje;
       const avisoValidacion = estadoHttp === 422 || estadoHttp === 409;
-      const mensaje = primerError || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
+      const mensaje = mensajeValidacion || (mensajeGenerico && !/No se pudo completar la operación/i.test(mensajeGenerico)
         ? mensajeGenerico : null) || (avisoValidacion
           ? 'Revisa los datos de la membresía antes de continuar.'
           : 'Ocurrió un error al registrar la membresía. Inténtalo nuevamente.');
