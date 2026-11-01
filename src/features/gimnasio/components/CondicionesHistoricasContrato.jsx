@@ -27,6 +27,16 @@ export function CondicionesHistoricasContrato({ membresia }) {
   const historial = Array.isArray(membresia.historial_condiciones)
     ? [...membresia.historial_condiciones].sort((a, b) => Number(b.version) - Number(a.version))
     : [];
+  const valorHistorial = (valor) => {
+    if (valor == null || valor === '') return '—';
+    if (typeof valor === 'boolean') return valor ? 'Sí' : 'No';
+    if (Array.isArray(valor)) {
+      if (!valor.length) return 'Ninguno';
+      if (valor.every((item) => typeof item !== 'object')) return valor.join(', ');
+      return valor.map((item) => Object.entries(item).map(([k, v]) => `${k}: ${v ?? '—'}`).join(', ')).join(' | ');
+    }
+    return String(valor);
+  };
   const etiquetasCambio = {
     estado: 'Estado', dias_gracia: 'Días de gracia',
     sede_id: 'Sede principal', sedes_autorizadas: 'Sedes autorizadas',
@@ -116,9 +126,22 @@ export function CondicionesHistoricasContrato({ membresia }) {
                     </Typography>
                   </Stack>
                   {cambios.length > 0 && (
-                    <Typography variant="caption" color="text.secondary">
-                      Campos modificados: {cambios.join(', ')}
-                    </Typography>
+                    <>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        Campos modificados: {cambios.join(', ')}
+                      </Typography>
+                      <Box component="details" sx={{ mt: 0.5, '& summary': { cursor: 'pointer', fontSize: 12, fontWeight: 600 } }}>
+                        <Box component="summary">Ver valores anteriores y nuevos</Box>
+                        <Stack spacing={0.5} sx={{ mt: 0.75 }}>
+                          {Object.entries(registro.condiciones.cambios).map(([campo, cambio]) => (
+                            <Typography key={campo} variant="caption" sx={{ overflowWrap: 'anywhere' }}>
+                              <strong>{etiquetasCambio[campo] || campo}:</strong>{' '}
+                              {valorHistorial(cambio.antes)} → {valorHistorial(cambio.despues)}
+                            </Typography>
+                          ))}
+                        </Stack>
+                      </Box>
+                    </>
                   )}
                   {registro.motivo && (
                     <Typography variant="caption" color="text.secondary" display="block">
