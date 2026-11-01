@@ -25,7 +25,10 @@ const tiposVenta = ['PRODUCTO', 'MEMBRESIA', 'SERVICIO', 'OTRO'];
 const metodosPago = ['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'DEPOSITO', 'OTRO'];
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const opcionesEstados = (valores = []) => valores.map((item) => ({ value: String(item.valor_interno), label: String(item.nombre || item.valor_interno) }));
-const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
+const dinero = (valor) => `${Number(valor || 0).toFixed(2)}`;
+const hoyEcuador = () => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit',
+}).format(new Date());
 const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : 'Sin fecha';
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
 const estadoTexto = (valor) => String(valor || '').toLowerCase().replace('pagada', 'activo').replace('confirmado', 'activo').replace('emitido', 'activo');
@@ -62,7 +65,7 @@ const configs = {
     inicial: { id: null, cliente_id: '', membresia_id: '', caja_id: '', tipo_venta: 'PRODUCTO', concepto: '', subtotal: 0, descuento: 0, impuesto: 0, total: 0, estado: 'PENDIENTE', observaciones: '', detalle: { producto_id: '', cantidad: 1, precio_unitario: 0 } },
   },
   pagos: {
-    titulo: 'Cobros', singular: 'Cobro', descripcion: 'Consulta operaciones de cobro consolidadas por venta, turno y métodos de pago.', icono: <PaymentsOutlinedIcon />,
+    titulo: 'Cobros', singular: 'Cobro', descripcion: 'Pagos recibidos y registrados en caja, por fecha y método de pago.', icono: <PaymentsOutlinedIcon />,
     obtener: 'obtenerPagos', crear: null, actualizar: null,
     inicial: {},
   },
@@ -79,7 +82,7 @@ export function VentasCatalogo({ tipo }) {
   const [meta, setMeta] = useState({});
   const [catalogos, setCatalogos] = useState({});
   const [formData, setFormData] = useState(config.inicial);
-  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
+  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5, ...(tipo === 'pagos' ? { fecha_pago: hoyEcuador() } : {}) });
   const [filtrosColumna, setFiltrosColumna] = useState({});
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
@@ -94,8 +97,11 @@ export function VentasCatalogo({ tipo }) {
       setItems(response.datos || []);
       setMeta(response.meta || {});
       setCatalogos(response.meta?.catalogos || {});
-    } catch {
-      showNotificacion(`Error al cargar ${config.titulo.toLowerCase()}`, 'error');
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const detalle = errores ? Object.values(errores).flat()[0] : null;
+      const mensaje = detalle || error.response?.data?.mensaje || error.response?.data?.message;
+      showNotificacion(mensaje || `Error al cargar ${config.titulo.toLowerCase()}. Revisa el servidor.`, 'error');
     } finally {
       setCargando(false);
     }
@@ -104,7 +110,7 @@ export function VentasCatalogo({ tipo }) {
   useEffect(() => {
     setVista('lista');
     setFormData(config.inicial);
-    setFiltros({ busqueda: '', page: 1, per_page: 5 });
+    setFiltros({ busqueda: '', page: 1, per_page: 5, ...(tipo === 'pagos' ? { fecha_pago: hoyEcuador() } : {}) });
     setFiltrosColumna({});
   }, [tipo]);
 
@@ -216,6 +222,19 @@ export function VentasCatalogo({ tipo }) {
       <PageHeader titulo={config.titulo} descripcion={config.descripcion} icono={config.icono} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || items.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={config.crear ? <Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button> : null} />
+        {tipo === 'pagos' && (
+          <Box sx={{ px: { xs: 1.5, md: 2 }, pb: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <TextField size="small" label="Fecha del cobro" type="date"
+              value={filtros.fecha_pago || ''}
+              onChange={(e) => buscar({ ...filtros, fecha_pago: e.target.value })}
+              slotProps={{ inputLabel: { shrink: true } }}
+              sx={{ width: { xs: '100%', sm: 190 } }} />
+            <Button size="small" variant={filtros.fecha_pago === hoyEcuador() ? 'contained' : 'outlined'}
+              onClick={() => buscar({ ...filtros, fecha_pago: hoyEcuador() })}>Hoy</Button>
+            <Button size="small" variant={!filtros.fecha_pago ? 'contained' : 'outlined'}
+              onClick={() => buscar({ ...filtros, fecha_pago: '' })}>Todos</Button>
+          </Box>
+        )}
         <TablaVentas
           tipo={tipo}
           items={items}
