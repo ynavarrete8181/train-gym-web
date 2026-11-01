@@ -361,9 +361,7 @@ export function PlanesPage() {
 
   const seccionesPlan = [
     { id: 'generales', titulo: 'Datos generales', descripcion: 'Identificación y descripción' },
-    { id: 'cobro', titulo: 'Política de cobro', descripcion: 'Producto, generación de venta y cobro' },
-    { id: 'acceso', titulo: 'Condiciones de acceso', descripcion: 'Requisitos para utilizar el plan' },
-    { id: 'renovaciones', titulo: 'Renovaciones', descripcion: 'Continuidad del contrato' },
+    { id: 'comercial', titulo: 'Configuración comercial', descripcion: 'Cobro, requisitos y renovación' },
     { id: 'servicios', titulo: 'Servicios incluidos', descripcion: 'Cobertura deportiva' },
     { id: 'tarifas', titulo: 'Modalidades y tarifas', descripcion: 'Duración y precios por sede' },
   ];
@@ -429,7 +427,7 @@ export function PlanesPage() {
               </Box>
 
               </Box>
-              <Box sx={{ display: seccionPlan === 'cobro' ? 'block' : 'none' }}>
+              <Box sx={{ display: seccionPlan === 'comercial' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
                 <Typography sx={formStyles.modalSeccionTitulo}>Política de cobro</Typography>
                 <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
@@ -444,52 +442,26 @@ export function PlanesPage() {
                     <MenuItem value="RECURRENTE">Recurrente</MenuItem>
                   </TextField>
                 </Box>
-                <Box sx={{ mt: 2, p: 1.5, borderRadius: 1.5, border: 1, borderColor: 'divider', bgcolor: 'background.default' }}>
-                  <FormControlLabel
-                    control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />}
-                    label="Generar venta al asignar la membresía"
-                  />
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 6 }}>
-                    Para planes que requieren pago, registra la obligación comercial pendiente al contratar. La venta y el cobro son operaciones diferentes.
-                  </Typography>
-                  {formData.requiere_pago && !formData.generar_venta && (
-                    <Typography variant="body2" sx={{ mt: 1, color: 'warning.dark', fontWeight: 700 }}>
-                      Atención: el plan exige pago para activar, pero tiene deshabilitada la generación de venta. Revisa esta combinación antes de guardar.
-                    </Typography>
-                  )}
+                <Box sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, columnGap: 2, rowGap: 0.5 }}>
+                  <FormControlLabel control={<Switch name="generar_venta" checked={Boolean(formData.generar_venta)} onChange={handleChange} />} label="Generar venta al contratar" />
+                  <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
+                  <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Permite renovación" />
+                  <FormControlLabel control={<Switch name="requiere_modalidades" checked={Boolean(formData.requiere_modalidades)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Tiene modalidades" />
+                  <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
+                  <FormControlLabel control={<Switch name="requiere_ficha_inicial" checked={Boolean(formData.requiere_ficha_inicial)} onChange={handleChange} />} label="Requiere ficha inicial" />
                 </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                  La fecha límite de pago y la autorización de pago posterior son condiciones del contrato de cada deportista; se definirán en Asignar membresía.
+                {formData.requiere_pago && !formData.generar_venta && (
+                  <Typography variant="body2" sx={{ mt: 1, color: 'warning.dark', fontWeight: 700 }}>
+                    El plan exige pago, pero no genera venta al contratar. Revisa esta combinación.
+                  </Typography>
+                )}
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  El pago inmediato o posterior, su fecha límite y los recordatorios personales se definen al asignar la membresía; no se configuran para todos los clientes aquí.
                 </Typography>
               </Box>
               </Box>
 
-              <Box sx={{ display: seccionPlan === 'acceso' ? 'block' : 'none' }}>
-                <Box sx={formStyles.seccion}>
-                  <Typography sx={formStyles.modalSeccionTitulo}>Condiciones de acceso</Typography>
-                  <Stack spacing={1}>
-                    <FormControlLabel control={<Switch name="requiere_pago" checked={Boolean(formData.requiere_pago)} onChange={handleChange} />} label="Requiere pago para activar" />
-                    <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
-                    <FormControlLabel control={<Switch name="requiere_ficha_inicial" checked={Boolean(formData.requiere_ficha_inicial)} onChange={handleChange} />} label="Requiere ficha inicial" />
-                    <FormControlLabel control={<Switch name="requiere_modalidades" checked={Boolean(formData.requiere_modalidades)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Requiere modalidades" />
-                  </Stack>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                    Una autorización excepcional para entrenar antes de pagar debe quedar registrada en la membresía del deportista, no aplicada a todos los usuarios del plan.
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: seccionPlan === 'renovaciones' ? 'block' : 'none' }}>
-                <Box sx={formStyles.seccion}>
-                  <Typography sx={formStyles.modalSeccionTitulo}>Renovaciones</Typography>
-                  <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Permitir renovar este plan" />
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
-                    La renovación automática, el día habitual de cobro y las obligaciones de los siguientes períodos se configuran en la membresía del deportista. Activar «Renovable» no significa realizar cobros automáticos.
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box sx={{ display: seccionPlan === 'servicios' ? 'block' : 'none' }}>
+                            <Box sx={{ display: seccionPlan === 'servicios' ? 'block' : 'none' }}>
               <Box sx={formStyles.seccion}>
                   <Typography sx={formStyles.modalSeccionTitulo}>Servicios incluidos</Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1.2 }}>
