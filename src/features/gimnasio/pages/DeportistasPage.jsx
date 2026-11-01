@@ -2357,23 +2357,23 @@ export function DeportistasPage() {
       </Box>}
       {vistaMembresia === 'historial' && historialMembresiaSeleccionada && (
         <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'stretch', sm: 'center' }}
-            justifyContent="space-between" spacing={1.5} sx={{ mb: 2 }}>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography sx={formStyles.modalSeccionTitulo}>Historial del contrato</Typography>
-              <Typography variant="body2" color="text.secondary">
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 2, width: '100%', mb: 2 }}>
+            <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>
+              <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 0.5 }}>
+                Historial del contrato
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
                 {historialMembresiaSeleccionada.codigo_contrato
                   || historialMembresiaSeleccionada.plan_nombre
-                  || 'Membresía'} · Condiciones originales y modificaciones
+                  || 'Membresía'} · Consulta de condiciones y modificaciones
               </Typography>
             </Box>
-            <Box sx={{ flexShrink: 0, alignSelf: { xs: 'flex-end', sm: 'center' } }}>
-              <BotonVolver onClick={() => {
-                setHistorialMembresiaSeleccionada(null);
-                setVistaMembresia('listado');
-              }} />
-            </Box>
-          </Stack>
+            <BotonVolver sx={{ flex: '0 0 auto', ml: 'auto' }} onClick={() => {
+              setHistorialMembresiaSeleccionada(null);
+              setVistaMembresia('listado');
+            }} />
+          </Box>
           <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} />
         </Box>
       )}
