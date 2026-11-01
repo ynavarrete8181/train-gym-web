@@ -26,9 +26,25 @@ const avanzar = (fecha, tipo, cantidad) => {
   return null;
 };
 
-export const generarVistaPreviaCuotas = ({ inicio, primerPago, cantidad, tipo, duracion }) => {
+// Primer vencimiento en el día indicado, nunca anterior al inicio.
+export const primerVencimientoDiaFijo = (inicio, diaPago) => {
+  const fecha = parseFecha(inicio);
+  const dia = Number(diaPago);
+  if (!fecha || !Number.isInteger(dia) || dia < 1 || dia > 31) return '';
+  const vencimientoEnMes = (base) => {
+    const ultimo = new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth() + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(base.getUTCFullYear(), base.getUTCMonth(), Math.min(dia, ultimo)));
+  };
+  let primerPago = vencimientoEnMes(fecha);
+  if (primerPago < fecha) primerPago = vencimientoEnMes(meses(fecha, 1));
+  return iso(primerPago);
+};
+
+export const generarVistaPreviaCuotas = ({ inicio, primerPago, diaPago, cantidad, tipo, duracion }) => {
   const desde = parseFecha(inicio);
-  const pago = parseFecha(primerPago);
+  const pago = parseFecha(diaPago === undefined || diaPago === null || diaPago === ''
+    ? primerPago
+    : primerVencimientoDiaFijo(inicio, diaPago));
   const n = Number(cantidad);
   const d = Number(duracion);
   if (!desde || !pago || !Number.isInteger(n) || n < 1 || n > 36 || !Number.isInteger(d) || d < 1 || pago < desde) return [];
