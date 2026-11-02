@@ -5,9 +5,8 @@ import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
 /**
- * Fase 1 / Política C: resumen exclusivamente informativo.
- * No modifica contratos, acceso, cuotas, ventas ni cartera.
- * Los movimientos transaccionales se habilitan en las fases siguientes.
+ * Resumen informativo. Las operaciones auditadas se realizan desde
+ * GestionCicloVidaMembresia, nunca desde la edición convencional.
  */
 export function CicloVidaMembresiaResumen({ membresia }) {
   if (!membresia?.id) return null;
@@ -25,8 +24,8 @@ export function CicloVidaMembresiaResumen({ membresia }) {
   const descripcion = terminal
     ? 'El contrato está finalizado. Si el deportista regresa, corresponde evaluar una recontratación; una reapertura será excepcional.'
     : estado === 'CONGELADA'
-      ? 'El estado actual indica congelación, pero las fechas y los ajustes financieros deben gestionarse mediante movimientos auditados.'
-      : 'El contrato está disponible para evaluar una congelación futura, sujeta a validación de fechas, cuotas y autorización.';
+      ? 'La membresía está congelada. Consulta el historial y solicita la reactivación desde Gestión del ciclo de vida.'
+      : 'Las congelaciones pueden previsualizarse. La confirmación depende de las reglas de vigencia y conciliación financiera de Laravel.';
 
   return (
     <Box sx={{ border: '1px solid', borderColor: uiTokens.colores.borde, borderRadius: 2,
@@ -36,10 +35,10 @@ export function CicloVidaMembresiaResumen({ membresia }) {
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle2" fontWeight={800}>Gestión del ciclo de vida</Typography>
           <Typography variant="caption" color="text.secondary">
-            Consulta previa a congelaciones, reactivaciones y cierres.
+            Resumen contractual y acceso a congelación/reactivación con validación financiera.
           </Typography>
         </Box>
-        <Chip size="small" variant="outlined" label="Fase 1 · Informativo" />
+        <Chip size="small" variant="outlined" label="Ciclo de vida" />
       </Stack>
       <Divider />
       <Box sx={{ p: 1.75 }}>
@@ -72,7 +71,7 @@ export function CicloVidaMembresiaResumen({ membresia }) {
         </Box>
         <Typography variant="body2" sx={{ mt: 1.5 }}>{descripcion}</Typography>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-          Los pagos y saldos reales se consultan en Ventas y Cartera. Cambiar el estado manualmente no constituye una congelación formal ni suspende por sí solo los cobros.
+          Los pagos y saldos reales se consultan en Ventas y Cartera. El estado es informativo: congelar y reactivar requiere un movimiento auditado y la validación del backend.
         </Typography>
       </Box>
     </Box>
