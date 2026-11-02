@@ -184,6 +184,17 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
               <Typography variant="body2">Saldo de ventas emitidas: <strong>${Number(preview.impacto_financiero.deuda_emitida || 0).toFixed(2)}</strong></Typography>
               <Typography variant="body2">Cuotas reprogramables: <strong>{preview.impacto_financiero.cuotas_reprogramables}</strong></Typography>
             </Stack>
+            {(preview.impacto_financiero.ventas_adicionales || []).length > 0 && (
+              <Alert severity={preview.impacto_financiero.requiere_revision_cartera ? 'warning' : 'info'}
+                sx={{ mb: 1.5 }}>
+                Existen ventas adicionales vinculadas al contrato. No se modificarán:
+                {(preview.impacto_financiero.ventas_adicionales || []).map((venta) => (
+                  <Typography variant="caption" display="block" key={venta.id}>
+                    {venta.numero || `Venta ${venta.id}`} · Saldo ${Number(venta.saldo_emitido).toFixed(2)}
+                  </Typography>
+                ))}
+              </Alert>
+            )}
             <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1, maxWidth: '100%', overflowX: 'auto' }}>
               <Table size="small" aria-label="Impacto financiero por cuota">
                 <TableHead><TableRow>
