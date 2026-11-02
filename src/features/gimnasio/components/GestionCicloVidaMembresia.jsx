@@ -135,11 +135,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </Alert>
       )}
       <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
-        <Button variant="contained" disabled={!puedeCongelar || procesando}
+        <Button variant="contained" disabled={estado !== 'ACTIVA' || procesando}
           sx={{ textTransform: 'none', bgcolor: uiTokens.colores.acento, color: uiTokens.colores.textoFuerte,
             '&:hover': { bgcolor: uiTokens.colores.acentoOscuro } }}
           onClick={() => { setOperacion('congelar'); setPreview(null); setError(''); }}>
-          Congelar por tiempo
+          {puedeCongelar ? 'Congelar por tiempo' : 'Simular congelación'}
         </Button>
         <Button variant="outlined" disabled={!puedeReactivar || procesando} sx={{ textTransform: 'none' }}
           onClick={() => { setOperacion('reactivar'); setPreview(null); setError(''); }}>
@@ -170,11 +170,15 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <Typography variant="body2">Días reconocidos: {preview.dias_previstos}</Typography>
           <Typography variant="body2">Fin actual: {fechaLegible(preview.fecha_fin_original)}</Typography>
           <Typography variant="body2">Fin propuesto: {fechaLegible(preview.fecha_fin_ajustada)}</Typography>
-          <Typography variant="caption">No genera ventas ni modifica pagos. El ajuste efectivo se confirma al reactivar.</Typography>
-          <Stack alignItems="flex-end" sx={{ mt: 1.5 }}>
+          <Typography variant="caption">La simulación no genera ventas ni modifica pagos. El ajuste efectivo se confirma al reactivar.</Typography>
+          {!preview.confirmable && <Alert severity="warning" sx={{ mt: 1.5 }}>
+            No se puede confirmar esta congelación: {preview.motivo_bloqueo}
+            {preview.cuotas_programadas > 0 ? ` Hay ${preview.cuotas_programadas} cuota(s) todavía programadas.` : ''}
+          </Alert>}
+          {preview.confirmable && <Stack alignItems="flex-end" sx={{ mt: 1.5 }}>
             <Button variant="contained" color="warning" disabled={procesando || motivo.trim().length < 8}
               onClick={confirmar}>Confirmar congelación</Button>
-          </Stack>
+          </Stack>}
         </Box>}
       </Box>}
       {operacion === 'reactivar' && <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, p: 2, mb: 2 }}>
