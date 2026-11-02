@@ -1052,14 +1052,6 @@ export function DeportistasPage() {
         return;
       }
 
-      if (
-        membresiaForm.id && membresiaForm.congelar_membresia
-        && (!membresiaForm.fecha_congelacion_inicio || !membresiaForm.fecha_congelacion_fin)
-      ) {
-        showNotificacion('Completa el período de congelación de la membresía', 'warning');
-        return;
-      }
-
       const contratoNuevo = !membresiaForm.id && String(planSeleccionado?.tipo_producto || '').toUpperCase() !== 'PASE_DIARIO';
       const modalidadSeleccionada = (planSeleccionado?.modalidades || [])
         .find((modalidad) => String(modalidad.id) === String(membresiaForm.modalidad_id));
@@ -1096,13 +1088,11 @@ export function DeportistasPage() {
         cantidad_periodos_contratados: contratoNuevo ? cantidadCalculada : membresiaForm.cantidad_periodos_contratados,
         // El servidor fija fecha_fin según los períodos completos.
         fecha_fin: contratoNuevo ? undefined : membresiaForm.fecha_fin,
+        // Los movimientos de congelación y reactivación tienen endpoints auditados.
+        // Nunca se realizan mediante la actualización general del contrato.
         congelar_membresia: undefined,
-        fecha_congelacion_inicio: membresiaForm.congelar_membresia
-          ? (membresiaForm.fecha_congelacion_inicio || null)
-          : null,
-        fecha_congelacion_fin: membresiaForm.congelar_membresia
-          ? (membresiaForm.fecha_congelacion_fin || null)
-          : null,
+        fecha_congelacion_inicio: undefined,
+        fecha_congelacion_fin: undefined,
         deportista_id: formData.id,
         modalidad_id: membresiaForm.modalidad_id ? Number(membresiaForm.modalidad_id) : null,
         sede_id: (membresiaForm.sedes_habilitadas || []).map(Number).includes(Number(membresiaForm.sede_id))
@@ -1131,8 +1121,6 @@ export function DeportistasPage() {
         delete payload.cantidad_periodos_contratados;
         delete payload.fecha_primer_pago;
       }
-      if (!payload.fecha_congelacion_inicio) delete payload.fecha_congelacion_inicio;
-      if (!payload.fecha_congelacion_fin) delete payload.fecha_congelacion_fin;
       if (requiereDescuento) {
         if (descuentoInvalido) {
           showNotificacion(
@@ -2061,16 +2049,17 @@ export function DeportistasPage() {
         {membresiaForm.id && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
           {membresiaForm.id && (
-            <TextField select label="Estado" name="estado"
-              value={membresiaForm.estado || 'PENDIENTE_PAGO'}
-              onChange={handleMembresiaChange} required size="small"
-            >
-              <MenuItem value="PENDIENTE_PAGO">Pendiente pago</MenuItem>
-              <MenuItem value="ACTIVA">Activa</MenuItem>
-              <MenuItem value="VENCIDA">Vencida</MenuItem>
-              <MenuItem value="CONGELADA">Congelada</MenuItem>
-              <MenuItem value="CANCELADA">Cancelada</MenuItem>
-            </TextField>
+            <TextField label="Estado del contrato" size="small"
+              value={({
+                PENDIENTE_PAGO: 'Pendiente de pago',
+                ACTIVA: 'Activa',
+                VENCIDA: 'Vencida',
+                CONGELADA: 'Congelada',
+                CANCELADA: 'Cancelada',
+              })[String(membresiaForm.estado || '').toUpperCase()] || membresiaForm.estado || 'Sin estado'}
+              slotProps={{ input: { readOnly: true } }}
+              helperText="El estado cambia mediante los procesos autorizados de membresías, pagos y ciclo de vida."
+            />
           )}
           {membresiaForm.id && (
             <TextField
@@ -2112,31 +2101,7 @@ export function DeportistasPage() {
             />
           </Box>
 
-          <Box
-            sx={{
-              height: 40,
-              boxSizing: 'border-box',
-              px: 1.25,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1,
-              display: 'flex',
-              alignItems: 'center',
-              bgcolor: '#f8fafc',
-            }}
-          >
-            <FormControlLabel
-              control={
-                <Switch
-                  name="congelar_membresia"
-                  checked={Boolean(membresiaForm.congelar_membresia)}
-                  onChange={handleMembresiaChange}
-                  size="small"
-                />
-              }
-              label="Congelar membresía"
-              sx={{ m: 0 }}
-            />
-          </Box>
+
             </>
           ) : null}
         </Box>
@@ -2313,46 +2278,7 @@ export function DeportistasPage() {
         </Box>
         )}
 
-        {membresiaForm.id && !membresiaForm.cantidad_periodos_contratados && membresiaForm.congelar_membresia ? (
-          <Box
-            sx={{
-              mt: 1.5,
-              p: 1.5,
-              border: '1px solid #dbe5f0',
-              borderRadius: 1.5,
-              bgcolor: '#fbfdff',
-            }}
-          >
-            <Typography variant="body2" fontWeight={800} sx={{ mb: 1 }}>
-              Período de congelación
-            </Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
-              <TextField
-                label="Desde"
-                name="fecha_congelacion_inicio"
-                type="date"
-                value={membresiaForm.fecha_congelacion_inicio || ''}
-                onChange={handleMembresiaChange}
-                required
-                size="small"
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-              <TextField
-                label="Hasta"
-                name="fecha_congelacion_fin"
-                type="date"
-                value={membresiaForm.fecha_congelacion_fin || ''}
-                onChange={handleMembresiaChange}
-                required
-                size="small"
-                slotProps={{ inputLabel: { shrink: true } }}
-              />
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-              La congelación pausa temporalmente la membresía; no equivale a días de gracia ni a cancelación.
-            </Typography>
-          </Box>
-        ) : null}
+
         {(membresiaForm.id || mostrarComercial) && (
           <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
             <BotonGuardar onClick={handleGuardarMembresia} />
