@@ -44,6 +44,7 @@ import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 import { CicloVidaMembresiaResumen } from '../components/CicloVidaMembresiaResumen.jsx';
+import { GestionCicloVidaMembresia } from '../components/GestionCicloVidaMembresia.jsx';
 
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
@@ -2174,7 +2175,13 @@ export function DeportistasPage() {
           />
         ) : null}
         {membresiaForm.id && (
-          <CicloVidaMembresiaResumen membresia={membresiaForm} />
+          <>
+            <CicloVidaMembresiaResumen membresia={membresiaForm} />
+            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+              <Button variant="outlined" sx={{ textTransform: 'none' }}
+                onClick={() => setVistaMembresia('ciclo_vida')}>Gestionar congelación y reactivación</Button>
+            </Stack>
+          </>
         )}
         {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
@@ -2404,6 +2411,28 @@ export function DeportistasPage() {
           </TableBody>
         </TablaGestion>
       </Box>}
+      {vistaMembresia === 'ciclo_vida' && membresiaForm.id && (
+        <GestionCicloVidaMembresia
+          membresia={membresiaForm}
+          onVolver={() => setVistaMembresia('formulario')}
+          onActualizado={async () => {
+            try {
+              const respuesta = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
+              const actualizadas = respuesta.datos?.membresias || [];
+              setMembresiasCliente(actualizadas);
+              const contrato = actualizadas.find((item) => String(item.id) === String(membresiaForm.id));
+              if (contrato) {
+                setMembresiaForm((anterior) => ({ ...anterior,
+                  estado: contrato.estado, fecha_fin: limpiarFechaMembresia(contrato.fecha_fin),
+                  periodos: contrato.periodos || anterior.periodos, cuotas: contrato.cuotas || anterior.cuotas,
+                }));
+              }
+            } catch (error) {
+              showNotificacion('El movimiento fue guardado; no se logró actualizar la ficha. Recarga la pestaña.', 'warning');
+            }
+          }}
+        />
+      )}
       {vistaMembresia === 'historial' && historialMembresiaSeleccionada && (
         <Box sx={{ ...formStyles.seccion, mt: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
