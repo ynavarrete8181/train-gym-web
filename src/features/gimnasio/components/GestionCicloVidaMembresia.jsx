@@ -130,8 +130,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
       </Stack>
       {estado === 'ACTIVA' && !puedeCongelar && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          Este contrato no permite congelación de tiempo en Fase 2. Si tiene varios períodos, cuotas por emitir o cobros
-          recurrentes, primero debemos implementar la reprogramación financiera de Fase 3.
+          Puedes simular fechas futuras sin guardar cambios. Este contrato no puede confirmar la congelación todavía:
+          tiene obligaciones económicas que requieren la reprogramación financiera de Fase 3.
         </Alert>
       )}
       <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
@@ -148,7 +148,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         <Button variant="outlined" disabled sx={{ textTransform: 'none' }}>Congelar facturación · Fase 3</Button>
       </Stack>
       {operacion === 'congelar' && <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Registrar congelación por tiempo</Typography>
+        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Simular congelación por tiempo</Typography>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <TextField size="small" label="Desde" type="date" required value={inicio}
             onChange={e => { setInicio(e.target.value); setPreview(null); }}
@@ -170,9 +170,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <Typography variant="body2">Días reconocidos: {preview.dias_previstos}</Typography>
           <Typography variant="body2">Fin actual: {fechaLegible(preview.fecha_fin_original)}</Typography>
           <Typography variant="body2">Fin propuesto: {fechaLegible(preview.fecha_fin_ajustada)}</Typography>
-          <Typography variant="caption">La simulación no genera ventas ni modifica pagos. El ajuste efectivo se confirma al reactivar.</Typography>
+          <Typography variant="caption">Simulación informativa: no genera ventas, no modifica pagos y no cambia la vigencia contractual.</Typography>
           {!preview.confirmable && <Alert severity="warning" sx={{ mt: 1.5 }}>
-            No se puede confirmar esta congelación: {preview.motivo_bloqueo}
+            Esta es una simulación, no una solicitud registrada. {preview.motivo_bloqueo}
             {preview.cuotas_programadas > 0 ? ` Hay ${preview.cuotas_programadas} cuota(s) todavía programadas.` : ''}
           </Alert>}
           {preview.confirmable && <Stack alignItems="flex-end" sx={{ mt: 1.5 }}>
