@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, CircularProgress, Divider, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Divider, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -19,14 +19,14 @@ const mensajeError = (e) => {
 };
 
 /**
- * Fase 2: congelación de TIEMPO exclusivamente para contratos compatibles.
- * Fase 3 habilitará reprogramaciones de cuotas y facturación.
+ * Fase 3: previsualización de cuotas, ventas y pagos, y congelación financiera
+ * validada exclusivamente por Laravel. Los pagos confirmados son inmutables.
  */
 export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }) {
   const [ciclo, setCiclo] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [operacion, setOperacion] = useState('');
-  const [tipo, setTipo] = useState('TIEMPO');
+  const [tipo, setTipo] = useState('FACTURACION');
   const [inicio, setInicio] = useState(fechaLocal());
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -129,9 +129,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </Box>
       </Stack>
       {estado === 'ACTIVA' && !puedeCongelar && (
-        <Alert severity="warning" sx={{ mb: 2 }}>
-          Puedes simular fechas futuras sin guardar cambios. Este contrato no puede confirmar la congelación todavía:
-          tiene obligaciones económicas que requieren la reprogramación financiera de Fase 3.
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Este contrato tiene obligaciones económicas. Selecciona «Congelación de facturación» para revisar
+          cada cuota y sus vencimientos. Laravel decidirá si puede confirmarse; las ventas y pagos
+          ya registrados se conservan. Las solicitudes futuras solo pueden simularse.
         </Alert>
       )}
       <Stack direction="row" flexWrap="wrap" gap={1} sx={{ mb: 2 }}>
@@ -139,16 +140,20 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           sx={{ textTransform: 'none', bgcolor: uiTokens.colores.acento, color: uiTokens.colores.textoFuerte,
             '&:hover': { bgcolor: uiTokens.colores.acentoOscuro } }}
           onClick={() => { setOperacion('congelar'); setPreview(null); setError(''); }}>
-          {puedeCongelar ? 'Congelar por tiempo' : 'Simular congelación'}
+          Gestionar congelación
         </Button>
         <Button variant="outlined" disabled={!puedeReactivar || procesando} sx={{ textTransform: 'none' }}
           onClick={() => { setOperacion('reactivar'); setPreview(null); setError(''); }}>
           Reactivar
         </Button>
-        <Button variant="outlined" disabled sx={{ textTransform: 'none' }}>Congelar facturación · Fase 3</Button>
       </Stack>
       {operacion === 'congelar' && <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, p: 2, mb: 2 }}>
-        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Simular congelación por tiempo</Typography>
+        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Datos de congelación y simulación</Typography>
+        <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Modalidad de congelación"
+          value={tipo} onChange={(e) => { setTipo(e.target.value); setPreview(null); }}>
+          <MenuItem value="TIEMPO">Congelación de tiempo · mantiene el calendario de pago</MenuItem>
+          <MenuItem value="FACTURACION">Congelación de facturación · reprograma cuotas sin emitir</MenuItem>
+        </TextField>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <TextField size="small" label="Desde" type="date" required value={inicio}
             onChange={e => { setInicio(e.target.value); setPreview(null); }}
@@ -171,13 +176,53 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <Typography variant="body2">Fin actual: {fechaLegible(preview.fecha_fin_original)}</Typography>
           <Typography variant="body2">Fin propuesto: {fechaLegible(preview.fecha_fin_ajustada)}</Typography>
           <Typography variant="caption">Simulación informativa: no genera ventas, no modifica pagos y no cambia la vigencia contractual.</Typography>
+          {preview.impacto_financiero && <>
+            <Divider sx={{ my: 1.5 }}/>
+            <Typography variant="subtitle2" fontWeight={800}>Impacto en Ventas y Cartera</Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ my: 1 }}>
+              <Typography variant="body2">Pagos confirmados conservados: <strong>${Number(preview.impacto_financiero.pagos_confirmados || 0).toFixed(2)}</strong></Typography>
+              <Typography variant="body2">Saldo de ventas emitidas: <strong>${Number(preview.impacto_financiero.deuda_emitida || 0).toFixed(2)}</strong></Typography>
+              <Typography variant="body2">Cuotas reprogramables: <strong>{preview.impacto_financiero.cuotas_reprogramables}</strong></Typography>
+            </Stack>
+            <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1, maxWidth: '100%', overflowX: 'auto' }}>
+              <Table size="small" aria-label="Impacto financiero por cuota">
+                <TableHead><TableRow>
+                  <TableCell>Cuota</TableCell>
+                  <TableCell>Emisión actual</TableCell>
+                  <TableCell>Emisión propuesta</TableCell>
+                  <TableCell>Vence actual</TableCell>
+                  <TableCell>Vence propuesto</TableCell>
+                  <TableCell>Acción</TableCell>
+                </TableRow></TableHead>
+                <TableBody>
+                  {(preview.impacto_financiero.cuotas || []).map((cuota) => <TableRow key={cuota.cuota_id}>
+                    <TableCell>{cuota.numero}</TableCell>
+                    <TableCell>{fechaLegible(cuota.emision_anterior)}</TableCell>
+                    <TableCell>{fechaLegible(cuota.emision_propuesta)}</TableCell>
+                    <TableCell>{fechaLegible(cuota.vencimiento_anterior)}</TableCell>
+                    <TableCell>{fechaLegible(cuota.vencimiento_propuesto)}</TableCell>
+                    <TableCell>{({
+                      REPROGRAMACION_PROPUESTA: 'Reprogramación propuesta',
+                      PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
+                      VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
+                      SIN_CAMBIOS: 'Sin cambios',
+                    })[cuota.accion] || cuota.accion}</TableCell>
+                  </TableRow>)}
+                </TableBody>
+              </Table>
+            </TableContainer>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Fechas proyectadas. Ninguna venta emitida ni pago confirmado se anula o modifica.
+              Las fechas reales se concilian al reactivar el contrato.
+            </Typography>
+          </>}
           {!preview.confirmable && <Alert severity="warning" sx={{ mt: 1.5 }}>
             Esta es una simulación, no una solicitud registrada. {preview.motivo_bloqueo}
             {preview.cuotas_programadas > 0 ? ` Hay ${preview.cuotas_programadas} cuota(s) todavía programadas.` : ''}
           </Alert>}
           {preview.confirmable && <Stack alignItems="flex-end" sx={{ mt: 1.5 }}>
             <Button variant="contained" color="warning" disabled={procesando || motivo.trim().length < 8}
-              onClick={confirmar}>Confirmar congelación</Button>
+              onClick={confirmar}>Confirmar congelación con revisión financiera</Button>
           </Stack>}
         </Box>}
       </Box>}
