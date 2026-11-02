@@ -202,6 +202,22 @@ export const gimnasioServicio = {
     const { data } = await api.put(`/base/gimnasio/membresias/${id}`, payload);
     return data;
   },
+  obtenerCicloVidaMembresia: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/ciclo-vida`);
+    return data.datos;
+  },
+  previsualizarCongelacion: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/preview`, payload);
+    return data.datos;
+  },
+  congelarMembresia: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion`, payload);
+    return data.datos;
+  },
+  reactivarMembresia: async (id, motivo) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/reactivacion`, { motivo });
+    return data.datos;
+  },
   renovarMembresia: async (id) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/renovar`);
     return data;
