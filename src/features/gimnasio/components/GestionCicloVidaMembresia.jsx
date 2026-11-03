@@ -100,35 +100,35 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     finally { setProcesando(false); }
   };
 
-  const confirmar = async () => {
-    if (!preview || motivo.trim().length < 8) {
-      setError('Indica un motivo de al menos 8 caracteres y previsualiza el cambio.');
+  const guardarCongelacion = async () => {
+    if (!motivoCodigo || !inicio || !fin || fin < inicio || motivo.trim().length < 8) {
+      setError('Selecciona el motivo, ingresa fechas válidas y una justificación de al menos 8 caracteres.');
       return;
     }
-    setProcesando(true); setError('');
-    try {
-      await gimnasioServicio.congelarMembresia(membresia.id, {
-        tipo, fecha_inicio: inicio, fecha_fin: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo || null,
-      });
-      setExito('Congelación registrada correctamente. Consulta el historial del contrato.');
-      setOperacion(''); setPreview(null); setMotivo('');
-      await cargar();
-      await onActualizado?.();
-    } catch (e) { setError(mensajeError(e)); }
-    finally { setProcesando(false); }
-  };
-
-  const programar = async () => {
-    if (!preview?.programable || motivo.trim().length < 8) {
-      setError('Completa el motivo y previsualiza una solicitud futura válida.');
-      return;
-    }
+    if (procesando) return;
     setProcesando(true); setError(''); setExito('');
     try {
-      await gimnasioServicio.programarCongelacionTiempo(membresia.id, {
-        tipo: 'TIEMPO', fecha_inicio: inicio, fecha_fin: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo || null,
+      // La vista previa nunca sustituye la autorización de Laravel.
+      // Si no se solicitó manualmente, Guardar la obtiene antes de registrar.
+      const calculo = preview || await gimnasioServicio.previsualizarCongelacion(membresia.id, {
+        tipo, fecha_inicio: inicio, fecha_fin: fin,
       });
-      setExito('Vacaciones registradas. La membresía permanecerá activa hasta la fecha de inicio; Laravel revalidará las condiciones antes de suspenderla.');
+      setPreview(calculo);
+      if (!calculo?.confirmable && !calculo?.programable) {
+        setError(calculo?.motivo_bloqueo || 'La membresía no cumple los requisitos para registrar la congelación.');
+        return;
+      }
+      const datos = {
+        tipo, fecha_inicio: inicio, fecha_fin: fin,
+        motivo: motivo.trim(), motivo_codigo: motivoCodigo,
+      };
+      if (calculo.programable) {
+        await gimnasioServicio.programarCongelacionTiempo(membresia.id, datos);
+        setExito('Congelación programada. El contrato permanecerá activo hasta la fecha autorizada.');
+      } else {
+        await gimnasioServicio.congelarMembresia(membresia.id, datos);
+        setExito('Congelación registrada correctamente. Consulta el historial del contrato.');
+      }
       setOperacion(''); setPreview(null); setMotivo('');
       await cargar();
       await onActualizado?.();
@@ -170,19 +170,23 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   };
 
   const reactivar = async () => {
-    if (!previewReactivacion?.confirmable) {
-      setError('Revisa primero la vista previa de reactivación y sus condiciones financieras.');
+    if (!motivoCodigo || motivo.trim().length < 8) {
+      setError('Selecciona un motivo y escribe una justificación de al menos 8 caracteres.');
       return;
     }
-    if (motivo.trim().length < 8) {
-      setError('Registra el motivo de la reactivación (mínimo 8 caracteres).');
-      return;
-    }
+    if (procesando) return;
     setProcesando(true); setError(''); setExito('');
     try {
-      await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim(), motivoCodigo || null);
+      const calculo = previewReactivacion
+        || await gimnasioServicio.previsualizarReactivacion(membresia.id);
+      setPreviewReactivacion(calculo);
+      if (!calculo?.confirmable) {
+        setError(calculo?.motivo_bloqueo || 'La reactivación requiere revisión administrativa.');
+        return;
+      }
+      await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim(), motivoCodigo);
       setExito('Reactivación registrada. La vigencia quedó actualizada en el contrato.');
-      setOperacion(''); setPreview(null); setMotivo('');
+      setOperacion(''); setPreviewReactivacion(null); setMotivo('');
       await cargar();
       await onActualizado?.();
     } catch (e) { setError(mensajeError(e)); }
@@ -408,9 +412,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
           <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
             cargando={procesando && !preview} onClick={simular}/>
-          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(preview)}
-            disabled={!motivoCodigo || !preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
-            onClick={preview?.programable ? programar : confirmar}/>
+          <BotonGuardar texto="Guardar" guardando={procesando}
+            disabled={!motivoCodigo || !inicio || !fin || fin < inicio || motivo.trim().length < 8}
+            onClick={guardarCongelacion}/>
         </Box>
       </Box>}
       {operacion === 'reactivar' && <Box sx={{ mb: 0 }}>
@@ -443,8 +447,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
           <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
             onClick={simularReactivacion}/>
-          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(previewReactivacion)}
-            disabled={!motivoCodigo || !previewReactivacion?.confirmable || motivo.trim().length < 8}
+          <BotonGuardar texto="Guardar" guardando={procesando}
+            disabled={!motivoCodigo || motivo.trim().length < 8}
             onClick={reactivar}/>
         </Box>
       </Box>}
