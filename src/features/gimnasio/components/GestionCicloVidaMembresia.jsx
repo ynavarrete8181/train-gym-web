@@ -6,6 +6,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
+import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -40,6 +41,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(5);
   const [detalleSuspension, setDetalleSuspension] = useState(null);
+  const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [inicio, setInicio] = useState(fechaLocal());
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -104,6 +106,31 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
       });
       setExito('Vacaciones registradas. La membresía permanecerá activa hasta la fecha de inicio; Laravel revalidará las condiciones antes de suspenderla.');
       setOperacion(''); setPreview(null); setMotivo('');
+      await cargar();
+      await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
+  const cancelarProgramada = async () => {
+    if (!detalleSuspension || motivoCancelacion.trim().length < 8) {
+      setError('Indica el motivo de cancelación de al menos 8 caracteres.');
+      return;
+    }
+    const confirmado = await confirmarAccion({
+      titulo: 'Cancelar vacaciones programadas',
+      texto: 'La solicitud quedará cancelada en el historial. No se alterarán pagos ni cuotas.',
+      textoConfirmar: 'Sí, cancelar programación',
+      icono: 'warning',
+    });
+    if (!confirmado) return;
+    setProcesando(true); setError(''); setExito('');
+    try {
+      await gimnasioServicio.cancelarCongelacionProgramada(
+        membresia.id, detalleSuspension.id, motivoCancelacion.trim()
+      );
+      setDetalleSuspension(null); setMotivoCancelacion('');
+      setExito('Programación de vacaciones cancelada, con historial conservado.');
       await cargar();
       await onActualizado?.();
     } catch (e) { setError(mensajeError(e)); }
@@ -205,10 +232,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
               <TableCell><Chip size="small" variant="outlined"
                 color={s.estado === 'VIGENTE' ? 'warning' : s.estado === 'FINALIZADA' ? 'success' : 'default'}
                 label={({ PROGRAMADA: 'Programada', VIGENTE: 'Vigente', FINALIZADA: 'Finalizada',
-                  NO_APLICADA: 'No aplicada' })[s.estado] || s.estado} /></TableCell>
+                  NO_APLICADA: 'No aplicada', CANCELADA: 'Cancelada' })[s.estado] || s.estado} /></TableCell>
               <TableCell align="center">
                 <Tooltip title="Ver detalle de la congelación">
-                  <IconButton size="small" aria-label="Ver congelación" onClick={() => setDetalleSuspension(s)}>
+                  <IconButton size="small" aria-label="Ver congelación" onClick={() => { setDetalleSuspension(s); setMotivoCancelacion(''); }}>
                     <VisibilityOutlinedIcon fontSize="small"/>
                   </IconButton>
                 </Tooltip>
@@ -237,6 +264,16 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Motivo: {(ciclo?.movimientos || []).find(m => Number(m.id) === Number(detalleSuspension.movimiento_inicio_id))?.motivo || 'No disponible'}
           </Typography>
+          {detalleSuspension.estado === 'PROGRAMADA' && <Box sx={{ mt: 1.5 }}>
+            <TextField size="small" fullWidth multiline minRows={2}
+              label="Motivo para cancelar las vacaciones programadas"
+              value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)}
+              helperText="La cancelación será auditada; la membresía y sus cuotas permanecen intactas."/>
+            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
+              <Button variant="outlined" color="error" disabled={procesando || motivoCancelacion.trim().length < 8}
+                onClick={cancelarProgramada}>Cancelar programación</Button>
+            </Stack>
+          </Box>}
           {detalleSuspension.fecha_fin_real && <Typography variant="body2" sx={{ mt: 0.5 }}>
             Último día efectivo de suspensión: {fechaLegible(detalleSuspension.fecha_fin_real)}
           </Typography>}
@@ -333,7 +370,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
               Las fechas reales se concilian al reactivar el contrato.
             </Typography>
           </>}
-          {!preview.confirmable && <Alert severity="warning" sx={{ mt: 1.5 }}>
+          {!preview.confirmable && !preview.programable && <Alert severity="warning" sx={{ mt: 1.5 }}>
             Esta es una simulación, no una solicitud registrada. {preview.motivo_bloqueo}
             {preview.cuotas_programadas > 0 ? ` Hay ${preview.cuotas_programadas} cuota(s) todavía programadas.` : ''}
           </Alert>}
