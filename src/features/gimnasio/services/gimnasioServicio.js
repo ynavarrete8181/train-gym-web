@@ -252,6 +252,14 @@ export const gimnasioServicio = {
       { motivo, motivo_codigo: motivoCodigo });
     return data.datos;
   },
+  previsualizarRenovacionProgramada: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/renovacion-programada/preview`);
+    return data.datos;
+  },
+  registrarRenovacionProgramada: async (id) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/renovacion-programada`);
+    return data.datos;
+  },
   renovarMembresia: async (id) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/renovar`);
     return data;
