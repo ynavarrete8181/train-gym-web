@@ -21,8 +21,19 @@ const operaciones = [
   { value: 'REABRIR', label: 'Reaperturas excepcionales' },
 ];
 const inicial = { codigo: '', nombre: '', operacion: 'CONGELAR', descripcion: '', orden: 100, activo: true };
-const errorTexto = e => Object.values(e?.response?.data?.errors || e?.response?.data?.errores || {})
-  .flat().find(Boolean) || e?.response?.data?.mensaje || 'No se pudo completar la operación.';
+const errorTexto = e => {
+  const estado = e?.response?.status;
+  const codigo = e?.response?.data?.codigo || e?.response?.data?.code;
+  const errores = Object.values(e?.response?.data?.errors || e?.response?.data?.errores || {}).flat();
+  const detalle = errores.find(Boolean);
+  if (estado === 401) return 'La sesión expiró. Vuelve a iniciar sesión para consultar los motivos.';
+  if (estado === 403) return 'Tu usuario no tiene permiso para consultar el catálogo de motivos del ciclo de vida.';
+  if (estado === 404) return 'El backend todavía no tiene la ruta del catálogo. Actualiza Laravel y limpia las rutas.';
+  if (estado === 500) return 'El servidor no pudo consultar los motivos (HTTP 500). Comprueba que esté aplicada la migración de membresias.motivos_ciclo_vida y revisa el registro de Laravel.';
+  if (!e?.response) return 'No hay conexión con la API. Comprueba que Laravel esté iniciado y que la URL del backend sea correcta.';
+  return String(detalle || e?.response?.data?.mensaje || e?.message || 'No se pudo completar la operación.')
+    + (codigo ? ` (Código: ${codigo})` : ` (HTTP ${estado || 'desconocido'})`);
+};
 
 export function MotivosCicloVidaPage() {
   const [datos, setDatos] = useState([]);
@@ -33,15 +44,22 @@ export function MotivosCicloVidaPage() {
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
+  const [errorCarga, setErrorCarga] = useState(false);
   const [notificacion, setNotificacion] = useState('');
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(5);
 
   const cargar = useCallback(async () => {
     setCargando(true);
-    try { setDatos(await gimnasioServicio.listarMotivosCicloVida()); setError(''); }
-    catch (e) { setError(errorTexto(e)); }
-    finally { setCargando(false); }
+    try {
+      const respuesta = await gimnasioServicio.listarMotivosCicloVida();
+      if (!Array.isArray(respuesta)) {
+        throw new Error('La API no devolvió un listado válido de motivos.');
+      }
+      setDatos(respuesta); setError(''); setErrorCarga(false);
+    } catch (e) {
+      setDatos([]); setErrorCarga(true); setError(errorTexto(e));
+    } finally { setCargando(false); }
   }, []);
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -73,7 +91,9 @@ export function MotivosCicloVidaPage() {
   return <Box sx={{ width: '100%', pb: 3 }}>
     <PageHeader titulo="Motivos del ciclo de vida" descripcion="Catálogo de motivos de congelación, reactivación, cierre y reapertura." />
     <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {error && <Alert severity="error" sx={{ mb: 2 }} action={errorCarga
+        ? <Button color="inherit" size="small" disabled={cargando} onClick={() => cargar()}>Reintentar</Button>
+        : null}>{error}</Alert>}
       {edicion !== null ? <>
         <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>
@@ -129,7 +149,11 @@ export function MotivosCicloVidaPage() {
                 <EditOutlinedIcon fontSize="small"/></IconButton></Tooltip></TableCell>
             </TableRow>)}
             {!filtrados.length && <TableRow><TableCell colSpan={5} align="center">
-              Sin motivos para mostrar.
+              {errorCarga
+                ? 'No fue posible cargar el catálogo. Revisa el error indicado arriba.'
+                : busqueda || operacionFiltro
+                  ? 'No hay motivos que coincidan con los filtros.'
+                  : 'No hay motivos registrados.'}
             </TableCell></TableRow>}
           </TableBody>
         </TablaGestion>
