@@ -71,7 +71,7 @@ export function MotivosCicloVidaPage() {
   };
 
   return <Box sx={{ width: '100%', pb: 3 }}>
-    <PageHeader title="Motivos del ciclo de vida" subtitle="Catálogo de motivos de congelación, reactivación, cierre y reapertura." />
+    <PageHeader titulo="Motivos del ciclo de vida" descripcion="Catálogo de motivos de congelación, reactivación, cierre y reapertura." />
     <Box sx={{ ...formStyles.seccion, mt: 2 }}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {edicion !== null ? <>
