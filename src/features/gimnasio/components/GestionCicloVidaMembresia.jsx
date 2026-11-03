@@ -308,12 +308,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           </Button>
         </Stack>}
       </>}
-      {operacion === 'congelar' && <Box sx={{ ...formStyles.seccion, mb: 2 }}>
-        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Registrar solicitud de congelación</Typography>
-        <Alert severity="info" sx={{ mb: 2 }}>
-          Para vacaciones pagadas selecciona <strong>Tiempo</strong>. Se conservan las cuotas y fechas de pago,
-          y se compensan únicamente los días realmente suspendidos. Las solicitudes futuras se registran como programadas.
-        </Alert>
+      {operacion === 'congelar' && <Box sx={{ mb: 0 }}>
         <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Motivo principal"
           value={motivoCodigo} onChange={e => { setMotivoCodigo(e.target.value); setPreview(null); }}>
           <MenuItem value="">Seleccionar motivo</MenuItem>
@@ -406,8 +401,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             Revisa los cálculos anteriores y selecciona Guardar para confirmar la operación.
           </Typography>}
         </Box>}
-        <Stack direction="row" justifyContent="flex-end" alignItems="center" flexWrap="wrap"
-          gap={1.5} sx={{ mt: 2, width: '100%' }}>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1.5}
+          flexWrap="wrap" useFlexGap sx={{ mt: 2, width: '100%', ml: 'auto' }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
           <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
             cargando={procesando && !preview} onClick={simular}/>
@@ -416,13 +411,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             onClick={preview?.programable ? programar : confirmar}/>
         </Stack>
       </Box>}
-      {operacion === 'reactivar' && <Box sx={{ ...formStyles.seccion, mb: 2 }}>
-        <Typography variant="subtitle2" fontWeight={800}>Reactivar contrato congelado</Typography>
-        <Typography variant="caption" color="text.secondary">
-          Laravel calculará el período realmente congelado y ajustará la vigencia. Si se excedió la fecha prevista
-          requerirá revisión administrativa.
-        </Typography>
-        <TextField select size="small" fullWidth sx={{ mt: 2 }} label="Motivo principal"
+      {operacion === 'reactivar' && <Box sx={{ mb: 0 }}>
+        <TextField select size="small" fullWidth sx={{ mt: 1 }} label="Motivo principal"
           value={motivoCodigo} onChange={e => { setMotivoCodigo(e.target.value); setPreviewReactivacion(null); }}>
           <MenuItem value="">Seleccionar motivo</MenuItem>
           {motivosCatalogo.filter(m => m.operacion === 'REACTIVAR').map(m =>
@@ -445,8 +435,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             {previewReactivacion.motivo_bloqueo || 'La reactivación requiere una revisión administrativa.'}
           </Alert>}
         </Box>}
-        <Stack direction="row" justifyContent="flex-end" alignItems="center" flexWrap="wrap"
-          gap={1.5} sx={{ mt: 2, width: '100%' }}>
+        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1.5}
+          flexWrap="wrap" useFlexGap sx={{ mt: 2, width: '100%', ml: 'auto' }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
           <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
             onClick={simularReactivacion}/>
