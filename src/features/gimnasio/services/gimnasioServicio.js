@@ -223,6 +223,18 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/programar`, payload);
     return data.datos;
   },
+  previsualizarEdicionCongelacion: async (id, suspensionId, payload) => {
+    const { data } = await api.post(
+      `/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/preview-edicion`, payload
+    );
+    return data.datos;
+  },
+  actualizarCongelacionProgramada: async (id, suspensionId, payload) => {
+    const { data } = await api.put(
+      `/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/programacion`, payload
+    );
+    return data.datos;
+  },
   cancelarCongelacionProgramada: async (id, suspensionId, motivo) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/cancelar`, { motivo });
     return data.datos;
