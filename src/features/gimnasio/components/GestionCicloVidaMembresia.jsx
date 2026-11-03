@@ -22,6 +22,12 @@ const fechaLegible = (v) => {
   const a = String(v || '').slice(0, 10).split('-');
   return a.length === 3 ? [a[2], a[1], a[0]].join('/') : '—';
 };
+const leerDetalleMovimiento = (movimiento) => {
+  if (!movimiento?.detalle) return {};
+  if (typeof movimiento.detalle !== 'string') return movimiento.detalle;
+  try { return JSON.parse(movimiento.detalle) || {}; }
+  catch { return {}; }
+};
 const mensajeError = (e) => {
   const errores = e?.response?.data?.errors || e?.response?.data?.errores;
   const primero = errores && Object.values(errores).flat().find(Boolean);
@@ -158,9 +164,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const tienePendiente = suspensiones.some(s => ['PROGRAMADA', 'VIGENTE'].includes(s.estado));
   const puedeReactivar = estado === 'CONGELADA' &&
     suspensiones.some(s => s.estado === 'VIGENTE');
+  const movimientoDe = s => (ciclo?.movimientos || [])
+    .find(m => Number(m.id) === Number(s?.movimiento_inicio_id));
   const filtradas = suspensiones.filter(s => [
     s.tipo, s.estado, s.fecha_inicio, s.fecha_fin_prevista,
-    (ciclo?.movimientos || []).find(m => Number(m.id) === Number(s.movimiento_inicio_id))?.motivo,
+    movimientoDe(s)?.motivo,
   ].some(value => String(value || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC'))));
   const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtradas.length / porPagina) || 1));
   const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
@@ -228,7 +236,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
               <TableCell>{fechaLegible(s.fecha_inicio)}</TableCell>
               <TableCell>{fechaLegible(s.fecha_fin_prevista)}</TableCell>
               <TableCell>{s.tipo === 'TIEMPO' ? 'Tiempo / vacaciones' : 'Facturación'}</TableCell>
-              <TableCell align="center">{Number(s.dias_reconocidos || 0) || '—'}</TableCell>
+              <TableCell align="center">{s.dias_reconocidos || leerDetalleMovimiento(movimientoDe(s)).dias_previstos || '—'}</TableCell>
               <TableCell><Chip size="small" variant="outlined"
                 color={s.estado === 'VIGENTE' ? 'warning' : s.estado === 'FINALIZADA' ? 'success' : 'default'}
                 label={({ PROGRAMADA: 'Programada', VIGENTE: 'Vigente', FINALIZADA: 'Finalizada',
@@ -262,8 +270,12 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             {' · '}Vigencia estimada: <strong>{fechaLegible(detalleSuspension.fecha_fin_ajustada)}</strong>
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Motivo: {(ciclo?.movimientos || []).find(m => Number(m.id) === Number(detalleSuspension.movimiento_inicio_id))?.motivo || 'No disponible'}
+            Motivo: {movimientoDe(detalleSuspension)?.motivo || 'No disponible'}
           </Typography>
+          {detalleSuspension.estado === 'NO_APLICADA' && <Alert severity="warning" sx={{ mt: 1.5 }}>
+            {leerDetalleMovimiento(movimientoDe(detalleSuspension)).motivo_no_aplicacion
+              || 'La programación no fue aplicada. Revisa las condiciones actuales del contrato.'}
+          </Alert>}
           {detalleSuspension.estado === 'PROGRAMADA' && <Box sx={{ mt: 1.5 }}>
             <TextField size="small" fullWidth multiline minRows={2}
               label="Motivo para cancelar las vacaciones programadas"
