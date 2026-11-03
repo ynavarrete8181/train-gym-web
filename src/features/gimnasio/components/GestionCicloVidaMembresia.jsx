@@ -52,6 +52,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
   const [motivoCodigo, setMotivoCodigo] = useState('');
   const [motivosCatalogo, setMotivosCatalogo] = useState([]);
+  const [previewReactivacion, setPreviewReactivacion] = useState(null);
   const [inicio, setInicio] = useState(fechaLocal());
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -154,7 +155,19 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     finally { setProcesando(false); }
   };
 
+  const simularReactivacion = async () => {
+    setProcesando(true); setError(''); setExito(''); setPreviewReactivacion(null);
+    try {
+      setPreviewReactivacion(await gimnasioServicio.previsualizarReactivacion(membresia.id));
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
   const reactivar = async () => {
+    if (!previewReactivacion?.confirmable) {
+      setError('Revisa primero la vista previa de reactivación y sus condiciones financieras.');
+      return;
+    }
     if (motivo.trim().length < 8) {
       setError('Registra el motivo de la reactivación (mínimo 8 caracteres).');
       return;
@@ -302,7 +315,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           </Typography>}
         </Box>}
         {puedeReactivar && <Stack alignItems="flex-end" sx={{ mt: 2 }}>
-          <Button variant="outlined" onClick={() => { setOperacion('reactivar'); setMotivo(''); setError(''); }}>
+          <Button variant="outlined" onClick={() => { setOperacion('reactivar'); setMotivo(''); setError(''); setPreviewReactivacion(null); }}>
             Reactivar membresía
           </Button>
         </Stack>}
@@ -414,7 +427,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           </Typography>}
         </Box>}
       </Box>}
-      {operacion === 'reactivar' && <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, p: 2, mb: 2 }}>
+      {operacion === 'reactivar' && <Box sx={{ ...formStyles.seccion, mb: 2 }}>
         <Typography variant="subtitle2" fontWeight={800}>Reactivar contrato congelado</Typography>
         <Typography variant="caption" color="text.secondary">
           Laravel calculará el período realmente congelado y ajustará la vigencia. Si se excedió la fecha prevista
@@ -422,11 +435,29 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </Typography>
         <TextField sx={{ mt: 2 }} size="small" multiline minRows={2} fullWidth required
           label="Motivo de reactivación" value={motivo} onChange={e => setMotivo(e.target.value)}/>
-        <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ mt: 2 }}>
-          <Button onClick={() => setOperacion('')}>Cancelar</Button>
-          <Button color="warning" variant="contained" disabled={procesando || motivo.trim().length < 8}
-            onClick={reactivar}>Confirmar reactivación</Button>
+        <Stack direction="row" justifyContent="flex-end" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
+          <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
+            onClick={simularReactivacion}/>
+          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(previewReactivacion)}
+            disabled={!previewReactivacion?.confirmable || motivo.trim().length < 8}
+            onClick={reactivar}/>
         </Stack>
+        {previewReactivacion && <Box sx={{ mt: 2, bgcolor: uiTokens.colores.acentoSuave,
+          border: `1px solid ${uiTokens.colores.acentoBorde}`, p: 1.5, borderRadius: 1.5 }}>
+          <Typography fontWeight={800} variant="subtitle2">Cálculo al regresar · Laravel</Typography>
+          <Typography variant="body2">Días realmente suspendidos: <strong>{previewReactivacion.dias_reconocidos}</strong></Typography>
+          <Typography variant="body2">Fin anterior: {fechaLegible(previewReactivacion.fecha_fin_original)}</Typography>
+          <Typography variant="body2">Nuevo fin: <strong>{fechaLegible(previewReactivacion.fecha_fin_propuesta)}</strong></Typography>
+          <Typography variant="body2">Pagos confirmados: ${Number(previewReactivacion.impacto_financiero?.pagos_confirmados || 0).toFixed(2)}</Typography>
+          <Typography variant="body2">Saldo emitido: ${Number(previewReactivacion.impacto_financiero?.deuda_emitida || 0).toFixed(2)}</Typography>
+          <Typography variant="caption" color="text.secondary">
+            La vista previa no modifica contratos, cuotas ni Cartera. Guardar vuelve a validar todos los datos.
+          </Typography>
+          {!previewReactivacion.confirmable && <Alert severity="warning" sx={{ mt: 1 }}>
+            {previewReactivacion.motivo_bloqueo || 'La reactivación requiere una revisión administrativa.'}
+          </Alert>}
+        </Box>}
       </Box>}
     </>}
   </Box>;
