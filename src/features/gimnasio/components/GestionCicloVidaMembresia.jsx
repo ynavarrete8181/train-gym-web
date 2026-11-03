@@ -279,7 +279,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           rowsPerPage={porPagina} onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
           <TableHead><TableRow>
             <TableCell>Desde</TableCell><TableCell>Hasta (incluido)</TableCell>
-            <TableCell>Modalidad</TableCell><TableCell align="center">Días</TableCell>
+            <TableCell>Modalidad</TableCell><TableCell align="center">Días previstos</TableCell>
             <TableCell>Estado</TableCell><TableCell align="center">Acciones</TableCell>
           </TableRow></TableHead>
           <TableBody>
@@ -287,7 +287,13 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
               <TableCell>{fechaLegible(s.fecha_inicio)}</TableCell>
               <TableCell>{fechaLegible(s.fecha_fin_prevista)}</TableCell>
               <TableCell>{s.tipo === 'TIEMPO' ? 'Tiempo / vacaciones' : 'Facturación'}</TableCell>
-              <TableCell align="center">{s.dias_reconocidos || leerDetalleMovimiento(movimientoDe(s)).dias_previstos || '—'}</TableCell>
+              <TableCell align="center">
+                <Tooltip title={s.estado === 'FINALIZADA'
+                  ? `Período autorizado: ${s.dias_previstos ?? '—'} días. Días efectivos: ${s.dias_reconocidos ?? '—'}.`
+                  : 'Duración solicitada; no son días compensados.'}>
+                  <span>{s.dias_previstos ?? leerDetalleMovimiento(movimientoDe(s)).dias_previstos ?? '—'}</span>
+                </Tooltip>
+              </TableCell>
               <TableCell><Chip size="small" variant="outlined"
                 color={s.estado === 'VIGENTE' ? 'warning' : s.estado === 'FINALIZADA' ? 'success' : 'default'}
                 label={({ PROGRAMADA: 'Programada', VIGENTE: 'Vigente', FINALIZADA: 'Finalizada',
