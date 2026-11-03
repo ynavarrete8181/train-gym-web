@@ -311,11 +311,13 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             </TableCell></TableRow>}
           </TableBody>
         </TablaGestion>
-        {puedeReactivar && <Stack alignItems="flex-end" sx={{ mt: 2 }}>
-          <Button variant="outlined" onClick={() => { setOperacion('reactivar'); setMotivo(''); setMotivoCodigo('REGRESO'); setError(''); setPreviewReactivacion(null); }}>
+        {puedeReactivar && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+          <Button variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={() => { setOperacion('reactivar'); setMotivo(''); setMotivoCodigo('REGRESO'); setError(''); setPreviewReactivacion(null); }}>
             Reactivar membresía
           </Button>
-        </Stack>}
+        </Box>}
       </>}
       {(operacion === 'congelar' || operacion === 'editar') && <Box sx={{ mb: 0 }}>
         {operacion === 'editar' && <Alert severity="info" sx={{ mb: 2 }}>
