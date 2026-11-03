@@ -29,7 +29,7 @@ import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import PauseCircleOutlineOutlinedIcon from '@mui/icons-material/PauseCircleOutlineOutlined';
+import ManageHistoryOutlinedIcon from '@mui/icons-material/ManageHistoryOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
@@ -2323,7 +2323,7 @@ export function DeportistasPage() {
                         handleEditarMembresia(m);
                         setVistaMembresia('ciclo_vida');
                       }}>
-                      <PauseCircleOutlineOutlinedIcon sx={{ fontSize: 18 }} />
+                      <ManageHistoryOutlinedIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title="Ver historial del contrato">
