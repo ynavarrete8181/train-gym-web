@@ -177,7 +177,7 @@ export function CalendarioCuotasRegistradas({ periodos = [], cuotas = [] }) {
         </Box>
       </Box>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 1.5, py: 1 }}>
-        Fechas e importes guardados en el contrato; la edición no los recalcula.
+        Calendario contractual original: las cuotas pagadas y sus comprobantes no se modifican desde este formulario. En congelaciones de tiempo, los pagos conservan sus fechas y la compensación de días se aplica mediante la reactivación.
       </Typography>
     </Box>
   );
