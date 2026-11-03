@@ -340,7 +340,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             onChange={e => { setFin(e.target.value); setPreview(null); }}
             slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: inicio || fechaLocal() } }}/>
         </Stack>
-        <TextField multiline minRows={2} size="small" fullWidth label="Motivo de congelación" required
+        <TextField multiline minRows={2} size="small" fullWidth
+          label={operacion === 'editar' ? 'Justificación del cambio de fechas' : 'Motivo de congelación'} required
           sx={{ mt: 2 }} value={motivo}
           onChange={e => { setMotivo(e.target.value); setPreview(null); }}/>
         <Box sx={{ ...dbanuStyles.formActions, width: '100%', px: 0, pb: 0, mt: 2,
@@ -405,7 +406,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
       motivoCancelacion={motivoCancelacion}
       onMotivoCancelacion={setMotivoCancelacion}
       onCerrar={() => { setDetalleSuspension(null); setMotivoCancelacion(''); setError(''); }}
-      onCancelarProgramada={cancelarProgramada} procesando={procesando} error={error}
+      onCancelarProgramada={cancelarProgramada}
+      onEditarProgramada={() => editarProgramacion(detalleSuspension)}
+      procesando={procesando} error={error}
     />
     <DialogCongelacionMembresia
       abierto={Boolean(resumenGuardado)} modo="exito"
