@@ -5,6 +5,8 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
+import { BotonVistaPrevia } from '../../../components/common/BotonVistaPrevia.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
@@ -48,6 +50,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const [porPagina, setPorPagina] = useState(5);
   const [detalleSuspension, setDetalleSuspension] = useState(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
+  const [motivoCodigo, setMotivoCodigo] = useState('');
+  const [motivosCatalogo, setMotivosCatalogo] = useState([]);
   const [inicio, setInicio] = useState(fechaLocal());
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -70,6 +74,13 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   }, [membresia?.id]);
 
   useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    let activo = true;
+    gimnasioServicio.listarMotivosCicloVida({ solo_activos: true })
+      .then(items => { if (activo) setMotivosCatalogo(Array.isArray(items) ? items : []); })
+      .catch(() => { if (activo) setMotivosCatalogo([]); });
+    return () => { activo = false; };
+  }, []);
 
   const simular = async () => {
     setProcesando(true); setError(''); setExito(''); setPreview(null);
@@ -90,7 +101,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     setProcesando(true); setError('');
     try {
       await gimnasioServicio.congelarMembresia(membresia.id, {
-        tipo, fecha_inicio: inicio, fecha_fin: fin, motivo: motivo.trim(),
+        tipo, fecha_inicio: inicio, fecha_fin: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo || null,
       });
       setExito('Congelación registrada correctamente. Consulta el historial del contrato.');
       setOperacion(''); setPreview(null); setMotivo('');
@@ -108,7 +119,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     setProcesando(true); setError(''); setExito('');
     try {
       await gimnasioServicio.programarCongelacionTiempo(membresia.id, {
-        tipo: 'TIEMPO', fecha_inicio: inicio, fecha_fin: fin, motivo: motivo.trim(),
+        tipo: 'TIEMPO', fecha_inicio: inicio, fecha_fin: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo || null,
       });
       setExito('Vacaciones registradas. La membresía permanecerá activa hasta la fecha de inicio; Laravel revalidará las condiciones antes de suspenderla.');
       setOperacion(''); setPreview(null); setMotivo('');
@@ -213,7 +224,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           onBusqueda={valor => { setBusqueda(valor); setPagina(1); }}
           acciones={<Button startIcon={<AddOutlinedIcon />} disabled={estado !== 'ACTIVA' || tienePendiente || procesando}
             onClick={() => {
-              setTipo('TIEMPO'); setInicio(fechaLocal()); setFin(''); setMotivo('');
+              setTipo('TIEMPO'); setInicio(fechaLocal()); setFin(''); setMotivo(''); setMotivoCodigo('VACACIONES');
               setDetalleSuspension(null); setPreview(null); setError(''); setOperacion('congelar');
             }}>Añadir</Button>}
         />
@@ -297,11 +308,17 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </Stack>}
       </>}
       {operacion === 'congelar' && <Box sx={{ ...formStyles.seccion, mb: 2 }}>
-        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Solicitud de vacaciones o congelación</Typography>
+        <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Registrar solicitud de congelación</Typography>
         <Alert severity="info" sx={{ mb: 2 }}>
           Para vacaciones pagadas selecciona <strong>Tiempo</strong>. Se conservan las cuotas y fechas de pago,
           y se compensan únicamente los días realmente suspendidos. Las solicitudes futuras se registran como programadas.
         </Alert>
+        <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Motivo principal"
+          value={motivoCodigo} onChange={e => { setMotivoCodigo(e.target.value); setPreview(null); }}>
+          <MenuItem value="">Seleccionar motivo</MenuItem>
+          {motivosCatalogo.filter(m => m.operacion === 'CONGELAR').map(m =>
+            <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
+        </TextField>
         <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Modalidad de congelación"
           value={tipo} onChange={(e) => { setTipo(e.target.value); setPreview(null); }}>
           <MenuItem value="TIEMPO">Congelación de tiempo · mantiene el calendario de pago</MenuItem>
@@ -319,10 +336,12 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           sx={{ mt: 2 }} value={motivo}
           onChange={e => { setMotivo(e.target.value); setPreview(null); }}/>
         <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ mt: 2 }}>
-          <Button onClick={() => { setOperacion(''); setPreview(null); }}>Cancelar</Button>
-          <Button variant="outlined" disabled={!inicio || !fin || fin < inicio || procesando} onClick={simular}>
-            {procesando ? <CircularProgress size={17}/> : 'Previsualizar impacto'}
-          </Button>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
+          <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
+            cargando={procesando && !preview} onClick={simular}/>
+          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(preview)}
+            disabled={!preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
+            onClick={preview?.programable ? programar : confirmar}/>
         </Stack>
         {preview && <Box sx={{ mt: 2, p: 1.5, bgcolor: uiTokens.colores.acentoSuave,
           border: `1px solid ${uiTokens.colores.acentoBorde}`, borderRadius: 1.5 }}>
@@ -390,14 +409,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             Las vacaciones quedarán registradas como <strong>programadas</strong>. No se suspende el acceso
             ahora: el sistema revisará el contrato en su fecha de inicio. La extensión definitiva se aplica al reactivar.
           </Alert>}
-          {preview.programable && <Stack alignItems="flex-end" sx={{ mt: 1.5 }}>
-            <BotonGuardar texto="Registrar vacaciones programadas" guardando={procesando}
-              disabled={motivo.trim().length < 8} onClick={programar}/>
-          </Stack>}
-          {preview.confirmable && <Stack alignItems="flex-end" sx={{ mt: 1.5 }}>
-            <Button variant="contained" color="warning" disabled={procesando || motivo.trim().length < 8}
-              onClick={confirmar}>Confirmar congelación hoy</Button>
-          </Stack>}
+          {(preview.programable || preview.confirmable) && <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
+            Revisa los cálculos anteriores y selecciona Guardar para confirmar la operación.
+          </Typography>}
         </Box>}
       </Box>}
       {operacion === 'reactivar' && <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, p: 2, mb: 2 }}>
