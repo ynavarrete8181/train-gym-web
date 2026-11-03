@@ -360,8 +360,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     <DialogCongelacionMembresia
       abierto={vistaPreviaAbierta && Boolean(preview)}
       modo="preview" membresia={membresia} preview={preview}
-      motivo={motivo} procesando={procesando}
-      onCerrar={() => setVistaPreviaAbierta(false)}
+      motivo={motivo} procesando={procesando} error={error}
+      puedeGuardar={Boolean(motivoCodigo && motivo.trim().length >= 8)}
+      onCerrar={() => { setVistaPreviaAbierta(false); setError(''); }}
       onGuardar={guardarCongelacion}
     />
     <DialogCongelacionMembresia
@@ -370,8 +371,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
       movimiento={movimientoDe(detalleSuspension)}
       motivoCancelacion={motivoCancelacion}
       onMotivoCancelacion={setMotivoCancelacion}
-      onCerrar={() => { setDetalleSuspension(null); setMotivoCancelacion(''); }}
-      onCancelarProgramada={cancelarProgramada} procesando={procesando}
+      onCerrar={() => { setDetalleSuspension(null); setMotivoCancelacion(''); setError(''); }}
+      onCancelarProgramada={cancelarProgramada} procesando={procesando} error={error}
     />
     <DialogCongelacionMembresia
       abierto={Boolean(resumenGuardado)} modo="exito"
