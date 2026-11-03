@@ -231,6 +231,10 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion`, payload);
     return data.datos;
   },
+  previsualizarReactivacion: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/reactivacion/preview`);
+    return data.datos;
+  },
   reactivarMembresia: async (id, motivo) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/reactivacion`, { motivo });
     return data.datos;
