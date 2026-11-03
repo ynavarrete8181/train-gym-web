@@ -174,7 +174,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     }
     setProcesando(true); setError(''); setExito('');
     try {
-      await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim());
+      await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim(), motivoCodigo || null);
       setExito('Reactivación registrada. La vigencia quedó actualizada en el contrato.');
       setOperacion(''); setPreview(null); setMotivo('');
       await cargar();
@@ -315,7 +315,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           </Typography>}
         </Box>}
         {puedeReactivar && <Stack alignItems="flex-end" sx={{ mt: 2 }}>
-          <Button variant="outlined" onClick={() => { setOperacion('reactivar'); setMotivo(''); setError(''); setPreviewReactivacion(null); }}>
+          <Button variant="outlined" onClick={() => { setOperacion('reactivar'); setMotivo(''); setMotivoCodigo('REGRESO'); setError(''); setPreviewReactivacion(null); }}>
             Reactivar membresía
           </Button>
         </Stack>}
@@ -433,8 +433,14 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           Laravel calculará el período realmente congelado y ajustará la vigencia. Si se excedió la fecha prevista
           requerirá revisión administrativa.
         </Typography>
+        <TextField select size="small" fullWidth sx={{ mt: 2 }} label="Motivo principal"
+          value={motivoCodigo} onChange={e => { setMotivoCodigo(e.target.value); setPreviewReactivacion(null); }}>
+          <MenuItem value="">Seleccionar motivo</MenuItem>
+          {motivosCatalogo.filter(m => m.operacion === 'REACTIVAR').map(m =>
+            <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
+        </TextField>
         <TextField sx={{ mt: 2 }} size="small" multiline minRows={2} fullWidth required
-          label="Motivo de reactivación" value={motivo} onChange={e => setMotivo(e.target.value)}/>
+          label="Justificación de reactivación" value={motivo} onChange={e => setMotivo(e.target.value)}/>
         <Stack direction="row" justifyContent="flex-end" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
           <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
