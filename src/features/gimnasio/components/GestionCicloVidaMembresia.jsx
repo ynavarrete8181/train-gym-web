@@ -10,9 +10,13 @@ import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
-const fechaLocal = () => new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit',
-}).format(new Date());
+const fechaLocal = () => {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const valor = (tipo) => partes.find(parte => parte.type === tipo)?.value;
+  return [valor('year'), valor('month'), valor('day')].join('-');
+};
 const fechaLegible = (v) => {
   const a = String(v || '').slice(0, 10).split('-');
   return a.length === 3 ? [a[2], a[1], a[0]].join('/') : '—';
