@@ -35,6 +35,8 @@ const nombresPaginas = {
   MiAgendaEntrenadorPage: 'Mi agenda',
   PlanesPage: 'Planes de membresía',
   MembresiasPage: 'Membresías',
+  GestionesCicloVidaPage: 'Congelaciones y reactivaciones',
+  MotivosCicloVidaPage: 'Motivos del ciclo de vida',
   CategoriasServicioPage: 'Categorías de servicio',
   ServiciosPage: 'Servicios',
   HorariosPage: 'Horarios',
