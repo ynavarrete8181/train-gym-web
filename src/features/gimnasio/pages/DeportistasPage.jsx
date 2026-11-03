@@ -44,7 +44,6 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
-import { CicloVidaMembresiaResumen } from '../components/CicloVidaMembresiaResumen.jsx';
 import { GestionCicloVidaMembresia } from '../components/GestionCicloVidaMembresia.jsx';
 
 const nombreGeografico = (valor = '') =>
@@ -2142,7 +2141,6 @@ export function DeportistasPage() {
         ) : null}
         {membresiaForm.id && (
           <>
-            <CicloVidaMembresiaResumen membresia={membresiaForm} />
             <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
               <Button variant="outlined" sx={{ textTransform: 'none' }}
                 onClick={() => setVistaMembresia('ciclo_vida')}>Gestionar ciclo de vida</Button>
