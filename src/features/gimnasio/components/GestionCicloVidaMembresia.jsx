@@ -79,7 +79,12 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     let activo = true;
     gimnasioServicio.listarMotivosCicloVida({ solo_activos: true })
       .then(items => { if (activo) setMotivosCatalogo(Array.isArray(items) ? items : []); })
-      .catch(() => { if (activo) setMotivosCatalogo([]); });
+      .catch(() => {
+        if (activo) {
+          setMotivosCatalogo([]);
+          setError('No se pudo consultar el catálogo de motivos. Verifica que la migración de motivos del ciclo de vida esté aplicada.');
+        }
+      });
     return () => { activo = false; };
   }, []);
 
@@ -353,7 +358,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
             cargando={procesando && !preview} onClick={simular}/>
           <BotonGuardar texto="Guardar" guardando={procesando && Boolean(preview)}
-            disabled={!preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
+            disabled={!motivoCodigo || !preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
             onClick={preview?.programable ? programar : confirmar}/>
         </Stack>
         {preview && <Box sx={{ mt: 2, p: 1.5, bgcolor: uiTokens.colores.acentoSuave,
@@ -446,7 +451,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
             onClick={simularReactivacion}/>
           <BotonGuardar texto="Guardar" guardando={procesando && Boolean(previewReactivacion)}
-            disabled={!previewReactivacion?.confirmable || motivo.trim().length < 8}
+            disabled={!motivoCodigo || !previewReactivacion?.confirmable || motivo.trim().length < 8}
             onClick={reactivar}/>
         </Stack>
         {previewReactivacion && <Box sx={{ mt: 2, bgcolor: uiTokens.colores.acentoSuave,
