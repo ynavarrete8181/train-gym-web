@@ -218,8 +218,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         setError(calculo?.motivo_bloqueo || 'La reactivación requiere revisión administrativa.');
         return;
       }
-      await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim(), motivoCodigo);
-      setExito('Reactivación registrada. La vigencia quedó actualizada en el contrato.');
+      const resultado = await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim(), motivoCodigo);
+      setExito(`Reactivación registrada: ${resultado.dias_reconocidos} días reconocidos. `
+        + `Vigencia anterior: ${fechaLegible(resultado.fecha_fin_original)}; `
+        + `nueva vigencia: ${fechaLegible(resultado.fecha_fin)}. `
+        + 'Las cuotas emitidas y los pagos confirmados se conservan.');
       setOperacion(''); setPreviewReactivacion(null); setMotivo('');
       await cargar();
       await onActualizado?.();
@@ -378,10 +381,23 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         {previewReactivacion && <Box sx={{ mt: 2, bgcolor: uiTokens.colores.acentoSuave,
           border: `1px solid ${uiTokens.colores.acentoBorde}`, p: 1.5, borderRadius: 1.5 }}>
           <Typography fontWeight={800} variant="subtitle2">Cálculo al regresar · Laravel</Typography>
-          <Typography variant="body2">Fecha efectiva de regreso: <strong>{fechaLegible(previewReactivacion.fecha_regreso)}</strong></Typography>
-          <Typography variant="body2">Días realmente suspendidos: <strong>{previewReactivacion.dias_reconocidos}</strong></Typography>
-          <Typography variant="body2">Fin anterior: {fechaLegible(previewReactivacion.fecha_fin_original)}</Typography>
-          <Typography variant="body2">Nuevo fin: <strong>{fechaLegible(previewReactivacion.fecha_fin_propuesta)}</strong></Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))',
+            md: 'repeat(4,minmax(0,1fr))' }, gap: 1.25, mt: 1.25, mb: 1.25 }}>
+            {[
+              ['Regreso efectivo', fechaLegible(previewReactivacion.fecha_regreso)],
+              ['Días suspendidos', `${previewReactivacion.dias_reconocidos} días`],
+              ['Vencimiento anterior', fechaLegible(previewReactivacion.fecha_fin_original)],
+              ['Nuevo vencimiento', fechaLegible(previewReactivacion.fecha_fin_propuesta)],
+            ].map(([label, value], indice) => <Box key={label} sx={{
+              p: 1.25, minWidth: 0, borderRadius: 1.5, border: '1px solid',
+              borderColor: 'divider', bgcolor: indice === 3 ? 'background.paper' : 'transparent',
+            }}>
+              <Typography variant="caption" color="text.secondary">{label}</Typography>
+              <Typography variant="body2" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
+                {value}
+              </Typography>
+            </Box>)}
+          </Box>
           <Typography variant="body2">Pagos confirmados: ${Number(previewReactivacion.impacto_financiero?.pagos_confirmados || 0).toFixed(2)}</Typography>
           <Typography variant="body2">Saldo emitido: ${Number(previewReactivacion.impacto_financiero?.deuda_emitida || 0).toFixed(2)}</Typography>
           <Typography variant="caption" color="text.secondary">
