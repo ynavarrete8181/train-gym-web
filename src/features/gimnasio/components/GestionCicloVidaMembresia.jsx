@@ -203,14 +203,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
   const mostrarFormulario = operacion === 'congelar' || operacion === 'reactivar';
 
-  return <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={2} sx={{ mb: 2, width: '100%' }}>
+  return <Box sx={{ ...formStyles.seccion, mt: 1.5, p: { xs: 1.5, sm: 2 } }}>
+    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
           {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'reactivar' ? 'Reactivar membresía' : 'Gestión de congelaciones'}
-        </Typography>
-        <Typography variant="caption" color="text.secondary">
-          Vacaciones, reactivaciones e historial auditado · {membresia?.codigo_contrato || 'Contrato'}
         </Typography>
       </Box>
       <Box sx={{ ml: 'auto', flexShrink: 0 }}>
@@ -221,20 +218,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
     {exito && <Alert severity="success" sx={{ mb: 2 }}>{exito}</Alert>}
     {ciclo && <>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 2 }}>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" color="text.secondary">Estado del contrato</Typography>
-          <Typography variant="body2" fontWeight={800}>{estado}</Typography>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" color="text.secondary">Vigencia registrada hasta</Typography>
-          <Typography variant="body2" fontWeight={800}>{fechaLegible(ciclo.fecha_fin)}</Typography>
-        </Box>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="caption" color="text.secondary">Movimientos registrados</Typography>
-          <Typography variant="body2" fontWeight={800}>{ciclo.movimientos?.length || 0}</Typography>
-        </Box>
-      </Stack>
       {!mostrarFormulario && <>
         <GestionToolbar
           total={filtradas.length}
@@ -353,14 +336,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         <TextField multiline minRows={2} size="small" fullWidth label="Motivo de congelación" required
           sx={{ mt: 2 }} value={motivo}
           onChange={e => { setMotivo(e.target.value); setPreview(null); }}/>
-        <Stack direction="row" justifyContent="flex-end" gap={1} sx={{ mt: 2 }}>
-          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
-          <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
-            cargando={procesando && !preview} onClick={simular}/>
-          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(preview)}
-            disabled={!motivoCodigo || !preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
-            onClick={preview?.programable ? programar : confirmar}/>
-        </Stack>
         {preview && <Box sx={{ mt: 2, p: 1.5, bgcolor: uiTokens.colores.acentoSuave,
           border: `1px solid ${uiTokens.colores.acentoBorde}`, borderRadius: 1.5 }}>
           <Typography variant="body2" fontWeight={800}>Resultado calculado por Laravel</Typography>
@@ -431,6 +406,15 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             Revisa los cálculos anteriores y selecciona Guardar para confirmar la operación.
           </Typography>}
         </Box>}
+        <Stack direction="row" justifyContent="flex-end" alignItems="center" flexWrap="wrap"
+          gap={1.5} sx={{ mt: 2, width: '100%' }}>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
+          <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
+            cargando={procesando && !preview} onClick={simular}/>
+          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(preview)}
+            disabled={!motivoCodigo || !preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
+            onClick={preview?.programable ? programar : confirmar}/>
+        </Stack>
       </Box>}
       {operacion === 'reactivar' && <Box sx={{ ...formStyles.seccion, mb: 2 }}>
         <Typography variant="subtitle2" fontWeight={800}>Reactivar contrato congelado</Typography>
@@ -446,14 +430,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </TextField>
         <TextField sx={{ mt: 2 }} size="small" multiline minRows={2} fullWidth required
           label="Justificación de reactivación" value={motivo} onChange={e => setMotivo(e.target.value)}/>
-        <Stack direction="row" justifyContent="flex-end" flexWrap="wrap" gap={1} sx={{ mt: 2 }}>
-          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
-          <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
-            onClick={simularReactivacion}/>
-          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(previewReactivacion)}
-            disabled={!motivoCodigo || !previewReactivacion?.confirmable || motivo.trim().length < 8}
-            onClick={reactivar}/>
-        </Stack>
         {previewReactivacion && <Box sx={{ mt: 2, bgcolor: uiTokens.colores.acentoSuave,
           border: `1px solid ${uiTokens.colores.acentoBorde}`, p: 1.5, borderRadius: 1.5 }}>
           <Typography fontWeight={800} variant="subtitle2">Cálculo al regresar · Laravel</Typography>
@@ -469,6 +445,15 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             {previewReactivacion.motivo_bloqueo || 'La reactivación requiere una revisión administrativa.'}
           </Alert>}
         </Box>}
+        <Stack direction="row" justifyContent="flex-end" alignItems="center" flexWrap="wrap"
+          gap={1.5} sx={{ mt: 2, width: '100%' }}>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
+          <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
+            onClick={simularReactivacion}/>
+          <BotonGuardar texto="Guardar" guardando={procesando && Boolean(previewReactivacion)}
+            disabled={!motivoCodigo || !previewReactivacion?.confirmable || motivo.trim().length < 8}
+            onClick={reactivar}/>
+        </Stack>
       </Box>}
     </>}
   </Box>;
