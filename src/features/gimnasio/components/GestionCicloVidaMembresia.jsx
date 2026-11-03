@@ -336,75 +336,129 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         <TextField multiline minRows={2} size="small" fullWidth label="Motivo de congelación" required
           sx={{ mt: 2 }} value={motivo}
           onChange={e => { setMotivo(e.target.value); setPreview(null); }}/>
-        {preview && <Box sx={{ mt: 2, p: 1.5, bgcolor: uiTokens.colores.acentoSuave,
-          border: `1px solid ${uiTokens.colores.acentoBorde}`, borderRadius: 1.5 }}>
-          <Typography variant="body2" fontWeight={800}>Resultado calculado por Laravel</Typography>
-          <Typography variant="body2">Días reconocidos: {preview.dias_previstos}</Typography>
-          <Typography variant="body2">Fin actual: {fechaLegible(preview.fecha_fin_original)}</Typography>
-          <Typography variant="body2">Fin propuesto: {fechaLegible(preview.fecha_fin_ajustada)}</Typography>
-          <Typography variant="caption">Simulación informativa: no genera ventas, no modifica pagos y no cambia la vigencia contractual.</Typography>
-          {preview.impacto_financiero && <>
-            <Divider sx={{ my: 1.5 }}/>
-            <Typography variant="subtitle2" fontWeight={800}>Impacto en Ventas y Cartera</Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ my: 1 }}>
-              <Typography variant="body2">Pagos confirmados conservados: <strong>${Number(preview.impacto_financiero.pagos_confirmados || 0).toFixed(2)}</strong></Typography>
-              <Typography variant="body2">Saldo de ventas emitidas: <strong>${Number(preview.impacto_financiero.deuda_emitida || 0).toFixed(2)}</strong></Typography>
-              <Typography variant="body2">Cuotas reprogramables: <strong>{preview.impacto_financiero.cuotas_reprogramables}</strong></Typography>
-            </Stack>
-            {(preview.impacto_financiero.ventas_adicionales || []).length > 0 && (
-              <Alert severity={preview.impacto_financiero.requiere_revision_cartera ? 'warning' : 'info'}
-                sx={{ mb: 1.5 }}>
-                Existen ventas adicionales vinculadas al contrato. No se modificarán:
-                {(preview.impacto_financiero.ventas_adicionales || []).map((venta) => (
-                  <Typography variant="caption" display="block" key={venta.id}>
-                    {venta.numero || `Venta ${venta.id}`} · Saldo ${Number(venta.saldo_emitido).toFixed(2)}
-                  </Typography>
-                ))}
-              </Alert>
-            )}
-            <TableContainer sx={{ bgcolor: 'background.paper', borderRadius: 1, maxWidth: '100%', overflowX: 'auto' }}>
-              <Table size="small" aria-label="Impacto financiero por cuota">
-                <TableHead><TableRow>
-                  <TableCell>Cuota</TableCell>
-                  <TableCell>Emisión actual</TableCell>
-                  <TableCell>Emisión propuesta</TableCell>
-                  <TableCell>Vence actual</TableCell>
-                  <TableCell>Vence propuesto</TableCell>
-                  <TableCell>Acción</TableCell>
-                </TableRow></TableHead>
-                <TableBody>
-                  {(preview.impacto_financiero.cuotas || []).map((cuota) => <TableRow key={cuota.cuota_id}>
-                    <TableCell>{cuota.numero}</TableCell>
-                    <TableCell>{fechaLegible(cuota.emision_anterior)}</TableCell>
-                    <TableCell>{fechaLegible(cuota.emision_propuesta)}</TableCell>
-                    <TableCell>{fechaLegible(cuota.vencimiento_anterior)}</TableCell>
-                    <TableCell>{fechaLegible(cuota.vencimiento_propuesto)}</TableCell>
-                    <TableCell>{({
-                      REPROGRAMACION_PROPUESTA: 'Reprogramación propuesta',
-                      PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
-                      VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
-                      SIN_CAMBIOS: 'Sin cambios',
-                    })[cuota.accion] || cuota.accion}</TableCell>
-                  </TableRow>)}
-                </TableBody>
-              </Table>
-            </TableContainer>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Fechas proyectadas. Ninguna venta emitida ni pago confirmado se anula o modifica.
-              Las fechas reales se concilian al reactivar el contrato.
-            </Typography>
-          </>}
-          {!preview.confirmable && !preview.programable && <Alert severity="warning" sx={{ mt: 1.5 }}>
-            Esta es una simulación, no una solicitud registrada. {preview.motivo_bloqueo}
-            {preview.cuotas_programadas > 0 ? ` Hay ${preview.cuotas_programadas} cuota(s) todavía programadas.` : ''}
-          </Alert>}
-          {preview.programable && <Alert severity="info" sx={{ mt: 1.5 }}>
-            Las vacaciones quedarán registradas como <strong>programadas</strong>. No se suspende el acceso
-            ahora: el sistema revisará el contrato en su fecha de inicio. La extensión definitiva se aplica al reactivar.
-          </Alert>}
-          {(preview.programable || preview.confirmable) && <Typography variant="caption" sx={{ display: 'block', mt: 1 }}>
-            Revisa los cálculos anteriores y selecciona Guardar para confirmar la operación.
-          </Typography>}
+        {preview && <Box sx={{
+          mt: 2, border: `1px solid ${uiTokens.colores.borde}`,
+          borderRadius: uiTokens.radios.panel, bgcolor: 'background.paper', overflow: 'hidden',
+        }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between" gap={1} sx={{ px: 2, py: 1.5, bgcolor: uiTokens.colores.primarioSuave }}>
+            <Box>
+              <Typography variant="subtitle2" fontWeight={900}>Vista previa de congelación</Typography>
+              <Typography variant="caption" color="text.secondary">
+                Cálculo realizado por Laravel · Sin cambios hasta guardar
+              </Typography>
+            </Box>
+            <Chip size="small" variant="outlined"
+              color={!preview.confirmable && !preview.programable ? 'warning' : 'success'}
+              label={preview.programable ? 'Programación futura'
+                : preview.confirmable ? 'Disponible para registrar' : 'Requiere revisión'} />
+          </Stack>
+
+          <Box sx={{ px: 2, py: 2 }}>
+            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.25 }}>Impacto en la vigencia</Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: {
+              xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))',
+            }, gap: 1.25 }}>
+              {[
+                { label: 'Días de congelación', value: `${preview.dias_previstos} días`, destacado: true },
+                { label: 'Vencimiento actual', value: fechaLegible(preview.fecha_fin_original) },
+                { label: 'Vencimiento proyectado', value: fechaLegible(preview.fecha_fin_ajustada), destacado: true },
+              ].map(item => <Box key={item.label} sx={{
+                px: 1.5, py: 1.25, border: `1px solid ${item.destacado
+                  ? uiTokens.colores.acentoBorde : uiTokens.colores.bordeSuave}`,
+                borderRadius: 1.5, bgcolor: item.destacado ? uiTokens.colores.acentoSuave : 'background.paper',
+                minWidth: 0,
+              }}>
+                <Typography variant="caption" color="text.secondary">{item.label}</Typography>
+                <Typography variant="subtitle1" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
+                  {item.value}
+                </Typography>
+              </Box>)}
+            </Box>
+
+            {preview.impacto_financiero && <>
+              <Divider sx={{ my: 2 }}/>
+              <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.25 }}>Impacto en Ventas y Cartera</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: {
+                xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))',
+              }, gap: 1.25, mb: 2 }}>
+                {[
+                  { label: 'Pagos confirmados', value: `$${Number(preview.impacto_financiero.pagos_confirmados || 0).toFixed(2)}` },
+                  { label: 'Saldo emitido', value: `$${Number(preview.impacto_financiero.deuda_emitida || 0).toFixed(2)}` },
+                  { label: 'Cuotas reprogramables', value: String(preview.impacto_financiero.cuotas_reprogramables ?? 0) },
+                ].map(item => <Box key={item.label} sx={{
+                  p: 1.25, border: `1px solid ${uiTokens.colores.bordeSuave}`, borderRadius: 1.5,
+                }}>
+                  <Typography variant="caption" color="text.secondary">{item.label}</Typography>
+                  <Typography variant="body1" fontWeight={900}>{item.value}</Typography>
+                </Box>)}
+              </Box>
+
+              {(preview.impacto_financiero.ventas_adicionales || []).length > 0 && (
+                <Alert severity={preview.impacto_financiero.requiere_revision_cartera ? 'warning' : 'info'}
+                  sx={{ mb: 1.5 }}>
+                  Ventas adicionales vinculadas al contrato (sin modificación):
+                  {(preview.impacto_financiero.ventas_adicionales || []).map(venta => (
+                    <Typography variant="caption" display="block" key={venta.id}>
+                      {venta.numero || `Venta ${venta.id}`} · Saldo $${Number(venta.saldo_emitido || 0).toFixed(2)}
+                    </Typography>
+                  ))}
+                </Alert>
+              )}
+
+              <Typography variant="body2" fontWeight={800} sx={{ mb: 1 }}>Detalle de cuotas</Typography>
+              <TableContainer sx={{ border: `1px solid ${uiTokens.colores.bordeSuave}`,
+                borderRadius: 1.5, overflowX: 'auto' }}>
+                <Table size="small" aria-label="Impacto financiero por cuota" sx={{ ...dbanuStyles.table }}>
+                  <TableHead><TableRow>
+                    <TableCell>Cuota</TableCell>
+                    <TableCell>Emisión actual</TableCell>
+                    {tipo === 'FACTURACION' && <TableCell>Emisión propuesta</TableCell>}
+                    <TableCell>Vencimiento actual</TableCell>
+                    {tipo === 'FACTURACION' && <TableCell>Vencimiento propuesto</TableCell>}
+                    <TableCell>Resultado</TableCell>
+                  </TableRow></TableHead>
+                  <TableBody>
+                    {(preview.impacto_financiero.cuotas || []).map(cuota => <TableRow key={cuota.cuota_id}>
+                      <TableCell>{cuota.numero}</TableCell>
+                      <TableCell>{fechaLegible(cuota.emision_anterior)}</TableCell>
+                      {tipo === 'FACTURACION' && <TableCell>{fechaLegible(cuota.emision_propuesta)}</TableCell>}
+                      <TableCell>{fechaLegible(cuota.vencimiento_anterior)}</TableCell>
+                      {tipo === 'FACTURACION' && <TableCell>{fechaLegible(cuota.vencimiento_propuesto)}</TableCell>}
+                      <TableCell>
+                        <Chip size="small" variant="outlined" label={({
+                          REPROGRAMACION_PROPUESTA: 'A reprogramar',
+                          PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
+                          VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
+                          SIN_CAMBIOS: 'Sin cambios',
+                        })[cuota.accion] || cuota.accion || '—'}
+                          color={cuota.accion === 'VENTA_EMITIDA_REVISAR_CARTERA' ? 'warning'
+                            : cuota.accion === 'PAGO_CONFIRMADO_CONSERVAR' ? 'success' : 'default'} />
+                      </TableCell>
+                    </TableRow>)}
+                    {!(preview.impacto_financiero.cuotas || []).length && <TableRow>
+                      <TableCell colSpan={tipo === 'FACTURACION' ? 6 : 4} align="center">
+                        No existen cuotas relacionadas con este período.
+                      </TableCell>
+                    </TableRow>}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                {tipo === 'TIEMPO'
+                  ? 'Las fechas de pago y los importes se conservan. La vigencia se ajusta cuando se reactive la membresía.'
+                  : 'Las fechas son proyectadas. Las ventas emitidas y los pagos confirmados permanecen intactos.'}
+              </Typography>
+            </>}
+
+            {(!preview.confirmable && !preview.programable) && <Alert severity="warning" sx={{ mt: 1.5 }}>
+              {preview.motivo_bloqueo || 'No es posible registrar esta congelación con las condiciones actuales.'}
+            </Alert>}
+            {preview.programable && <Alert severity="info" sx={{ mt: 1.5 }}>
+              La solicitud se registrará como programada. El acceso se mantiene hasta la fecha de inicio;
+              el ajuste definitivo de vigencia se realizará al reactivar.
+            </Alert>}
+          </Box>
         </Box>}
         <Box sx={{ ...dbanuStyles.formActions, width: '100%', px: 0, pb: 0, mt: 2,
           flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center',
