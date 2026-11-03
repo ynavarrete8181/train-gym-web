@@ -235,8 +235,9 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/reactivacion/preview`);
     return data.datos;
   },
-  reactivarMembresia: async (id, motivo) => {
-    const { data } = await api.post(`/base/gimnasio/membresias/${id}/reactivacion`, { motivo });
+  reactivarMembresia: async (id, motivo, motivoCodigo = null) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/reactivacion`,
+      { motivo, motivo_codigo: motivoCodigo });
     return data.datos;
   },
   renovarMembresia: async (id) => {
