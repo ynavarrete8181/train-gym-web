@@ -4,6 +4,7 @@ import {
   TextField, Typography,
 } from '@mui/material';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
@@ -50,7 +51,7 @@ export function DialogCongelacionMembresia({
   abierto, modo = 'detalle', membresia, preview, suspension, movimiento, motivo = '',
   motivoCancelacion = '', onMotivoCancelacion, procesando = false,
   error = '', puedeGuardar = false,
-  onCerrar, onGuardar, onCancelarProgramada, onVerDetalle,
+  onCerrar, onGuardar, onCancelarProgramada, onEditarProgramada, onVerDetalle,
 }) {
   const esPrevia = modo === 'preview';
   const esExito = modo === 'exito';
@@ -71,6 +72,9 @@ export function DialogCongelacionMembresia({
   const fechaAjustada = datos.fecha_fin_ajustada || datos.fecha_fin_propuesta;
   const financiero = datos.impacto_financiero;
   const puedeCancelar = modo === 'detalle' && suspension?.estado === 'PROGRAMADA';
+  const puedeEditar = puedeCancelar && suspension?.tipo === 'TIEMPO'
+    && String(suspension?.fecha_inicio || '').slice(0, 10)
+      > new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guayaquil' }).format(new Date());
   const bloqueo = datos.motivo_bloqueo || datosMovimiento.motivo_no_aplicacion;
 
   const titulo = esPrevia ? 'Vista previa de congelación'
@@ -200,6 +204,9 @@ export function DialogCongelacionMembresia({
     <DialogActions sx={{ ...dbanuStyles.dialogActions, flexWrap: 'wrap', gap: 1.5 }}>
       <Button variant="outlined" startIcon={<CloseOutlinedIcon/>}
         sx={{ ...dbanuStyles.backButton }} onClick={onCerrar} disabled={procesando}>Cerrar</Button>
+      {puedeEditar && onEditarProgramada && <Button variant="outlined"
+        startIcon={<EditOutlinedIcon/>} disabled={procesando}
+        onClick={onEditarProgramada}>Editar fechas</Button>}
       {puedeCancelar && <Button variant="outlined" color="error"
         disabled={procesando || motivoCancelacion.trim().length < 8}
         onClick={onCancelarProgramada}>Cancelar programación</Button>}
