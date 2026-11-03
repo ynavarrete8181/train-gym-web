@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Box, Button, Chip, CircularProgress, Divider, IconButton, MenuItem, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
@@ -61,6 +62,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const [preview, setPreview] = useState(null);
   const [vistaPreviaAbierta, setVistaPreviaAbierta] = useState(false);
   const [resumenGuardado, setResumenGuardado] = useState(null);
+  const [editandoSuspensionId, setEditandoSuspensionId] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
@@ -95,9 +97,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const simular = async () => {
     setProcesando(true); setError(''); setExito(''); setPreview(null);
     try {
-      const resultado = await gimnasioServicio.previsualizarCongelacion(membresia.id, {
-        tipo, fecha_inicio: inicio, fecha_fin: fin,
-      });
+      const datosFechas = { tipo, fecha_inicio: inicio, fecha_fin: fin };
+      const resultado = editandoSuspensionId
+        ? await gimnasioServicio.previsualizarEdicionCongelacion(membresia.id, editandoSuspensionId, datosFechas)
+        : await gimnasioServicio.previsualizarCongelacion(membresia.id, datosFechas);
       setPreview(resultado);
       setVistaPreviaAbierta(true);
     } catch (e) { setError(mensajeError(e)); }
@@ -114,9 +117,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     try {
       // La vista previa nunca sustituye la autorización de Laravel.
       // Si no se solicitó manualmente, Guardar la obtiene antes de registrar.
-      const calculo = preview || await gimnasioServicio.previsualizarCongelacion(membresia.id, {
-        tipo, fecha_inicio: inicio, fecha_fin: fin,
-      });
+      const datosFechas = { tipo, fecha_inicio: inicio, fecha_fin: fin };
+      const calculo = preview || (editandoSuspensionId
+        ? await gimnasioServicio.previsualizarEdicionCongelacion(membresia.id, editandoSuspensionId, datosFechas)
+        : await gimnasioServicio.previsualizarCongelacion(membresia.id, datosFechas));
       setPreview(calculo);
       if (!calculo?.confirmable && !calculo?.programable) {
         setError(calculo?.motivo_bloqueo || 'La membresía no cumple los requisitos para registrar la congelación.');
@@ -126,9 +130,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         tipo, fecha_inicio: inicio, fecha_fin: fin,
         motivo: motivo.trim(), motivo_codigo: motivoCodigo,
       };
-      const resultadoGuardado = calculo.programable
-        ? await gimnasioServicio.programarCongelacionTiempo(membresia.id, datos)
-        : await gimnasioServicio.congelarMembresia(membresia.id, datos);
+      const resultadoGuardado = editandoSuspensionId
+        ? await gimnasioServicio.actualizarCongelacionProgramada(membresia.id, editandoSuspensionId, datos)
+        : calculo.programable
+          ? await gimnasioServicio.programarCongelacionTiempo(membresia.id, datos)
+          : await gimnasioServicio.congelarMembresia(membresia.id, datos);
       const actualizado = await gimnasioServicio.obtenerCicloVidaMembresia(membresia.id);
       setCiclo(actualizado);
       setVistaPreviaAbierta(false);
@@ -138,10 +144,29 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         motivo: motivo.trim(),
       });
       setOperacion(''); setPreview(null); setMotivo('');
+      setEditandoSuspensionId(null);
       setExito('');
       await onActualizado?.();
     } catch (e) { setError(mensajeError(e)); }
     finally { setProcesando(false); }
+  };
+
+  const editarProgramacion = (suspension) => {
+    if (!suspension || suspension.estado !== 'PROGRAMADA' || suspension.tipo !== 'TIEMPO'
+        || String(suspension.fecha_inicio).slice(0, 10) <= fechaLocal()) return;
+    const movimiento = (ciclo?.movimientos || [])
+      .find(m => Number(m.id) === Number(suspension.movimiento_inicio_id));
+    const detalle = leerDetalleMovimiento(movimiento);
+    setEditandoSuspensionId(suspension.id);
+    setTipo('TIEMPO');
+    setInicio(String(suspension.fecha_inicio).slice(0, 10));
+    setFin(String(suspension.fecha_fin_prevista).slice(0, 10));
+    setMotivoCodigo(detalle.motivo_codigo || 'VACACIONES');
+    setMotivo(movimiento?.motivo || '');
+    setPreview(null); setVistaPreviaAbierta(false);
+    setDetalleSuspension(null);
+    setError(''); setExito('');
+    setOperacion('editar');
   };
 
   const cancelarProgramada = async () => {
@@ -214,17 +239,17 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   ].some(value => String(value || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC'))));
   const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtradas.length / porPagina) || 1));
   const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
-  const mostrarFormulario = operacion === 'congelar' || operacion === 'reactivar';
+  const mostrarFormulario = ['congelar', 'editar', 'reactivar'].includes(operacion);
 
   return <Box sx={{ ...formStyles.seccion, mt: 1.5, p: { xs: 1.5, sm: 2 } }}>
     <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
-          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'reactivar' ? 'Reactivar membresía' : 'Gestión de congelaciones'}
+          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : 'Gestión de congelaciones'}
         </Typography>
       </Box>
       <Box sx={{ ml: 'auto', flexShrink: 0 }}>
-        <BotonVolver onClick={mostrarFormulario ? () => { setOperacion(''); setPreview(null); setError(''); } : onVolver}/>
+        <BotonVolver onClick={mostrarFormulario ? () => { setOperacion(''); setEditandoSuspensionId(null); setPreview(null); setError(''); } : onVolver}/>
       </Box>
     </Stack>
     {cargando && <CircularProgress size={23}/>}
@@ -239,7 +264,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           acciones={<Button startIcon={<AddOutlinedIcon />} disabled={estado !== 'ACTIVA' || tienePendiente || procesando}
             onClick={() => {
               setTipo('TIEMPO'); setInicio(fechaLocal()); setFin(''); setMotivo(''); setMotivoCodigo('VACACIONES');
-              setDetalleSuspension(null); setPreview(null); setError(''); setOperacion('congelar');
+              setDetalleSuspension(null); setEditandoSuspensionId(null); setPreview(null); setError(''); setOperacion('congelar');
             }}>Añadir</Button>}
         />
         {estado === 'ACTIVA' && tienePendiente && <Alert severity="info" sx={{ mb: 1.5 }}>
@@ -269,6 +294,13 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
                     <VisibilityOutlinedIcon fontSize="small"/>
                   </IconButton>
                 </Tooltip>
+                {s.estado === 'PROGRAMADA' && s.tipo === 'TIEMPO'
+                  && String(s.fecha_inicio).slice(0, 10) > fechaLocal() && <Tooltip title="Editar fechas programadas">
+                  <IconButton size="small" aria-label="Editar fechas programadas"
+                    disabled={procesando} onClick={() => editarProgramacion(s)}>
+                    <EditOutlinedIcon fontSize="small"/>
+                  </IconButton>
+                </Tooltip>}
               </TableCell>
             </TableRow>)}
             {!filtradas.length && <TableRow><TableCell colSpan={6} align="center">
@@ -284,7 +316,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           </Button>
         </Stack>}
       </>}
-      {operacion === 'congelar' && <Box sx={{ mb: 0 }}>
+      {(operacion === 'congelar' || operacion === 'editar') && <Box sx={{ mb: 0 }}>
+        {operacion === 'editar' && <Alert severity="info" sx={{ mb: 2 }}>
+          Cambia las fechas de esta solicitud programada. Laravel recalculará los días y la vigencia;
+          no se creará otra congelación ni se modificarán cobros.
+        </Alert>}
         <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Motivo principal"
           value={motivoCodigo} onChange={e => { setMotivoCodigo(e.target.value); setPreview(null); }}>
           <MenuItem value="">Seleccionar motivo</MenuItem>
@@ -292,7 +328,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
         </TextField>
         <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Modalidad de congelación"
-          value={tipo} onChange={(e) => { setTipo(e.target.value); setPreview(null); }}>
+          disabled={operacion === 'editar'} value={tipo} onChange={(e) => { setTipo(e.target.value); setPreview(null); }}>
           <MenuItem value="TIEMPO">Congelación de tiempo · mantiene el calendario de pago</MenuItem>
           <MenuItem value="FACTURACION">Congelación de facturación · reprograma cuotas sin emitir</MenuItem>
         </TextField>
