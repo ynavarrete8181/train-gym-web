@@ -245,9 +245,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         {estado === 'ACTIVA' && tienePendiente && <Alert severity="info" sx={{ mb: 1.5 }}>
           Existe una congelación programada. No es posible registrar otra hasta que finalice o se resuelva la actual.
         </Alert>}
-        {estado === 'CONGELADA' && <Alert severity="warning" sx={{ mb: 1.5 }}>
-          El acceso deportivo está suspendido. Reactiva cuando regrese el cliente o revisa la fecha autorizada.
-        </Alert>}
         <TablaGestion total={suspensiones.length} filtrados={filtradas.length}
           page={paginaActual} onPageChange={setPagina}
           rowsPerPage={porPagina} onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
