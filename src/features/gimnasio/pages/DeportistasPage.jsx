@@ -2145,7 +2145,7 @@ export function DeportistasPage() {
             <CicloVidaMembresiaResumen membresia={membresiaForm} />
             <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
               <Button variant="outlined" sx={{ textTransform: 'none' }}
-                onClick={() => setVistaMembresia('ciclo_vida')}>Gestionar congelación y reactivación</Button>
+                onClick={() => setVistaMembresia('ciclo_vida')}>Gestionar ciclo de vida</Button>
             </Stack>
           </>
         )}
@@ -2316,8 +2316,8 @@ export function DeportistasPage() {
                       <EditOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Gestionar congelación y reactivación">
-                    <IconButton aria-label="Gestionar congelación y reactivación"
+                  <Tooltip title="Gestionar ciclo de vida">
+                    <IconButton aria-label="Gestionar ciclo de vida"
                       sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
                       onClick={() => {
                         handleEditarMembresia(m);
