@@ -214,6 +214,10 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/programar`, payload);
     return data.datos;
   },
+  cancelarCongelacionProgramada: async (id, suspensionId, motivo) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/cancelar`, { motivo });
+    return data.datos;
+  },
   congelarMembresia: async (id, payload) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion`, payload);
     return data.datos;
