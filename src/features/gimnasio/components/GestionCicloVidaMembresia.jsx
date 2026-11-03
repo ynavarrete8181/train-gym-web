@@ -8,6 +8,7 @@ import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
 import { BotonVistaPrevia } from '../../../components/common/BotonVistaPrevia.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
+import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
@@ -401,15 +402,16 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             Revisa los cálculos anteriores y selecciona Guardar para confirmar la operación.
           </Typography>}
         </Box>}
-        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1.5}
-          flexWrap="wrap" useFlexGap sx={{ mt: 2, width: '100%', ml: 'auto' }}>
+        <Box sx={{ ...dbanuStyles.formActions, width: '100%', px: 0, pb: 0, mt: 2,
+          flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center',
+          '& > .MuiButton-root': { flex: '0 0 auto' } }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
           <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
             cargando={procesando && !preview} onClick={simular}/>
           <BotonGuardar texto="Guardar" guardando={procesando && Boolean(preview)}
             disabled={!motivoCodigo || !preview || (!preview.programable && !preview.confirmable) || motivo.trim().length < 8}
             onClick={preview?.programable ? programar : confirmar}/>
-        </Stack>
+        </Box>
       </Box>}
       {operacion === 'reactivar' && <Box sx={{ mb: 0 }}>
         <TextField select size="small" fullWidth sx={{ mt: 1 }} label="Motivo principal"
@@ -435,15 +437,16 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             {previewReactivacion.motivo_bloqueo || 'La reactivación requiere una revisión administrativa.'}
           </Alert>}
         </Box>}
-        <Stack direction="row" alignItems="center" justifyContent="flex-end" spacing={1.5}
-          flexWrap="wrap" useFlexGap sx={{ mt: 2, width: '100%', ml: 'auto' }}>
+        <Box sx={{ ...dbanuStyles.formActions, width: '100%', px: 0, pb: 0, mt: 2,
+          flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center',
+          '& > .MuiButton-root': { flex: '0 0 auto' } }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReactivacion(null); }}/>
           <BotonVistaPrevia cargando={procesando && !previewReactivacion} disabled={procesando}
             onClick={simularReactivacion}/>
           <BotonGuardar texto="Guardar" guardando={procesando && Boolean(previewReactivacion)}
             disabled={!motivoCodigo || !previewReactivacion?.confirmable || motivo.trim().length < 8}
             onClick={reactivar}/>
-        </Stack>
+        </Box>
       </Box>}
     </>}
   </Box>;
