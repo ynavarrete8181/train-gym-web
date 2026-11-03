@@ -365,16 +365,26 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </TextField>
         <TextField sx={{ mt: 2 }} size="small" multiline minRows={2} fullWidth required
           label="Justificación de reactivación" value={motivo} onChange={e => setMotivo(e.target.value)}/>
+        {(() => {
+          const vigente = suspensiones.find(item => item.estado === 'VIGENTE');
+          return vigente ? <Alert severity="info" sx={{ mt: 1.5 }}>
+            Congelación autorizada hasta <strong>{fechaLegible(vigente.fecha_fin_prevista)}</strong>.
+            Si el cliente regresa antes, la reactivación reconoce únicamente los días completos
+            anteriores a la fecha efectiva de regreso.
+          </Alert> : null;
+        })()}
         {previewReactivacion && <Box sx={{ mt: 2, bgcolor: uiTokens.colores.acentoSuave,
           border: `1px solid ${uiTokens.colores.acentoBorde}`, p: 1.5, borderRadius: 1.5 }}>
           <Typography fontWeight={800} variant="subtitle2">Cálculo al regresar · Laravel</Typography>
+          <Typography variant="body2">Fecha efectiva de regreso: <strong>{fechaLegible(previewReactivacion.fecha_regreso)}</strong></Typography>
           <Typography variant="body2">Días realmente suspendidos: <strong>{previewReactivacion.dias_reconocidos}</strong></Typography>
           <Typography variant="body2">Fin anterior: {fechaLegible(previewReactivacion.fecha_fin_original)}</Typography>
           <Typography variant="body2">Nuevo fin: <strong>{fechaLegible(previewReactivacion.fecha_fin_propuesta)}</strong></Typography>
           <Typography variant="body2">Pagos confirmados: ${Number(previewReactivacion.impacto_financiero?.pagos_confirmados || 0).toFixed(2)}</Typography>
           <Typography variant="body2">Saldo emitido: ${Number(previewReactivacion.impacto_financiero?.deuda_emitida || 0).toFixed(2)}</Typography>
           <Typography variant="caption" color="text.secondary">
-            La vista previa no modifica contratos, cuotas ni Cartera. Guardar vuelve a validar todos los datos.
+            Esta operación reactiva hoy. No modifica pagos confirmados y vuelve a validar
+            el cálculo en Laravel al guardar. Para un regreso futuro todavía no se registra una reactivación.
           </Typography>
           {!previewReactivacion.confirmable && <Alert severity="warning" sx={{ mt: 1 }}>
             {previewReactivacion.motivo_bloqueo || 'La reactivación requiere una revisión administrativa.'}
