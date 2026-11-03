@@ -210,6 +210,10 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/preview`, payload);
     return data.datos;
   },
+  programarCongelacionTiempo: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/programar`, payload);
+    return data.datos;
+  },
   congelarMembresia: async (id, payload) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion`, payload);
     return data.datos;
