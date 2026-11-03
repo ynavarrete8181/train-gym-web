@@ -72,9 +72,13 @@ export function DialogCongelacionMembresia({
   const fechaAjustada = datos.fecha_fin_ajustada || datos.fecha_fin_propuesta;
   const financiero = datos.impacto_financiero;
   const puedeCancelar = modo === 'detalle' && suspension?.estado === 'PROGRAMADA';
+  const hoyPartes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date());
+  const parte = nombre => hoyPartes.find(item => item.type === nombre)?.value;
+  const hoyEcuador = [parte('year'), parte('month'), parte('day')].join('-');
   const puedeEditar = puedeCancelar && suspension?.tipo === 'TIEMPO'
-    && String(suspension?.fecha_inicio || '').slice(0, 10)
-      > new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guayaquil' }).format(new Date());
+    && String(suspension?.fecha_inicio || '').slice(0, 10) > hoyEcuador;
   const bloqueo = datos.motivo_bloqueo || datosMovimiento.motivo_no_aplicacion;
 
   const titulo = esPrevia ? 'Vista previa de congelación'
