@@ -13,6 +13,7 @@ import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { DialogCongelacionMembresia } from './DialogCongelacionMembresia.jsx';
 
 const fechaLocal = () => {
   const partes = new Intl.DateTimeFormat('en-US', {
@@ -58,6 +59,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
   const [preview, setPreview] = useState(null);
+  const [vistaPreviaAbierta, setVistaPreviaAbierta] = useState(false);
+  const [resumenGuardado, setResumenGuardado] = useState(null);
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
@@ -96,6 +99,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         tipo, fecha_inicio: inicio, fecha_fin: fin,
       });
       setPreview(resultado);
+      setVistaPreviaAbierta(true);
     } catch (e) { setError(mensajeError(e)); }
     finally { setProcesando(false); }
   };
@@ -122,15 +126,19 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         tipo, fecha_inicio: inicio, fecha_fin: fin,
         motivo: motivo.trim(), motivo_codigo: motivoCodigo,
       };
-      if (calculo.programable) {
-        await gimnasioServicio.programarCongelacionTiempo(membresia.id, datos);
-        setExito('Congelación programada. El contrato permanecerá activo hasta la fecha autorizada.');
-      } else {
-        await gimnasioServicio.congelarMembresia(membresia.id, datos);
-        setExito('Congelación registrada correctamente. Consulta el historial del contrato.');
-      }
+      const resultadoGuardado = calculo.programable
+        ? await gimnasioServicio.programarCongelacionTiempo(membresia.id, datos)
+        : await gimnasioServicio.congelarMembresia(membresia.id, datos);
+      const actualizado = await gimnasioServicio.obtenerCicloVidaMembresia(membresia.id);
+      setCiclo(actualizado);
+      setVistaPreviaAbierta(false);
+      setResumenGuardado({
+        preview: { ...calculo, ...resultadoGuardado },
+        suspensionId: resultadoGuardado?.suspension_id,
+        motivo: motivo.trim(),
+      });
       setOperacion(''); setPreview(null); setMotivo('');
-      await cargar();
+      setExito('');
       await onActualizado?.();
     } catch (e) { setError(mensajeError(e)); }
     finally { setProcesando(false); }
@@ -273,40 +281,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             </TableCell></TableRow>}
           </TableBody>
         </TablaGestion>
-        {detalleSuspension && <Box sx={{ ...formStyles.seccion, mt: 2, bgcolor: 'background.default' }}>
-          <Stack direction="row" justifyContent="space-between" gap={1} alignItems="center">
-            <Typography variant="subtitle2" fontWeight={800}>Detalle de la congelación #{detalleSuspension.id}</Typography>
-            <Button size="small" onClick={() => setDetalleSuspension(null)}>Cerrar detalle</Button>
-          </Stack>
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            {fechaLegible(detalleSuspension.fecha_inicio)} al {fechaLegible(detalleSuspension.fecha_fin_prevista)}
-            {' · '}{detalleSuspension.tipo === 'TIEMPO' ? 'Sin reprogramar cobros' : 'Reprogramación financiera'}
-          </Typography>
-          <Typography variant="body2" sx={{ mt: 0.5 }}>
-            Vigencia original: <strong>{fechaLegible(detalleSuspension.fecha_fin_original)}</strong>
-            {' · '}Vigencia estimada: <strong>{fechaLegible(detalleSuspension.fecha_fin_ajustada)}</strong>
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Motivo: {movimientoDe(detalleSuspension)?.motivo || 'No disponible'}
-          </Typography>
-          {detalleSuspension.estado === 'NO_APLICADA' && <Alert severity="warning" sx={{ mt: 1.5 }}>
-            {leerDetalleMovimiento(movimientoDe(detalleSuspension)).motivo_no_aplicacion
-              || 'La programación no fue aplicada. Revisa las condiciones actuales del contrato.'}
-          </Alert>}
-          {detalleSuspension.estado === 'PROGRAMADA' && <Box sx={{ mt: 1.5 }}>
-            <TextField size="small" fullWidth multiline minRows={2}
-              label="Motivo para cancelar las vacaciones programadas"
-              value={motivoCancelacion} onChange={e => setMotivoCancelacion(e.target.value)}
-              helperText="La cancelación será auditada; la membresía y sus cuotas permanecen intactas."/>
-            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
-              <Button variant="outlined" color="error" disabled={procesando || motivoCancelacion.trim().length < 8}
-                onClick={cancelarProgramada}>Cancelar programación</Button>
-            </Stack>
-          </Box>}
-          {detalleSuspension.fecha_fin_real && <Typography variant="body2" sx={{ mt: 0.5 }}>
-            Último día efectivo de suspensión: {fechaLegible(detalleSuspension.fecha_fin_real)}
-          </Typography>}
-        </Box>}
         {puedeReactivar && <Stack alignItems="flex-end" sx={{ mt: 2 }}>
           <Button variant="outlined" onClick={() => { setOperacion('reactivar'); setMotivo(''); setMotivoCodigo('REGRESO'); setError(''); setPreviewReactivacion(null); }}>
             Reactivar membresía
@@ -336,130 +310,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         <TextField multiline minRows={2} size="small" fullWidth label="Motivo de congelación" required
           sx={{ mt: 2 }} value={motivo}
           onChange={e => { setMotivo(e.target.value); setPreview(null); }}/>
-        {preview && <Box sx={{
-          mt: 2, border: `1px solid ${uiTokens.colores.borde}`,
-          borderRadius: uiTokens.radios.panel, bgcolor: 'background.paper', overflow: 'hidden',
-        }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }}
-            justifyContent="space-between" gap={1} sx={{ px: 2, py: 1.5, bgcolor: uiTokens.colores.primarioSuave }}>
-            <Box>
-              <Typography variant="subtitle2" fontWeight={900}>Vista previa de congelación</Typography>
-              <Typography variant="caption" color="text.secondary">
-                Cálculo realizado por Laravel · Sin cambios hasta guardar
-              </Typography>
-            </Box>
-            <Chip size="small" variant="outlined"
-              color={!preview.confirmable && !preview.programable ? 'warning' : 'success'}
-              label={preview.programable ? 'Programación futura'
-                : preview.confirmable ? 'Disponible para registrar' : 'Requiere revisión'} />
-          </Stack>
-
-          <Box sx={{ px: 2, py: 2 }}>
-            <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.25 }}>Impacto en la vigencia</Typography>
-            <Box sx={{ display: 'grid', gridTemplateColumns: {
-              xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))',
-            }, gap: 1.25 }}>
-              {[
-                { label: 'Días de congelación', value: `${preview.dias_previstos} días`, destacado: true },
-                { label: 'Vencimiento actual', value: fechaLegible(preview.fecha_fin_original) },
-                { label: 'Vencimiento proyectado', value: fechaLegible(preview.fecha_fin_ajustada), destacado: true },
-              ].map(item => <Box key={item.label} sx={{
-                px: 1.5, py: 1.25, border: `1px solid ${item.destacado
-                  ? uiTokens.colores.acentoBorde : uiTokens.colores.bordeSuave}`,
-                borderRadius: 1.5, bgcolor: item.destacado ? uiTokens.colores.acentoSuave : 'background.paper',
-                minWidth: 0,
-              }}>
-                <Typography variant="caption" color="text.secondary">{item.label}</Typography>
-                <Typography variant="subtitle1" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
-                  {item.value}
-                </Typography>
-              </Box>)}
-            </Box>
-
-            {preview.impacto_financiero && <>
-              <Divider sx={{ my: 2 }}/>
-              <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.25 }}>Impacto en Ventas y Cartera</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: {
-                xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))',
-              }, gap: 1.25, mb: 2 }}>
-                {[
-                  { label: 'Pagos confirmados', value: `$${Number(preview.impacto_financiero.pagos_confirmados || 0).toFixed(2)}` },
-                  { label: 'Saldo emitido', value: `$${Number(preview.impacto_financiero.deuda_emitida || 0).toFixed(2)}` },
-                  { label: 'Cuotas reprogramables', value: String(preview.impacto_financiero.cuotas_reprogramables ?? 0) },
-                ].map(item => <Box key={item.label} sx={{
-                  p: 1.25, border: `1px solid ${uiTokens.colores.bordeSuave}`, borderRadius: 1.5,
-                }}>
-                  <Typography variant="caption" color="text.secondary">{item.label}</Typography>
-                  <Typography variant="body1" fontWeight={900}>{item.value}</Typography>
-                </Box>)}
-              </Box>
-
-              {(preview.impacto_financiero.ventas_adicionales || []).length > 0 && (
-                <Alert severity={preview.impacto_financiero.requiere_revision_cartera ? 'warning' : 'info'}
-                  sx={{ mb: 1.5 }}>
-                  Ventas adicionales vinculadas al contrato (sin modificación):
-                  {(preview.impacto_financiero.ventas_adicionales || []).map(venta => (
-                    <Typography variant="caption" display="block" key={venta.id}>
-                      {venta.numero || `Venta ${venta.id}`} · Saldo $${Number(venta.saldo_emitido || 0).toFixed(2)}
-                    </Typography>
-                  ))}
-                </Alert>
-              )}
-
-              <Typography variant="body2" fontWeight={800} sx={{ mb: 1 }}>Detalle de cuotas</Typography>
-              <TableContainer sx={{ border: `1px solid ${uiTokens.colores.bordeSuave}`,
-                borderRadius: 1.5, overflowX: 'auto' }}>
-                <Table size="small" aria-label="Impacto financiero por cuota" sx={{ ...dbanuStyles.table }}>
-                  <TableHead><TableRow>
-                    <TableCell>Cuota</TableCell>
-                    <TableCell>Emisión actual</TableCell>
-                    {tipo === 'FACTURACION' && <TableCell>Emisión propuesta</TableCell>}
-                    <TableCell>Vencimiento actual</TableCell>
-                    {tipo === 'FACTURACION' && <TableCell>Vencimiento propuesto</TableCell>}
-                    <TableCell>Resultado</TableCell>
-                  </TableRow></TableHead>
-                  <TableBody>
-                    {(preview.impacto_financiero.cuotas || []).map(cuota => <TableRow key={cuota.cuota_id}>
-                      <TableCell>{cuota.numero}</TableCell>
-                      <TableCell>{fechaLegible(cuota.emision_anterior)}</TableCell>
-                      {tipo === 'FACTURACION' && <TableCell>{fechaLegible(cuota.emision_propuesta)}</TableCell>}
-                      <TableCell>{fechaLegible(cuota.vencimiento_anterior)}</TableCell>
-                      {tipo === 'FACTURACION' && <TableCell>{fechaLegible(cuota.vencimiento_propuesto)}</TableCell>}
-                      <TableCell>
-                        <Chip size="small" variant="outlined" label={({
-                          REPROGRAMACION_PROPUESTA: 'A reprogramar',
-                          PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
-                          VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
-                          SIN_CAMBIOS: 'Sin cambios',
-                        })[cuota.accion] || cuota.accion || '—'}
-                          color={cuota.accion === 'VENTA_EMITIDA_REVISAR_CARTERA' ? 'warning'
-                            : cuota.accion === 'PAGO_CONFIRMADO_CONSERVAR' ? 'success' : 'default'} />
-                      </TableCell>
-                    </TableRow>)}
-                    {!(preview.impacto_financiero.cuotas || []).length && <TableRow>
-                      <TableCell colSpan={tipo === 'FACTURACION' ? 6 : 4} align="center">
-                        No existen cuotas relacionadas con este período.
-                      </TableCell>
-                    </TableRow>}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-                {tipo === 'TIEMPO'
-                  ? 'Las fechas de pago y los importes se conservan. La vigencia se ajusta cuando se reactive la membresía.'
-                  : 'Las fechas son proyectadas. Las ventas emitidas y los pagos confirmados permanecen intactos.'}
-              </Typography>
-            </>}
-
-            {(!preview.confirmable && !preview.programable) && <Alert severity="warning" sx={{ mt: 1.5 }}>
-              {preview.motivo_bloqueo || 'No es posible registrar esta congelación con las condiciones actuales.'}
-            </Alert>}
-            {preview.programable && <Alert severity="info" sx={{ mt: 1.5 }}>
-              La solicitud se registrará como programada. El acceso se mantiene hasta la fecha de inicio;
-              el ajuste definitivo de vigencia se realizará al reactivar.
-            </Alert>}
-          </Box>
-        </Box>}
         <Box sx={{ ...dbanuStyles.formActions, width: '100%', px: 0, pb: 0, mt: 2,
           flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center',
           '& > .MuiButton-root': { flex: '0 0 auto' } }}>
@@ -507,5 +357,36 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         </Box>
       </Box>}
     </>}
+    <DialogCongelacionMembresia
+      abierto={vistaPreviaAbierta && Boolean(preview)}
+      modo="preview" membresia={membresia} preview={preview}
+      motivo={motivo} procesando={procesando}
+      onCerrar={() => setVistaPreviaAbierta(false)}
+      onGuardar={guardarCongelacion}
+    />
+    <DialogCongelacionMembresia
+      abierto={Boolean(detalleSuspension)} modo="detalle"
+      membresia={membresia} suspension={detalleSuspension}
+      movimiento={movimientoDe(detalleSuspension)}
+      motivoCancelacion={motivoCancelacion}
+      onMotivoCancelacion={setMotivoCancelacion}
+      onCerrar={() => { setDetalleSuspension(null); setMotivoCancelacion(''); }}
+      onCancelarProgramada={cancelarProgramada} procesando={procesando}
+    />
+    <DialogCongelacionMembresia
+      abierto={Boolean(resumenGuardado)} modo="exito"
+      membresia={membresia} preview={resumenGuardado?.preview}
+      motivo={resumenGuardado?.motivo}
+      onCerrar={() => setResumenGuardado(null)}
+      onVerDetalle={() => {
+        const guardada = (ciclo?.suspensiones || [])
+          .find(item => Number(item.id) === Number(resumenGuardado?.suspensionId));
+        setResumenGuardado(null);
+        if (guardada) {
+          setDetalleSuspension(guardada);
+          setMotivoCancelacion('');
+        }
+      }}
+    />
   </Box>;
 }
