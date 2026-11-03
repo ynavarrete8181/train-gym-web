@@ -252,6 +252,10 @@ export const gimnasioServicio = {
       { motivo, motivo_codigo: motivoCodigo });
     return data.datos;
   },
+  obtenerHistorialIntegralMembresia: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/historial-integral`);
+    return data.datos;
+  },
   previsualizarRenovacionProgramada: async (id) => {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/renovacion-programada/preview`);
     return data.datos;
