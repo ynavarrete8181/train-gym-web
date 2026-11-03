@@ -49,6 +49,7 @@ const leerDetalle = (movimiento) => {
 export function DialogCongelacionMembresia({
   abierto, modo = 'detalle', membresia, preview, suspension, movimiento, motivo = '',
   motivoCancelacion = '', onMotivoCancelacion, procesando = false,
+  error = '', puedeGuardar = false,
   onCerrar, onGuardar, onCancelarProgramada, onVerDetalle,
 }) {
   const esPrevia = modo === 'preview';
@@ -177,6 +178,7 @@ export function DialogCongelacionMembresia({
       </>}
 
       {bloqueo && <Alert severity="warning" sx={{ mt: 2 }}>{bloqueo}</Alert>}
+      {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       {esExito && <Alert severity="success" sx={{ mt: 2 }}>
         El movimiento quedó registrado en el historial de la membresía.
       </Alert>}
@@ -205,7 +207,7 @@ export function DialogCongelacionMembresia({
         Ver detalle
       </Button>}
       {esPrevia && (preview?.programable || preview?.confirmable) && onGuardar && <BotonGuardar
-        texto="Guardar" guardando={procesando} onClick={onGuardar}/>}
+        texto="Guardar" guardando={procesando} disabled={!puedeGuardar} onClick={onGuardar}/>}
     </DialogActions>
   </Dialog>;
 }
