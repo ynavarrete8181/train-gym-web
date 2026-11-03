@@ -2139,14 +2139,6 @@ export function DeportistasPage() {
             cuotas={membresiaForm.cuotas}
           />
         ) : null}
-        {membresiaForm.id && (
-          <>
-            <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1 }}>
-              <Button variant="outlined" sx={{ textTransform: 'none' }}
-                onClick={() => setVistaMembresia('ciclo_vida')}>Gestionar ciclo de vida</Button>
-            </Stack>
-          </>
-        )}
         {mostrarSedes && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas *</Typography>
