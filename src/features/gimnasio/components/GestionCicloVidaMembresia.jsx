@@ -294,17 +294,23 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
                   NO_APLICADA: 'No aplicada', CANCELADA: 'Cancelada' })[s.estado] || s.estado} /></TableCell>
               <TableCell align="center">
                 <Tooltip title="Ver detalle de la congelación">
-                  <IconButton size="small" aria-label="Ver congelación" onClick={() => { setDetalleSuspension(s); setMotivoCancelacion(''); }}>
+                  <IconButton size="small" aria-label="Ver congelación" sx={dbanuStyles.actionView}
+                    onClick={() => { setDetalleSuspension(s); setMotivoCancelacion(''); }}>
                     <VisibilityOutlinedIcon fontSize="small"/>
                   </IconButton>
                 </Tooltip>
                 {s.estado === 'PROGRAMADA' && s.tipo === 'TIEMPO'
-                  && String(s.fecha_inicio).slice(0, 10) > fechaLocal() &&
-                  <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon fontSize="small"/>}
-                    disabled={procesando} onClick={() => editarProgramacion(s)}
-                    sx={{ ml: 1, textTransform: 'none', whiteSpace: 'nowrap' }}>
-                    Editar fechas
-                  </Button>}
+                  && String(s.fecha_inicio).slice(0, 10) > fechaLocal() && (
+                  <Tooltip title="Editar fechas programadas">
+                    <span>
+                      <IconButton size="small" aria-label="Editar fechas programadas"
+                        sx={{ ...dbanuStyles.actionEdit, mr: 0 }}
+                        disabled={procesando} onClick={() => editarProgramacion(s)}>
+                        <EditOutlinedIcon fontSize="small"/>
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
               </TableCell>
             </TableRow>)}
             {!filtradas.length && <TableRow><TableCell colSpan={6} align="center">
