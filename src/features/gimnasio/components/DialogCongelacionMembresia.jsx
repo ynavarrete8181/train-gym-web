@@ -50,7 +50,7 @@ const leerDetalle = (movimiento) => {
 export function DialogCongelacionMembresia({
   abierto, modo = 'detalle', membresia, preview, suspension, movimiento, motivo = '',
   motivoCancelacion = '', onMotivoCancelacion, procesando = false,
-  error = '', puedeGuardar = false,
+  error = '', puedeGuardar = false, esEdicion = false,
   onCerrar, onGuardar, onCancelarProgramada, onEditarProgramada, onVerDetalle,
 }) {
   const esPrevia = modo === 'preview';
@@ -82,7 +82,7 @@ export function DialogCongelacionMembresia({
   const bloqueo = datos.motivo_bloqueo || datosMovimiento.motivo_no_aplicacion;
 
   const titulo = esPrevia ? 'Vista previa de congelación'
-    : esExito ? 'Congelación registrada correctamente'
+    : esExito ? (esEdicion ? 'Programación actualizada correctamente' : 'Congelación registrada correctamente')
       : 'Detalle de congelación';
   const estadoLabel = estado === 'CONFIRMABLE' ? 'Lista para registrar'
     : estado === 'REVISAR' ? 'Requiere revisión'
