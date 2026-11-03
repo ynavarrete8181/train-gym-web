@@ -65,9 +65,12 @@ export function DialogCongelacionMembresia({
   const modalidad = datos.tipo || suspension?.tipo || 'TIEMPO';
   const inicio = datos.inicio || datos.fecha_inicio || suspension?.fecha_inicio;
   const fin = datos.fin_previsto || datos.fecha_fin_prevista || suspension?.fecha_fin_prevista;
-  const dias = datos.dias_previstos
-    ?? (esPrevia ? preview?.dias_previstos : (suspension?.dias_reconocidos || datosMovimiento.dias_previstos))
-    ?? '—';
+  const dias = esPrevia || esExito
+    ? (datos.dias_previstos ?? '—')
+    : (suspension?.dias_previstos ?? datosMovimiento.dias_previstos ?? '—');
+  const finalizada = !esPrevia && !esExito && suspension?.estado === 'FINALIZADA';
+  const cancelada = !esPrevia && !esExito && ['CANCELADA', 'NO_APLICADA'].includes(suspension?.estado);
+  const diasReconocidos = finalizada ? (suspension?.dias_reconocidos ?? '—') : null;
   const fechaOriginal = datos.fecha_fin_original;
   const fechaAjustada = datos.fecha_fin_ajustada || datos.fecha_fin_propuesta;
   const financiero = datos.impacto_financiero;
@@ -120,20 +123,42 @@ export function DialogCongelacionMembresia({
         gap: 1.25, mb: 2 }}>
         <Indicador etiqueta="Desde" valor={fecha(inicio)}/>
         <Indicador etiqueta="Hasta (incluido)" valor={fecha(fin)}/>
-        <Indicador etiqueta="Días" valor={dias === '—' ? dias : `${dias} días`} destacado />
+        <Indicador etiqueta="Días previstos" valor={dias === '—' ? dias : `${dias} días`}/>
         <Indicador etiqueta="Modalidad" valor={modalidad === 'TIEMPO' ? 'Tiempo' : 'Facturación'}/>
       </Box>
+      {!esPrevia && !esExito && (
+        <Box sx={{ mb: 2 }}>
+          {finalizada ? <>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))' }, gap: 1.25 }}>
+              <Indicador etiqueta="Días realmente reconocidos"
+                valor={diasReconocidos === '—' ? diasReconocidos : `${diasReconocidos} días`} destacado/>
+              <Indicador etiqueta="Fecha efectiva de regreso" valor={fecha(suspension?.fecha_regreso)}/>
+              <Indicador etiqueta="Último día de congelación" valor={fecha(suspension?.fecha_fin_real)}/>
+              <Indicador etiqueta="Reactivado por" valor={suspension?.autor_cierre || 'Sistema / usuario no disponible'}/>
+            </Box>
+          </> : <Typography variant="caption" color="text.secondary">
+            {cancelada
+              ? 'Solicitud cancelada o no aplicada: los días previstos no generan compensación.'
+              : 'Los días reconocidos se determinarán al finalizar la congelación. No se deben confundir con los previstos.'}
+          </Typography>}
+        </Box>
+      )}
       <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1.25 }}>
         Vigencia de la membresía
       </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))' }, gap: 1.25 }}>
-        <Indicador etiqueta="Vencimiento original" valor={fecha(fechaOriginal)}/>
-        <Indicador etiqueta="Vencimiento estimado" valor={fecha(fechaAjustada)} destacado/>
+        <Indicador etiqueta="Vencimiento anterior" valor={fecha(fechaOriginal)}/>
+        <Indicador etiqueta={finalizada ? 'Nuevo vencimiento efectivo'
+          : cancelada ? 'Proyección no aplicada' : 'Vencimiento proyectado'}
+          valor={cancelada ? 'Sin cambio por esta solicitud' : fecha(fechaAjustada)}
+          destacado={finalizada}/>
       </Box>
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-        {modalidad === 'TIEMPO'
-          ? 'Se conserva el calendario de cobros. La extensión definitiva se consolida al reactivar.'
-          : 'La reprogramación de cuotas depende de las validaciones financieras de Laravel.'}
+        {cancelada ? 'La solicitud no modificó la vigencia ni los cobros.'
+          : finalizada ? 'La vigencia efectiva quedó registrada al reactivar. Los pagos confirmados se conservan.'
+            : modalidad === 'TIEMPO'
+              ? 'El calendario de cobros se conserva. La extensión definitiva se consolida al reactivar.'
+              : 'La reprogramación de cuotas depende de las validaciones financieras de Laravel.'}
       </Typography>
 
       {(motivo || movimiento?.motivo) && <Box sx={{ mt: 2 }}>
@@ -144,6 +169,24 @@ export function DialogCongelacionMembresia({
           borderRadius: 1.5, bgcolor: uiTokens.colores.primarioSuave }}>
           <Typography variant="body2">{motivo || movimiento?.motivo}</Typography>
         </Box>
+      </Box>}
+
+      {!esPrevia && !esExito && <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1 }}>Trazabilidad</Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))' }, gap: 1.25 }}>
+          <Indicador etiqueta="Registrado por" valor={suspension?.autor_registro || movimiento?.autor_nombre || 'Usuario no disponible'}/>
+          <Indicador etiqueta="Fecha de registro" valor={fecha(suspension?.registrado_at || movimiento?.created_at)}/>
+          {suspension?.fecha_cierre && <Indicador etiqueta="Cerrado por"
+            valor={suspension.autor_cierre || 'Sistema / usuario no disponible'}/>}
+          {suspension?.fecha_cierre && <Indicador etiqueta="Fecha del movimiento de cierre"
+            valor={fecha(suspension.fecha_cierre)}/>}
+        </Box>
+        {suspension?.motivo_cierre && <Box sx={{ mt: 1.25 }}>
+          <Typography variant="caption" color="text.secondary">
+            {cancelada ? 'Motivo de cancelación' : 'Justificación de reactivación'}
+          </Typography>
+          <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{suspension.motivo_cierre}</Typography>
+        </Box>}
       </Box>}
 
       {financiero && <>
