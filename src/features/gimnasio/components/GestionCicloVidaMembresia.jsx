@@ -142,6 +142,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
         preview: { ...calculo, ...resultadoGuardado },
         suspensionId: resultadoGuardado?.suspension_id,
         motivo: motivo.trim(),
+        esEdicion: Boolean(editandoSuspensionId),
       });
       setOperacion(''); setPreview(null); setMotivo('');
       setEditandoSuspensionId(null);
@@ -414,6 +415,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
       abierto={Boolean(resumenGuardado)} modo="exito"
       membresia={membresia} preview={resumenGuardado?.preview}
       motivo={resumenGuardado?.motivo}
+      esEdicion={Boolean(resumenGuardado?.esEdicion)}
       onCerrar={() => setResumenGuardado(null)}
       onVerDetalle={() => {
         const guardada = (ciclo?.suspensiones || [])
