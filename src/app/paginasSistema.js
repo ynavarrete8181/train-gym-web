@@ -33,7 +33,7 @@ const nombresPaginas = {
   DeportistasPage: 'Clientes',
   MisDeportistasPage: 'Mis deportistas',
   MiAgendaEntrenadorPage: 'Mi agenda',
-  PlanesPage: 'Planes de membresía',
+  PlanesPage: 'Planes',
   MembresiasPage: 'Membresías',
   GestionesCicloVidaPage: 'Congelaciones y reactivaciones',
   MotivosCicloVidaPage: 'Motivos del ciclo de vida',
