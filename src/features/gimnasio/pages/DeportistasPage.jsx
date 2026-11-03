@@ -2016,6 +2016,9 @@ export function DeportistasPage() {
             label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso' : 'Fecha inicio'}
             name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
             onChange={handleMembresiaChange} required size="small"
+            disabled={Boolean(membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null)}
+            helperText={membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null
+              ? 'Fecha contractual: los días de congelación se compensan al reactivar.' : ''}
             slotProps={{ inputLabel: { shrink: true } }}
           />
           {contratoNuevoVisible ? (
