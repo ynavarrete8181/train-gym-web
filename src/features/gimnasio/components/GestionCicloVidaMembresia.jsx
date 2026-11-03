@@ -296,12 +296,12 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
                   </IconButton>
                 </Tooltip>
                 {s.estado === 'PROGRAMADA' && s.tipo === 'TIEMPO'
-                  && String(s.fecha_inicio).slice(0, 10) > fechaLocal() && <Tooltip title="Editar fechas programadas">
-                  <IconButton size="small" aria-label="Editar fechas programadas"
-                    disabled={procesando} onClick={() => editarProgramacion(s)}>
-                    <EditOutlinedIcon fontSize="small"/>
-                  </IconButton>
-                </Tooltip>}
+                  && String(s.fecha_inicio).slice(0, 10) > fechaLocal() &&
+                  <Button size="small" variant="outlined" startIcon={<EditOutlinedIcon fontSize="small"/>}
+                    disabled={procesando} onClick={() => editarProgramacion(s)}
+                    sx={{ ml: 1, textTransform: 'none', whiteSpace: 'nowrap' }}>
+                    Editar fechas
+                  </Button>}
               </TableCell>
             </TableRow>)}
             {!filtradas.length && <TableRow><TableCell colSpan={6} align="center">
