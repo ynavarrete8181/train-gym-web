@@ -44,7 +44,7 @@ import { entrenamientoServicio } from '../../entrenamiento/services/entrenamient
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
-import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
+import { HistorialIntegralMembresia } from '../components/HistorialIntegralMembresia.jsx';
 import { GestionCicloVidaMembresia } from '../components/GestionCicloVidaMembresia.jsx';
 import { DialogRenovacionMembresia } from '../components/DialogRenovacionMembresia.jsx';
 
@@ -2407,7 +2407,7 @@ export function DeportistasPage() {
               setVistaMembresia('listado');
             }} />
           </Box>
-          <CondicionesHistoricasContrato membresia={historialMembresiaSeleccionada} sedes={sedes} />
+          <HistorialIntegralMembresia membresia={historialMembresiaSeleccionada} />
         </Box>
       )}
     </Stack>
