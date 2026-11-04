@@ -5,6 +5,9 @@ const colores = {
   pendiente: 'info',
   riesgo: 'warning',
   bloqueado: 'error',
+  cancelada: 'error',
+  cancelado: 'error',
+  congelada: 'warning',
   cerrado: 'default',
 }
 
