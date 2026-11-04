@@ -55,9 +55,12 @@ export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActu
     } finally { setProcesando(false); }
   };
 
+  const Contenido = integrado ? Box : DialogContent;
+  const Acciones = integrado ? Box : DialogActions;
+
   const contenido = <>
 
-    <DialogTitle sx={formStyles.modalHeader}>
+    {!integrado && <DialogTitle sx={formStyles.modalHeader}>
       <Box sx={{ ...formStyles.modalIcono, bgcolor: uiTokens.colores.acentoSuave,
         border: `1px solid ${uiTokens.colores.acentoBorde}`, color: uiTokens.colores.textoFuerte }}>
         <AutorenewOutlinedIcon/>
@@ -71,12 +74,15 @@ export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActu
         </Typography>
       </Box>
       {guardado && <Chip size="small" label="Guardada" color="success" variant="outlined"/>}
-    </DialogTitle>
-    <Divider/>
-    <DialogContent sx={{ p: 2.5 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+    </DialogTitle>}
+    {!integrado && <Divider/>}
+    <Contenido sx={integrado ? { px: 0, py: 1 } : { p: 2.5 }}>
+      {integrado && <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>
+        Nueva renovación
+      </Typography>}
+      {!integrado && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         Se añadirá un período al contrato actual. Las cuotas pagadas y las ventas emitidas permanecen intactas.
-      </Typography>
+      </Typography>}
       {error && <Alert severity={guardado ? 'info' : 'warning'} sx={{ mb: 1.5 }}>{error}</Alert>}
       {preview ? <>
         <Box sx={{ display: 'grid',
@@ -92,17 +98,20 @@ export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActu
           {guardado ? 'Se agregó un nuevo período y su cuota al contrato original.'
             : 'Vista previa calculada por Laravel. No se ha creado ninguna cuota ni venta todavía.'}
         </Alert>
-      </> : <Alert severity="info">
+      </> : !integrado ? <Alert severity="info">
         Pulsa Vista previa para consultar si el contrato puede renovarse, las fechas y la próxima cuota.
-      </Alert>}
-    </DialogContent>
-    <Divider/>
-    <DialogActions sx={{ ...dbanuStyles.dialogActions, flexWrap: 'wrap' }}>
-      <BotonCancelar texto="Cerrar" disabled={procesando} onClick={onCerrar}/>
+      </Alert> : null}
+    </Contenido>
+    {!integrado && <Divider/>}
+    <Acciones sx={integrado ? {
+      display: 'flex', justifyContent: 'flex-end', gap: 1.25,
+      flexWrap: 'wrap', pt: 2, px: 0,
+    } : { ...dbanuStyles.dialogActions, flexWrap: 'wrap' }}>
+      <BotonCancelar texto={integrado ? 'Cancelar' : 'Cerrar'} disabled={procesando} onClick={onCerrar}/>
       {!guardado && <BotonVistaPrevia onClick={previsualizar} cargando={procesando} disabled={procesando}/>}
       {!guardado && <BotonGuardar texto="Guardar" onClick={guardar}
         disabled={!preview?.confirmable} guardando={procesando}/>}
-    </DialogActions>
+    </Acciones>
   </>;
 
   if (integrado) {
