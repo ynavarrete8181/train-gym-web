@@ -2,8 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert, Box, Chip, CircularProgress, Stack, Typography,
   TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogActions, Divider,
 } from '@mui/material';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
+import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
@@ -138,7 +143,6 @@ function DetalleEvento({ evento }) {
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 
 /**
  * Historial real del contrato: listado con paginación de 5 y detalle interno.
@@ -180,23 +184,6 @@ export function HistorialIntegralMembresia({ membresia }) {
   ].some(v => String(v || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC')))), [eventos, busqueda]);
   const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtrados.length / porPagina) || 1));
   const visibles = filtrados.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
-
-  if (seleccionado) {
-    return <Box sx={{ minWidth: 0 }}>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 2 }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="subtitle1" fontWeight={800}>
-            {tituloTipo[seleccionado.tipo] || seleccionado.tipo?.replaceAll('_', ' ') || 'Movimiento'}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {fechaHora(seleccionado.fecha)} · {seleccionado.autor_nombre || 'Sistema / autor no disponible'}
-          </Typography>
-        </Box>
-        <BotonVolver onClick={() => setSeleccionado(null)} />
-      </Stack>
-      <DetalleEvento evento={seleccionado} />
-    </Box>;
-  }
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
     {cargando && <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
@@ -244,5 +231,65 @@ export function HistorialIntegralMembresia({ membresia }) {
         </TableRow>}
       </TableBody>
     </TablaGestion>
+
+    <Dialog
+      open={Boolean(seleccionado)}
+      onClose={() => setSeleccionado(null)}
+      fullWidth
+      maxWidth="md"
+      aria-labelledby="detalle-movimiento-membresia-titulo"
+      PaperProps={{ sx: { borderRadius: 2, maxHeight: '90vh' } }}
+    >
+      {seleccionado && <>
+        <DialogTitle sx={{ ...formStyles.modalHeader, gap: 1.5, pr: 1.5 }}>
+          <Box sx={{
+            ...formStyles.modalIcono,
+            bgcolor: uiTokens.colores.acentoSuave,
+            border: `1px solid ${uiTokens.colores.acentoBorde}`,
+            color: uiTokens.colores.textoFuerte,
+            boxShadow: 'none',
+          }}>
+            <HistoryOutlinedIcon />
+          </Box>
+          <Box sx={{ minWidth: 0, flex: 1 }}>
+            <Typography id="detalle-movimiento-membresia-titulo"
+              variant="subtitle1" fontWeight={850} sx={{ overflowWrap: 'anywhere' }}>
+              {tituloTipo[seleccionado.tipo] || seleccionado.tipo?.replaceAll('_', ' ') || 'Detalle del movimiento'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block">
+              {membresia?.codigo_contrato || 'Contrato'} · {fechaHora(seleccionado.fecha)}
+            </Typography>
+          </Box>
+          <Tooltip title="Cerrar">
+            <IconButton aria-label="Cerrar detalle" size="small"
+              onClick={() => setSeleccionado(null)} sx={{ color: 'text.secondary', alignSelf: 'flex-start' }}>
+              <CloseOutlinedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        </DialogTitle>
+        <Divider />
+        <DialogContent sx={{ px: { xs: 2, sm: 2.5 }, py: 2.5 }}>
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+            gap: 1.25,
+            mb: 2,
+          }}>
+            <Dato label="Responsable"
+              value={seleccionado.autor_nombre || 'Sistema / autor no disponible'} />
+            <Dato label="Tipo de movimiento"
+              value={seleccionado.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'} />
+          </Box>
+          <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 1.25 }}>
+            Información registrada
+          </Typography>
+          <DetalleEvento evento={seleccionado} />
+        </DialogContent>
+        <Divider />
+        <DialogActions sx={{ ...dbanuStyles.dialogActions, py: 1.5 }}>
+          <BotonCancelar texto="Cerrar" onClick={() => setSeleccionado(null)} />
+        </DialogActions>
+      </>}
+    </Dialog>
   </Box>;
 }
