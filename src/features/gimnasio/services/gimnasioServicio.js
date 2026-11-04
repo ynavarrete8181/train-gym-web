@@ -277,6 +277,18 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/historial-integral`);
     return data.datos;
   },
+  obtenerExpedienteMembresia: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/expediente`);
+    return data.datos;
+  },
+  previsualizarReaperturaMembresia: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/reapertura/preview`);
+    return data.datos;
+  },
+  reabrirMembresia: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/reapertura`, payload);
+    return data.datos;
+  },
   previsualizarRenovacionProgramada: async (id) => {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/renovacion-programada/preview`);
     return data.datos;
