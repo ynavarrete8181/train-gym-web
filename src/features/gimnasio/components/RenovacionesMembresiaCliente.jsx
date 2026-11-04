@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Chip, CircularProgress, IconButton, Stack,
+import { Alert, Box, Button, CircularProgress, IconButton, Stack,
   TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
