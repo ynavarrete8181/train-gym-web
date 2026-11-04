@@ -92,8 +92,15 @@ export function DialogCongelacionMembresia({
       : estadoTexto[estado] || estado || '—';
 
   return <Dialog open={Boolean(abierto)} onClose={procesando ? undefined : onCerrar}
-    fullWidth maxWidth="md" scroll="paper" aria-labelledby="dialog-congelacion-titulo"
-    PaperProps={{ sx: { borderRadius: 2, overflow: 'hidden', maxHeight: '90vh' } }}>
+    fullWidth maxWidth="lg" scroll="paper" aria-labelledby="dialog-congelacion-titulo"
+    PaperProps={{ sx: {
+      borderRadius: 2,
+      overflow: 'hidden',
+      width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 48px)', lg: 'min(1180px, calc(100% - 64px))' },
+      maxWidth: 1180,
+      maxHeight: '90vh',
+      m: { xs: 1.5, sm: 3 },
+    } }}>
     <DialogTitle id="dialog-congelacion-titulo" sx={{ ...formStyles.modalHeader, py: 1.75 }}>
       <Box sx={{ ...formStyles.modalIcono, bgcolor: uiTokens.colores.acentoSuave,
         color: uiTokens.colores.textoFuerte, boxShadow: 'none',
