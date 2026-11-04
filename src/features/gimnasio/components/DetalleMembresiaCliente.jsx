@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, Divider, Stack, Typography } from '@mui/material';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
@@ -9,7 +8,6 @@ import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { HistorialIntegralMembresia } from './HistorialIntegralMembresia.jsx';
 import { RenovacionesMembresiaCliente } from './RenovacionesMembresiaCliente.jsx';
 import { GestionCicloVidaMembresia } from './GestionCicloVidaMembresia.jsx';
-import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -50,7 +48,7 @@ function DatoContrato({ titulo, valor }) {
  * Todas las operaciones comerciales continúan autorizándose en Laravel.
  */
 export function DetalleMembresiaCliente({
-  membresia, onVolver, onEditar, onActualizado,
+  membresia, onVolver, onActualizado,
 }) {
   const [seccion, setSeccion] = useState('informacion');
 
@@ -148,12 +146,6 @@ export function DetalleMembresiaCliente({
               <DatoContrato titulo="Fin de vigencia" valor={fecha(membresia.fecha_fin)} />
               <DatoContrato titulo="Precio registrado" valor={importe(membresia.precio_aplicado)} />
             </Box>
-            <Stack direction="row" justifyContent="flex-end">
-              <Button variant="outlined" startIcon={<EditOutlinedIcon />}
-                onClick={() => onEditar(membresia)} sx={dbanuStyles.secondaryButtonRevive}>
-                Editar membresía
-              </Button>
-            </Stack>
           </>}
 
           {seccion === 'congelacion' && <GestionCicloVidaMembresia
