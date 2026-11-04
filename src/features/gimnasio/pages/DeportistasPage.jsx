@@ -29,8 +29,6 @@ import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import ManageHistoryOutlinedIcon from '@mui/icons-material/ManageHistoryOutlined';
-import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
@@ -44,7 +42,7 @@ import { entrenamientoServicio } from '../../entrenamiento/services/entrenamient
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
-import { HistorialIntegralMembresia } from '../components/HistorialIntegralMembresia.jsx';
+import { DetalleMembresiaCliente } from '../components/DetalleMembresiaCliente.jsx';
 import { GestionCicloVidaMembresia } from '../components/GestionCicloVidaMembresia.jsx';
 import { DialogRenovacionMembresia } from '../components/DialogRenovacionMembresia.jsx';
 
@@ -367,6 +365,7 @@ export function DeportistasPage() {
   const [tabFicha, setTabFicha] = useState('datos');
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
+  const [membresiaDetalle, setMembresiaDetalle] = useState(null);
   const [membresiaRenovacion, setMembresiaRenovacion] = useState(null);
   const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
   const [requiereDescuento, setRequiereDescuento] = useState(false);
@@ -384,7 +383,6 @@ export function DeportistasPage() {
   const [cargandoFicha, setCargandoFicha] = useState(false);
   const [planes, setPlanes] = useState([]);
   const [membresiaForm, setMembresiaForm] = useState(getInitialMembresia());
-  const [historialMembresiaSeleccionada, setHistorialMembresiaSeleccionada] = useState(null);
   const [progresosCliente, setProgresosCliente] = useState([]);
   const [progresoForm, setProgresoForm] = useState(getInitialProgreso());
   const [planesEntrenamiento, setPlanesEntrenamiento] = useState([]);
@@ -1011,7 +1009,7 @@ export function DeportistasPage() {
   };
 
   const handleNuevaMembresia = () => {
-    setHistorialMembresiaSeleccionada(null);
+    setMembresiaDetalle(null);
     setMembresiaForm(getInitialMembresia());
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
     setRequiereDescuento(false);
@@ -1019,7 +1017,6 @@ export function DeportistasPage() {
   };
 
   const handleEditarMembresia = (m) => {
-    setHistorialMembresiaSeleccionada(null);
     const descuentoActual = m.descuento_vigente;
     setRequiereDescuento(Boolean(descuentoActual));
     setDescuentoMembresia(descuentoActual ? {
@@ -1817,26 +1814,6 @@ export function DeportistasPage() {
     </Stack>
   );
 
-  const handleEliminarMembresia = async (m) => {
-    const confirmado = await confirmarAccion({
-      titulo: 'Eliminar membresía',
-      texto: `¿Estás seguro que deseas eliminar la membresía "${m.plan_nombre}" (${m.codigo_contrato})?`,
-      textoConfirmar: 'Sí, eliminar',
-      icono: 'warning',
-    });
-
-    if (!confirmado) return;
-
-    try {
-      await gimnasioServicio.eliminarMembresia(m.id);
-      showNotificacion('Membresía eliminada con éxito', 'success');
-      if (membresiaForm.id === m.id) setMembresiaForm(getInitialMembresia());
-      cargarFicha(formData);
-    } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al eliminar la membresía', 'error');
-    }
-  };
-
   const planMembresiaSeleccionado = planes.find(
     (plan) => String(plan.id) === String(membresiaForm.plan_id),
   );
@@ -2312,7 +2289,7 @@ export function DeportistasPage() {
               options={opcionesExcel(membresiasCliente, (m) => textoMembresia(m, campo))}>
               {{ plan: 'Plan', vigencia: 'Vigencia', precio: 'Precio', estado: 'Estado' }[campo]}
             </FilterHeaderCell>)}
-            <TableCell align="center" sx={{ minWidth: 215 }}>Acciones</TableCell>
+            <TableCell align="center" sx={{ minWidth: 172 }}>Acciones</TableCell>
           </TableRow></TableHead>
           <TableBody>
             {membresiasFiltradas.slice((paginaMembresia - 1) * porPaginaMembresia, paginaMembresia * porPaginaMembresia).map((m) => <TableRow key={m.id} hover>
@@ -2321,7 +2298,7 @@ export function DeportistasPage() {
               <TableCell>{textoMembresia(m, 'vigencia')}</TableCell>
               <TableCell>{textoMembresia(m, 'precio')}</TableCell>
               <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
-              <TableCell align="center" sx={{ width: 215, minWidth: 215, whiteSpace: 'nowrap' }}>
+              <TableCell align="center" sx={{ minWidth: 172, whiteSpace: 'nowrap' }}>
                 <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ flexWrap: 'nowrap' }}>
                   <Tooltip title="Editar membresía">
                     <IconButton aria-label="Editar membresía" sx={{ ...dbanuStyles.actionEdit, m: 0, flexShrink: 0 }}
@@ -2329,43 +2306,13 @@ export function DeportistasPage() {
                       <EditOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Gestionar ciclo de vida">
-                    <IconButton aria-label="Gestionar ciclo de vida"
-                      sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
-                      onClick={() => {
-                        handleEditarMembresia(m);
-                        setVistaMembresia('ciclo_vida');
-                      }}>
-                      <ManageHistoryOutlinedIcon sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  </Tooltip>
-                  {m.cantidad_periodos_contratados != null && <Tooltip
-                    title={String(m.estado || '') === 'CONGELADA'
-                      ? 'Primero reactiva la congelación para renovar' : 'Renovar este contrato'}>
-                    <span>
-                      <IconButton aria-label="Renovar membresía"
-                        disabled={String(m.estado || '') === 'CONGELADA'}
-                        sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
-                        onClick={() => setMembresiaRenovacion(m)}>
-                        <AutorenewOutlinedIcon sx={{ fontSize: 18 }}/>
-                      </IconButton>
-                    </span>
-                  </Tooltip>}
-                  <Tooltip title="Ver historial del contrato">
-                    <IconButton aria-label="Ver historial de membresía" sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
-                      onClick={() => {
-                        setHistorialMembresiaSeleccionada(m);
-                        setVistaMembresia('historial');
-                      }}>
-                      <HistoryOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Eliminar membresía">
-                    <IconButton aria-label="Eliminar membresía" sx={{ ...dbanuStyles.actionDelete, m: 0, flexShrink: 0 }}
-                      onClick={() => handleEliminarMembresia(m)}>
-                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
+                  <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontWeight: 700 }}
+                    onClick={() => {
+                      setMembresiaDetalle(m);
+                      setVistaMembresia('detalle');
+                    }}>
+                    Ver detalle
+                  </Button>
                 </Stack>
               </TableCell>
             </TableRow>)}
@@ -2373,6 +2320,18 @@ export function DeportistasPage() {
           </TableBody>
         </TablaGestion>
       </Box>}
+      {vistaMembresia === 'detalle' && membresiaDetalle && (
+        <DetalleMembresiaCliente
+          membresia={membresiaDetalle}
+          onVolver={() => setVistaMembresia('listado')}
+          onEditar={handleEditarMembresia}
+          onGestionarCicloVida={(m) => {
+            handleEditarMembresia(m);
+            setVistaMembresia('ciclo_vida');
+          }}
+          onRenovar={setMembresiaRenovacion}
+        />
+      )}
       <DialogRenovacionMembresia abierto={Boolean(membresiaRenovacion)}
         membresia={membresiaRenovacion}
         onCerrar={() => setMembresiaRenovacion(null)}
@@ -2381,12 +2340,15 @@ export function DeportistasPage() {
           const actualizadas = respuesta.datos?.membresias || [];
           setMembresiasCliente(actualizadas);
           const actual = actualizadas.find(m => Number(m.id) === Number(membresiaRenovacion?.id));
-          if (actual) setMembresiaRenovacion(actual);
+          if (actual) {
+            setMembresiaRenovacion(actual);
+            setMembresiaDetalle(actual);
+          }
         }}/>
       {vistaMembresia === 'ciclo_vida' && membresiaForm.id && (
         <GestionCicloVidaMembresia
           membresia={membresiaForm}
-          onVolver={() => setVistaMembresia('formulario')}
+          onVolver={() => setVistaMembresia('detalle')}
           onActualizado={async () => {
             try {
               const respuesta = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
@@ -2394,6 +2356,7 @@ export function DeportistasPage() {
               setMembresiasCliente(actualizadas);
               const contrato = actualizadas.find((item) => String(item.id) === String(membresiaForm.id));
               if (contrato) {
+                setMembresiaDetalle(contrato);
                 setMembresiaForm((anterior) => ({ ...anterior,
                   estado: contrato.estado, fecha_fin: limpiarFechaMembresia(contrato.fecha_fin),
                   periodos: contrato.periodos || anterior.periodos, cuotas: contrato.cuotas || anterior.cuotas,
@@ -2405,28 +2368,7 @@ export function DeportistasPage() {
           }}
         />
       )}
-      {vistaMembresia === 'historial' && historialMembresiaSeleccionada && (
-        <Box sx={{ ...formStyles.seccion, mt: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            gap: 2, width: '100%', mb: 2 }}>
-            <Box sx={{ minWidth: 0, flex: '1 1 auto' }}>
-              <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 0.5 }}>
-                Historial del contrato
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-                {historialMembresiaSeleccionada.codigo_contrato
-                  || historialMembresiaSeleccionada.plan_nombre
-                  || 'Membresía'} · Consulta de condiciones y modificaciones
-              </Typography>
-            </Box>
-            <BotonVolver sx={{ flex: '0 0 auto', ml: 'auto' }} onClick={() => {
-              setHistorialMembresiaSeleccionada(null);
-              setVistaMembresia('listado');
-            }} />
-          </Box>
-          <HistorialIntegralMembresia membresia={historialMembresiaSeleccionada} />
-        </Box>
-      )}
+
     </Stack>
   );
 
