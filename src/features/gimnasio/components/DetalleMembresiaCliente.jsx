@@ -123,14 +123,14 @@ export function DetalleMembresiaCliente({
                 {referenciaContrato}
               </Typography>
             </Box>
-            <Stack direction="row" alignItems="center" gap={1}
-              sx={{ flexShrink: 0, maxWidth: '100%' }}>
+            <Stack direction="row" alignItems="center" spacing={2}
+              sx={{ flexShrink: 0, maxWidth: '100%', columnGap: 2 }}>
               <StatusChip estado={String(membresia.estado || '').toLowerCase()}
                 sx={{ height: 34, borderRadius: 1, fontWeight: 700,
                   '& .MuiChip-label': { px: 1.25, fontSize: 12, textTransform: 'capitalize' } }} />
               <BotonVolver onClick={onVolver} sx={{
                 height: 34, minHeight: 34, minWidth: 0, width: 'auto',
-                px: 1.25, fontSize: 12, whiteSpace: 'nowrap',
+                px: 1.25, ml: 1, fontSize: 12, whiteSpace: 'nowrap',
               }} />
             </Stack>
           </Stack>
