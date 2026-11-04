@@ -44,7 +44,7 @@ const mensajeError = (e) => {
  * Fase 3: previsualización de cuotas, ventas y pagos, y congelación financiera
  * validada exclusivamente por Laravel. Los pagos confirmados son inmutables.
  */
-export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }) {
+export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, integrado = false }) {
   const [ciclo, setCiclo] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [operacion, setOperacion] = useState('');
@@ -312,8 +312,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
   const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar'].includes(operacion);
 
-  return <Box sx={{ ...formStyles.seccion, mt: 1.5, p: { xs: 1.5, sm: 2 } }}>
-    <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 1.5, width: '100%' }}>
+  return <Box sx={integrado ? { width: '100%', minWidth: 0 } : {
+    ...formStyles.seccion, mt: 1.5, p: { xs: 1.5, sm: 2 },
+  }}>
+    {(!integrado || mostrarFormulario) && <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
           {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : 'Gestión del ciclo de vida'}
@@ -322,7 +324,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
       <Box sx={{ ml: 'auto', flexShrink: 0 }}>
         <BotonVolver onClick={mostrarFormulario ? () => { setOperacion(''); setEditandoSuspensionId(null); setPreview(null); setError(''); } : onVolver}/>
       </Box>
-    </Stack>
+    </Stack>}
     {cargando && <CircularProgress size={23}/>}
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
     {exito && <Alert severity="success" sx={{ mb: 2 }}>{exito}</Alert>}
