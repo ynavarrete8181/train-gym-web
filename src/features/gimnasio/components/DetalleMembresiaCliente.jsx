@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Box, Button, Divider, Stack, Typography } from '@mui/material';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
@@ -11,6 +10,7 @@ import { HistorialIntegralMembresia } from './HistorialIntegralMembresia.jsx';
 import { RenovacionesMembresiaCliente } from './RenovacionesMembresiaCliente.jsx';
 import { GestionCicloVidaMembresia } from './GestionCicloVidaMembresia.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
@@ -29,10 +29,10 @@ const importe = (valor) => {
 };
 
 const SECCIONES_MEMBRESIA = [
-  { id: 'informacion', nombre: 'Información del contrato', descripcion: 'Plan, modalidad y vigencia', Icono: CardMembershipOutlinedIcon },
-  { id: 'congelacion', nombre: 'Congelación y reactivación', descripcion: 'Suspensiones y reactivaciones', Icono: AcUnitOutlinedIcon },
-  { id: 'renovaciones', nombre: 'Renovaciones', descripcion: 'Períodos y condiciones', Icono: AutorenewOutlinedIcon },
-  { id: 'historial', nombre: 'Historial integral', descripcion: 'Movimientos y auditoría', Icono: HistoryOutlinedIcon },
+  { id: 'informacion', nombre: 'Información', descripcion: 'Datos del contrato', Icono: CardMembershipOutlinedIcon },
+  { id: 'congelacion', nombre: 'Congelaciones', descripcion: 'Suspensiones y reactivaciones', Icono: AcUnitOutlinedIcon },
+  { id: 'renovaciones', nombre: 'Renovaciones', descripcion: 'Períodos registrados', Icono: AutorenewOutlinedIcon },
+  { id: 'historial', nombre: 'Historial', descripcion: 'Movimientos', Icono: HistoryOutlinedIcon },
 ];
 
 function DatoContrato({ titulo, valor }) {
@@ -114,31 +114,29 @@ export function DetalleMembresiaCliente({
       <Stack spacing={2} sx={{ minWidth: 0 }}>
         <Box sx={formStyles.seccion}>
           <Stack direction={{ xs: 'column', sm: 'row' }}
-            alignItems={{ xs: 'stretch', sm: 'center' }}
-            justifyContent="space-between" gap={1.5} sx={{ mb: 2 }}>
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between" gap={1.5} sx={{ mb: 1.75 }}>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={800}>Detalle de membresía</Typography>
+              <Typography variant="subtitle1" fontWeight={800}>Membresía</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
                 {nombre}
+                {membresia.codigo_contrato ? ` · ${membresia.codigo_contrato}` : ''}
               </Typography>
-              {membresia.codigo_contrato && <Typography variant="caption" display="block" color="text.secondary">
-                Contrato: {membresia.codigo_contrato}
-              </Typography>}
             </Box>
-            <Stack direction="row" alignItems="center" justifyContent={{ xs: 'space-between', sm: 'flex-end' }}
-              gap={1} sx={{ flexShrink: 0 }}>
+            <Stack direction="row" alignItems="center" gap={1}
+              sx={{ flexShrink: 0, maxWidth: '100%' }}>
               <StatusChip estado={String(membresia.estado || '').toLowerCase()} />
-              <Button variant="outlined" startIcon={<ArrowBackOutlinedIcon />}
-                onClick={onVolver} sx={{ ...dbanuStyles.backButton, whiteSpace: 'nowrap' }}>
-                Volver al listado
-              </Button>
+              <BotonVolver onClick={onVolver} sx={{
+                height: 34, minHeight: 34, minWidth: 0, width: 'auto',
+                px: 1.25, fontSize: 12, whiteSpace: 'nowrap',
+              }} />
             </Stack>
           </Stack>
-          <Divider sx={{ mb: 2 }} />
+          <Divider sx={{ mb: 1.75 }} />
 
           {seccion === 'informacion' && <>
             <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 2 }}>
-              Información de la asignación
+              Datos del contrato
             </Typography>
             <Box sx={{
               display: 'grid',
@@ -150,7 +148,6 @@ export function DetalleMembresiaCliente({
               <DatoContrato titulo="Inicio de vigencia" valor={fecha(membresia.fecha_inicio)} />
               <DatoContrato titulo="Fin de vigencia" valor={fecha(membresia.fecha_fin)} />
               <DatoContrato titulo="Precio registrado" valor={importe(membresia.precio_aplicado)} />
-              <DatoContrato titulo="Estado contractual" valor={membresia.estado || '—'} />
             </Box>
             <Stack direction="row" justifyContent="flex-end">
               <Button variant="outlined" startIcon={<EditOutlinedIcon />}
@@ -174,7 +171,7 @@ export function DetalleMembresiaCliente({
 
           {seccion === 'historial' && <>
             <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 1.5 }}>
-              Historial integral del contrato
+              Movimientos del contrato
             </Typography>
             <HistorialIntegralMembresia membresia={membresia} />
           </>}
