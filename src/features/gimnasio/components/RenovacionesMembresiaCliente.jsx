@@ -25,8 +25,11 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   const [vista, setVista] = useState('listado');
   const [seleccionada, setSeleccionada] = useState(null);
   const id = membresia?.id;
-  const congelada = String(membresia?.estado || '').toUpperCase() === 'CONGELADA';
-  const puedeRenovar = membresia?.cantidad_periodos_contratados != null && !congelada;
+  const estadoContrato = String(membresia?.estado || '').toUpperCase();
+  const puedeRenovar = estadoContrato === 'ACTIVA' && membresia?.cantidad_periodos_contratados != null;
+  const motivoBloqueo = estadoContrato !== 'ACTIVA'
+    ? 'La membresía debe estar activa para renovarse.'
+    : 'Este contrato no admite renovación manual por períodos.';
 
   const cargar = useCallback(async () => {
     if (!id) return;
@@ -98,8 +101,10 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
     </Stack>}
     <GestionToolbar total={filtradas.length} busqueda={busqueda}
       onBusqueda={valor => { setBusqueda(valor); setPagina(1); }}
-      acciones={<Button startIcon={<AddOutlinedIcon />} disabled={!puedeRenovar}
-        onClick={() => setVista('formulario')}>Añadir</Button>} />
+      acciones={<Tooltip title={puedeRenovar ? 'Añadir renovación' : motivoBloqueo}>
+        <span><Button startIcon={<AddOutlinedIcon />} disabled={!puedeRenovar}
+          onClick={() => setVista('formulario')}>Añadir</Button></span>
+      </Tooltip>} />
     <TablaGestion total={historial.length} filtrados={filtradas.length} cargando={cargando}
       page={paginaActual} onPageChange={setPagina} rowsPerPage={porPagina}
       onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
@@ -133,8 +138,8 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
         </TableRow>}
       </TableBody>
     </TablaGestion>
-    {congelada && <Typography variant="caption" color="text.secondary" sx={{ mt: 1.25, display: 'block' }}>
-      Reactiva la membresía antes de renovarla.
+    {!puedeRenovar && <Typography variant="caption" color="text.secondary" sx={{ mt: 1.25, display: 'block' }}>
+      {motivoBloqueo}
     </Typography>}
   </Box>;
 }
