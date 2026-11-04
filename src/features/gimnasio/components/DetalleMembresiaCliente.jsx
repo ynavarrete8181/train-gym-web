@@ -8,6 +8,8 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { HistorialIntegralMembresia } from './HistorialIntegralMembresia.jsx';
+import { RenovacionesMembresiaCliente } from './RenovacionesMembresiaCliente.jsx';
+import { GestionCicloVidaMembresia } from './GestionCicloVidaMembresia.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -48,7 +50,7 @@ function DatoContrato({ titulo, valor }) {
  * Todas las operaciones comerciales continúan autorizándose en Laravel.
  */
 export function DetalleMembresiaCliente({
-  membresia, onVolver, onEditar, onGestionarCicloVida, onRenovar,
+  membresia, onVolver, onEditar, onActualizado,
 }) {
   const [seccion, setSeccion] = useState('informacion');
 
@@ -56,8 +58,6 @@ export function DetalleMembresiaCliente({
 
   if (!membresia) return null;
 
-  const congelada = String(membresia.estado || '').toUpperCase() === 'CONGELADA';
-  const tienePeriodos = membresia.cantidad_periodos_contratados != null;
   const nombre = [membresia.plan_nombre, membresia.modalidad_nombre].filter(Boolean).join(' · ') || 'Membresía';
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
@@ -160,38 +160,17 @@ export function DetalleMembresiaCliente({
             </Stack>
           </>}
 
-          {seccion === 'congelacion' && <>
-            <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 1 }}>
-              Congelación y reactivación
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Consulta las suspensiones del contrato, gestiona las fechas autorizadas y registra reactivaciones.
-            </Typography>
-            <Button variant="outlined" startIcon={<AcUnitOutlinedIcon />}
-              onClick={() => onGestionarCicloVida(membresia)} sx={dbanuStyles.secondaryButtonRevive}>
-              Gestionar congelación y reactivación
-            </Button>
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 2 }}>
-              Las fechas y los efectos sobre cuotas y vigencia son validados por Laravel.
-            </Typography>
-          </>}
+          {seccion === 'congelacion' && <GestionCicloVidaMembresia
+            membresia={membresia}
+            integrado
+            onVolver={() => setSeccion('informacion')}
+            onActualizado={onActualizado}
+          />}
 
-          {seccion === 'renovaciones' && <>
-            <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 1 }}>Renovaciones</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Gestiona los siguientes períodos y sus condiciones comerciales sin sobrescribir los períodos anteriores.
-            </Typography>
-            {tienePeriodos ? <Button variant="outlined" startIcon={<AutorenewOutlinedIcon />}
-              disabled={congelada} onClick={() => onRenovar(membresia)}
-              sx={dbanuStyles.secondaryButtonRevive}>
-              Renovar membresía
-            </Button> : <Typography variant="body2" color="text.secondary">
-              Este contrato no dispone de renovación manual por períodos.
-            </Typography>}
-            {congelada && <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1.5 }}>
-              Primero debes reactivar la membresía para poder renovarla.
-            </Typography>}
-          </>}
+          {seccion === 'renovaciones' && <RenovacionesMembresiaCliente
+            membresia={membresia}
+            onActualizado={onActualizado}
+          />}
 
           {seccion === 'historial' && <>
             <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 1.5 }}>
