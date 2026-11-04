@@ -3,11 +3,11 @@ import {
   Divider, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   TextField, Typography,
 } from '@mui/material';
-import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -26,13 +26,29 @@ const estadoTexto = {
 
 function Indicador({ etiqueta, valor, destacado = false }) {
   return <Box sx={{
-    minWidth: 0, p: 1.5, borderRadius: 1.5,
+    minWidth: 0, px: 1.3, py: 0.75,
+    minHeight: 56, borderRadius: 0.5,
     border: `1px solid ${destacado ? uiTokens.colores.acentoBorde : uiTokens.colores.borde}`,
     bgcolor: destacado ? uiTokens.colores.acentoSuave : 'background.paper',
+    display: 'flex', flexDirection: 'column', justifyContent: 'center',
   }}>
-    <Typography variant="caption" color="text.secondary" display="block">{etiqueta}</Typography>
-    <Typography variant="subtitle1" fontWeight={900} sx={{ overflowWrap: 'anywhere' }}>
+    <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.25, fontSize: 11 }}>
+      {etiqueta}
+    </Typography>
+    <Typography variant="body2" fontWeight={800} sx={{ mt: 0.25, overflowWrap: 'anywhere', lineHeight: 1.3 }}>
       {valor}
+    </Typography>
+  </Box>;
+}
+
+function TituloReporte({ children }) {
+  return <Box sx={{
+    bgcolor: 'action.hover',
+    border: '1px solid', borderColor: 'divider',
+    borderRadius: 0.5, px: 1.25, py: 0.7, mb: 1,
+  }}>
+    <Typography variant="caption" fontWeight={900} color="text.primary" sx={{ letterSpacing: 0.2 }}>
+      {children}
     </Typography>
   </Box>;
 }
@@ -101,7 +117,7 @@ export function DialogCongelacionMembresia({
       maxHeight: '90vh',
       m: { xs: 1.5, sm: 3 },
     } }}>
-    <DialogTitle id="dialog-congelacion-titulo" sx={{ ...formStyles.modalHeader, py: 1.75 }}>
+    <DialogTitle id="dialog-congelacion-titulo" sx={{ ...formStyles.modalHeader, py: 1.25 }}>
       <Box sx={{ ...formStyles.modalIcono, bgcolor: uiTokens.colores.acentoSuave,
         color: uiTokens.colores.textoFuerte, boxShadow: 'none',
         border: `1px solid ${uiTokens.colores.acentoBorde}` }}>
@@ -121,22 +137,20 @@ export function DialogCongelacionMembresia({
         label={estadoLabel} />
     </DialogTitle>
     <Divider />
-    <DialogContent sx={{ p: { xs: 2, sm: 2.5 } }}>
-      <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1.25 }}>
-        Período y modalidad
-      </Typography>
+    <DialogContent sx={{ px: { xs: 1.5, sm: 2.5 }, py: { xs: 1.5, sm: 1.75 } }}>
+      <TituloReporte>Período y modalidad</TituloReporte>
       <Box sx={{ display: 'grid',
         gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))', sm: 'repeat(4, minmax(0,1fr))' },
-        gap: 1.25, mb: 2 }}>
+        gap: 1, mb: 1.5 }}>
         <Indicador etiqueta="Desde" valor={fecha(inicio)}/>
         <Indicador etiqueta="Hasta (incluido)" valor={fecha(fin)}/>
         <Indicador etiqueta="Días previstos" valor={dias === '—' ? dias : `${dias} días`}/>
         <Indicador etiqueta="Modalidad" valor={modalidad === 'TIEMPO' ? 'Tiempo' : 'Facturación'}/>
       </Box>
       {!esPrevia && !esExito && (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1.25 }}>
           {finalizada ? <>
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))' }, gap: 1.25 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,minmax(0,1fr))' }, gap: 1 }}>
               <Indicador etiqueta="Días realmente reconocidos"
                 valor={diasReconocidos === '—' ? diasReconocidos : `${diasReconocidos} días`} destacado/>
               <Indicador etiqueta="Fecha efectiva de regreso" valor={fecha(suspension?.fecha_regreso)}/>
@@ -150,17 +164,15 @@ export function DialogCongelacionMembresia({
           </Typography>}
         </Box>
       )}
-      <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1.25 }}>
-        Vigencia de la membresía
-      </Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))' }, gap: 1.25 }}>
+      <TituloReporte>Vigencia contractual</TituloReporte>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))' }, gap: 1 }}>
         <Indicador etiqueta="Vencimiento anterior" valor={fecha(fechaOriginal)}/>
         <Indicador etiqueta={finalizada ? 'Nuevo vencimiento efectivo'
           : cancelada ? 'Proyección no aplicada' : 'Vencimiento proyectado'}
           valor={cancelada ? 'Sin cambio por esta solicitud' : fecha(fechaAjustada)}
           destacado={finalizada}/>
       </Box>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.6, lineHeight: 1.3 }}>
         {cancelada ? 'La solicitud no modificó la vigencia ni los cobros.'
           : finalizada ? 'La vigencia efectiva quedó registrada al reactivar. Los pagos confirmados se conservan.'
             : modalidad === 'TIEMPO'
@@ -168,19 +180,19 @@ export function DialogCongelacionMembresia({
               : 'La reprogramación de cuotas depende de las validaciones financieras de Laravel.'}
       </Typography>
 
-      {(motivo || movimiento?.motivo) && <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 0.75 }}>
-          Motivo registrado
-        </Typography>
-        <Box sx={{ p: 1.5, border: `1px solid ${uiTokens.colores.borde}`,
-          borderRadius: 1.5, bgcolor: uiTokens.colores.primarioSuave }}>
-          <Typography variant="body2">{motivo || movimiento?.motivo}</Typography>
+      {(motivo || movimiento?.motivo) && <Box sx={{ mt: 1.25 }}>
+        <TituloReporte>Motivo registrado</TituloReporte>
+        <Box sx={{ px: 1.3, py: 0.9, border: `1px solid ${uiTokens.colores.borde}`,
+          borderRadius: 0.5, bgcolor: uiTokens.colores.primarioSuave }}>
+          <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{motivo || movimiento?.motivo}</Typography>
         </Box>
       </Box>}
 
-      {!esPrevia && !esExito && <Box sx={{ mt: 2 }}>
-        <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1 }}>Trazabilidad</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))' }, gap: 1.25 }}>
+      {!esPrevia && !esExito && <Box sx={{ mt: 1.25 }}>
+        <TituloReporte>Trazabilidad</TituloReporte>
+        <Box sx={{ display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', lg: 'repeat(4,minmax(0,1fr))' },
+          gap: 1 }}>
           <Indicador etiqueta="Registrado por" valor={suspension?.autor_registro || movimiento?.autor_nombre || 'Usuario no disponible'}/>
           <Indicador etiqueta="Fecha de registro" valor={fecha(suspension?.registrado_at || movimiento?.created_at)}/>
           {suspension?.fecha_cierre && <Indicador etiqueta="Cerrado por"
@@ -188,7 +200,10 @@ export function DialogCongelacionMembresia({
           {suspension?.fecha_cierre && <Indicador etiqueta="Fecha del movimiento de cierre"
             valor={fecha(suspension.fecha_cierre)}/>}
         </Box>
-        {suspension?.motivo_cierre && <Box sx={{ mt: 1.25 }}>
+        {suspension?.motivo_cierre && <Box sx={{
+          mt: 1, border: '1px solid', borderColor: 'divider', borderRadius: 0.5,
+          px: 1.3, py: 0.8,
+        }}>
           <Typography variant="caption" color="text.secondary">
             {cancelada ? 'Motivo de cancelación' : 'Justificación de reactivación'}
           </Typography>
@@ -197,20 +212,17 @@ export function DialogCongelacionMembresia({
       </Box>}
 
       {financiero && <>
-        <Divider sx={{ my: 2 }}/>
-        <Typography variant="subtitle2" fontWeight={850} sx={{ mb: 1.25 }}>
-          Ventas y Cartera
-        </Typography>
+        <Box sx={{ mt: 1.25 }}><TituloReporte>Ventas y cartera</TituloReporte></Box>
         <Box sx={{ display: 'grid',
           gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))', md: 'repeat(3, minmax(0,1fr))' },
-          gap: 1.25 }}>
+          gap: 1 }}>
           <Indicador etiqueta="Pagos confirmados" valor={dinero(financiero.pagos_confirmados)}/>
           <Indicador etiqueta="Saldo emitido" valor={dinero(financiero.deuda_emitida)}/>
           <Indicador etiqueta="Cuotas reprogramables" valor={financiero.cuotas_reprogramables ?? 0}/>
         </Box>
         {(financiero.cuotas || []).length > 0 && <>
-          <Typography variant="subtitle2" fontWeight={800} sx={{ mt: 2, mb: 1 }}>Detalle de cuotas</Typography>
-          <TableContainer sx={{ border: `1px solid ${uiTokens.colores.borde}`, borderRadius: 1.5 }}>
+          <Box sx={{ mt: 1.25 }}><TituloReporte>Detalle de cuotas</TituloReporte></Box>
+          <TableContainer sx={{ border: `1px solid ${uiTokens.colores.borde}`, borderRadius: 0.5 }}>
             <Table size="small" sx={dbanuStyles.table}>
               <TableHead><TableRow>
                 <TableCell>Cuota</TableCell><TableCell>Emisión</TableCell>
@@ -256,15 +268,16 @@ export function DialogCongelacionMembresia({
     </DialogContent>
     <Divider />
     <DialogActions sx={{ ...dbanuStyles.dialogActions, flexWrap: 'wrap', gap: 1.5 }}>
-      <Button variant="outlined" startIcon={<CloseOutlinedIcon/>}
-        sx={{ ...dbanuStyles.backButton }} onClick={onCerrar} disabled={procesando}>Cerrar</Button>
+      <BotonCancelar texto="Cerrar" onClick={onCerrar} disabled={procesando}/>
       {puedeEditar && onEditarProgramada && <Button variant="outlined"
-        startIcon={<EditOutlinedIcon/>} disabled={procesando}
-        onClick={onEditarProgramada}>Editar fechas</Button>}
+        startIcon={<EditOutlinedIcon/>} sx={dbanuStyles.secondaryButtonRevive}
+        disabled={procesando} onClick={onEditarProgramada}>Editar fechas</Button>}
       {puedeCancelar && <Button variant="outlined" color="error"
+        sx={dbanuStyles.cancelButton}
         disabled={procesando || motivoCancelacion.trim().length < 8}
         onClick={onCancelarProgramada}>Cancelar programación</Button>}
-      {esExito && onVerDetalle && <Button variant="outlined" onClick={onVerDetalle}>
+      {esExito && onVerDetalle && <Button variant="outlined"
+        sx={dbanuStyles.secondaryButtonRevive} onClick={onVerDetalle}>
         Ver detalle
       </Button>}
       {esPrevia && (preview?.programable || preview?.confirmable) && onGuardar && <BotonGuardar
