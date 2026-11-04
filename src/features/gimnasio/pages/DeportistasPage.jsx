@@ -28,6 +28,7 @@ import ContactPhoneOutlinedIcon from '@mui/icons-material/ContactPhoneOutlined';
 import SportsIcon from '@mui/icons-material/Sports';
 import CardMembershipOutlinedIcon from '@mui/icons-material/CardMembershipOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
@@ -2289,7 +2290,7 @@ export function DeportistasPage() {
               options={opcionesExcel(membresiasCliente, (m) => textoMembresia(m, campo))}>
               {{ plan: 'Plan', vigencia: 'Vigencia', precio: 'Precio', estado: 'Estado' }[campo]}
             </FilterHeaderCell>)}
-            <TableCell align="center" sx={{ minWidth: 172 }}>Acciones</TableCell>
+            <TableCell align="center" sx={{ width: 116, minWidth: 116 }}>Acciones</TableCell>
           </TableRow></TableHead>
           <TableBody>
             {membresiasFiltradas.slice((paginaMembresia - 1) * porPaginaMembresia, paginaMembresia * porPaginaMembresia).map((m) => <TableRow key={m.id} hover>
@@ -2298,7 +2299,7 @@ export function DeportistasPage() {
               <TableCell>{textoMembresia(m, 'vigencia')}</TableCell>
               <TableCell>{textoMembresia(m, 'precio')}</TableCell>
               <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
-              <TableCell align="center" sx={{ minWidth: 172, whiteSpace: 'nowrap' }}>
+              <TableCell align="center" sx={{ width: 116, minWidth: 116, whiteSpace: 'nowrap' }}>
                 <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ flexWrap: 'nowrap' }}>
                   <Tooltip title="Editar membresía">
                     <IconButton aria-label="Editar membresía" sx={{ ...dbanuStyles.actionEdit, m: 0, flexShrink: 0 }}
@@ -2306,13 +2307,16 @@ export function DeportistasPage() {
                       <EditOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
-                  <Button size="small" variant="outlined" sx={{ textTransform: 'none', fontWeight: 700 }}
-                    onClick={() => {
-                      setMembresiaDetalle(m);
-                      setVistaMembresia('detalle');
-                    }}>
-                    Ver detalle
-                  </Button>
+                  <Tooltip title="Ver detalle de membresía">
+                    <IconButton aria-label="Ver detalle de membresía"
+                      sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
+                      onClick={() => {
+                        setMembresiaDetalle(m);
+                        setVistaMembresia('detalle');
+                      }}>
+                      <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  </Tooltip>
                 </Stack>
               </TableCell>
             </TableRow>)}
