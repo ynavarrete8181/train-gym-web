@@ -27,6 +27,7 @@ const hoy = () => new Date().toISOString().slice(0, 10);
 const fecha = (valor) => valor ? String(valor).slice(0, 10) : '';
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
+const youtubeId = (url = '') => String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^?&/]{11})/)?.[1] || null;
 
 const configs = {
   ejercicios: {
@@ -254,9 +255,9 @@ function Formulario({ tipo, formData, catalogos, onChange, videoArchivo, onVideo
           <input type="file" hidden accept="video/mp4,video/webm,video/quicktime" onChange={(e) => onVideoArchivo(e.target.files?.[0] || null)} />
         </Button>
         {videoArchivo && <Typography variant="caption" sx={{ gridColumn: { md: 'span 3' } }}>Video seleccionado: {(videoArchivo.size / 1024 / 1024).toFixed(1)} MB · máximo 50 MB. Se subirá al guardar el ejercicio.</Typography>}
-        {(formData.video_url || formData.url_recurso) && <Box sx={{ gridColumn: { md: 'span 3' } }}>
+        {(videoArchivo || formData.video_url || formData.url_recurso) && <Box sx={{ gridColumn: { md: 'span 3' } }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>Ejemplo del ejercicio</Typography>
-          {formData.video_url ? <Box component="video" controls preload="metadata" src={formData.video_url} sx={{ width: '100%', maxWidth: 480, borderRadius: 1 }} /> : <Button component="a" target="_blank" rel="noopener noreferrer" href={formData.url_recurso} variant="outlined" size="small">Ver video del ejercicio</Button>}
+          <VistaPreviaEjercicioVideo archivo={videoArchivo} videoUrl={formData.video_url} recursoUrl={formData.url_recurso} />
         </Box>}
         <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
         <TextField label="Instrucciones" name="instrucciones" value={formData.instrucciones || ''} onChange={onChange} size="small" multiline minRows={3} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
@@ -331,6 +332,20 @@ function Formulario({ tipo, formData, catalogos, onChange, videoArchivo, onVideo
       <TextField label="Observaciones" name="observaciones" value={formData.observaciones || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
     </Box>
   );
+}
+
+function VistaPreviaEjercicioVideo({ archivo, videoUrl, recursoUrl }) {
+  const archivoUrl = useMemo(() => archivo ? URL.createObjectURL(archivo) : '', [archivo]);
+  useEffect(() => () => { if (archivoUrl) URL.revokeObjectURL(archivoUrl); }, [archivoUrl]);
+  const src = archivoUrl || videoUrl || recursoUrl || '';
+  const idYoutube = youtubeId(src);
+  const estilo = { width: '100%', maxWidth: 420, height: 236, borderRadius: 2, bgcolor: 'black', display: 'block' };
+
+  if (idYoutube) {
+    return <Box component="iframe" src={`https://www.youtube.com/embed/${idYoutube}?rel=0`} title="Vista previa del ejercicio" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen sx={{ ...estilo, border: 0 }} />;
+  }
+
+  return <Box component="video" controls preload="metadata" src={src} sx={estilo} />;
 }
 
 function TablaEntrenamiento({ items, columnas, meta, cargando, onEditar, onPageChange, onRowsPerPageChange }) {

@@ -239,6 +239,19 @@ export const gimnasioServicio = {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/cancelar`, { motivo });
     return data.datos;
   },
+  previsualizarProrrogaCongelacion: async (id, suspensionId, fechaFin) => {
+    const { data } = await api.post(
+      `/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/preview-prorroga`,
+      { fecha_fin: fechaFin }
+    );
+    return data.datos;
+  },
+  prorrogarCongelacion: async (id, suspensionId, payload) => {
+    const { data } = await api.put(
+      `/base/gimnasio/membresias/${id}/congelacion/${suspensionId}/prorroga`, payload
+    );
+    return data.datos;
+  },
   congelarMembresia: async (id, payload) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion`, payload);
     return data.datos;
@@ -250,6 +263,14 @@ export const gimnasioServicio = {
   reactivarMembresia: async (id, motivo, motivoCodigo = null) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/reactivacion`,
       { motivo, motivo_codigo: motivoCodigo });
+    return data.datos;
+  },
+  previsualizarCancelacionMembresia: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}/cancelacion/preview`);
+    return data.datos;
+  },
+  cancelarContratoMembresia: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/cancelacion`, payload);
     return data.datos;
   },
   obtenerHistorialIntegralMembresia: async (id) => {

@@ -1,6 +1,18 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const entrenamientoServicio = {
+  obtenerSesiones: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/entrenamiento/sesiones', { params });
+    return data;
+  },
+  obtenerPizarra: async (params) => {
+    const { data } = await api.get('/base/entrenamiento/pizarra', { params });
+    return data;
+  },
+  obtenerPizarraGeneral: async (params) => {
+    const { data } = await api.get('/base/entrenamiento/pizarra-general', { params });
+    return data;
+  },
   obtenerDeportistasEvaluaciones: async () => {
     const { data } = await api.get('/base/entrenamiento/evaluaciones-fisicas/deportistas');
     return data;

@@ -3,6 +3,7 @@ import { Alert, Box, Button, Chip, CircularProgress, Divider, IconButton, MenuIt
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
@@ -56,6 +57,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   const [motivoCodigo, setMotivoCodigo] = useState('');
   const [motivosCatalogo, setMotivosCatalogo] = useState([]);
   const [previewReactivacion, setPreviewReactivacion] = useState(null);
+  const [previewCancelacion, setPreviewCancelacion] = useState(null);
   const [inicio, setInicio] = useState(fechaLocal());
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
@@ -230,6 +232,71 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
     finally { setProcesando(false); }
   };
 
+  const prepararProrroga = (suspension) => {
+    setEditandoSuspensionId(suspension.id);
+    setInicio(String(suspension.fecha_inicio).slice(0, 10));
+    setFin(String(suspension.fecha_fin_prevista).slice(0, 10));
+    setMotivoCodigo('VACACIONES'); setMotivo(''); setPreview(null);
+    setError(''); setExito(''); setOperacion('prorrogar');
+  };
+
+  const simularProrroga = async () => {
+    setProcesando(true); setError(''); setPreview(null);
+    try {
+      setPreview(await gimnasioServicio.previsualizarProrrogaCongelacion(
+        membresia.id, editandoSuspensionId, fin
+      ));
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
+  const guardarProrroga = async () => {
+    if (!motivoCodigo || motivo.trim().length < 8 || !fin) {
+      setError('Selecciona el motivo, la nueva fecha y escribe una justificación de al menos 8 caracteres.');
+      return;
+    }
+    setProcesando(true); setError('');
+    try {
+      const resultado = await gimnasioServicio.prorrogarCongelacion(membresia.id, editandoSuspensionId, {
+        fecha_fin: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo,
+      });
+      setExito(`Prórroga registrada: ${resultado.dias_adicionales} días adicionales; regreso previsto después del ${fechaLegible(resultado.fecha_fin_propuesta)}.`);
+      setOperacion(''); setEditandoSuspensionId(null); setPreview(null); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
+  const simularCancelacion = async () => {
+    setProcesando(true); setError('');
+    try { setPreviewCancelacion(await gimnasioServicio.previsualizarCancelacionMembresia(membresia.id)); }
+    catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
+  const cancelarContrato = async () => {
+    if (!motivoCodigo || motivo.trim().length < 8) {
+      setError('Selecciona el motivo de cierre y escribe una justificación de al menos 8 caracteres.');
+      return;
+    }
+    const confirmado = await confirmarAccion({
+      titulo: 'Cancelar contrato de membresía',
+      texto: 'Se bloquearán nuevos accesos. Ventas, pagos, comprobantes y deuda permanecerán en el historial.',
+      textoConfirmar: 'Sí, cancelar contrato', icono: 'warning',
+    });
+    if (!confirmado) return;
+    setProcesando(true); setError('');
+    try {
+      await gimnasioServicio.cancelarContratoMembresia(membresia.id, {
+        motivo: motivo.trim(), motivo_codigo: motivoCodigo,
+      });
+      setExito('Contrato cancelado con trazabilidad. El historial financiero fue conservado.');
+      setOperacion(''); setPreviewCancelacion(null); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
   const estado = String(ciclo?.estado || membresia?.estado || '').toUpperCase();
   const suspensiones = ciclo?.suspensiones || [];
   const tienePendiente = suspensiones.some(s => ['PROGRAMADA', 'VIGENTE'].includes(s.estado));
@@ -243,13 +310,13 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
   ].some(value => String(value || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC'))));
   const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtradas.length / porPagina) || 1));
   const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
-  const mostrarFormulario = ['congelar', 'editar', 'reactivar'].includes(operacion);
+  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar'].includes(operacion);
 
   return <Box sx={{ ...formStyles.seccion, mt: 1.5, p: { xs: 1.5, sm: 2 } }}>
     <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
-          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : 'Gestión de congelaciones'}
+          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : 'Gestión del ciclo de vida'}
         </Typography>
       </Box>
       <Box sx={{ ml: 'auto', flexShrink: 0 }}>
@@ -317,6 +384,15 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
                     </span>
                   </Tooltip>
                 )}
+                {s.estado === 'VIGENTE' && s.tipo === 'TIEMPO' && (
+                  <Tooltip title="Extender fecha autorizada">
+                    <span><IconButton size="small" aria-label="Prorrogar congelación"
+                      sx={{ ...dbanuStyles.actionEdit, mr: 0 }} disabled={procesando}
+                      onClick={() => prepararProrroga(s)}>
+                      <EventRepeatOutlinedIcon fontSize="small"/>
+                    </IconButton></span>
+                  </Tooltip>
+                )}
               </TableCell>
             </TableRow>)}
             {!filtradas.length && <TableRow><TableCell colSpan={6} align="center">
@@ -326,13 +402,20 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
             </TableCell></TableRow>}
           </TableBody>
         </TablaGestion>
-        {puedeReactivar && <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
+          {ciclo?.puede_cancelar_contrato && <Button color="error" variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={() => { setOperacion('cancelar'); setMotivo(''); setMotivoCodigo('RETIRO_VOLUNTARIO'); setPreviewCancelacion(null); setError(''); }}>
+            Cancelar contrato
+          </Button>}
+        {puedeReactivar && <Box>
           <Button variant="outlined"
             sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
             onClick={() => { setOperacion('reactivar'); setMotivo(''); setMotivoCodigo('REGRESO'); setError(''); setPreviewReactivacion(null); }}>
             Reactivar membresía
           </Button>
         </Box>}
+        </Box>
       </>}
       {(operacion === 'congelar' || operacion === 'editar') && <Box sx={{ mb: 0 }}>
         {operacion === 'editar' && <Alert severity="info" sx={{ mb: 2 }}>
@@ -429,6 +512,54 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado }
           <BotonGuardar texto="Guardar" guardando={procesando}
             disabled={!motivoCodigo || motivo.trim().length < 8}
             onClick={reactivar}/>
+        </Box>
+      </Box>}
+      {operacion === 'prorrogar' && <Box>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Amplía la ausencia autorizada sin cambiar todavía el vencimiento del contrato ni sus pagos.
+          La compensación definitiva se aplicará al reactivar.
+        </Alert>
+        <TextField select size="small" fullWidth label="Motivo principal" value={motivoCodigo}
+          onChange={e => setMotivoCodigo(e.target.value)}>
+          {motivosCatalogo.filter(m => m.operacion === 'CONGELAR').map(m =>
+            <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
+        </TextField>
+        <TextField size="small" label="Nueva fecha hasta (incluido)" type="date" required fullWidth sx={{ mt: 2 }}
+          value={fin} onChange={e => { setFin(e.target.value); setPreview(null); }}
+          slotProps={{ inputLabel: { shrink: true } }}/>
+        <TextField multiline minRows={2} size="small" fullWidth label="Justificación de la prórroga"
+          required sx={{ mt: 2 }} value={motivo} onChange={e => setMotivo(e.target.value)}/>
+        {preview && <Alert severity="warning" sx={{ mt: 2 }}>
+          Se añadirán <strong>{preview.dias_adicionales} días</strong>. Total autorizado: {preview.dias_totales} días.
+          Vencimiento proyectado al regresar: <strong>{fechaLegible(preview.fecha_fin_ajustada)}</strong>.
+        </Alert>}
+        <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
+          <BotonVistaPrevia disabled={!fin || procesando} cargando={procesando && !preview} onClick={simularProrroga}/>
+          <BotonGuardar texto="Guardar prórroga" guardando={procesando}
+            disabled={!motivoCodigo || !fin || motivo.trim().length < 8} onClick={guardarProrroga}/>
+        </Box>
+      </Box>}
+      {operacion === 'cancelar' && <Box>
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          Esta es una cancelación contractual formal. No elimina ventas, cobros, comprobantes ni deuda.
+        </Alert>
+        <TextField select size="small" fullWidth label="Motivo de cierre" value={motivoCodigo}
+          onChange={e => setMotivoCodigo(e.target.value)}>
+          {motivosCatalogo.filter(m => m.operacion === 'CERRAR').map(m =>
+            <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
+        </TextField>
+        <TextField multiline minRows={2} size="small" fullWidth label="Justificación de cancelación"
+          required sx={{ mt: 2 }} value={motivo} onChange={e => setMotivo(e.target.value)}/>
+        {previewCancelacion && <Alert severity="info" sx={{ mt: 2 }}>
+          Fecha efectiva: {fechaLegible(previewCancelacion.fecha_efectiva)}. Ventas registradas: {previewCancelacion.ventas_emitidas};
+          pendientes: {previewCancelacion.ventas_pendientes}. {previewCancelacion.congelacion_abierta ? 'La congelación abierta también quedará cerrada.' : ''}
+        </Alert>}
+        <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewCancelacion(null); }}/>
+          <BotonVistaPrevia disabled={procesando} cargando={procesando && !previewCancelacion} onClick={simularCancelacion}/>
+          <BotonGuardar texto="Cancelar contrato" guardando={procesando}
+            disabled={!motivoCodigo || motivo.trim().length < 8} onClick={cancelarContrato}/>
         </Box>
       </Box>}
     </>}

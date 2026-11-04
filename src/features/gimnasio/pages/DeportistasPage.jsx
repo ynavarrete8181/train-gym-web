@@ -176,22 +176,39 @@ const calcularFechaFinMembresia = (fechaInicioStr, configuracion) => {
   const duracion = Number(configuracion.duracion || 0);
   if (!duracion) return '';
 
-  const fecha = new Date(`${fechaInicioStr}T00:00:00`);
+  const partes = String(fechaInicioStr).split('-').map(Number);
+  if (partes.length !== 3 || partes.some(valor => !Number.isInteger(valor))) return '';
+  const [anio, mes, dia] = partes;
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia));
+  if (fecha.getUTCFullYear() !== anio || fecha.getUTCMonth() !== mes - 1 || fecha.getUTCDate() !== dia) return '';
+  const moverMesesSinDesborde = (base, cantidad) => {
+    const indiceMes = base.getUTCMonth() + cantidad;
+    const primerDiaDestino = new Date(Date.UTC(base.getUTCFullYear(), indiceMes, 1));
+    const ultimoDiaDestino = new Date(Date.UTC(
+      primerDiaDestino.getUTCFullYear(), primerDiaDestino.getUTCMonth() + 1, 0,
+    )).getUTCDate();
+    primerDiaDestino.setUTCDate(Math.min(base.getUTCDate(), ultimoDiaDestino));
+    return primerDiaDestino;
+  };
   switch (configuracion.tipo_duracion) {
     case 'DIAS':
-      fecha.setDate(fecha.getDate() + Math.max(duracion - 1, 0));
+      fecha.setUTCDate(fecha.getUTCDate() + Math.max(duracion - 1, 0));
       break;
     case 'SEMANAS':
-      fecha.setDate(fecha.getDate() + (duracion * 7) - 1);
+      fecha.setUTCDate(fecha.getUTCDate() + (duracion * 7) - 1);
       break;
-    case 'MESES':
-      fecha.setMonth(fecha.getMonth() + duracion);
-      fecha.setDate(fecha.getDate() - 1);
+    case 'MESES': {
+      const finExclusivo = moverMesesSinDesborde(fecha, duracion);
+      fecha.setTime(finExclusivo.getTime());
+      fecha.setUTCDate(fecha.getUTCDate() - 1);
       break;
-    case 'ANIOS':
-      fecha.setFullYear(fecha.getFullYear() + duracion);
-      fecha.setDate(fecha.getDate() - 1);
+    }
+    case 'ANIOS': {
+      const finExclusivo = moverMesesSinDesborde(fecha, duracion * 12);
+      fecha.setTime(finExclusivo.getTime());
+      fecha.setUTCDate(fecha.getUTCDate() - 1);
       break;
+    }
     default:
       return '';
   }
