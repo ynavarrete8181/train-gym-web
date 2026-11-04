@@ -44,8 +44,6 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
 import { DetalleMembresiaCliente } from '../components/DetalleMembresiaCliente.jsx';
-import { GestionCicloVidaMembresia } from '../components/GestionCicloVidaMembresia.jsx';
-import { DialogRenovacionMembresia } from '../components/DialogRenovacionMembresia.jsx';
 
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
@@ -367,7 +365,6 @@ export function DeportistasPage() {
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
   const [membresiaDetalle, setMembresiaDetalle] = useState(null);
-  const [membresiaRenovacion, setMembresiaRenovacion] = useState(null);
   const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
   const [requiereDescuento, setRequiereDescuento] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
@@ -2329,41 +2326,20 @@ export function DeportistasPage() {
           membresia={membresiaDetalle}
           onVolver={() => setVistaMembresia('listado')}
           onEditar={handleEditarMembresia}
-          onGestionarCicloVida={(m) => {
-            handleEditarMembresia(m);
-            setVistaMembresia('ciclo_vida');
-          }}
-          onRenovar={setMembresiaRenovacion}
-        />
-      )}
-      <DialogRenovacionMembresia abierto={Boolean(membresiaRenovacion)}
-        membresia={membresiaRenovacion}
-        onCerrar={() => setMembresiaRenovacion(null)}
-        onActualizado={async () => {
-          const respuesta = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
-          const actualizadas = respuesta.datos?.membresias || [];
-          setMembresiasCliente(actualizadas);
-          const actual = actualizadas.find(m => Number(m.id) === Number(membresiaRenovacion?.id));
-          if (actual) {
-            setMembresiaRenovacion(actual);
-            setMembresiaDetalle(actual);
-          }
-        }}/>
-      {vistaMembresia === 'ciclo_vida' && membresiaForm.id && (
-        <GestionCicloVidaMembresia
-          membresia={membresiaForm}
-          onVolver={() => setVistaMembresia('detalle')}
           onActualizado={async () => {
             try {
               const respuesta = await gimnasioServicio.obtenerDeportistaPorId(formData.id);
               const actualizadas = respuesta.datos?.membresias || [];
               setMembresiasCliente(actualizadas);
-              const contrato = actualizadas.find((item) => String(item.id) === String(membresiaForm.id));
+              const contrato = actualizadas.find(item => String(item.id) === String(membresiaDetalle.id));
               if (contrato) {
                 setMembresiaDetalle(contrato);
-                setMembresiaForm((anterior) => ({ ...anterior,
-                  estado: contrato.estado, fecha_fin: limpiarFechaMembresia(contrato.fecha_fin),
-                  periodos: contrato.periodos || anterior.periodos, cuotas: contrato.cuotas || anterior.cuotas,
+                setMembresiaForm(anterior => ({
+                  ...anterior,
+                  estado: contrato.estado,
+                  fecha_fin: limpiarFechaMembresia(contrato.fecha_fin),
+                  periodos: contrato.periodos || anterior.periodos,
+                  cuotas: contrato.cuotas || anterior.cuotas,
                 }));
               }
             } catch (error) {
@@ -2372,7 +2348,6 @@ export function DeportistasPage() {
           }}
         />
       )}
-
     </Stack>
   );
 
