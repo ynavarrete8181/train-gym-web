@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Accordion, AccordionDetails, AccordionSummary, Alert, Box, Chip,
-  CircularProgress, Divider, Stack, Typography,
+  Alert, Box, Chip, CircularProgress, Stack, Typography,
+  TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip,
 } from '@mui/material';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
-import ExpandMoreOutlinedIcon from '@mui/icons-material/ExpandMoreOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
@@ -140,20 +141,34 @@ function DetalleEvento({ evento }) {
   </Stack>;
 }
 
+import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
+import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
+
 /**
- * Lectura independiente de los dos historiales, sin reconstruir fechas
- * originales a partir del contrato actual.
+ * Historial real del contrato: listado con paginación de 5 y detalle interno.
+ * Mantiene la lectura de eventos del servicio existente, sin alterar auditoría.
  */
 export function HistorialIntegralMembresia({ membresia }) {
   const [historial, setHistorial] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
+  const [busqueda, setBusqueda] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(5);
+  const [seleccionado, setSeleccionado] = useState(null);
   const id = membresia?.id;
 
   useEffect(() => {
     if (!id) return;
     let vigente = true;
-    setHistorial(null); setCargando(true); setError('');
+    setHistorial(null);
+    setCargando(true);
+    setError('');
+    setSeleccionado(null);
+    setBusqueda('');
+    setPagina(1);
     gimnasioServicio.obtenerHistorialIntegralMembresia(id)
       .then(datos => { if (vigente) setHistorial(datos); })
       .catch(e => {
@@ -165,98 +180,75 @@ export function HistorialIntegralMembresia({ membresia }) {
   }, [id]);
 
   const eventos = useMemo(() => historial?.eventos || [], [historial]);
-  const original = historial?.contratacion_original;
-  const actual = historial?.vigencia_actual;
-  const fechaFinOriginal = original?.fecha_fin || null;
-  const nombrePlan = original?.plan_nombre || membresia?.plan_nombre || '—';
+  const filtrados = useMemo(() => eventos.filter(e => [
+    tituloTipo[e.tipo] || e.tipo,
+    e.categoria, e.fecha, e.fecha_efectiva, e.autor_nombre, e.motivo,
+  ].some(v => String(v || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC')))), [eventos, busqueda]);
+  const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtrados.length / porPagina) || 1));
+  const visibles = filtrados.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
 
-  return <Stack spacing={2}>
-    {cargando && <Stack direction="row" alignItems="center" gap={1.5} sx={{ py: 2 }}>
-      <CircularProgress size={20}/>
-      <Typography variant="body2">Consultando historial contractual…</Typography>
-    </Stack>}
-    {error && <Alert severity="error">{error}</Alert>}
-    {historial && <>
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-        <Box sx={{ px: 2, py: 1.5, bgcolor: 'action.hover' }}>
-          <Typography variant="subtitle1" fontWeight={800}>Contrato y vigencia</Typography>
+  if (seleccionado) {
+    return <Box sx={{ minWidth: 0 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 2 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="subtitle1" fontWeight={800}>
+            {tituloTipo[seleccionado.tipo] || seleccionado.tipo?.replaceAll('_', ' ') || 'Movimiento'}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
-            Condiciones originalmente pactadas y estado efectivo actual, sin mezclar sus fechas.
+            {fechaHora(seleccionado.fecha)} · {seleccionado.autor_nombre || 'Sistema / autor no disponible'}
           </Typography>
         </Box>
-        <Box sx={{ p: 2, display: 'grid', gap: 1.25,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))', lg: 'repeat(4,minmax(0,1fr))' } }}>
-          <Dato label="Plan contratado" value={nombrePlan}/>
-          <Dato label="Inicio original" value={fecha(original?.fecha_inicio)}/>
-          <Dato label="Fin originalmente pactado" value={fecha(fechaFinOriginal)}/>
-          <Dato label="Vigencia actual hasta" value={fecha(actual?.fecha_fin)} destacado/>
-          <Dato label="Períodos contratados originalmente"
-            value={original?.cantidad_periodos ?? 'No disponible'}/>
-          <Dato label="Precio original por período" value={dinero(original?.precio_periodo)}/>
-          <Dato label="Total bruto originalmente pactado"
-            value={dinero(original?.total_bruto_referencial)}/>
-          <Dato label="Estado actual" value={historial.estado_actual || '—'}/>
-        </Box>
-        {!original && <Alert severity="warning" sx={{ mx: 2, mb: 2 }}>
-          No existe un registro histórico de contratación original para este contrato.
-          No se puede afirmar cuál fue su fecha inicial de vencimiento.
-        </Alert>}
-        {original && fechaFinOriginal && actual?.fecha_fin
-          && String(fechaFinOriginal).slice(0, 10) !== String(actual.fecha_fin).slice(0, 10) && (
-          <Typography variant="caption" color="text.secondary" sx={{ px: 2, pb: 2, display: 'block' }}>
-            La vigencia actual incorpora los movimientos posteriores. El vencimiento originalmente pactado no se ha sobrescrito.
-          </Typography>
-        )}
-      </Box>
-      <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
-        <Stack direction="row" alignItems="center" gap={1} sx={{ px: 2, py: 1.5, bgcolor: 'action.hover' }}>
-          <HistoryOutlinedIcon fontSize="small"/>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle1" fontWeight={800}>Historial integral de movimientos</Typography>
-            <Typography variant="caption" color="text.secondary">
-              Contratación, cambios administrativos, congelaciones, reactivaciones y renovaciones
+        <BotonVolver onClick={() => setSeleccionado(null)} />
+      </Stack>
+      <DetalleEvento evento={seleccionado} />
+    </Box>;
+  }
+
+  return <Box sx={{ width: '100%', minWidth: 0 }}>
+    {cargando && <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
+      <CircularProgress size={18} />
+      <Typography variant="body2">Consultando movimientos…</Typography>
+    </Stack>}
+    {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
+    <GestionToolbar total={filtrados.length} busqueda={busqueda}
+      onBusqueda={valor => { setBusqueda(valor); setPagina(1); }} />
+    <TablaGestion total={eventos.length} filtrados={filtrados.length} cargando={cargando}
+      page={paginaActual} onPageChange={setPagina} rowsPerPage={porPagina}
+      onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
+      <TableHead><TableRow>
+        <TableCell>Movimiento</TableCell>
+        <TableCell>Fecha</TableCell>
+        <TableCell>Responsable</TableCell>
+        <TableCell>Tipo</TableCell>
+        <TableCell align="center">Acciones</TableCell>
+      </TableRow></TableHead>
+      <TableBody>
+        {visibles.map((evento, index) => <TableRow key={evento.id || `${evento.tipo}-${evento.fecha}-${index}`} hover>
+          <TableCell>
+            <Typography variant="body2" fontWeight={700}>
+              {tituloTipo[evento.tipo] || evento.tipo?.replaceAll('_', ' ') || 'Movimiento'}
             </Typography>
-          </Box>
-          <Chip size="small" variant="outlined" label={`${eventos.length} movimientos`}/>
-        </Stack>
-        <Box sx={{ p: { xs: 1.25, sm: 2 } }}>
-          {!eventos.length && <Typography variant="body2" color="text.secondary">
-            Todavía no existen movimientos auditados.
-          </Typography>}
-          <Stack spacing={1}>
-            {eventos.map(evento => {
-              const etiqueta = tituloTipo[evento.tipo] || evento.tipo.replaceAll('_', ' ').toLowerCase();
-              const Icono = evento.tipo === 'RENOVACION_MANUAL' ? AutorenewOutlinedIcon
-                : evento.categoria === 'CICLO_VIDA' ? AcUnitOutlinedIcon
-                  : evento.tipo === 'CONTRATACION' ? EventAvailableOutlinedIcon : ReceiptLongOutlinedIcon;
-              return <Accordion key={evento.id} disableGutters elevation={0}
-                sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px !important',
-                  '&:before': { display: 'none' } }}>
-                <AccordionSummary expandIcon={<ExpandMoreOutlinedIcon/>}
-                  sx={{ px: 1.5, '& .MuiAccordionSummary-content': { my: 1 } }}>
-                  <Stack direction="row" gap={1.25} alignItems="center" sx={{ width: '100%', minWidth: 0 }}>
-                    <Icono sx={{ fontSize: 20, color: 'text.secondary' }}/>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="body2" fontWeight={800} sx={{ textTransform: 'capitalize' }}>
-                        {etiqueta}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {fechaHora(evento.fecha)} · {evento.autor_nombre || 'Sistema / autor no disponible'}
-                      </Typography>
-                    </Box>
-                    <Chip size="small" variant="outlined"
-                      label={evento.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'}/>
-                  </Stack>
-                </AccordionSummary>
-                <AccordionDetails sx={{ px: 1.75, pb: 1.75 }}>
-                  <Divider sx={{ mb: 1.25 }}/>
-                  <DetalleEvento evento={evento}/>
-                </AccordionDetails>
-              </Accordion>;
-            })}
-          </Stack>
-        </Box>
-      </Box>
-    </>}
-  </Stack>;
+          </TableCell>
+          <TableCell>{fechaHora(evento.fecha)}</TableCell>
+          <TableCell>{evento.autor_nombre || 'Sistema / no disponible'}</TableCell>
+          <TableCell><Chip size="small" variant="outlined"
+            label={evento.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'}/></TableCell>
+          <TableCell align="center">
+            <Tooltip title="Ver detalle del movimiento">
+              <IconButton size="small" sx={dbanuStyles.actionView}
+                aria-label="Ver detalle del movimiento"
+                onClick={() => setSeleccionado(evento)}>
+                <VisibilityOutlinedIcon sx={{ fontSize: 18 }}/>
+              </IconButton>
+            </Tooltip>
+          </TableCell>
+        </TableRow>)}
+        {!cargando && !visibles.length && <TableRow>
+          <TableCell colSpan={5} align="center">
+            {busqueda ? 'No hay movimientos que coincidan con la búsqueda.' : 'Sin movimientos registrados.'}
+          </TableCell>
+        </TableRow>}
+      </TableBody>
+    </TablaGestion>
+  </Box>;
 }
