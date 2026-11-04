@@ -3,13 +3,7 @@ import {
   Alert, Box, Chip, CircularProgress, Stack, Typography,
   TableBody, TableCell, TableHead, TableRow, IconButton, Tooltip,
 } from '@mui/material';
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
-import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlined';
-import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
-import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
-import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
