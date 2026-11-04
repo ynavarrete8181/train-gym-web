@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Box, Button, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Divider, Stack, Typography } from '@mui/material';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import ChevronRightOutlinedIcon from '@mui/icons-material/ChevronRightOutlined';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { HistorialIntegralMembresia } from './HistorialIntegralMembresia.jsx';
-import { uiTokens } from '../../../styles/uiTokens.js';
+import { dbanuStyles } from '../../../styles/dbanuStyles.js';
+import { formStyles } from '../../../styles/formStyles.js';
 
 const fecha = (valor) => {
   if (!valor) return '—';
@@ -15,129 +17,179 @@ const fecha = (valor) => {
   return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : String(valor);
 };
 
-const importe = (valor) => valor == null
-  ? '—'
-  : new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(Number(valor));
+const importe = (valor) => {
+  if (valor === null || valor === undefined || valor === '') return '—';
+  const numero = Number(valor);
+  return Number.isFinite(numero)
+    ? new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(numero)
+    : '—';
+};
 
 function DatoContrato({ titulo, valor }) {
-  return <Box sx={{ minWidth: 0, py: 0.5 }}>
-    <Typography variant="caption" color="text.secondary" display="block">{titulo}</Typography>
-    <Typography variant="body2" fontWeight={700} sx={{ overflowWrap: 'anywhere' }}>{valor || '—'}</Typography>
+  return <Box sx={{ minWidth: 0 }}>
+    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.45 }}>
+      {titulo}
+    </Typography>
+    <Typography variant="body2" fontWeight={800} sx={{ overflowWrap: 'anywhere' }}>
+      {valor ?? '—'}
+    </Typography>
   </Box>;
 }
 
+function OperacionContrato({ icono, titulo, descripcion, onClick, disabled = false }) {
+  return <Button
+    variant="outlined"
+    fullWidth
+    disabled={disabled}
+    onClick={onClick}
+    sx={{
+      ...dbanuStyles.secondaryButtonRevive,
+      minHeight: 64,
+      px: 1.5,
+      py: 1,
+      gap: 1.5,
+      justifyContent: 'flex-start',
+      textAlign: 'left',
+      alignItems: 'center',
+      bgcolor: 'background.paper',
+      '& .MuiButton-startIcon': { display: 'none' },
+    }}
+  >
+    <Box sx={{ display: 'flex', alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}>
+      {icono}
+    </Box>
+    <Box sx={{ minWidth: 0, flex: 1 }}>
+      <Typography variant="body2" fontWeight={800} color="text.primary" sx={{ textTransform: 'none' }}>
+        {titulo}
+      </Typography>
+      <Typography variant="caption" color="text.secondary" component="div"
+        sx={{ lineHeight: 1.35, fontWeight: 400, textTransform: 'none' }}>
+        {descripcion}
+      </Typography>
+    </Box>
+    <ChevronRightOutlinedIcon sx={{ fontSize: 19, color: 'text.secondary', flexShrink: 0 }} />
+  </Button>;
+}
+
 /**
- * Vista interna del Paper 2 del perfil integral.
- * No crea Paper ni altera el encabezado, las pestañas o la estructura global.
- * Las operaciones se autorizan en Laravel; aquí solo se presentan los accesos.
+ * Pantalla de detalle dentro del Paper 2 existente del perfil integral.
+ * La cabecera del perfil (Paper 1) y las pestañas del Paper 2 no se modifican.
+ * La sección principal muestra información y operaciones simultáneamente,
+ * de acuerdo con el diseño aprobado de REVIVE.
  */
 export function DetalleMembresiaCliente({
   membresia, onVolver, onEditar, onGestionarCicloVida, onRenovar,
 }) {
-  const [seccion, setSeccion] = useState('informacion');
+  const [mostrandoHistorial, setMostrandoHistorial] = useState(false);
 
-  useEffect(() => { setSeccion('informacion'); }, [membresia?.id]);
+  useEffect(() => { setMostrandoHistorial(false); }, [membresia?.id]);
 
   if (!membresia) return null;
 
   const congelada = String(membresia.estado || '').toUpperCase() === 'CONGELADA';
-  const permiteAccesoRenovacion = membresia.cantidad_periodos_contratados != null && !congelada;
+  const tienePeriodos = membresia.cantidad_periodos_contratados != null;
+  const nombre = [membresia.plan_nombre, membresia.modalidad_nombre].filter(Boolean).join(' · ') || 'Membresía';
 
-  const secciones = [
-    { id: 'informacion', titulo: 'Información' },
-    { id: 'operaciones', titulo: 'Operaciones' },
-    { id: 'historial', titulo: 'Historial' },
-  ];
-
-  return <Box sx={{ width: '100%', minWidth: 0 }}>
-    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between"
-      alignItems={{ xs: 'stretch', sm: 'center' }} gap={1.5} sx={{ mb: 2 }}>
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="h6" fontWeight={800}>Detalle de membresía</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {[membresia.plan_nombre, membresia.modalidad_nombre].filter(Boolean).join(' · ') || 'Membresía'}
+  return <Box sx={{ width: '100%', minWidth: 0, pb: 0.5 }}>
+    <Stack direction={{ xs: 'column', sm: 'row' }}
+      alignItems={{ xs: 'stretch', sm: 'center' }} justifyContent="space-between"
+      gap={2} sx={{ mb: 2.5 }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
+        <Typography variant="h6" fontWeight={800} sx={{ mb: 0.35 }}>
+          Detalle de membresía
         </Typography>
-        {membresia.codigo_contrato && <Typography variant="caption" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
+          {nombre}
+        </Typography>
+        {membresia.codigo_contrato && <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 0.25 }}>
           Contrato: {membresia.codigo_contrato}
         </Typography>}
       </Box>
-      <Stack direction="row" alignItems="center" flexWrap="wrap" gap={1}>
+      <Stack direction="row" gap={1.5} alignItems="center"
+        justifyContent={{ xs: 'space-between', sm: 'flex-end' }} sx={{ flexShrink: 0 }}>
         <StatusChip estado={String(membresia.estado || '').toLowerCase()} />
-        <Button variant="outlined" startIcon={<ArrowBackOutlinedIcon />} onClick={onVolver}>
-          Volver al listado
+        <Button variant="outlined" startIcon={<ArrowBackOutlinedIcon />}
+          sx={{ ...dbanuStyles.backButton, flexShrink: 0 }}
+          onClick={mostrandoHistorial ? () => setMostrandoHistorial(false) : onVolver}>
+          {mostrandoHistorial ? 'Volver al detalle' : 'Volver al listado'}
         </Button>
       </Stack>
     </Stack>
 
-    <Stack direction="row" flexWrap="wrap" gap={1} role="tablist" aria-label="Secciones de la membresía"
-      sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 1.25, mb: 2 }}>
-      {secciones.map(item => <Button key={item.id} size="small" role="tab"
-        aria-selected={seccion === item.id} variant={seccion === item.id ? 'contained' : 'outlined'}
-        onClick={() => setSeccion(item.id)}
-        sx={{ textTransform: 'none', fontWeight: 700, minWidth: 0 }}>
-        {item.titulo}
-      </Button>)}
-    </Stack>
-
-    {seccion === 'informacion' && <Box>
-      <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 1.5 }}>
-        Información de la asignación
-      </Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: {
-        xs: 'repeat(1, minmax(0, 1fr))',
-        sm: 'repeat(2, minmax(0, 1fr))',
-        md: 'repeat(3, minmax(0, 1fr))',
-      }, gap: 2, mb: 2 }}>
-        <DatoContrato titulo="Plan" valor={membresia.plan_nombre} />
-        <DatoContrato titulo="Modalidad" valor={membresia.modalidad_nombre || 'Sin modalidad'} />
-        <DatoContrato titulo="Inicio de vigencia" valor={fecha(membresia.fecha_inicio)} />
-        <DatoContrato titulo="Fin de vigencia" valor={fecha(membresia.fecha_fin)} />
-        <DatoContrato titulo="Precio registrado" valor={importe(membresia.precio_aplicado)} />
-        <DatoContrato titulo="Estado del contrato" valor={membresia.estado} />
-      </Box>
-      <Button variant="outlined" startIcon={<EditOutlinedIcon />} onClick={() => onEditar(membresia)}>
-        Editar membresía
-      </Button>
-    </Box>}
-
-    {seccion === 'operaciones' && <Box>
-      <Typography variant="subtitle1" fontWeight={800} sx={{ mb: 0.5 }}>Operaciones del contrato</Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Consulta la disponibilidad de cada operación según el estado del contrato y las reglas del sistema.
-      </Typography>
-      <Stack direction={{ xs: 'column', md: 'row' }} alignItems="stretch" gap={1.5}>
-        <Button variant="outlined" startIcon={<AcUnitOutlinedIcon />}
-          onClick={() => onGestionarCicloVida(membresia)} sx={{ justifyContent: 'flex-start', textTransform: 'none' }}>
-          Congelación y reactivación
-        </Button>
-        {membresia.cantidad_periodos_contratados != null && <Button variant="outlined"
-          startIcon={<AutorenewOutlinedIcon />} disabled={!permiteAccesoRenovacion}
-          onClick={() => onRenovar(membresia)} sx={{ justifyContent: 'flex-start', textTransform: 'none' }}>
-          Renovar membresía
-        </Button>}
-        <Button variant="outlined" startIcon={<HistoryOutlinedIcon />}
-          onClick={() => setSeccion('historial')} sx={{ justifyContent: 'flex-start', textTransform: 'none' }}>
-          Ver historial
-        </Button>
-      </Stack>
-      {congelada && <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1.5 }}>
-        Reactiva la membresía antes de solicitar una renovación.
-      </Typography>}
-      <Box sx={{ mt: 2, px: 1.5, py: 1.25, borderRadius: 1.5,
-        border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
-        <Typography variant="caption" sx={{ color: uiTokens.colores.textoMedio }}>
-          No se ofrece eliminación directa: las operaciones comerciales y sus movimientos deben conservar trazabilidad.
-        </Typography>
-      </Box>
-    </Box>}
-
-    {seccion === 'historial' && <Box>
+    {mostrandoHistorial ? <Box sx={{ pt: 1 }}>
       <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 2 }}>
         <HistoryOutlinedIcon fontSize="small" />
-        <Typography variant="subtitle1" fontWeight={800}>Historial integral del contrato</Typography>
-        <Chip size="small" variant="outlined" label="Trazabilidad" />
+        <Typography variant="subtitle1" fontWeight={800}>
+          Historial integral de la membresía
+        </Typography>
       </Stack>
       <HistorialIntegralMembresia membresia={membresia} />
-    </Box>}
+    </Box> : <>
+      <Divider sx={{ mb: 2.5 }} />
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1.65fr) minmax(340px, 1fr)' },
+        gap: { xs: 3, lg: 3.5 },
+        alignItems: 'start',
+      }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography sx={{ ...formStyles.modalSeccionTitulo, fontSize: 16, mb: 2 }}>
+            Información de la asignación
+          </Typography>
+          <Box sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' },
+            columnGap: 3, rowGap: 2.5, mb: 2.5,
+          }}>
+            <DatoContrato titulo="Plan" valor={membresia.plan_nombre} />
+            <DatoContrato titulo="Modalidad" valor={membresia.modalidad_nombre || 'Sin modalidad'} />
+            <DatoContrato titulo="Inicio de vigencia" valor={fecha(membresia.fecha_inicio)} />
+            <DatoContrato titulo="Fin de vigencia" valor={fecha(membresia.fecha_fin)} />
+            <DatoContrato titulo="Precio registrado" valor={importe(membresia.precio_aplicado)} />
+            <DatoContrato titulo="Estado contractual" valor={membresia.estado || '—'} />
+          </Box>
+          <Button variant="outlined" startIcon={<EditOutlinedIcon />}
+            sx={dbanuStyles.secondaryButtonRevive} onClick={() => onEditar(membresia)}>
+            Editar membresía
+          </Button>
+        </Box>
+        <Box sx={{
+          minWidth: 0,
+          borderLeft: { xs: 'none', lg: '1px solid' },
+          borderTop: { xs: '1px solid', lg: 'none' },
+          borderColor: 'divider',
+          pl: { xs: 0, lg: 3 },
+          pt: { xs: 2.5, lg: 0 },
+        }}>
+          <Typography sx={{ ...formStyles.modalSeccionTitulo, fontSize: 16, mb: 2 }}>
+            Operaciones y trazabilidad
+          </Typography>
+          <Stack spacing={1.25}>
+            <OperacionContrato
+              icono={<AcUnitOutlinedIcon fontSize="small" />}
+              titulo="Congelación y reactivación"
+              descripcion="Suspensiones, reactivaciones y ajustes de vigencia"
+              onClick={() => onGestionarCicloVida(membresia)}
+            />
+            {tienePeriodos && <OperacionContrato
+              icono={<AutorenewOutlinedIcon fontSize="small" />}
+              titulo="Renovaciones"
+              descripcion={congelada ? 'Requiere reactivación previa' : 'Períodos y condiciones comerciales'}
+              disabled={congelada}
+              onClick={() => onRenovar(membresia)}
+            />}
+            <OperacionContrato
+              icono={<HistoryOutlinedIcon fontSize="small" />}
+              titulo="Historial integral"
+              descripcion="Movimientos, responsables y auditoría"
+              onClick={() => setMostrandoHistorial(true)}
+            />
+          </Stack>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1.5 }}>
+            Las operaciones disponibles dependen del estado y de las reglas comerciales del contrato.
+          </Typography>
+        </Box>
+      </Box>
+    </>}
   </Box>;
 }
