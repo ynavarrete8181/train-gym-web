@@ -125,7 +125,7 @@ export function DetalleMembresiaCliente({
       </Typography>}
       <Box sx={{ mt: 2, px: 1.5, py: 1.25, borderRadius: 1.5,
         border: '1px solid', borderColor: 'divider', bgcolor: 'action.hover' }}>
-        <Typography variant="caption" sx={{ color: uiTokens.colores.textoSecundario }}>
+        <Typography variant="caption" sx={{ color: uiTokens.colores.textoMedio }}>
           No se ofrece eliminación directa: las operaciones comerciales y sus movimientos deben conservar trazabilidad.
         </Typography>
       </Box>
