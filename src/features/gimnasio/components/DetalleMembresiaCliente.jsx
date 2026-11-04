@@ -58,7 +58,8 @@ export function DetalleMembresiaCliente({
 
   if (!membresia) return null;
 
-  const nombre = [membresia.plan_nombre, membresia.modalidad_nombre].filter(Boolean).join(' · ') || 'Membresía';
+  const tituloSeccion = SECCIONES_MEMBRESIA.find(item => item.id === seccion)?.nombre || 'Información';
+  const referenciaContrato = [membresia.plan_nombre, membresia.codigo_contrato].filter(Boolean).join(' · ');
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
     <Box sx={{
@@ -76,7 +77,7 @@ export function DetalleMembresiaCliente({
           display: 'block', px: 1.5, pt: 1, pb: 0.5,
           color: 'text.secondary', fontWeight: 850,
         }}>
-          Membresía
+          Secciones
         </Typography>
         <Stack spacing={0.5}>
           {SECCIONES_MEMBRESIA.map(({ id, nombre: titulo, descripcion, Icono }) => {
@@ -117,15 +118,16 @@ export function DetalleMembresiaCliente({
             alignItems={{ xs: 'flex-start', sm: 'center' }}
             justifyContent="space-between" gap={1.5} sx={{ mb: 1.75 }}>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography variant="subtitle1" fontWeight={800}>Membresía</Typography>
+              <Typography variant="subtitle1" fontWeight={800}>{tituloSeccion}</Typography>
               <Typography variant="body2" color="text.secondary" sx={{ overflowWrap: 'anywhere' }}>
-                {nombre}
-                {membresia.codigo_contrato ? ` · ${membresia.codigo_contrato}` : ''}
+                {referenciaContrato}
               </Typography>
             </Box>
             <Stack direction="row" alignItems="center" gap={1}
               sx={{ flexShrink: 0, maxWidth: '100%' }}>
-              <StatusChip estado={String(membresia.estado || '').toLowerCase()} />
+              <StatusChip estado={String(membresia.estado || '').toLowerCase()}
+                sx={{ height: 34, borderRadius: 1, fontWeight: 700,
+                  '& .MuiChip-label': { px: 1.25, fontSize: 12, textTransform: 'capitalize' } }} />
               <BotonVolver onClick={onVolver} sx={{
                 height: 34, minHeight: 34, minWidth: 0, width: 'auto',
                 px: 1.25, fontSize: 12, whiteSpace: 'nowrap',
@@ -135,9 +137,6 @@ export function DetalleMembresiaCliente({
           <Divider sx={{ mb: 1.75 }} />
 
           {seccion === 'informacion' && <>
-            <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 2 }}>
-              Datos del contrato
-            </Typography>
             <Box sx={{
               display: 'grid',
               gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' },
@@ -169,12 +168,7 @@ export function DetalleMembresiaCliente({
             onActualizado={onActualizado}
           />}
 
-          {seccion === 'historial' && <>
-            <Typography sx={{ ...formStyles.modalSeccionTitulo, mb: 1.5 }}>
-              Movimientos del contrato
-            </Typography>
-            <HistorialIntegralMembresia membresia={membresia} />
-          </>}
+          {seccion === 'historial' && <HistorialIntegralMembresia membresia={membresia} />}
         </Box>
       </Stack>
     </Box>
