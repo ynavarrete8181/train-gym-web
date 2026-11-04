@@ -24,7 +24,7 @@ function Dato({ label, value, destacado }) {
 }
 
 /** Renueva el MISMO contrato: una cuota programada, sin emisión anticipada. */
-export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActualizado }) {
+export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActualizado, integrado = false }) {
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState('');
   const [procesando, setProcesando] = useState(false);
@@ -55,8 +55,8 @@ export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActu
     } finally { setProcesando(false); }
   };
 
-  return <Dialog open={Boolean(abierto)} onClose={procesando ? undefined : onCerrar}
-    fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 2 } }}>
+  const contenido = <>
+
     <DialogTitle sx={formStyles.modalHeader}>
       <Box sx={{ ...formStyles.modalIcono, bgcolor: uiTokens.colores.acentoSuave,
         border: `1px solid ${uiTokens.colores.acentoBorde}`, color: uiTokens.colores.textoFuerte }}>
@@ -103,5 +103,13 @@ export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActu
       {!guardado && <BotonGuardar texto="Guardar" onClick={guardar}
         disabled={!preview?.confirmable} guardando={procesando}/>}
     </DialogActions>
+  </>;
+
+  if (integrado) {
+    return abierto ? <Box sx={{ width: '100%', minWidth: 0 }}>{contenido}</Box> : null;
+  }
+  return <Dialog open={Boolean(abierto)} onClose={procesando ? undefined : onCerrar}
+    fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 2 } }}>
+    {contenido}
   </Dialog>;
 }
