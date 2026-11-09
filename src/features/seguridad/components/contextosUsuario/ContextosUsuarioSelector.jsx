@@ -218,8 +218,7 @@ export function ContextosUsuarioSelector({
     >
       <Stack
         direction={{ xs: "column", sm: "row" }}
-        justifyContent="space-between"
-        sx={{ mb: 1.5, alignItems: { xs: "stretch", sm: "center" } }}
+        sx={{ justifyContent: 'space-between', mb: 1.5, alignItems: { xs: "stretch", sm: "center" } }}
         spacing={1}
       >
         <Box>
@@ -366,7 +365,7 @@ export function ContextosUsuarioSelector({
           ) : null}
           {errorEditor ? <Alert severity="error" variant="outlined" sx={{ mt: 1.25 }}>{errorEditor}</Alert> : null}
 
-          <Stack direction="row" spacing={1} justifyContent="flex-end" sx={{ mt: 1.25 }}>
+          <Stack direction="row" spacing={1} sx={{ justifyContent: 'flex-end', mt: 1.25 }}>
             <Button variant="text" startIcon={<CloseOutlinedIcon />} onClick={cerrarEditor} disabled={disabled}>
               Cancelar
             </Button>

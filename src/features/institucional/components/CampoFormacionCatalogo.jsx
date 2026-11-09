@@ -1,6 +1,6 @@
 import CategoryOutlinedIcon from '@mui/icons-material/CategoryOutlined'
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
-import { Box, Chip, FormControlLabel, IconButton, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
+import { Box, Chip, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx'
 import { BotonAnadir } from '../../../components/common/BotonAnadir.jsx'
@@ -14,6 +14,7 @@ import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx'
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx'
 import { dbanuStyles } from '../../../styles/dbanuStyles.js'
 import { cambiarEstadoCampoAmplio, guardarCampoAmplio, listarCamposFormacion } from '../services/estructuraInstitucionalService.js'
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx'
 
 const filtrosIniciales = { nombre: [], codigo: [], estado: [] }
 const valorFiltro = (valor) => String(valor ?? '—')
@@ -108,9 +109,7 @@ export function CampoFormacionCatalogo() {
           <Paper elevation={0} sx={{ p: { xs: 2, md: 3 }, border: '1px solid #dbe5f0', borderRadius: 2 }}>
             <Stack spacing={2}>
               <TextField label="Nombre" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
-              <Box sx={{ minHeight: 56, px: 1.5, display: 'flex', alignItems: 'center', border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#f8fafc' }}>
-                <FormControlLabel control={<Switch checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />} label="Activo" />
-              </Box>
+              <CampoActivo checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
               <AccionesFormulario onCancelar={() => setModoForm(false)} onGuardar={guardar} guardando={guardando} />
             </Stack>
           </Paper>

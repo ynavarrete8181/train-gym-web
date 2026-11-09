@@ -63,7 +63,7 @@ export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificaci
   };
   return <Box sx={{ borderTop: 1, borderColor: 'divider', mt: 2, pt: 2 }}>
     <Typography fontWeight={800} sx={{ mb: 1 }}>Fotografías de esta evaluación</Typography>
-    <Stack direction="row" flexWrap="wrap" gap={1.5} sx={{ mb: 2 }}>{fotos.map((foto) => <FotoPrivada key={foto.id} deportistaId={deportistaId} foto={foto} />)}</Stack>
+    <Stack direction="row" gap={1.5} sx={{ flexWrap: 'wrap', mb: 2 }}>{fotos.map((foto) => <FotoPrivada key={foto.id} deportistaId={deportistaId} foto={foto} />)}</Stack>
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr' }, gap: 1.5 }}>
       <Button component="label" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />} sx={{ justifyContent: 'flex-start' }}>
         {archivo?.name || 'Seleccionar fotografía'}
@@ -72,7 +72,7 @@ export function FotosEvaluacionDeportista({ deportistaId, registro, onNotificaci
       <TextField select label="Vista" size="small" value={vista} onChange={(e) => setVista(e.target.value)} sx={dbanuStyles.field}>
         {['FRONTAL', 'LATERAL', 'POSTERIOR', 'OTRA'].map((v) => <MenuItem key={v} value={v}>{v}</MenuItem>)}
       </TextField>
-      <TextField type="date" size="small" value={fecha} onChange={(e) => setFecha(e.target.value)} inputProps={{ 'aria-label': 'Fecha de la fotografía' }} sx={dbanuStyles.field} />
+      <TextField type="date" size="small" value={fecha} onChange={(e) => setFecha(e.target.value)} slotProps={{ htmlInput: { 'aria-label': 'Fecha de la fotografía' } }} sx={dbanuStyles.field} />
     </Box>
     {vistaPrevia && <Box component="img" src={vistaPrevia} alt="Vista previa de la fotografía seleccionada" sx={{ mt: 1.5, width: 180, height: 150, borderRadius: 1, border: 1, borderColor: 'divider', objectFit: 'contain' }} />}
     <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>JPG, PNG o WEBP. Máximo 5 MB. Almacenamiento privado.</Typography>
@@ -97,7 +97,7 @@ export function GaleriaProgresoDeportista({ deportistaId, onNotificacion }) {
     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
       Fotografías vinculadas a las evaluaciones físicas. Para añadir nuevas imágenes, utiliza Ficha inicial → Evaluación física → Ver detalle.
     </Typography>
-    {fotos.length ? <Stack direction="row" gap={2} flexWrap="wrap">
+    {fotos.length ? <Stack direction="row" gap={2} sx={{ flexWrap: 'wrap' }}>
       {fotos.map((foto) => <FotoPrivada key={foto.id} deportistaId={deportistaId} foto={foto} />)}
     </Stack> : <Typography variant="body2" color="text.secondary">No hay fotografías de evolución registradas.</Typography>}
   </Box>;

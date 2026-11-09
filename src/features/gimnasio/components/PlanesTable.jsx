@@ -1,5 +1,4 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { IconButton, TableBody, TableCell, TableHead, TableRow, Typography, Stack, Tooltip } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
@@ -9,7 +8,7 @@ import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
-export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onModalidades, onEliminar, onCambiarEstado, onPageChange, onRowsPerPageChange }) {
+export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onModalidades, onCambiarEstado, onPageChange, onRowsPerPageChange }) {
   const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
   
   return (
@@ -84,13 +83,6 @@ export function PlanesTable({ planes, meta, cargando, filtrosColumna = {}, onFil
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
-                {onEliminar && (
-                  <Tooltip title="Eliminar plan">
-                    <IconButton sx={dbanuStyles.actionDelete} onClick={() => onEliminar(plan)}>
-                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17, color: 'error.main' }} />
-                    </IconButton>
-                  </Tooltip>
-                )}
               </Stack>
             </TableCell>
           </TableRow>

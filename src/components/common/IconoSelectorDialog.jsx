@@ -59,7 +59,7 @@ export function IconoSelectorDialog({ open, valor, onClose, onSeleccionar }) {
   )
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 3 } }}>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: 3 } } }}>
       <DialogTitle>
         <Typography sx={{ fontSize: 18, fontWeight: 900, color: uiTokens.colores.textoFuerte }}>Seleccionar ícono</Typography>
         <Typography sx={{ fontSize: 12.5, color: uiTokens.colores.textoMedio }}>

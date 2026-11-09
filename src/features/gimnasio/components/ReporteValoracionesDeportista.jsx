@@ -41,8 +41,8 @@ export function ReporteValoracionesDeportista({ deportistaId }) {
   const controles = reporte?.controles || {};
   const criterios = reporte?.criterios || [];
   return <Paper elevation={0} sx={{ mt: 2, p: { xs: 1.5, md: 2 }, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-    <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={2} alignItems={{ md: 'center' }} sx={{ mb: 2 }}>
-      <Stack direction="row" alignItems="center" spacing={1}>
+    <Stack direction={{ xs: 'column', md: 'row' }} gap={2} sx={{ alignItems: { md: 'center' }, justifyContent: 'space-between', mb: 2 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
         <AssessmentOutlinedIcon color="primary" />
         <Box>
           <Typography fontWeight={800} fontSize={14}>Reporte de valoración y seguimiento</Typography>
@@ -50,13 +50,13 @@ export function ReporteValoracionesDeportista({ deportistaId }) {
         </Box>
       </Stack>
       <Stack direction={{ xs: 'column', sm: 'row' }} gap={1}>
-        <TextField size="small" type="date" label="Desde" InputLabelProps={{ shrink: true }} value={desde} onChange={(e) => setDesde(e.target.value)} />
-        <TextField size="small" type="date" label="Hasta" InputLabelProps={{ shrink: true }} value={hasta} onChange={(e) => setHasta(e.target.value)} inputProps={{ min: desde || undefined }} />
+        <TextField size="small" type="date" label="Desde" slotProps={{ inputLabel: { shrink: true } }} value={desde} onChange={(e) => setDesde(e.target.value)} />
+        <TextField size="small" type="date" label="Hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: desde || undefined } }} />
         <Button variant="outlined" size="small" onClick={cargar} disabled={cargando}>Actualizar</Button>
       </Stack>
     </Stack>
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-    {cargando && <Stack direction="row" gap={1} alignItems="center" sx={{ mb: 2 }}><CircularProgress size={18} /><Typography fontSize={12}>Consultando estadísticas…</Typography></Stack>}
+    {cargando && <Stack direction="row" gap={1} sx={{ alignItems: 'center', mb: 2 }}><CircularProgress size={18} /><Typography fontSize={12}>Consultando estadísticas…</Typography></Stack>}
     {reporte && <>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2,minmax(0,1fr))', md: 'repeat(4,minmax(0,1fr))' }, gap: 1 }}>
         {Object.entries({ antecedentes: 0, evaluacion: 0, objetivos: 0, valoracion: 0 }).map(([clave]) => (

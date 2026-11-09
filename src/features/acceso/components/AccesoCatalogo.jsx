@@ -5,7 +5,7 @@ import DevicesOutlinedIcon from '@mui/icons-material/DevicesOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import HowToRegOutlinedIcon from '@mui/icons-material/HowToRegOutlined';
 import SensorOccupiedOutlinedIcon from '@mui/icons-material/SensorOccupiedOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -18,6 +18,7 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { accesoServicio } from '../services/accesoServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const tiposDispositivo = ['MANUAL', 'QR', 'BIOMETRICO', 'TORNIQUETE', 'APP'];
 const tiposCredencial = ['QR', 'TARJETA', 'CODIGO', 'APP'];
@@ -183,7 +184,7 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
   const grid = { display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 };
 
   if (tipo === 'dispositivos') {
-    return <Box sx={grid}><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField select label="Tipo" name="tipo" value={formData.tipo || 'MANUAL'} onChange={onChange} required size="small">{tiposDispositivo.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField><TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={onChange} size="small"><MenuItem value="">Sin sede</MenuItem>{(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}</TextField><TextField label="Proveedor" name="proveedor" value={formData.proveedor || ''} onChange={onChange} size="small" /><TextField label="Identificador externo" name="identificador_externo" value={formData.identificador_externo || ''} onChange={onChange} size="small" /><FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" /></Box>;
+    return <Box sx={grid}><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField select label="Tipo" name="tipo" value={formData.tipo || 'MANUAL'} onChange={onChange} required size="small">{tiposDispositivo.map((item) => <MenuItem key={item} value={item}>{item}</MenuItem>)}</TextField><TextField select label="Sede" name="sede_id" value={formData.sede_id || ''} onChange={onChange} size="small"><MenuItem value="">Sin sede</MenuItem>{(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}</TextField><TextField label="Proveedor" name="proveedor" value={formData.proveedor || ''} onChange={onChange} size="small" /><TextField label="Identificador externo" name="identificador_externo" value={formData.identificador_externo || ''} onChange={onChange} size="small" /><CampoActivo name="activo" checked={formData.activo} onChange={onChange} /></Box>;
   }
 
   if (tipo === 'credenciales') {

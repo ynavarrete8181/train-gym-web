@@ -3,12 +3,14 @@ import EventAvailableOutlinedIcon from '@mui/icons-material/EventAvailableOutlin
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../components/FiltroColumna.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { membresiasPorVencerServicio } from '../services/ventas/membresiasPorVencerServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC') : '—';
@@ -25,7 +27,7 @@ function sumarDias(fechaBase, dias) {
 }
 
 export function MembresiasPorVencerPage() {
-  const hoy = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const hoy = useMemo(() => hoyEcuador(), []);
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
   const [cargando, setCargando] = useState(true);
@@ -34,18 +36,11 @@ export function MembresiasPorVencerPage() {
     vence_desde: hoy,
     vence_hasta: sumarDias(hoy, 30),
     sede_id: [],
-    codigo_contrato: '',
-    cliente: '',
-    plan: '',
-    modalidad: '',
-    numero_periodo: '',
-    fecha_fin: '',
-    dias_restantes: '',
+    columnas: {},
     renovable: [],
     estado_periodo: [],
-    saldo: '',
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
 
   const cargar = async (params = filtros) => {
@@ -125,7 +120,7 @@ export function MembresiasPorVencerPage() {
           total={meta.total || 0}
           filtrados={meta.total || 0}
           page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 10}
+          rowsPerPage={meta.por_pagina || 5}
           onPageChange={(page) => {
             const nuevos = { ...filtros, page };
             setFiltros(nuevos);
@@ -141,16 +136,16 @@ export function MembresiasPorVencerPage() {
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.codigo_contrato} onChange={(valor) => aplicar({ codigo_contrato: valor })}>Contrato</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.cliente} onChange={(valor) => aplicar({ cliente: valor })}>Cliente</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.plan} onChange={(valor) => aplicar({ plan: valor })}>Plan</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.modalidad} onChange={(valor) => aplicar({ modalidad: valor })}>Modalidad</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.numero_periodo} onChange={(valor) => aplicar({ numero_periodo: valor })}>Período</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.fecha_fin} onChange={(valor) => aplicar({ fecha_fin: valor })}>Vence</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.dias_restantes} onChange={(valor) => aplicar({ dias_restantes: valor })}>Días restantes</FilterHeaderCell>
+              <FiltroColumna align="center" columna="codigo_contrato" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Contrato</FiltroColumna>
+              <FiltroColumna columna="cliente" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Cliente</FiltroColumna>
+              <FiltroColumna columna="plan" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Plan</FiltroColumna>
+              <FiltroColumna columna="modalidad" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Modalidad</FiltroColumna>
+              <FiltroColumna align="center" columna="numero_periodo" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Período</FiltroColumna>
+              <FiltroColumna align="center" columna="fecha_fin" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={fecha}>Vence</FiltroColumna>
+              <FiltroColumna align="center" columna="dias_restantes" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Días restantes</FiltroColumna>
               <FilterHeaderCell align="center" value={filtros.renovable} onChange={(valor) => aplicar({ renovable: valor })} options={catalogos.renovable || []} multiple>Renovable</FilterHeaderCell>
               <FilterHeaderCell align="center" value={filtros.estado_periodo} onChange={(valor) => aplicar({ estado_periodo: valor })} options={opciones(catalogos.estados_periodo)} multiple>Estado</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.saldo} onChange={(valor) => aplicar({ saldo: valor })}>Saldo</FilterHeaderCell>
+              <FiltroColumna align="center" columna="saldo_pendiente" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Saldo</FiltroColumna>
             </TableRow>
           </TableHead>
           <TableBody>

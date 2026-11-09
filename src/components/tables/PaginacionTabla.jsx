@@ -35,10 +35,11 @@ export function PaginacionTabla({ total, page, rowsPerPage, onPageChange, onRows
   }
 
   return (
-    <Stack
-      direction={{ xs: 'column', md: 'row' }}
-      spacing={{ xs: 1.2, md: 2 }}
+    <Box
       sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 1.2,
         px: 1.5,
         py: 1.2,
         borderTop: 1,
@@ -48,7 +49,7 @@ export function PaginacionTabla({ total, page, rowsPerPage, onPageChange, onRows
         borderColor: 'divider',
         borderRadius: integrada ? 0 : '0 0 4px 4px',
         mt: integrada ? 0 : '-1px',
-        alignItems: { xs: 'stretch', md: 'center' },
+        alignItems: 'center',
         justifyContent: 'space-between',
         bgcolor: 'background.paper',
       }}
@@ -57,7 +58,7 @@ export function PaginacionTabla({ total, page, rowsPerPage, onPageChange, onRows
         Mostrando <strong>{formatoNumero(desde)}–{formatoNumero(hasta)}</strong> de <strong>{formatoNumero(totalRegistros)}</strong> registros
       </Typography>
 
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: { xs: 'space-between', md: 'flex-end' }, flexWrap: 'wrap', rowGap: 1 }}>
+      <Stack direction="row" spacing={1.5} sx={{ ml: 'auto', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', rowGap: 1 }}>
         <Stack direction="row" spacing={0.8} sx={{ alignItems: 'center' }}>
           <Typography sx={{ display: { xs: 'none', sm: 'block' }, fontSize: 12, color: 'text.secondary' }}>
             Registros por página
@@ -84,6 +85,6 @@ export function PaginacionTabla({ total, page, rowsPerPage, onPageChange, onRows
           <Tooltip title="Última página"><span><IconButton aria-label="Última página" disabled={esUltima} onClick={() => irA(totalPaginas)} sx={estiloBoton}><LastPageOutlinedIcon fontSize="small" /></IconButton></span></Tooltip>
         </Box>
       </Stack>
-    </Stack>
+    </Box>
   )
 }

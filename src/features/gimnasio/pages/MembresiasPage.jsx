@@ -29,11 +29,14 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { MembresiasTable } from '../components/MembresiasTable.jsx';
+import { DetalleMembresiaCliente, MenuSeccionesMembresia, SECCION_NUEVA_MEMBRESIA } from '../components/DetalleMembresiaCliente.jsx';
+import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
 import { CalendarioCuotasPreview, generarVistaPreviaCuotas } from '../components/CalendarioCuotasPreview.jsx';
 import { CondicionesHistoricasContrato } from '../components/CondicionesHistoricasContrato.jsx';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
+const hoyISO = () => hoyEcuador();
 const limpiarFecha = (valor) => (valor ? String(valor).slice(0, 10) : '');
 const obtenerDeportistaContexto = () => new URLSearchParams(window.location.search).get('deportista_id') || '';
 
@@ -84,6 +87,9 @@ const calcularFechaFin = (fechaInicioStr, plan) => {
 export function MembresiasPage() {
   const deportistaContextoId = obtenerDeportistaContexto();
   const [vista, setVista] = useState(deportistaContextoId ? 'formulario' : 'lista');
+  const [membresiaDetalle, setMembresiaDetalle] = useState(null);
+  const [resumenPdf, setResumenPdf] = useState(null);
+  const [cargandoResumen, setCargandoResumen] = useState(false);
   const [formData, setFormData] = useState(() => ({ ...formInicial(), deportista_id: deportistaContextoId }));
   const [membresias, setMembresias] = useState([]);
   const [clientes, setClientes] = useState([]);
@@ -336,6 +342,7 @@ export function MembresiasPage() {
   };
 
   const handleGuardar = async () => {
+    let creada = null;
     try {
       const planSeleccionado = planes.find((p) => String(p.id) === String(formData.plan_id));
 
@@ -382,6 +389,7 @@ export function MembresiasPage() {
             }))
           : [],
         fecha_inicio: formData.fecha_inicio,
+        vigencia_fin: formData.vigencia_fin || undefined,
         dias_gracia: Number(formData.dias_gracia || 0),
         renovacion_automatica: Boolean(formData.renovacion_automatica),
       };
@@ -413,6 +421,7 @@ export function MembresiasPage() {
         });
 
         const ventaNumero = respuesta.datos?.venta_numero;
+        creada = respuesta.datos?.id ? respuesta.datos : null;
         showNotificacion(
           ventaNumero ? `Membresía creada. Venta ${ventaNumero} generada y pendiente de pago.` : 'Membresía creada como pendiente de pago.',
           'success',
@@ -423,7 +432,13 @@ export function MembresiasPage() {
         window.history.back();
         return;
       }
-      setVista('lista');
+      // Al registrar se abre el detalle completo de la membresía nueva.
+      if (creada) {
+        setMembresiaDetalle(creada);
+        setVista('detalle');
+      } else {
+        setVista('lista');
+      }
       cargarMembresias();
     } catch (error) {
       const errores = error.response?.data?.errors;
@@ -432,6 +447,24 @@ export function MembresiasPage() {
     } finally {
       setGuardando(false);
     }
+  };
+
+  const abrirResumen = async (membresia) => {
+    setResumenPdf(null);
+    setCargandoResumen(true);
+    try {
+      const blob = await gimnasioServicio.obtenerResumenContratoPdf(membresia.id);
+      setResumenPdf({ blob, url: URL.createObjectURL(blob), nombre: `contrato-${membresia.codigo_contrato || membresia.id}.pdf` });
+    } catch {
+      showNotificacion('No se pudo generar el resumen del contrato.', 'error');
+    } finally {
+      setCargandoResumen(false);
+    }
+  };
+
+  const cerrarResumen = () => {
+    if (resumenPdf?.url) URL.revokeObjectURL(resumenPdf.url);
+    setResumenPdf(null);
   };
 
   const handleRenovar = async (membresia) => {
@@ -466,12 +499,26 @@ export function MembresiasPage() {
     }
   };
 
-  const handleMembresiaCancelada = () => {
-    showNotificacion('Membresía cancelada. El contrato se conserva en el historial.', 'success');
-    cargarMembresias();
+  const refrescarDetalle = async () => {
+    const respuesta = await gimnasioServicio.obtenerMembresia(membresiaDetalle.id);
+    if (respuesta?.datos) setMembresiaDetalle(respuesta.datos);
   };
 
-  const handleErrorCancelarMembresia = (error) => showNotificacion(error.response?.data?.mensaje || 'No se pudo cancelar la membresía', 'error');
+  if (vista === 'detalle' && membresiaDetalle) {
+    return (
+      <Box className="page-wrapper">
+        <PageHeader titulo="Detalle de membresía" descripcion="Información, historial y acciones del contrato." icono={<CardMembershipOutlinedIcon />} />
+        <Paper className="page-content-container" elevation={0}>
+          <DetalleMembresiaCliente
+            membresia={membresiaDetalle}
+            sedes={sedes}
+            onVolver={() => { setMembresiaDetalle(null); setVista('lista'); }}
+            onActualizado={refrescarDetalle}
+          />
+        </Paper>
+      </Box>
+    );
+  }
 
   if (vista === 'formulario') {
     const clienteContextual = Boolean(deportistaContextoId && !formData.id);
@@ -501,7 +548,9 @@ export function MembresiasPage() {
           acciones={<BotonVolver onClick={handleCancelarFormulario} />}
         />
 
-        <Paper className="page-content-container" elevation={0} sx={{ mt: 2, overflow: 'hidden' }}>
+        <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: esEdicion ? 'minmax(0, 1fr)' : '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+        {!esEdicion && <MenuSeccionesMembresia secciones={SECCION_NUEVA_MEMBRESIA} seccion="nueva" />}
+        <Paper className="page-content-container" elevation={0} sx={{ overflow: 'hidden', minWidth: 0 }}>
           <Box sx={{ bgcolor: '#fff', px: { xs: 1.5, md: 2.5 }, py: 2.5 }}>
             <Stack spacing={2}>
               <Box sx={formStyles.seccion}>
@@ -581,7 +630,9 @@ export function MembresiasPage() {
                   ) : null}
 
                   <TextField label="Fecha inicio" name="fecha_inicio" type="date" value={formData.fecha_inicio || ''} onChange={handleChange} required size="small" slotProps={{ inputLabel: { shrink: true } }} />
-                  <TextField label="Fecha fin" type="date" value={!esEdicion && calendario.length ? calendario[calendario.length - 1].fin : (formData.fecha_fin || '')} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Fecha prevista; Laravel calculará la vigencia contractual definitiva." />
+                  {!esEdicion && String(planes.find((p) => String(p.id) === String(formData.plan_id))?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? (
+                    <TextField label="Fecha fin" name="vigencia_fin" type="date" value={formData.vigencia_fin || ''} onChange={handleChange} required size="small" helperText="Hasta esta fecha se puede vender el pase." slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: formData.fecha_inicio || undefined } }} />
+                  ) : <TextField label="Fecha fin" type="date" value={!esEdicion && calendario.length ? calendario[calendario.length - 1].fin : (formData.fecha_fin || '')} size="small" disabled slotProps={{ inputLabel: { shrink: true } }} helperText="Fecha prevista; Laravel calculará la vigencia contractual definitiva." />}
 
                   {esEdicion ? (
                     <TextField select label="Estado" name="estado" value={normalizarEstado(formData.estado)} onChange={handleChange} required size="small">
@@ -592,7 +643,12 @@ export function MembresiasPage() {
                   )}
 
                   <TextField label="Días de gracia" name="dias_gracia" type="number" value={formData.dias_gracia ?? 0} onChange={handleChange} size="small" helperText="Acceso adicional después del vencimiento; no cambia la fecha contractual." />
-                  <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
+                  {esRenovable ? (
+                    <Box>
+                      <FormControlLabel control={<Switch name="renovacion_automatica" checked={Boolean(formData.renovacion_automatica)} onChange={handleChange} disabled={!esRenovable} />} label={esRenovable ? 'Renovación automática' : 'Plan no renovable'} />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>7 días antes del fin, con las cuotas pagadas, se programa un período más; se cobra en Ventas.</Typography>
+                    </Box>
+                  ) : null}
                 </Box>
               </Box>
 
@@ -632,7 +688,7 @@ export function MembresiasPage() {
 
               {requiereEntrenador ? (
                 <Box sx={formStyles.seccion}>
-                  <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', sm: 'center' }} gap={1} sx={{ mb: 1 }}>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} gap={1} sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between', mb: 1 }}>
                     <Box>
                       <Typography sx={formStyles.modalSeccionTitulo}>Asignaciones de entrenamiento</Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -699,10 +755,8 @@ export function MembresiasPage() {
           {esEdicion ? (
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
-              sx={dbanuStyles.formActions}
+              sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'flex-end', ...dbanuStyles.formActions }}
               spacing={1}
-              justifyContent="flex-end"
-              alignItems={{ xs: 'stretch', sm: 'center' }}
             >
               <FormControlLabel
                 sx={{ mr: { sm: 'auto' } }}
@@ -725,10 +779,8 @@ export function MembresiasPage() {
           ) : (
             <Stack
               direction={{ xs: 'column', sm: 'row' }}
-              sx={dbanuStyles.formActions}
+              sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'flex-end', ...dbanuStyles.formActions }}
               spacing={1}
-              justifyContent="flex-end"
-              alignItems={{ xs: 'stretch', sm: 'center' }}
             >
               <FormControlLabel
                 sx={{ mr: { sm: 'auto' } }}
@@ -746,6 +798,7 @@ export function MembresiasPage() {
             </Stack>
           )}
         </Paper>
+        </Box>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
       </Box>
     );
@@ -756,7 +809,8 @@ export function MembresiasPage() {
       <PageHeader titulo="Membresías" descripcion="Contratos asignados a clientes, con plan, sedes habilitadas, vigencia, cobro y estado." icono={<CardMembershipOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || membresias.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <MembresiasTable membresias={membresias} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={aplicarFiltroColumna} onEditar={handleEditar} onRenovar={handleRenovar} onCancelada={handleMembresiaCancelada} onErrorCancelar={handleErrorCancelarMembresia} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargarMembresias(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargarMembresias(nuevos); }} />
+        <VisorPdf titulo="Resumen del contrato" pdf={resumenPdf} cargando={cargandoResumen} onCerrar={cerrarResumen} />
+        <MembresiasTable membresias={membresias} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={aplicarFiltroColumna} onEditar={handleEditar} onRenovar={handleRenovar} onVer={(membresia) => { setMembresiaDetalle(membresia); setVista('detalle'); }} onResumen={abrirResumen} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargarMembresias(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargarMembresias(nuevos); }} />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>

@@ -1,6 +1,18 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const entrenamientoServicio = {
+  obtenerSesiones: async (params = { page: 1 }) => {
+    const { data } = await api.get('/base/entrenamiento/sesiones', { params });
+    return data;
+  },
+  obtenerPizarra: async (params) => {
+    const { data } = await api.get('/base/entrenamiento/pizarra', { params });
+    return data;
+  },
+  obtenerPizarraGeneral: async (params) => {
+    const { data } = await api.get('/base/entrenamiento/pizarra-general', { params });
+    return data;
+  },
   obtenerDeportistasEvaluaciones: async () => {
     const { data } = await api.get('/base/entrenamiento/evaluaciones-fisicas/deportistas');
     return data;
@@ -89,10 +101,6 @@ export const entrenamientoServicio = {
   },
   actualizarProgreso: async (id, payload) => {
     const { data } = await api.put(`/base/entrenamiento/progreso/${id}`, payload);
-    return data;
-  },
-  eliminarProgreso: async (id) => {
-    const { data } = await api.delete(`/base/entrenamiento/progreso/${id}`);
     return data;
   },
 };

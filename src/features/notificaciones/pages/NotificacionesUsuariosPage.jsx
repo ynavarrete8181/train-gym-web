@@ -29,7 +29,7 @@ const opcionesEstado = [
 
 export function NotificacionesUsuariosPage({ integrada = false, referenciaProceso = null }) {
   const [datos, setDatos] = useState([])
-  const [meta, setMeta] = useState({ pagina_actual: 1, por_pagina: 10, total: 0 })
+  const [meta, setMeta] = useState({ pagina_actual: 1, por_pagina: 5, total: 0 })
   const [filtros, setFiltros] = useState({ busqueda: '', estado: '' })
   const [seleccion, setSeleccion] = useState([])
   const [cargando, setCargando] = useState(false)

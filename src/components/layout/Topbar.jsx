@@ -6,6 +6,7 @@ import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined'
 import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined'
 import LockResetOutlinedIcon from '@mui/icons-material/LockResetOutlined'
 import KeyboardArrowDownOutlinedIcon from '@mui/icons-material/KeyboardArrowDownOutlined'
+import MenuOutlinedIcon from '@mui/icons-material/MenuOutlined'
 import { AppBar, Avatar, Badge, Box, Divider, IconButton, Menu, MenuItem, Stack, Toolbar, Tooltip, Typography } from '@mui/material'
 import { useCallback, useEffect, useState } from 'react'
 import { uiTokens } from '../../styles/uiTokens.js'
@@ -37,7 +38,7 @@ const obtenerNombreCorto = (usuario) => {
   return [primerNombre, primerApellido].filter(Boolean).join(' ') || 'Usuario'
 }
 
-export function Topbar({ sidebarWidth, vistaActual, tituloVista: tituloMenu, usuario, onLogout, onAvisoNavigate }) {
+export function Topbar({ onAbrirMenu, sidebarWidth, vistaActual, tituloVista: tituloMenu, usuario, onLogout, onAvisoNavigate }) {
   const [cambiarClaveAbierto, setCambiarClaveAbierto] = useState(false)
   const [anclaAvisos, setAnclaAvisos] = useState(null)
   const [anclaTema, setAnclaTema] = useState(null)
@@ -106,6 +107,9 @@ export function Topbar({ sidebarWidth, vistaActual, tituloVista: tituloMenu, usu
   return (
     <AppBar position="fixed" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: '#202020', width: { md: `calc(100% - ${sidebarWidth}px)` }, ml: { md: `${sidebarWidth}px` }, bgcolor: '#343431', color: '#fff', transition: (themeMui) => themeMui.transitions.create(['width', 'margin'], { easing: themeMui.transitions.easing.sharp, duration: themeMui.transitions.duration.standard }) }}>
       <Toolbar sx={{ minHeight: { xs: 64, sm: 72 }, gap: 1.5 }}>
+        <IconButton aria-label="Abrir menú" onClick={onAbrirMenu} sx={{ display: { md: 'none' }, width: 36, height: 36, color: '#fff', border: 1, borderColor: 'rgba(255,255,255,0.20)' }}>
+          <MenuOutlinedIcon sx={{ fontSize: 20 }} />
+        </IconButton>
         <Box sx={{ flexGrow: 1, minWidth: 0 }}>
           <Typography sx={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.7 }}>Revive</Typography>
           <Typography sx={{ fontSize: 16, fontWeight: 900, color: '#fff' }} noWrap>{tituloVista}</Typography>
@@ -115,7 +119,7 @@ export function Topbar({ sidebarWidth, vistaActual, tituloVista: tituloMenu, usu
             <IconoTemaActual sx={{ fontSize: 20 }} />
           </IconButton>
         </Tooltip>
-        <Menu anchorEl={anclaTema} open={Boolean(anclaTema)} onClose={() => setAnclaTema(null)} PaperProps={{ sx: { mt: 1, minWidth: 170, borderRadius: 2 } }}>
+        <Menu anchorEl={anclaTema} open={Boolean(anclaTema)} onClose={() => setAnclaTema(null)} slotProps={{ paper: { sx: { mt: 1, minWidth: 170, borderRadius: 2 } } }}>
           {opcionesTema.map(({ valor, etiqueta, Icono }) => (
             <MenuItem
               key={valor}
@@ -134,7 +138,7 @@ export function Topbar({ sidebarWidth, vistaActual, tituloVista: tituloMenu, usu
             <Badge badgeContent={noLeidos} color="error" max={99}><NotificationsOutlinedIcon sx={{ fontSize: 20 }} /></Badge>
           </IconButton>
         </Tooltip>
-        <Menu anchorEl={anclaAvisos} open={Boolean(anclaAvisos)} onClose={() => setAnclaAvisos(null)} PaperProps={{ sx: { mt: 1, width: 360, maxHeight: 420, borderRadius: 2 } }}>
+        <Menu anchorEl={anclaAvisos} open={Boolean(anclaAvisos)} onClose={() => setAnclaAvisos(null)} slotProps={{ paper: { sx: { mt: 1, width: 360, maxHeight: 420, borderRadius: 2 } } }}>
           <Box sx={{ px: 2, py: 1.2 }}><Typography sx={{ fontSize: 13, fontWeight: 900 }}>Notificaciones</Typography></Box>
           <Divider />
           {avisos.length ? avisos.map((aviso) => (
@@ -176,7 +180,7 @@ export function Topbar({ sidebarWidth, vistaActual, tituloVista: tituloMenu, usu
             />
           </Stack>
         </Tooltip>
-        <Menu anchorEl={anclaUsuario} open={Boolean(anclaUsuario)} onClose={() => setAnclaUsuario(null)} PaperProps={{ sx: { mt: 1, minWidth: 220, borderRadius: 2 } }}>
+        <Menu anchorEl={anclaUsuario} open={Boolean(anclaUsuario)} onClose={() => setAnclaUsuario(null)} slotProps={{ paper: { sx: { mt: 1, minWidth: 220, borderRadius: 2 } } }}>
           <MenuItem onClick={() => { setAnclaUsuario(null); setCambiarClaveAbierto(true) }} sx={{ gap: 1.2, fontSize: 12.5 }}>
             <LockResetOutlinedIcon sx={{ fontSize: 19, color: uiTokens.colores.primario }} /> Cambiar contraseña
           </MenuItem>

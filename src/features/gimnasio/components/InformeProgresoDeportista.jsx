@@ -57,7 +57,7 @@ function Tendencia({ datos, campo, unidad }) {
       <polyline fill="none" stroke={uiTokens.colores.primario} strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" points={coord.map((p) => `${p.x},${p.y}`).join(' ')} />
       {coord.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r="1.7" fill={uiTokens.colores.primario}><title>{fecha(p.fecha)}: {formato(p.valor, unidad)}</title></circle>)}
     </Box>
-    <Stack direction="row" justifyContent="space-between">
+    <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
       <Typography variant="caption" color="text.secondary">{fecha(puntos[0].fecha)}</Typography>
       <Typography variant="caption" color="text.secondary">{fecha(puntos[puntos.length - 1].fecha)}</Typography>
     </Stack>
@@ -86,11 +86,11 @@ export function InformeProgresoDeportista({ deportistaId, onNotificacion }) {
   const pruebas = fuente?.pruebas || [];
   const comparativas = fuente?.comparativas_pruebas || [];
   const codigoActivo = comparativas.some((p) => p.codigo === pruebaElegida) ? pruebaElegida : comparativas[0]?.codigo || '';
-  if (cargando && !demostracion) return <Stack direction="row" justifyContent="center" sx={{ py: 5 }}><CircularProgress size={24} /></Stack>;
+  if (cargando && !demostracion) return <Stack direction="row" sx={{ justifyContent: 'center', py: 5 }}><CircularProgress size={24} /></Stack>;
   if (error && !demostracion) return <Stack spacing={2}><Alert severity="warning">{error}</Alert><Button variant="outlined" onClick={() => setDemostracion(true)}>Ver demostración con datos ficticios</Button></Stack>;
   return <Stack spacing={2}>
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography sx={{ fontWeight: 850, fontSize: 15 }}>Informe de progreso físico</Typography>
         <Button size="small" variant="outlined" onClick={() => setDemostracion((v) => !v)}>{demostracion ? 'Ver datos reales' : 'Ver ejemplo simulado'}</Button>
       </Stack>

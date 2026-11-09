@@ -5,7 +5,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import ViewWeekOutlinedIcon from '@mui/icons-material/ViewWeekOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -18,15 +18,18 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { entrenamientoServicio } from '../services/entrenamientoServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const diasSemana = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 const estadosPlan = ['BORRADOR', 'ACTIVO', 'PAUSADO', 'FINALIZADO'];
 const tiposRm = ['DIRECTO', 'ESTIMADO'];
 const tiposCarga = ['LIBRE', 'KG', 'PORCENTAJE_RM', 'RPE'];
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyEcuador();
 const fecha = (valor) => valor ? String(valor).slice(0, 10) : '';
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
+const youtubeId = (url = '') => String(url).match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^?&/]{11})/)?.[1] || null;
 
 const configs = {
   ejercicios: {
@@ -254,12 +257,12 @@ function Formulario({ tipo, formData, catalogos, onChange, videoArchivo, onVideo
           <input type="file" hidden accept="video/mp4,video/webm,video/quicktime" onChange={(e) => onVideoArchivo(e.target.files?.[0] || null)} />
         </Button>
         {videoArchivo && <Typography variant="caption" sx={{ gridColumn: { md: 'span 3' } }}>Video seleccionado: {(videoArchivo.size / 1024 / 1024).toFixed(1)} MB · máximo 50 MB. Se subirá al guardar el ejercicio.</Typography>}
-        {(formData.video_url || formData.url_recurso) && <Box sx={{ gridColumn: { md: 'span 3' } }}>
+        {(videoArchivo || formData.video_url || formData.url_recurso) && <Box sx={{ gridColumn: { md: 'span 3' } }}>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>Ejemplo del ejercicio</Typography>
-          {formData.video_url ? <Box component="video" controls preload="metadata" src={formData.video_url} sx={{ width: '100%', maxWidth: 480, borderRadius: 1 }} /> : <Button component="a" target="_blank" rel="noopener noreferrer" href={formData.url_recurso} variant="outlined" size="small">Ver video del ejercicio</Button>}
+          <VistaPreviaEjercicioVideo archivo={videoArchivo} videoUrl={formData.video_url} recursoUrl={formData.url_recurso} />
         </Box>}
-        <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
         <TextField label="Instrucciones" name="instrucciones" value={formData.instrucciones || ''} onChange={onChange} size="small" multiline minRows={3} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
+        <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
       </Box>
     );
   }
@@ -331,6 +334,20 @@ function Formulario({ tipo, formData, catalogos, onChange, videoArchivo, onVideo
       <TextField label="Observaciones" name="observaciones" value={formData.observaciones || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
     </Box>
   );
+}
+
+function VistaPreviaEjercicioVideo({ archivo, videoUrl, recursoUrl }) {
+  const archivoUrl = useMemo(() => archivo ? URL.createObjectURL(archivo) : '', [archivo]);
+  useEffect(() => () => { if (archivoUrl) URL.revokeObjectURL(archivoUrl); }, [archivoUrl]);
+  const src = archivoUrl || videoUrl || recursoUrl || '';
+  const idYoutube = youtubeId(src);
+  const estilo = { width: '100%', maxWidth: 420, height: 236, borderRadius: 2, bgcolor: 'black', display: 'block' };
+
+  if (idYoutube) {
+    return <Box component="iframe" src={`https://www.youtube.com/embed/${idYoutube}?rel=0`} title="Vista previa del ejercicio" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen sx={{ ...estilo, border: 0 }} />;
+  }
+
+  return <Box component="video" controls preload="metadata" src={src} sx={estilo} />;
 }
 
 function TablaEntrenamiento({ items, columnas, meta, cargando, onEditar, onPageChange, onRowsPerPageChange }) {

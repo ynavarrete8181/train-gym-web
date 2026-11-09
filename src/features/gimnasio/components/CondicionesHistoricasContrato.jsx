@@ -115,7 +115,7 @@ export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
     <Stack spacing={2.25}>
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper', overflow: 'hidden' }}>
         <Box sx={{ px: { xs: 1.75, md: 2.25 }, py: 1.75, bgcolor: 'action.hover' }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between' }}>
             <Box>
               <Typography variant="subtitle1" fontWeight={800}>Resumen de la membresía</Typography>
               <Typography variant="body2" color="text.secondary">Condiciones pactadas al momento de la contratación.</Typography>
@@ -132,7 +132,7 @@ export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
               <Typography variant="body2" color="text.secondary">{original?.modalidad_nombre || membresia.modalidad_nombre || 'Sin modalidad'}</Typography>
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Stack direction="row" alignItems="center" gap={0.75}>
+              <Stack direction="row" gap={0.75} sx={{ alignItems: 'center' }}>
                 <EventAvailableOutlinedIcon sx={{ fontSize: 17, color: 'text.secondary' }}/>
                 <Typography variant="caption" color="text.secondary">Vigencia del contrato</Typography>
               </Stack>
@@ -141,14 +141,14 @@ export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
               </Typography>
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Stack direction="row" alignItems="center" gap={0.75}>
+              <Stack direction="row" gap={0.75} sx={{ alignItems: 'center' }}>
                 <Inventory2OutlinedIcon sx={{ fontSize: 17, color: 'text.secondary' }}/>
                 <Typography variant="caption" color="text.secondary">Períodos contratados</Typography>
               </Stack>
               <Typography variant="h6" fontWeight={800} sx={{ mt: 0.25 }}>{cantidadPeriodos ?? '—'}</Typography>
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Stack direction="row" alignItems="center" gap={0.75}>
+              <Stack direction="row" gap={0.75} sx={{ alignItems: 'center' }}>
                 <PaymentsOutlinedIcon sx={{ fontSize: 17, color: 'text.secondary' }}/>
                 <Typography variant="caption" color="text.secondary">Total bruto pactado</Typography>
               </Stack>
@@ -156,7 +156,7 @@ export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
             </Box>
           </Box>
           <Divider sx={{ my: 1.75 }}/>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between' }}>
             <Typography variant="body2" color="text.secondary">
               {diaPago ? `Vencimiento habitual: día ${diaPago} de cada mes.` : 'Los vencimientos constan en el calendario de cuotas.'}
             </Typography>
@@ -173,7 +173,7 @@ export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
               {Array.isArray(original?.servicios_incluidos) && original.servicios_incluidos.length > 0 && (
                 <Box sx={{ gridColumn: '1 / -1' }}>
                   <Typography variant="caption" color="text.secondary">Servicios incluidos originalmente</Typography>
-                  <Stack direction="row" gap={0.75} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                  <Stack direction="row" gap={0.75} sx={{ flexWrap: 'wrap', mt: 0.5 }}>
                     {original.servicios_incluidos.map((servicio, indice) => (
                       <Chip key={servicio.id ?? indice} size="small" variant="outlined" label={servicio.nombre || 'Servicio'} />
                     ))}
@@ -187,7 +187,7 @@ export function CondicionesHistoricasContrato({ membresia, sedes = [] }) {
 
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper', overflow: 'hidden' }}>
         <Box sx={{ px: { xs: 1.75, md: 2.25 }, py: 1.75, bgcolor: 'action.hover' }}>
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <HistoryOutlinedIcon sx={{ color: 'text.secondary', fontSize: 20 }}/>
             <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography variant="subtitle1" fontWeight={800}>Historial de modificaciones</Typography>

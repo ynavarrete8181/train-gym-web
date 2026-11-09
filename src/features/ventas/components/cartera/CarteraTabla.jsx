@@ -96,7 +96,7 @@ export function CarteraTabla({
       total={meta.total || 0}
       filtrados={meta.total || 0}
       page={meta.pagina_actual || 1}
-      rowsPerPage={meta.por_pagina || 10}
+      rowsPerPage={meta.por_pagina || 5}
       onPageChange={onPageChange}
       onRowsPerPageChange={onRowsPerPageChange}
       cargando={cargando}
@@ -188,7 +188,7 @@ export function CarteraTabla({
               <TableCell key={columna.key}>{columna.render(item)}</TableCell>
             ))}
             <TableCell align="right">
-              <Stack direction="row" spacing={0.75} justifyContent="flex-end">
+              <Stack direction="row" spacing={0.75} sx={{ justifyContent: 'flex-end' }}>
                 <Tooltip title="Gestionar cuenta">
                   <Button
                     size="small"

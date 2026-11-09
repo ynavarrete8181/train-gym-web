@@ -12,6 +12,7 @@ import { AccionesFormulario } from '../../../components/common/AccionesFormulari
 import { CampoSelectIcono } from '../../../components/common/CampoSelectIcono.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -132,26 +133,6 @@ export function MetaComercialFormulario({
                 slotProps={{ htmlInput: { min: 0, step: 1 }, input: { startAdornment: <AutorenewOutlinedIcon sx={{ mr: 1, fontSize: 18, color: '#144985' }} /> } }}
               />
 
-              <CampoSelectIcono
-                icono={<FlagOutlinedIcon />}
-                label="Estado"
-                value={formulario.estado}
-                onChange={(e) => onChange('estado', e.target.value)}
-                options={[
-                  {
-                    value: 'ACTIVA',
-                    label: 'Activa',
-                    description: 'Participa en seguimiento y alertas',
-                    icono: <FlagOutlinedIcon />,
-                  },
-                  {
-                    value: 'INACTIVA',
-                    label: 'Inactiva',
-                    description: 'Se conserva sin seguimiento operativo',
-                    icono: <FlagOutlinedIcon />,
-                  },
-                ]}
-              />
               <TextField
                 size="small"
                 label="Observaciones"
@@ -160,6 +141,11 @@ export function MetaComercialFormulario({
                 sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }}
                 multiline
                 minRows={2}
+              />
+              <CampoActivo
+                label="Activa"
+                checked={formulario.estado === 'ACTIVA'}
+                onChange={(e) => onChange('estado', e.target.checked ? 'ACTIVA' : 'INACTIVA')}
               />
             </Box>
           </Box>

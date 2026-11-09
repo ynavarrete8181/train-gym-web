@@ -5,18 +5,20 @@ import {
   Divider,
   Paper,
   Popover,
-  Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import { TablaGestion } from "../../../../components/tables/TablaGestion.jsx";
+import { useTablaLocal } from "../../../../components/tables/useTablaLocal.js";
 
 export function CargaUsuariosVistaPrevia({ filas = [] }) {
   const [contextoVisible, setContextoVisible] = useState({ anchor: null, texto: "" });
+
+  const tabla = useTablaLocal(filas, {});
 
   if (!filas.length) return null;
 
@@ -37,15 +39,7 @@ export function CargaUsuariosVistaPrevia({ filas = [] }) {
         <Chip size="small" variant="outlined" label={`${filas.length} fila(s)`} />
       </Box>
       <Divider />
-      <TableContainer
-        sx={{
-          maxHeight: 430,
-          pb: 1.25,
-          bgcolor: "#fff",
-          "&::-webkit-scrollbar": { height: 10, width: 10 },
-        }}
-      >
-        <Table stickyHeader size="small">
+      <TablaGestion {...tabla.propsTabla}>
           <TableHead>
             <TableRow>
               <TableCell>Fila</TableCell>
@@ -60,7 +54,7 @@ export function CargaUsuariosVistaPrevia({ filas = [] }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filas.map((item) => (
+            {tabla.visibles.map((item) => (
               <TableRow key={item.fila}>
                 <TableCell>{item.fila}</TableCell>
                 <TableCell>{item.datos.nombres || item.datos.nombre}</TableCell>
@@ -117,8 +111,7 @@ export function CargaUsuariosVistaPrevia({ filas = [] }) {
               </TableRow>
             ))}
           </TableBody>
-        </Table>
-      </TableContainer>
+      </TablaGestion>
       <Popover
         open={Boolean(contextoVisible.anchor)}
         anchorEl={contextoVisible.anchor}

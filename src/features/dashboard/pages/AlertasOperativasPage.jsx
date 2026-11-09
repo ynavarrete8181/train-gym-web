@@ -35,7 +35,7 @@ export function AlertasOperativasPage({ referenciaProceso = null }) {
     nivel: [],
     sede_id: [],
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
 
   const cargar = async (params = filtros) => {
@@ -145,7 +145,7 @@ export function AlertasOperativasPage({ referenciaProceso = null }) {
           total={meta.total || 0}
           filtrados={meta.total || 0}
           page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 10}
+          rowsPerPage={meta.por_pagina || 5}
           onPageChange={(page) => {
             const nuevos = { ...filtros, page };
             setFiltros(nuevos);

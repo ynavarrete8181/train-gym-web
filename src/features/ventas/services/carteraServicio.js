@@ -1,7 +1,7 @@
 import { apiClient as api } from '../../../services/apiClient.js';
 
 export const carteraServicio = {
-  listar: async (params = { page: 1, per_page: 10 }) => (
+  listar: async (params = { page: 1, per_page: 5 }) => (
     await api.get('/base/ventas/cartera', { params })
   ).data,
 

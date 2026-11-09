@@ -28,6 +28,7 @@ import { NotificacionSnackbar } from '../../../components/common/NotificacionSna
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const DIAS = [
   { id: 'LUNES', corto: 'Lun', nombre: 'Lunes' },
@@ -567,29 +568,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
               helperText="Máximo de clientes asignados"
             />
 
-            <Box
-              sx={{
-                minHeight: 40,
-                px: 1.25,
-                border: '1px solid #dbe5f0',
-                borderRadius: 1,
-                display: 'flex',
-                alignItems: 'center',
-                bgcolor: '#f8fafc',
-              }}
-            >
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={Boolean(form.activo)}
-                    onChange={(event) => setForm((prev) => ({ ...prev, activo: event.target.checked }))}
-                    size="small"
-                  />
-                }
-                label={form.activo ? 'Activo' : 'Inactivo'}
-                sx={{ m: 0, '& .MuiFormControlLabel-label': { fontWeight: 800, fontSize: 13 } }}
-              />
-            </Box>
+            <CampoActivo checked={form.activo} onChange={(event) => setForm((prev) => ({ ...prev, activo: event.target.checked }))} />
           </Box>
 
           {esPersonalizado ? (
@@ -623,7 +602,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
                     mb: 1.25,
                   }}
                 >
-                  <Stack direction="row" spacing={0.6} flexWrap="wrap" useFlexGap>
+                  <Stack direction="row" spacing={0.6} useFlexGap sx={{ flexWrap: 'wrap' }}>
                     {DIAS.map((dia) => {
                       const seleccionado = esInstitucional
                         ? detallesJornada.some(
@@ -794,7 +773,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
                 <Box sx={{ mb: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1 }}>
                   {resumenSedes.map((sede) => (
                     <Box key={sede.id} sx={{ p: 1.4, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fbfdff' }}>
-                      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1 }}>
                         <LocationOnOutlinedIcon sx={{ fontSize: 19, color: '#144985' }} />
                         <Typography variant="body2" fontWeight={900}>{sede.nombre}</Typography>
                         <Box sx={{ flex: 1 }} />
@@ -899,7 +878,7 @@ export function HorarioEntrenadorPersonalizado({ entrenador, onVolver, onGuardad
 
         {versiones.length > 0 ? (
           <Box sx={{ ...formStyles.seccion, mt: 1.5 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1.25 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.25 }}>
               <HistoryOutlinedIcon sx={{ fontSize: 19 }} />
               <Typography sx={formStyles.modalSeccionTitulo}>Historial de versiones</Typography>
             </Stack>
@@ -987,8 +966,7 @@ function ResumenDato({ icono, etiqueta, valor }) {
     <Stack
       direction="row"
       spacing={1}
-      alignItems="center"
-      sx={{ p: 1, border: '1px solid #dbe5f0', borderRadius: 1.25, bgcolor: '#fbfdff' }}
+      sx={{ alignItems: 'center', p: 1, border: '1px solid #dbe5f0', borderRadius: 1.25, bgcolor: '#fbfdff' }}
     >
       <Box sx={{ display: 'flex', color: '#004985', '& svg': { fontSize: 18 } }}>{icono}</Box>
       <Box>

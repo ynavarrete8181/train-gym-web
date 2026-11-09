@@ -5,6 +5,7 @@ import { AccionesFormulario } from '../../../components/common/AccionesFormulari
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx'
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx'
 import { PageHeader } from '../../../components/common/PageHeader.jsx'
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx'
 
 const tipos = [
   ['OAUTH2_CLIENT_CREDENTIALS', 'OAuth 2.0 · Aplicación'],
@@ -119,11 +120,11 @@ export function FormularioIntegracion({ tipo, esEdicion, form, setForm, data, ca
           {esServicio && <>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5}><TextField select label="Método" value={form.metodo || 'POST'} onChange={(e) => setForm({ ...form, metodo: e.target.value })}>{['GET','POST','PUT','PATCH','DELETE'].map((m) => <MenuItem key={m} value={m}>{m}</MenuItem>)}</TextField><TextField fullWidth label="Endpoint relativo" value={form.endpoint || ''} onChange={(e) => setForm({ ...form, endpoint: e.target.value })} /></Stack>
             <TextField select label="Perfil de autenticación" value={form.credencial_id || ''} onChange={(e) => setForm({ ...form, credencial_id: e.target.value })}><MenuItem value="">Sin autenticación</MenuItem>{perfiles.map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}</TextField>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}><TextField fullWidth type="number" label="Tiempo máximo (segundos)" value={form.timeout_segundos || 25} onChange={(e) => setForm({ ...form, timeout_segundos: e.target.value })} /><TextField fullWidth type="number" label="Reintentos" value={form.reintentos ?? 3} onChange={(e) => setForm({ ...form, reintentos: e.target.value })} />{esServicioCorreo && <TextField fullWidth type="number" label="Correos por minuto" value={form.correos_por_minuto ?? 10} inputProps={{ min: 1, max: 1000 }} onChange={(e) => setForm({ ...form, correos_por_minuto: e.target.value })} />}</Stack>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}><TextField fullWidth type="number" label="Tiempo máximo (segundos)" value={form.timeout_segundos || 25} onChange={(e) => setForm({ ...form, timeout_segundos: e.target.value })} /><TextField fullWidth type="number" label="Reintentos" value={form.reintentos ?? 3} onChange={(e) => setForm({ ...form, reintentos: e.target.value })} />{esServicioCorreo && <TextField fullWidth type="number" label="Correos por minuto" value={form.correos_por_minuto ?? 10} slotProps={{ htmlInput: { min: 1, max: 1000 } }} onChange={(e) => setForm({ ...form, correos_por_minuto: e.target.value })} />}</Stack>
             <TextField label="Encabezados adicionales (JSON)" multiline minRows={4} value={form.headers || '{}'} onChange={(e) => setForm({ ...form, headers: e.target.value })} />
           </>}
           {esCredencial && <CamposCredencial form={form} setForm={setForm} dato={dato} />}
-          <Paper variant="outlined" sx={{ p: 1.5 }}><Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}><Switch checked={Boolean(form.activo)} onChange={(e) => setForm({ ...form, activo: e.target.checked })} /><Typography sx={{ fontSize: 12.5, fontWeight: 850 }}>Registro activo</Typography></Stack></Paper>
+          <CampoActivo checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
           <AccionesFormulario onCancelar={onVolver} onGuardar={onGuardar} guardando={cargando} />
         </Stack>
       </Paper>

@@ -6,7 +6,7 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import PersonOutlineOutlinedIcon from '@mui/icons-material/PersonOutlineOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
 import CoffeeOutlinedIcon from '@mui/icons-material/CoffeeOutlined';
-import { Autocomplete, Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -18,6 +18,8 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const fecha = (v) => String(v || '').slice(0, 10);
 const hora = (v) => String(v || '').slice(0, 5);
@@ -28,7 +30,7 @@ const inicial = {
   sede_id: '',
   jornada_id: '',
   receso_id: '',
-  fecha_inicio: new Date().toISOString().slice(0, 10),
+  fecha_inicio: hoyEcuador(),
   fecha_fin: '',
   activo: true,
   observaciones: '',
@@ -229,7 +231,7 @@ export function AsignacionHorariosPage() {
               <TextField label="Vigente hasta" type="date" size="small" value={form.fecha_fin} onChange={(e) => setForm((a) => ({ ...a, fecha_fin: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} helperText="Vacío = sin fecha final" />
 
               <TextField label="Observaciones" size="small" value={form.observaciones} onChange={(e) => setForm((a) => ({ ...a, observaciones: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
-              <FormControlLabel control={<Switch checked={Boolean(form.activo)} onChange={(e) => setForm((a) => ({ ...a, activo: e.target.checked }))} />} label="Activo" />
+              <CampoActivo checked={form.activo} onChange={(e) => setForm((a) => ({ ...a, activo: e.target.checked }))} />
             </Box>
 
             {jornada ? (
@@ -296,7 +298,7 @@ export function AsignacionHorariosPage() {
             {items.map((item) => (
               <TableRow key={item.id} hover>
                 <TableCell>
-                  <Stack direction="row" spacing={.7} alignItems="center">
+                  <Stack direction="row" spacing={.7} sx={{ alignItems: 'center' }}>
                     <PersonOutlineOutlinedIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
                     <Box>
                       <Typography variant="body2" fontWeight={700}>{item.entrenador_nombre}</Typography>
@@ -304,7 +306,7 @@ export function AsignacionHorariosPage() {
                     </Box>
                   </Stack>
                 </TableCell>
-                <TableCell><Stack direction="row" spacing={.6} alignItems="center"><LocationOnOutlinedIcon sx={{ fontSize: 17 }} /><span>{item.sede_nombre}</span></Stack></TableCell>
+                <TableCell><Stack direction="row" spacing={.6} sx={{ alignItems: 'center' }}><LocationOnOutlinedIcon sx={{ fontSize: 17 }} /><span>{item.sede_nombre}</span></Stack></TableCell>
                 <TableCell><Typography variant="body2" fontWeight={700}>{item.jornada_nombre}</Typography></TableCell>
                 <TableCell><Typography variant="body2">{(item.dias_semana || []).map((d) => d.slice(0,3)).join(' · ')}</Typography><Typography variant="caption" color="text.secondary">{hora(item.hora_inicio)} - {hora(item.hora_fin)}</Typography></TableCell>
                 <TableCell>{item.receso_nombre ? <><Typography variant="body2">{item.receso_nombre}</Typography><Typography variant="caption" color="text.secondary">{hora(item.receso_hora_inicio)}-{hora(item.receso_hora_fin)}</Typography></> : 'Sin receso'}</TableCell>
@@ -324,7 +326,7 @@ export function AsignacionHorariosPage() {
 }
 
 function Resumen({ icono, label, valor }) {
-  return <Stack direction="row" spacing={.7} alignItems="center">
+  return <Stack direction="row" spacing={.7} sx={{ alignItems: 'center' }}>
     <Box sx={{ display: 'flex', color: '#8a6500', '& svg': { fontSize: 18 } }}>{icono}</Box>
     <Box>
       <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>

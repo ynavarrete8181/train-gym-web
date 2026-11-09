@@ -35,7 +35,7 @@ export function CarteraPage() {
   const [vista, setVista] = useState('lista');
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
-  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 10 });
+  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({
     sede_id: [],
     venta_numero: '',

@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
@@ -77,12 +78,12 @@ export function AsignacionesClienteTable({
     return bFecha.localeCompare(aFecha);
   });
 
+  const tabla = useTablaLocal(ordenadas, {});
+
   return (
     <TablaGestion
-      total={ordenadas.length}
-      filtrados={ordenadas.length}
+      {...tabla.propsTabla}
       cargando={cargando}
-      textoResumen={`${ordenadas.length} asignación(es) registrada(s)`}
     >
       <TableHead>
         <TableRow>
@@ -100,7 +101,7 @@ export function AsignacionesClienteTable({
       </TableHead>
 
       <TableBody>
-        {ordenadas.map((item) => {
+        {tabla.visibles.map((item) => {
           const activa = String(item.estado || '').toUpperCase() === 'ACTIVO';
           const desde = fecha(item.fecha_inicio);
           const hasta = activa ? 'Actual' : (fecha(item.fecha_fin) || '—');

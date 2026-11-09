@@ -26,6 +26,7 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const nuevaModalidad = () => ({
   id: null,
@@ -244,22 +245,22 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
         <Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(3, minmax(0, 1fr))' }, gap: 1, alignItems: 'start', mt: 1 }}>
         <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
-        <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
-        <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 30 }} />
+        <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" slotProps={{ htmlInput: { min: 1, max: 7 } }} />
+        <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana ?? ''} onChange={cambiar} disabled={form.uso_ilimitado} size="small" slotProps={{ htmlInput: { min: 1, max: 30 } }} />
         <TextField select label="Duración" name="tipo_duracion" value={form.tipo_duracion} onChange={cambiar} size="small">
           <MenuItem value="DIAS">Días</MenuItem>
           <MenuItem value="SEMANAS">Semanas</MenuItem>
           <MenuItem value="MESES">Meses</MenuItem>
           <MenuItem value="ANIOS">Años</MenuItem>
         </TextField>
-        <TextField label="Cantidad" name="duracion" type="number" value={form.duracion} onChange={cambiar} size="small" inputProps={{ min: 1 }} />
-        <TextField label="Precio ($)" name="precio_base" type="number" value={form.precio_base} onChange={cambiar} size="small" inputProps={{ min: 0, step: '0.01' }} />
+        <TextField label="Cantidad" name="duracion" type="number" value={form.duracion} onChange={cambiar} size="small" slotProps={{ htmlInput: { min: 1 } }} />
+        <TextField label="Precio ($)" name="precio_base" type="number" value={form.precio_base} onChange={cambiar} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
         {/* Modelo y momento de cobro se conservan en los datos existentes; no son de uso habitual. */}
       </Box>
 
       <Box sx={{ mt: 1.5, border: '1px solid #dbe5f0', borderRadius: 2, p: 1.5, bgcolor: '#f8fafc' }}>
         <Stack spacing={1}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between' }}>
             <Box>
               <Typography variant="subtitle2" fontWeight={800}>Tarifas por sede</Typography>
               <Typography variant="caption" color="text.secondary">Opcional · Precios diferentes por sede</Typography>
@@ -286,7 +287,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                         {habilitado ? 'Tarifa específica' : `Precio general: $${Number(form.precio_base || 0).toFixed(2)}`}
                       </Typography>
                     </Box>
-                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
                       <FormControlLabel
                         sx={{ m: 0 }}
                         control={<Switch size="small" checked={habilitado} onChange={(e) => fijarPrecioSede(sede.id_sede, e.target.checked)} />}
@@ -297,7 +298,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                           label="Precio especial ($)" size="small" type="number"
                           value={especial.precio}
                           onChange={(e) => cambiarPrecioSede(sede.id_sede, e.target.value)}
-                          inputProps={{ min: 0, step: '0.01' }}
+                          slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
                           sx={{ maxWidth: 170 }}
                         />
                       )}
@@ -312,7 +313,7 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
       </Box>
 
       <Box sx={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5, mt: 2 }}>
-        <FormControlLabel sx={{ m: 0 }} control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
+        <CampoActivo name="activo" checked={form.activo} onChange={cambiar} label="Activa" />
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, ml: 'auto' }}>
           <BotonGuardar onClick={agregarOActualizar} texto="Agregar" />
         </Box>
@@ -367,17 +368,17 @@ export function PlanModalidadesEditor({ modalidades = [], onChange, sedes = [], 
                   />
                 </TableCell>
                 <TableCell align="center">
-                  <Stack direction="row" spacing={0.5} justifyContent="center">
+                  <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'center' }}>
                     <Tooltip title="Editar modalidad">
                       <IconButton size="small" onClick={() => editar(modalidad, index)} sx={dbanuStyles.actionEdit}>
                         <EditOutlinedIcon sx={{ fontSize: 17 }} />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Quitar modalidad">
+                    {!modalidad.id && <Tooltip title="Quitar del formulario">
                       <IconButton size="small" onClick={() => eliminar(index)} sx={dbanuStyles.actionDelete}>
                         <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
                       </IconButton>
-                    </Tooltip>
+                    </Tooltip>}
                   </Stack>
                 </TableCell>
               </TableRow>

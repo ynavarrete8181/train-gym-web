@@ -3,12 +3,14 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../components/FiltroColumna.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { ventasResponsableServicio } from '../services/ventas/ventasResponsableServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
@@ -21,19 +23,13 @@ export function VentasResponsablePage() {
   const [cargando, setCargando] = useState(true);
   const [filtros, setFiltros] = useState({
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
-    hasta: hoy.toISOString().slice(0, 10),
+    hasta: hoyEcuador(),
     sede_id: [],
+    columnas: {},
     responsable_id: [],
     responsable: '',
-    ventas: '',
-    clientes: '',
-    total_ventas: '',
-    total_cobrado: '',
-    saldo: '',
-    ticket_promedio: '',
-    porcentaje_cobrado: '',
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
 
   const cargar = async (params = filtros) => {
@@ -110,7 +106,7 @@ export function VentasResponsablePage() {
           total={meta.total || 0}
           filtrados={meta.total || 0}
           page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 10}
+          rowsPerPage={meta.por_pagina || 5}
           onPageChange={(page) => {
             const nuevos = { ...filtros, page };
             setFiltros(nuevos);
@@ -141,13 +137,13 @@ export function VentasResponsablePage() {
               >
                 Sede
               </FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.ventas} onChange={(valor) => aplicar({ ventas: valor })}>Ventas</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.clientes} onChange={(valor) => aplicar({ clientes: valor })}>Clientes</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.total_ventas} onChange={(valor) => aplicar({ total_ventas: valor })}>Total vendido</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.total_cobrado} onChange={(valor) => aplicar({ total_cobrado: valor })}>Cobrado</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.saldo} onChange={(valor) => aplicar({ saldo: valor })}>Saldo</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.ticket_promedio} onChange={(valor) => aplicar({ ticket_promedio: valor })}>Ticket promedio</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.porcentaje_cobrado} onChange={(valor) => aplicar({ porcentaje_cobrado: valor })}>% cobrado</FilterHeaderCell>
+              <FiltroColumna align="center" columna="ventas" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={numero}>Ventas</FiltroColumna>
+              <FiltroColumna align="center" columna="clientes" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={numero}>Clientes</FiltroColumna>
+              <FiltroColumna align="center" columna="total_ventas" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Total vendido</FiltroColumna>
+              <FiltroColumna align="center" columna="total_cobrado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Cobrado</FiltroColumna>
+              <FiltroColumna align="center" columna="saldo_pendiente" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Saldo</FiltroColumna>
+              <FiltroColumna align="center" columna="ticket_promedio" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Ticket promedio</FiltroColumna>
+              <FiltroColumna align="center" columna="porcentaje_cobrado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={porcentaje}>% cobrado</FiltroColumna>
             </TableRow>
           </TableHead>
           <TableBody>

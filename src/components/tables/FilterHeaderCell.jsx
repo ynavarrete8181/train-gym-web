@@ -76,7 +76,7 @@ export function FilterHeaderCell({ children, value = '', onChange, options = [],
           <Tooltip title={activo ? `Filtro aplicado${modoExcel ? ` (${seleccion.length})` : ''}` : 'Filtrar columna'}>
             <IconButton
               size="small"
-              onClick={(evento) => { setBusqueda(modoOpciones ? '' : String(value || '')); setAnchorEl(evento.currentTarget) }}
+              onClick={(evento) => { setBusqueda(modoOpciones || modoExcel ? '' : String(value || '')); setAnchorEl(evento.currentTarget) }}
               sx={{ width: '24px !important', height: '24px !important', minWidth: 24, p: 0.25, ml: 0.25, border: 'none !important', borderRadius: '4px !important', color: activo ? uiTokens.colores.primario : uiTokens.colores.textoMedio, bgcolor: activo ? 'rgba(0,73,135,0.09) !important' : 'transparent !important', '&:hover': { color: uiTokens.colores.primario, bgcolor: 'rgba(0,73,135,0.10) !important' }, '& .MuiSvgIcon-root': { fontSize: '16px !important' } }}
             ><FilterListRoundedIcon /></IconButton>
           </Tooltip>
@@ -90,7 +90,7 @@ export function FilterHeaderCell({ children, value = '', onChange, options = [],
             <IconButton size="small" onClick={() => setAnchorEl(null)} sx={{ width: 28, height: 28, color: uiTokens.colores.textoMedio }}><CloseOutlinedIcon sx={{ fontSize: 17 }} /></IconButton>
           </Stack>
 
-          {!modoOpciones ? (
+          {!modoOpciones && !modoExcel ? (
             <TextField autoFocus fullWidth size="small" value={busqueda} onChange={(evento) => setBusqueda(evento.target.value)} placeholder={`Buscar en ${String(children).toLowerCase()}`} sx={dbanuStyles.field} />
           ) : modoExcel ? (
             <>

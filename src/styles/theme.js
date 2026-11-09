@@ -314,6 +314,9 @@ export function crearTema(modo = 'light') {
           },
         },
       },
+      MuiSwitch: {
+        defaultProps: { color: 'success' },
+      },
       MuiChip: {
         styleOverrides: {
           root: {

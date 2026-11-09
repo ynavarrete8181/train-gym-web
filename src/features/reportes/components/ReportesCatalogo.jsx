@@ -127,22 +127,22 @@ function TablaReportes({ items, columnas, meta, cargando, tipo, onGenerar, onPag
 }
 
 function columnasPorTipo(tipo, meta, filtros, onFiltro) {
-  const filtro = (key, label, items = []) => <FilterHeaderCell key={key} value={filtros[key] || ''} onChange={(valor) => onFiltro(key, valor)} options={items}>{label}</FilterHeaderCell>;
+  const filtro = (key, label, items = []) => <FilterHeaderCell key={key} multiple value={filtros[key] || []} onChange={(valor) => onFiltro(key, valor)} options={items}>{label}</FilterHeaderCell>;
 
   if (tipo === 'historial') {
     return [
-      { key: 'reporte', header: <FilterHeaderCell key="reporte">Reporte</FilterHeaderCell>, render: (item) => <Box><Typography sx={{ fontSize: 12.5, fontWeight: 900 }}>{item.reporte_nombre}</Typography><Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>{item.codigo}</Typography></Box> },
+      { key: 'reporte', header: filtro('reporte', 'Reporte', opciones(meta.opciones_filtro?.reporte)), render: (item) => <Box><Typography sx={{ fontSize: 12.5, fontWeight: 900 }}>{item.reporte_nombre}</Typography><Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>{item.codigo}</Typography></Box> },
       { key: 'categoria', header: filtro('categoria', 'Categoría', opciones(meta.opciones_filtro?.categoria)), render: (item) => item.categoria },
       { key: 'formato', header: filtro('formato', 'Formato', opciones(meta.opciones_filtro?.formato)), render: (item) => item.formato },
-      { key: 'estado', header: filtro('estado', 'Estado', opciones(meta.opciones_filtro?.estado)), render: (item) => <StatusChip estado={estadoReporte(item.estado)} /> },
-      { key: 'generado', header: <FilterHeaderCell key="generado">Generado</FilterHeaderCell>, render: (item) => fecha(item.generado_at) },
-      { key: 'usuario', header: <FilterHeaderCell key="usuario">Usuario</FilterHeaderCell>, render: (item) => item.usuario_nombre || 'Sistema' },
+      { key: 'estado', header: filtro('estado', 'Estado', opciones(meta.opciones_filtro?.estado)), render: (item) => <StatusChip estado={estadoReporte(item.estado)} label={String(item.estado || '').toUpperCase() === 'GENERADO' ? 'Generado' : undefined} /> },
+      { key: 'generado', header: filtro('generado', 'Generado', (meta.opciones_filtro?.generado || []).map((valor) => ({ value: valor, label: valor.split('-').reverse().join('/') }))), render: (item) => fecha(item.generado_at) },
+      { key: 'usuario', header: filtro('usuario', 'Usuario', opciones(meta.opciones_filtro?.usuario)), render: (item) => item.usuario_nombre || 'Sistema' },
     ];
   }
 
   return [
-    { key: 'codigo', header: <FilterHeaderCell key="codigo">Código</FilterHeaderCell>, render: (item) => item.codigo },
-    { key: 'nombre', header: <FilterHeaderCell key="nombre">Reporte</FilterHeaderCell>, render: (item) => <Box><Typography sx={{ fontSize: 12.5, fontWeight: 900 }}>{item.nombre}</Typography><Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>{item.descripcion || 'Sin descripción'}</Typography></Box> },
+    { key: 'codigo', header: filtro('codigo', 'Código', opciones(meta.opciones_filtro?.codigo)), render: (item) => item.codigo },
+    { key: 'nombre', header: filtro('nombre', 'Reporte', opciones(meta.opciones_filtro?.nombre)), render: (item) => <Box><Typography sx={{ fontSize: 12.5, fontWeight: 900 }}>{item.nombre}</Typography><Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>{item.descripcion || 'Sin descripción'}</Typography></Box> },
     { key: 'categoria', header: filtro('categoria', 'Categoría', opciones(meta.opciones_filtro?.categoria)), render: (item) => item.categoria },
     { key: 'estado', header: filtro('activo', 'Estado', [{ value: 'true', label: 'Activo' }, { value: 'false', label: 'Inactivo' }]), render: (item) => <StatusChip estado={item.activo ? 'activo' : 'inactivo'} /> },
   ];

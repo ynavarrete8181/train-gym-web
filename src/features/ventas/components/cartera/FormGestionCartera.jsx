@@ -49,7 +49,7 @@ export function FormGestionCartera({
           type="datetime-local"
           size="small"
           label="Próxima gestión"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           value={form.proxima_gestion_at}
           onChange={(e) => setForm((actual) => ({ ...actual, proxima_gestion_at: e.target.value }))}
         />

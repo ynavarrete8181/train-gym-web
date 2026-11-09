@@ -57,7 +57,7 @@ export function EntrenadorConfiguracion({ datos, cargando = false, onVolver, onE
             }}
           >
             <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.7 }}>
-              <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" spacing={1}>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ justifyContent: 'space-between' }}>
                 <Box>
                   <Typography variant="h6" fontWeight={950}>{nombre}</Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -89,7 +89,7 @@ export function EntrenadorConfiguracion({ datos, cargando = false, onVolver, onE
 
           <Seccion titulo="Servicios habilitados" icono={<SportsOutlinedIcon />}>
             {servicios.length ? (
-              <Stack direction="row" spacing={.8} useFlexGap flexWrap="wrap">
+              <Stack direction="row" spacing={.8} useFlexGap sx={{ flexWrap: 'wrap' }}>
                 {servicios.map((servicio) => (
                   <Chip
                     key={servicio.id}
@@ -117,8 +117,8 @@ export function EntrenadorConfiguracion({ datos, cargando = false, onVolver, onE
                       bgcolor: '#fff',
                     }}
                   >
-                    <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1}>
-                      <Stack direction="row" spacing={.7} alignItems="center">
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Stack direction="row" spacing={.7} sx={{ alignItems: 'center' }}>
                         <LocationOnOutlinedIcon sx={{ fontSize: 18, color: '#9a7100' }} />
                         <Typography variant="body2" fontWeight={900}>{item.sede_nombre}</Typography>
                       </Stack>
@@ -198,7 +198,7 @@ export function EntrenadorConfiguracion({ datos, cargando = false, onVolver, onE
 function Seccion({ titulo, icono, children }) {
   return (
     <Box sx={{ mt: 1.5, border: '1px solid #e2e8f0', borderRadius: 2, p: 1.6, bgcolor: '#f8fafc' }}>
-      <Stack direction="row" spacing={.8} alignItems="center" sx={{ mb: 1.2 }}>
+      <Stack direction="row" spacing={.8} sx={{ alignItems: 'center', mb: 1.2 }}>
         <Box sx={{ display: 'flex', color: '#9a7100', '& svg': { fontSize: 19 } }}>{icono}</Box>
         <Typography variant="subtitle2" fontWeight={950}>{titulo}</Typography>
       </Stack>
@@ -209,7 +209,7 @@ function Seccion({ titulo, icono, children }) {
 
 function Dato({ icono, label, valor }) {
   return (
-    <Stack direction="row" spacing={.7} alignItems="flex-start">
+    <Stack direction="row" spacing={.7} sx={{ alignItems: 'flex-start' }}>
       {icono ? <Box sx={{ display: 'flex', mt: .15, color: '#64748b', '& svg': { fontSize: 17 } }}>{icono}</Box> : null}
       <Box sx={{ minWidth: 0 }}>
         <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
@@ -222,7 +222,7 @@ function Dato({ icono, label, valor }) {
 function ResumenCard({ icono, valor, texto }) {
   return (
     <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, p: 1.2, bgcolor: '#fff' }}>
-      <Stack direction="row" spacing={.8} alignItems="center">
+      <Stack direction="row" spacing={.8} sx={{ alignItems: 'center' }}>
         <Box sx={{ display: 'flex', color: '#9a7100', '& svg': { fontSize: 20 } }}>{icono}</Box>
         <Box>
           <Typography sx={{ fontSize: 20, fontWeight: 950, lineHeight: 1 }}>{valor}</Typography>

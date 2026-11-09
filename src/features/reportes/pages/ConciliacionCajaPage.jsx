@@ -3,16 +3,17 @@ import BalanceOutlinedIcon from '@mui/icons-material/BalanceOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../components/FiltroColumna.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { conciliacionCajaServicio } from '../services/ventas/conciliacionCajaServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
-const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : '—';
-const hora = (valor) => valor ? new Date(valor).toLocaleTimeString('es-EC', { hour: '2-digit', minute: '2-digit' }) : '—';
+const fechaDia = (valor) => new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC');
 const opciones = (items = []) => (items || []).map((item) => ({ value: String(item), label: String(item) }));
 
 export function ConciliacionCajaPage() {
@@ -23,26 +24,13 @@ export function ConciliacionCajaPage() {
   const [filtros, setFiltros] = useState({
     busqueda: '',
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
-    hasta: hoy.toISOString().slice(0, 10),
-    fecha: '',
+    hasta: hoyEcuador(),
     sede_id: [],
-    caja: '',
-    cajero: '',
-    apertura: '',
-    cierre: '',
-    saldo_inicial: '',
-    efectivo_cobrado: '',
-    efectivo_esperado: '',
-    efectivo_contado: '',
-    diferencia: '',
-    transferencia: '',
-    tarjeta: '',
-    deposito: '',
-    otros: '',
+    columnas: {},
     tipo_cierre: [],
     estado_conciliacion: [],
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
 
   const cargar = async (params = filtros) => {
@@ -100,12 +88,12 @@ export function ConciliacionCajaPage() {
                 descripcion="Cierres de caja, efectivo esperado, efectivo contado y diferencias."
                 filtros={filtros}
                 columnas={[
-                  { label: 'Fecha', value: (fila) => fecha(fila.fecha_cierre) },
+                  { label: 'Fecha', value: (fila) => fechaDia(fila.fecha) },
                   { label: 'Sede', value: 'sede', align: 'left' },
                   { label: 'Caja', value: (fila) => `${fila.caja_nombre || ''} ${fila.caja_codigo || ''}`, align: 'left' },
                   { label: 'Cajero', value: 'cajero', align: 'left' },
-                  { label: 'Apertura', value: (fila) => hora(fila.fecha_apertura) },
-                  { label: 'Cierre', value: (fila) => hora(fila.fecha_cierre) },
+                  { label: 'Apertura', value: 'hora_apertura' },
+                  { label: 'Cierre', value: 'hora_cierre' },
                   { label: 'Saldo inicial', value: (fila) => dinero(fila.saldo_inicial) },
                   { label: 'Efectivo cobrado', value: (fila) => dinero(fila.efectivo_cobrado) },
                   { label: 'Esperado', value: (fila) => dinero(fila.efectivo_esperado) },
@@ -129,7 +117,7 @@ export function ConciliacionCajaPage() {
           total={meta.total || 0}
           filtrados={meta.total || 0}
           page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 10}
+          rowsPerPage={meta.por_pagina || 5}
           onPageChange={(page) => {
             const nuevos = { ...filtros, page };
             setFiltros(nuevos);
@@ -144,21 +132,21 @@ export function ConciliacionCajaPage() {
         >
           <TableHead>
             <TableRow>
-              <FilterHeaderCell align="center" value={filtros.fecha} onChange={(valor) => aplicar({ fecha: valor })}>Fecha</FilterHeaderCell>
+              <FiltroColumna align="center" columna="fecha" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={fechaDia}>Fecha</FiltroColumna>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.caja} onChange={(valor) => aplicar({ caja: valor })}>Caja</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.cajero} onChange={(valor) => aplicar({ cajero: valor })}>Cajero</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.apertura} onChange={(valor) => aplicar({ apertura: valor })}>Apertura</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.cierre} onChange={(valor) => aplicar({ cierre: valor })}>Cierre</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.saldo_inicial} onChange={(valor) => aplicar({ saldo_inicial: valor })}>Saldo inicial</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.efectivo_cobrado} onChange={(valor) => aplicar({ efectivo_cobrado: valor })}>Efectivo cobrado</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.efectivo_esperado} onChange={(valor) => aplicar({ efectivo_esperado: valor })}>Efectivo esperado</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.efectivo_contado} onChange={(valor) => aplicar({ efectivo_contado: valor })}>Efectivo contado</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.diferencia} onChange={(valor) => aplicar({ diferencia: valor })}>Diferencia</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.transferencia} onChange={(valor) => aplicar({ transferencia: valor })}>Transferencias</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.tarjeta} onChange={(valor) => aplicar({ tarjeta: valor })}>Tarjetas</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.deposito} onChange={(valor) => aplicar({ deposito: valor })}>Depósitos</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.otros} onChange={(valor) => aplicar({ otros: valor })}>Otros</FilterHeaderCell>
+              <FiltroColumna columna="caja_nombre" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Caja</FiltroColumna>
+              <FiltroColumna columna="cajero" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Cajero</FiltroColumna>
+              <FiltroColumna align="center" columna="hora_apertura" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Apertura</FiltroColumna>
+              <FiltroColumna align="center" columna="hora_cierre" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Cierre</FiltroColumna>
+              <FiltroColumna align="center" columna="saldo_inicial" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Saldo inicial</FiltroColumna>
+              <FiltroColumna align="center" columna="efectivo_cobrado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Efectivo cobrado</FiltroColumna>
+              <FiltroColumna align="center" columna="efectivo_esperado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Efectivo esperado</FiltroColumna>
+              <FiltroColumna align="center" columna="efectivo_contado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Efectivo contado</FiltroColumna>
+              <FiltroColumna align="center" columna="diferencia" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Diferencia</FiltroColumna>
+              <FiltroColumna align="center" columna="transferencia_cobrada" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Transferencias</FiltroColumna>
+              <FiltroColumna align="center" columna="tarjeta_cobrada" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Tarjetas</FiltroColumna>
+              <FiltroColumna align="center" columna="deposito_cobrado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Depósitos</FiltroColumna>
+              <FiltroColumna align="center" columna="otros_cobrado" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Otros</FiltroColumna>
               <FilterHeaderCell align="center" value={filtros.tipo_cierre} onChange={(valor) => aplicar({ tipo_cierre: valor })} options={opciones(catalogos.tipos_cierre)} multiple>Tipo cierre</FilterHeaderCell>
               <FilterHeaderCell align="center" value={filtros.estado_conciliacion} onChange={(valor) => aplicar({ estado_conciliacion: valor })} options={catalogos.estados_conciliacion || []} multiple>Conciliación</FilterHeaderCell>
             </TableRow>
@@ -166,12 +154,12 @@ export function ConciliacionCajaPage() {
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.id} hover>
-                <TableCell align="center">{fecha(item.fecha_cierre)}</TableCell>
+                <TableCell align="center">{fechaDia(item.fecha)}</TableCell>
                 <TableCell>{item.sede}</TableCell>
                 <TableCell>{item.caja_nombre}<br /><small>{item.caja_codigo}</small></TableCell>
                 <TableCell>{item.cajero}</TableCell>
-                <TableCell align="center">{hora(item.fecha_apertura)}</TableCell>
-                <TableCell align="center">{hora(item.fecha_cierre)}</TableCell>
+                <TableCell align="center">{item.hora_apertura}</TableCell>
+                <TableCell align="center">{item.hora_cierre}</TableCell>
                 <TableCell align="center">{dinero(item.saldo_inicial)}</TableCell>
                 <TableCell align="center">{dinero(item.efectivo_cobrado)}</TableCell>
                 <TableCell align="center">{dinero(item.efectivo_esperado)}</TableCell>

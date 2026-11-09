@@ -3,7 +3,7 @@ import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import CoffeeOutlinedIcon from '@mui/icons-material/CoffeeOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -15,6 +15,7 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const DIAS = ['LUNES','MARTES','MIERCOLES','JUEVES','VIERNES','SABADO','DOMINGO'];
 const hora = (v) => String(v || '').slice(0,5);
@@ -139,12 +140,12 @@ function FormularioJornada({form,setForm}){
     <TextField label="Hora fin" type="time" size="small" value={form.hora_fin} onChange={e=>setForm(a=>({...a,hora_fin:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/>
     <Box sx={{gridColumn:{xs:'auto',md:'span 3'}}}>
       <Typography sx={{fontSize:11,fontWeight:800,color:'#64748b',mb:.7}}>Días de la jornada</Typography>
-      <Stack direction="row" spacing={.7} flexWrap="wrap" useFlexGap>
+      <Stack direction="row" spacing={.7} useFlexGap sx={{ flexWrap: 'wrap' }}>
         {DIAS.map(d=><Button key={d} variant={form.dias_semana.includes(d)?'contained':'outlined'} onClick={()=>toggleDia(d)} sx={{minWidth:48,height:32,textTransform:'none',fontWeight:850,...(form.dias_semana.includes(d)?dbanuStyles.addButtonRevive:{})}}>{d.slice(0,3)}</Button>)}
       </Stack>
     </Box>
     <TextField label="Descripción" size="small" value={form.descripcion||''} onChange={e=>setForm(a=>({...a,descripcion:e.target.value}))} multiline minRows={2} sx={{gridColumn:{xs:'auto',md:'span 2'}}}/>
-    <FormControlLabel control={<Switch checked={Boolean(form.activo)} onChange={e=>setForm(a=>({...a,activo:e.target.checked}))}/>} label="Activa"/>
+    <CampoActivo checked={form.activo} onChange={e=>setForm(a=>({...a,activo:e.target.checked}))} label="Activa" />
   </Box>;
 }
 
@@ -154,9 +155,9 @@ function FormularioReceso({form,setForm}){
     <TextField select label="Tipo" size="small" value={form.tipo} onChange={e=>setForm(a=>({...a,tipo:e.target.value}))}>
       {['DESAYUNO','ALMUERZO','MERIENDA','PAUSA','OTRO'].map(x=><MenuItem key={x} value={x}>{x.charAt(0)+x.slice(1).toLowerCase()}</MenuItem>)}
     </TextField>
-    <FormControlLabel control={<Switch checked={Boolean(form.activo)} onChange={e=>setForm(a=>({...a,activo:e.target.checked}))}/>} label="Activo"/>
     <TextField label="Hora inicio" type="time" size="small" value={form.hora_inicio} onChange={e=>setForm(a=>({...a,hora_inicio:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/>
     <TextField label="Hora fin" type="time" size="small" value={form.hora_fin} onChange={e=>setForm(a=>({...a,hora_fin:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/>
     <TextField label="Descripción" size="small" value={form.descripcion||''} onChange={e=>setForm(a=>({...a,descripcion:e.target.value}))}/>
+    <CampoActivo checked={form.activo} onChange={e=>setForm(a=>({...a,activo:e.target.checked}))} />
   </Box>;
 }

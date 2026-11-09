@@ -51,7 +51,7 @@ export function GestionToolbar({ total, busqueda, onBusqueda, acciones = null, r
         {mostrarTotal ? (
           <Chip
             variant="outlined"
-            label={`${Number(total || 0).toLocaleString('es-EC')} ${etiqueta}`}
+            label={`${Number(total || 0).toLocaleString('es-EC')} ${Number(total) === 1 && etiqueta === 'RESULTADOS' ? 'RESULTADO' : etiqueta}`}
             sx={{
               height: 38,
               borderRadius: 0.5,

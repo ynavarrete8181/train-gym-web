@@ -3,6 +3,7 @@ import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalance
 import { Box, Chip, Paper, TableBody, TableCell, TableHead, TableRow } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../components/FiltroColumna.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
@@ -19,15 +20,10 @@ export function CarteraVencidaReportePage() {
   const [filtros, setFiltros] = useState({
     busqueda: '',
     sede_id: [],
-    venta_numero: '',
-    cliente: '',
-    vencimiento: '',
-    dias_vencidos: '',
-    saldo: '',
-    responsable: '',
+    columnas: {},
     prioridad: [],
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
   const [cargando, setCargando] = useState(true);
 
@@ -90,16 +86,16 @@ export function CarteraVencidaReportePage() {
           )}
         />
 
-        <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 10} onPageChange={(page) => { const n = { ...filtros, page }; setFiltros(n); cargar(n); }} onRowsPerPageChange={(perPage) => { const n = { ...filtros, page: 1, per_page: perPage }; setFiltros(n); cargar(n); }} cargando={cargando}>
+        <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 5} onPageChange={(page) => { const n = { ...filtros, page }; setFiltros(n); cargar(n); }} onRowsPerPageChange={(perPage) => { const n = { ...filtros, page: 1, per_page: perPage }; setFiltros(n); cargar(n); }} cargando={cargando}>
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.venta_numero} onChange={(valor) => aplicar({ venta_numero: valor })}>N.º de venta</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.cliente} onChange={(valor) => aplicar({ cliente: valor })}>Cliente</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.vencimiento} onChange={(valor) => aplicar({ vencimiento: valor })}>Vencimiento</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.dias_vencidos} onChange={(valor) => aplicar({ dias_vencidos: valor })}>Días</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.saldo} onChange={(valor) => aplicar({ saldo: valor })}>Saldo</FilterHeaderCell>
-              <FilterHeaderCell value={filtros.responsable} onChange={(valor) => aplicar({ responsable: valor })}>Responsable</FilterHeaderCell>
+              <FiltroColumna align="center" columna="venta_numero" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>N.º de venta</FiltroColumna>
+              <FiltroColumna columna="cliente" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Cliente</FiltroColumna>
+              <FiltroColumna align="center" columna="fecha_vencimiento" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={fecha}>Vencimiento</FiltroColumna>
+              <FiltroColumna align="center" columna="dias_vencidos" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Días</FiltroColumna>
+              <FiltroColumna align="center" columna="saldo_pendiente" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} formato={dinero}>Saldo</FiltroColumna>
+              <FiltroColumna columna="responsable" filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar}>Responsable</FiltroColumna>
               <FilterHeaderCell align="center" value={filtros.prioridad} onChange={(valor) => aplicar({ prioridad: valor })} options={(catalogos.prioridades || []).map((p) => ({ value: p, label: p }))} multiple>Prioridad</FilterHeaderCell>
             </TableRow>
           </TableHead>

@@ -18,10 +18,13 @@ import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.js
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const diasSemana = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 const estadosReserva = ['RESERVADA', 'ASISTIO', 'CANCELADA', 'NO_ASISTIO'];
@@ -70,7 +73,7 @@ const configuraciones = {
     obtener: 'obtenerReservasDia',
     crear: 'crearReservaDia',
     actualizar: 'actualizarReservaDia',
-    formInicial: { id: null, cliente_id: '', servicio_id: '', horario_id: '', sede_id: '', fecha: fecha(new Date().toISOString()), hora_inicio: '', hora_fin: '', estado: 'RESERVADA', observaciones: '' },
+    formInicial: { id: null, cliente_id: '', servicio_id: '', horario_id: '', sede_id: '', fecha: fecha(hoyEcuador()), hora_inicio: '', hora_fin: '', estado: 'RESERVADA', observaciones: '' },
   },
 };
 
@@ -347,7 +350,7 @@ function FormularioCampos({ tipo, formData, catalogos, onChange }) {
       <Box sx={grid}>
         <TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" />
         <TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
-        <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
+        <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
       </Box>
     );
   }
@@ -362,8 +365,8 @@ function FormularioCampos({ tipo, formData, catalogos, onChange }) {
         <TextField label="Duración minutos" name="duracion_minutos" type="number" value={formData.duracion_minutos || 60} onChange={onChange} required size="small" />
         <TextField label="Capacidad base" name="capacidad_base" type="number" value={formData.capacidad_base || 1} onChange={onChange} required size="small" />
         <FormControlLabel control={<Switch name="requiere_reserva" checked={Boolean(formData.requiere_reserva)} onChange={onChange} />} label="Requiere reserva" />
-        <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
         <TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
+        <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
       </Box>
     );
   }
@@ -422,7 +425,7 @@ function FormularioCampos({ tipo, formData, catalogos, onChange }) {
             })}
           </Box>
         </Box>
-        <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
+        <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
       </Box>
     );
   }
@@ -476,7 +479,7 @@ function TablaServicioAgenda({ tipo, items, columnas, meta, cargando, onEditar, 
           <TableRow key={item.id} hover>
             {columnas.map((columna) => <TableCell key={columna.key}>{columna.render(item)}</TableCell>)}
             <TableCell align="right">
-              <Stack direction="row" spacing={0.4} justifyContent="flex-end">
+              <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end' }}>
                 {onVerDetalle ? (
                   <Tooltip title="Ver detalle">
                     <IconButton sx={dbanuStyles.actionView} onClick={() => onVerDetalle(item)}>
@@ -518,6 +521,7 @@ function TablaServicioAgenda({ tipo, items, columnas, meta, cargando, onEditar, 
 function DetalleHorarioVista({ detalle, onVolver }) {
   const bloque = detalle?.bloque || {};
   const detalles = detalle?.detalles || [];
+  const tablaDetalles = useTablaLocal(detalles, {});
 
   return (
     <Box className="page-wrapper">
@@ -529,9 +533,7 @@ function DetalleHorarioVista({ detalle, onVolver }) {
       />
       <Paper className="page-content-container" elevation={0}>
         <TablaGestion
-          total={detalles.length}
-          filtrados={detalles.length}
-          textoResumen={`${detalles.length} combinaciones consultadas`}
+          {...tablaDetalles.propsTabla}
         >
           <TableHead>
             <TableRow>
@@ -543,7 +545,7 @@ function DetalleHorarioVista({ detalle, onVolver }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {detalles.map((item) => (
+            {tablaDetalles.visibles.map((item) => (
               <TableRow key={item.id} hover>
                 <TableCell>{item.sede_nombre}</TableCell>
                 <TableCell>{item.dia_semana}</TableCell>

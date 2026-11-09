@@ -74,7 +74,7 @@ export function ActivarCuentaPage() {
             <Alert severity="success">Contraseña guardada. Te llevaremos al inicio de sesión.</Alert>
           ) : estado.valido ? (
             <>
-              {!token ? <TextField label="Código de verificación" value={form.codigo} onChange={(e) => { setForm((actual) => ({ ...actual, codigo: e.target.value.toUpperCase() })); setEstado((actual) => ({ ...actual, error: '' })) }} inputProps={{ maxLength: 10 }} required autoFocus /> : null}
+              {!token ? <TextField label="Código de verificación" value={form.codigo} onChange={(e) => { setForm((actual) => ({ ...actual, codigo: e.target.value.toUpperCase() })); setEstado((actual) => ({ ...actual, error: '' })) }} slotProps={{ htmlInput: { maxLength: 10 } }} required autoFocus /> : null}
               <TooltipRequisitosClave valor={form.password}>
                 <CampoClave fullWidth label="Nueva contraseña" required value={form.password} onChange={(e) => setForm((actual) => ({ ...actual, password: e.target.value }))} />
               </TooltipRequisitosClave>
