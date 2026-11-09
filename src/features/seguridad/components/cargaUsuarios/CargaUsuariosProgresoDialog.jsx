@@ -23,7 +23,7 @@ export function CargaUsuariosProgresoDialog({ abierto, carga, onCerrar, onDescar
   const color = colorEstado(carga, terminado)
 
   return (
-    <Dialog open={abierto} onClose={terminado ? onCerrar : undefined} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+    <Dialog open={abierto} onClose={terminado ? onCerrar : undefined} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, overflow: 'hidden' } } }}>
       <Box sx={formStyles.modalHeader}>
         <Box sx={{ ...formStyles.modalIcono, bgcolor: color }}><GroupAddOutlinedIcon /></Box>
         <Box sx={{ minWidth: 0, flex: 1 }}>

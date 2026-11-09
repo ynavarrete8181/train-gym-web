@@ -118,7 +118,7 @@ export function DialogRenovacionMembresia({ abierto, membresia, onCerrar, onActu
     return abierto ? <Box sx={{ width: '100%', minWidth: 0 }}>{contenido}</Box> : null;
   }
   return <Dialog open={Boolean(abierto)} onClose={procesando ? undefined : onCerrar}
-    fullWidth maxWidth="sm" PaperProps={{ sx: { borderRadius: 2 } }}>
+    fullWidth maxWidth="sm" slotProps={{ paper: { sx: { borderRadius: 2 } } }}>
     {contenido}
   </Dialog>;
 }

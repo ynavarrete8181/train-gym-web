@@ -10,8 +10,9 @@ import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
-const hoy = new Date().toISOString().slice(0,10);
+const hoy = hoyEcuador();
 
 const agruparBloqueos = (slots = []) => {
   const resultado = [];
@@ -367,7 +368,7 @@ export function DisponibilidadAgendaPage({ entrenadorInicial = null, onVolver = 
 
 function Leyenda({ color, texto }) {
   return (
-    <Stack direction="row" spacing={.55} alignItems="center">
+    <Stack direction="row" spacing={.55} sx={{ alignItems: 'center' }}>
       <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: color }} />
       <Typography variant="caption" color="text.secondary" fontWeight={700}>
         {texto}

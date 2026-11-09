@@ -1,6 +1,6 @@
 import {
   Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle,
-  Divider, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  Divider, Stack, TableBody, TableCell, TableHead, TableRow,
   TextField, Typography,
 } from '@mui/material';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -8,6 +8,8 @@ import AcUnitOutlinedIcon from '@mui/icons-material/AcUnitOutlined';
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
+import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
@@ -63,6 +65,33 @@ const leerDetalle = (movimiento) => {
  * Componente visual sin escrituras: tanto la simulación como el historial
  * muestran exclusivamente datos del servicio Laravel, nunca recalculan días.
  */
+function TablaCuotas({ cuotas, modalidad }) {
+  const tabla = useTablaLocal(cuotas, {});
+
+  return (
+    <TablaGestion {...tabla.propsTabla}>
+      <TableHead><TableRow>
+        <TableCell>Cuota</TableCell><TableCell>Emisión</TableCell>
+        <TableCell>Vencimiento</TableCell>
+        {modalidad === 'FACTURACION' && <TableCell>Nuevo vencimiento</TableCell>}
+        <TableCell>Resultado</TableCell>
+      </TableRow></TableHead>
+      <TableBody>{tabla.visibles.map(c => <TableRow key={c.cuota_id}>
+        <TableCell>{c.numero}</TableCell>
+        <TableCell>{fecha(c.emision_anterior)}</TableCell>
+        <TableCell>{fecha(c.vencimiento_anterior)}</TableCell>
+        {modalidad === 'FACTURACION' && <TableCell>{fecha(c.vencimiento_propuesto)}</TableCell>}
+        <TableCell>{({
+          PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
+          REPROGRAMACION_PROPUESTA: 'A reprogramar',
+          VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
+          SIN_CAMBIOS: 'Sin cambios',
+        })[c.accion] || c.accion || '—'}</TableCell>
+      </TableRow>)}</TableBody>
+    </TablaGestion>
+  );
+}
+
 export function DialogCongelacionMembresia({
   abierto, modo = 'detalle', membresia, preview, suspension, movimiento, motivo = '',
   motivoCancelacion = '', onMotivoCancelacion, procesando = false,
@@ -109,14 +138,14 @@ export function DialogCongelacionMembresia({
 
   return <Dialog open={Boolean(abierto)} onClose={procesando ? undefined : onCerrar}
     fullWidth maxWidth="lg" scroll="paper" aria-labelledby="dialog-congelacion-titulo"
-    PaperProps={{ sx: {
+    slotProps={{ paper: { sx: {
       borderRadius: 2,
       overflow: 'hidden',
       width: { xs: 'calc(100% - 24px)', sm: 'calc(100% - 48px)', lg: 'min(1180px, calc(100% - 64px))' },
       maxWidth: 1180,
       maxHeight: '90vh',
       m: { xs: 1.5, sm: 3 },
-    } }}>
+    } } }}>
     <DialogTitle id="dialog-congelacion-titulo" sx={{ ...formStyles.modalHeader, py: 1.25 }}>
       <Box sx={{ ...formStyles.modalIcono, bgcolor: uiTokens.colores.acentoSuave,
         color: uiTokens.colores.textoFuerte, boxShadow: 'none',
@@ -222,28 +251,7 @@ export function DialogCongelacionMembresia({
         </Box>
         {(financiero.cuotas || []).length > 0 && <>
           <Box sx={{ mt: 1.25 }}><TituloReporte>Detalle de cuotas</TituloReporte></Box>
-          <TableContainer sx={{ border: `1px solid ${uiTokens.colores.borde}`, borderRadius: 0.5 }}>
-            <Table size="small" sx={dbanuStyles.table}>
-              <TableHead><TableRow>
-                <TableCell>Cuota</TableCell><TableCell>Emisión</TableCell>
-                <TableCell>Vencimiento</TableCell>
-                {modalidad === 'FACTURACION' && <TableCell>Nuevo vencimiento</TableCell>}
-                <TableCell>Resultado</TableCell>
-              </TableRow></TableHead>
-              <TableBody>{financiero.cuotas.map(c => <TableRow key={c.cuota_id}>
-                <TableCell>{c.numero}</TableCell>
-                <TableCell>{fecha(c.emision_anterior)}</TableCell>
-                <TableCell>{fecha(c.vencimiento_anterior)}</TableCell>
-                {modalidad === 'FACTURACION' && <TableCell>{fecha(c.vencimiento_propuesto)}</TableCell>}
-                <TableCell>{({
-                  PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
-                  REPROGRAMACION_PROPUESTA: 'A reprogramar',
-                  VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
-                  SIN_CAMBIOS: 'Sin cambios',
-                })[c.accion] || c.accion || '—'}</TableCell>
-              </TableRow>)}</TableBody>
-            </Table>
-          </TableContainer>
+          <TablaCuotas cuotas={financiero.cuotas} modalidad={modalidad} />
         </>}
       </>}
 

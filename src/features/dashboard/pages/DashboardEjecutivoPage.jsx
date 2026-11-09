@@ -27,6 +27,7 @@ import {
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { dashboardEjecutivoServicio } from '../services/dashboardEjecutivoServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const dinero = (valor) => Number(valor || 0).toLocaleString('es-EC', { style: 'currency', currency: 'USD' });
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
@@ -48,7 +49,7 @@ function Indicador({ titulo, valor, detalle, icono, cargando = false }) {
         boxShadow: 'none',
       }}
     >
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontSize: 10.5, fontWeight: 900, color: uiTokens.colores.textoMedio, textTransform: 'uppercase', letterSpacing: 0.25 }}>
             {titulo}
@@ -129,7 +130,7 @@ export function DashboardEjecutivoPage() {
   const [cargando, setCargando] = useState(true);
   const [filtros, setFiltros] = useState({
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
-    hasta: hoy.toISOString().slice(0, 10),
+    hasta: hoyEcuador(),
     sede_id: '',
   });
 

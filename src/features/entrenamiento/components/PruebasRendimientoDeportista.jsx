@@ -63,16 +63,16 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion, per
         {Object.entries(catalogo).map(([codigo, item]) => <MenuItem key={codigo} value={codigo}>{item.nombre}</MenuItem>)}
       </TextField>
       <TextField size="small" label={`Resultado ${seleccionada ? '(' + seleccionada.unidad.toLowerCase() + ')' : ''}`} type="number" fullWidth value={form.resultado}
-        onChange={(e) => setForm((v) => ({ ...v, resultado: e.target.value }))} inputProps={{ min: 0, step: seleccionada?.unidad === 'REPETICIONES' ? 1 : 0.01 }} />
+        onChange={(e) => setForm((v) => ({ ...v, resultado: e.target.value }))} slotProps={{ htmlInput: { min: 0, step: seleccionada?.unidad === 'REPETICIONES' ? 1 : 0.01 } }} />
       <TextField size="small" type="date" label="Fecha de prueba" fullWidth value={form.fecha_prueba}
-        onChange={(e) => setForm((v) => ({ ...v, fecha_prueba: e.target.value }))} InputLabelProps={{ shrink: true }} />
+        onChange={(e) => setForm((v) => ({ ...v, fecha_prueba: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} />
       <TextField size="small" label="Protocolo de evaluación" required fullWidth value={form.protocolo}
         onChange={(e) => setForm((v) => ({ ...v, protocolo: e.target.value }))} sx={{ gridColumn: { md: 'span 3' } }}
         helperText="Describe condiciones, técnica y procedimiento para comparar resultados posteriores." />
       <TextField size="small" label="Observaciones (opcional)" fullWidth value={form.observaciones}
         onChange={(e) => setForm((v) => ({ ...v, observaciones: e.target.value }))} sx={{ gridColumn: { md: 'span 3' } }} />
     </Box>}
-    {(permisos.crear || (permisos.editar && editando)) && <Stack direction="row" justifyContent="flex-end" sx={{ mt: 1.5 }}>
+    {(permisos.crear || (permisos.editar && editando)) && <Stack direction="row" sx={{ justifyContent: 'flex-end', mt: 1.5 }}>
       {editando && <Button size="small" onClick={() => { setEditando(null); setForm(nuevo()); }} disabled={guardando}>Cancelar edición</Button>}
       <Button variant="contained" size="small" disabled={guardando || cargando} onClick={guardar}>{editando ? 'Guardar cambios' : 'Guardar prueba'}</Button>
     </Stack>}
@@ -80,8 +80,8 @@ export function PruebasRendimientoDeportista({ deportistaId, onNotificacion, per
     {cargando && <CircularProgress size={18} />}
     {!cargando && registros.length === 0 && <Typography fontSize={12} color="text.secondary">No se han registrado pruebas.</Typography>}
     <Stack spacing={1}>
-      {registros.map((registro) => <Stack key={registro.id} direction={{ xs: 'column', sm: 'row' }} gap={1} justifyContent="space-between"
-        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
+      {registros.map((registro) => <Stack key={registro.id} direction={{ xs: 'column', sm: 'row' }} gap={1}
+        sx={{ justifyContent: 'space-between', border: '1px solid', borderColor: 'divider', borderRadius: 1, p: 1 }}>
         <Box>
           <Typography fontWeight={700} fontSize={12}>{catalogo[registro.codigo_prueba]?.nombre || registro.codigo_prueba} · {registro.resultado} {registro.unidad.toLowerCase()}</Typography>
           <Typography fontSize={12} color="text.secondary">{fecha(registro.fecha_prueba)} · {registro.protocolo}</Typography>

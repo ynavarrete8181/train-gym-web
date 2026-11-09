@@ -68,7 +68,7 @@ function TablaAuditoria({ tipo }) {
   const config = configs[tipo];
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
-  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 10 });
+  const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
   const [filtrosColumna, setFiltrosColumna] = useState({});
   const [cargando, setCargando] = useState(true);
   const [detalle, setDetalle] = useState(null);
@@ -85,9 +85,9 @@ function TablaAuditoria({ tipo }) {
   };
 
   useEffect(() => {
-    setFiltros({ busqueda: '', page: 1, per_page: 10 });
+    setFiltros({ busqueda: '', page: 1, per_page: 5 });
     setFiltrosColumna({});
-    cargar({ busqueda: '', page: 1, per_page: 10 });
+    cargar({ busqueda: '', page: 1, per_page: 5 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tipo]);
 
@@ -107,7 +107,7 @@ function TablaAuditoria({ tipo }) {
       <PageHeader titulo={config.titulo} descripcion={config.descripcion} icono={config.icono} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || items.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} />
-        <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 10} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }} cargando={cargando}>
+        <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 5} onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }} onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }} cargando={cargando}>
           <TableHead><TableRow>{columnas.map((columna) => columna.header)}{tipo === 'eventos' || tipo === 'logs' || tipo === 'integraciones' ? <TableCell align="right">Detalle</TableCell> : null}</TableRow></TableHead>
           <TableBody>
             {!cargando && items.length === 0 ? <TablaEstadoFila colSpan={columnas.length + (tipo === 'eventos' || tipo === 'logs' || tipo === 'integraciones' ? 1 : 0)} texto="No hay registros para los filtros seleccionados." /> : null}

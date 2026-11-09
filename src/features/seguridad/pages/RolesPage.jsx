@@ -7,7 +7,6 @@ import {
   Box,
   Button,
   IconButton,
-  MenuItem,
   Paper,
   Stack,
   TableBody,
@@ -45,6 +44,7 @@ import {
   quitarFuncionRol,
   sincronizarRol,
 } from "../services/rolPermisoService.js";
+import { CampoActivo } from "../../../components/common/CampoActivo.jsx";
 
 const inicial = { role: "", activo: true };
 
@@ -353,20 +353,10 @@ export function RolesPage() {
                   setFormulario({ ...formulario, role: e.target.value })
                 }
               />
-              <TextField
-                select
-                label="Estado"
-                value={formulario.activo ? "1" : "0"}
-                onChange={(e) =>
-                  setFormulario({
-                    ...formulario,
-                    activo: e.target.value === "1",
-                  })
-                }
-              >
-                <MenuItem value="1">Activo</MenuItem>
-                <MenuItem value="0">Inactivo</MenuItem>
-              </TextField>
+              <CampoActivo
+                checked={formulario.activo}
+                onChange={(e) => setFormulario({ ...formulario, activo: e.target.checked })}
+              />
             </Box>
             <AccionesFormulario
               onCancelar={() => setModoFormulario(false)}

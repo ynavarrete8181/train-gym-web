@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Autocomplete, Box, Button, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Switch, TextField, Typography, Chip, Tooltip, TableHead, TableBody, TableRow, TableCell } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import { formStyles } from '../../../styles/formStyles.js';
 import { Stack } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
@@ -32,6 +31,10 @@ import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import { DeportistasTable } from '../components/DeportistasTable.jsx';
+import { SelectorTutor } from '../components/SelectorTutor.jsx';
+import { RepresentadosTutor } from '../components/RepresentadosTutor.jsx';
+import { HistorialTutores } from '../components/HistorialTutores.jsx';
+import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
 import { MapaUbicacionPersona } from '../components/MapaUbicacionPersona.jsx';
 import { FichaInicialDeportista } from '../components/FichaInicialDeportista.jsx';
 import { InformeProgresoDeportista } from '../components/InformeProgresoDeportista.jsx';
@@ -42,12 +45,39 @@ import { entrenamientoServicio } from '../../entrenamiento/services/entrenamient
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { CalendarioCuotasPreview, CalendarioCuotasRegistradas, generarVistaPreviaCuotas, periodosParaCubrirFecha } from '../components/CalendarioCuotasPreview.jsx';
-import { DetalleMembresiaCliente } from '../components/DetalleMembresiaCliente.jsx';
+import { DetalleMembresiaCliente, MenuSeccionesMembresia, SECCION_NUEVA_MEMBRESIA } from '../components/DetalleMembresiaCliente.jsx';
+import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
+import { esPaseDiario, membresiaEditable, presentarEstadoMembresia, textoVigenciaPase } from '../components/estadoMembresia.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const nombreGeografico = (valor = '') =>
   String(valor).trim().toLocaleLowerCase('es-EC')
     .replace(/(^|[\s(/-])([a-záéíóúñü])/g, (_, espacio, letra) => espacio + letra.toLocaleUpperCase('es-EC'))
     .replace(/\b(De|Del|La|Las|Los|Y)\b/g, (palabra, offset) => offset === 0 ? palabra : palabra.toLocaleLowerCase('es-EC'));
+
+const tutorVacio = { persona_id: null, tipo_relacion: 'TUTOR', responsable_pago: false };
+
+// La ficha del deportista solo guarda el vínculo; los datos del tutor se editan en su propia ficha.
+const mapearTutorDeFicha = (tutor) => (tutor ? {
+  persona_id: tutor.persona_id,
+  tipo_identificacion: tutor.tipo_identificacion || 'CEDULA',
+  identificacion: tutor.identificacion || '',
+  nombres: tutor.nombres || '',
+  apellidos: tutor.apellidos || '',
+  nombre_completo: tutor.nombre_completo || '',
+  telefono: tutor.telefono || '',
+  email: tutor.email || '',
+  direccion: tutor.direccion || '',
+  tipo_relacion: tutor.tipo_relacion || 'TUTOR',
+  responsable_pago: booleanoBackend(tutor.responsable_pago),
+} : { ...tutorVacio });
+
+const esMenorDeEdad = (fecha) => {
+  if (!fecha) return false;
+  const hoy = hoyEcuador();
+  return String(fecha).slice(0, 10) > `${Number(hoy.slice(0, 4)) - 18}${hoy.slice(4)}`;
+};
 
 const getInitialForm = () => ({
   id: null,
@@ -70,19 +100,14 @@ const getInitialForm = () => ({
   contacto_emergencia_telefono: '',
   observaciones_medicas: '',
   sede_principal_id: '',
-  estado: 'PROSPECTO',
+  estado: 'ACTIVO',
+  tipo_cliente: 'DEPORTISTA',
+  tutor_id: null,
+  representados: [],
+  representados_anteriores: [],
+  historial_tutores: [],
   requiere_representante_legal: false,
-  representante_legal: {
-    tipo_identificacion: 'CEDULA',
-    identificacion: '',
-    nombres: '',
-    apellidos: '',
-    telefono: '',
-    email: '',
-    direccion: '',
-    tipo_relacion: 'REPRESENTANTE_LEGAL',
-    responsable_pago: false,
-  }
+  representante_legal: { ...tutorVacio },
 });
 
 const getInitialAsignacion = () => ({
@@ -94,10 +119,11 @@ const getInitialAsignacion = () => ({
 const SECCIONES_CLIENTE = [
   { id: 'persona', nombre: 'Datos de la persona', descripcion: 'Identificación y datos generales', Icono: BadgeOutlinedIcon },
   { id: 'ubicacion', nombre: 'Ubicación geográfica', descripcion: 'Provincia, cantón, parroquia y mapa', Icono: MapOutlinedIcon },
-  { id: 'cliente', nombre: 'Datos del cliente', descripcion: 'Sede y estado', Icono: PeopleAltOutlinedIcon },
-  { id: 'representante', nombre: 'Representante legal', descripcion: 'Tutor y responsable de pago', Icono: ContactEmergencyOutlinedIcon },
+  { id: 'representante', nombre: 'Tutor', descripcion: 'Tutor y responsable de pago', Icono: ContactEmergencyOutlinedIcon },
   { id: 'contacto', nombre: 'Contacto y observaciones', descripcion: 'Emergencias y notas', Icono: ContactPhoneOutlinedIcon },
 ];
+
+const TAB_REPRESENTADOS = { value: 'representados', label: 'Representados', icon: <ContactEmergencyOutlinedIcon sx={{ fontSize: 17 }} /> };
 
 const TABS_FICHA = [
   { value: 'datos', label: 'Datos del cliente', icon: <BadgeOutlinedIcon sx={{ fontSize: 17 }} /> },
@@ -139,7 +165,7 @@ const resumirDiasHorario = (diasTexto = '') => {
   return dias.map((dia) => corto[dia] || dia).join(', ');
 };
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
+const hoyISO = () => hoyEcuador();
 
 const getInitialMembresia = () => ({
   id: null,
@@ -343,6 +369,9 @@ export function DeportistasPage() {
   const [vista, setVista] = useState('lista');
   const [formData, setFormData] = useState(getInitialForm());
   const [seccionCliente, setSeccionCliente] = useState('persona');
+  const [dialogoQuitarTutor, setDialogoQuitarTutor] = useState(false);
+  const [motivoQuitarTutor, setMotivoQuitarTutor] = useState('');
+  const [quitandoTutor, setQuitandoTutor] = useState(false);
   const [mostrarMapaCliente, setMostrarMapaCliente] = useState(false);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
   const [diagnosticoIdentidad, setDiagnosticoIdentidad] = useState(null);
@@ -356,7 +385,7 @@ export function DeportistasPage() {
   const [parroquias, setParroquias] = useState([]);
   const [meta, setMeta] = useState({});
   const [filtros, setFiltros] = useState({ busqueda: '', page: 1, per_page: 5 });
-  const [filtrosColumna, setFiltrosColumna] = useState({ cedula: [], nombres: [], telefono: [], sede: [], estado: [] });
+  const [filtrosColumna, setFiltrosColumna] = useState({ cedula: [], nombres: [], telefono: [], tipo_cliente: [], estado: [] });
   const [cargando, setCargando] = useState(true);
 
   // Ficha del cliente (pestañas: datos / entrenador y horario)
@@ -364,6 +393,8 @@ export function DeportistasPage() {
   const [membresiasCliente, setMembresiasCliente] = useState([]);
   const [vistaMembresia, setVistaMembresia] = useState('listado');
   const [membresiaDetalle, setMembresiaDetalle] = useState(null);
+  const [resumenPdf, setResumenPdf] = useState(null);
+  const [cargandoResumen, setCargandoResumen] = useState(false);
   const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
   const [requiereDescuento, setRequiereDescuento] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
@@ -399,7 +430,7 @@ export function DeportistasPage() {
   const cargarDeportistas = async (parametros = filtros) => {
     setCargando(true);
     try {
-      const response = await gimnasioServicio.obtenerDeportistas(parametros);
+      const response = await gimnasioServicio.obtenerDeportistas({ ...parametros, incluir_tutores: 1 });
       setDeportistas(response.datos || []);
       setMeta(response.meta || {});
     } catch (error) {
@@ -504,20 +535,8 @@ export function DeportistasPage() {
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
-      ...(name === 'requiere_representante_legal' && !checked
-        ? {
-            representante_legal: {
-              tipo_identificacion: 'CEDULA',
-              identificacion: '',
-              nombres: '',
-              apellidos: '',
-              telefono: '',
-              email: '',
-              direccion: '',
-              tipo_relacion: 'REPRESENTANTE_LEGAL',
-              responsable_pago: false,
-            },
-          }
+      ...((name === 'requiere_representante_legal' && !checked) || (name === 'tipo_cliente' && value !== 'DEPORTISTA')
+        ? { requiere_representante_legal: false, representante_legal: { ...tutorVacio } }
         : {}),
     }));
   };
@@ -533,6 +552,82 @@ export function DeportistasPage() {
     }));
   };
 
+  const handleSeleccionarTutor = (tutor) => {
+    setFormData((prev) => ({
+      ...prev,
+      representante_legal: tutor
+        ? { ...mapearTutorDeFicha(tutor), tipo_relacion: prev.representante_legal?.tipo_relacion || 'TUTOR', responsable_pago: Boolean(prev.representante_legal?.responsable_pago) }
+        : { ...tutorVacio },
+    }));
+  };
+
+  // Devuelve el motivo que impide guardar el tutor del cliente, si existe.
+  const validarTutorCliente = () => {
+    if (formData.tipo_cliente !== 'DEPORTISTA') {
+      if (formData.tipo_cliente === 'TUTOR' && !String(formData.identificacion || '').trim()) return 'La identificación del tutor es obligatoria.';
+      if (esMenorDeEdad(formData.fecha_nacimiento)) return 'Un tutor debe ser mayor de edad.';
+      return null;
+    }
+    if (esMenorDeEdad(formData.fecha_nacimiento) && !formData.requiere_representante_legal) {
+      setSeccionCliente('representante');
+      return 'El cliente es menor de edad: selecciona su tutor.';
+    }
+    if (formData.requiere_representante_legal && !formData.representante_legal?.persona_id) {
+      setSeccionCliente('representante');
+      return 'Selecciona el tutor del cliente.';
+    }
+    return null;
+  };
+
+  // Solo se puede quitar el tutor ya guardado de un cliente mayor de edad.
+  const tutorVigente = (formData.historial_tutores || []).find((item) => item.activo);
+  const puedeQuitarTutor = Boolean(formData.id) && Boolean(tutorVigente) && !esMenorDeEdad(formData.fecha_nacimiento);
+
+  const confirmarQuitarTutor = async () => {
+    setQuitandoTutor(true);
+    try {
+      const respuesta = await gimnasioServicio.quitarTutorCliente(formData.id, motivoQuitarTutor);
+      const datos = respuesta.datos || {};
+      setFormData((prev) => ({
+        ...prev,
+        requiere_representante_legal: booleanoBackend(datos.requiere_representante_legal),
+        representante_legal: mapearTutorDeFicha(datos.representante_legal),
+        historial_tutores: datos.historial_tutores || [],
+      }));
+      setDialogoQuitarTutor(false);
+      setMotivoQuitarTutor('');
+      showNotificacion('Tutor quitado. El vínculo queda en el historial.', 'success');
+    } catch (error) {
+      const errores = error.response?.data?.errors || error.response?.data?.errores;
+      showNotificacion((errores ? Object.values(errores).flat().join(' ') : '') || error.response?.data?.mensaje || 'No se pudo quitar el tutor.', 'error');
+    } finally {
+      setQuitandoTutor(false);
+    }
+  };
+
+  const payloadPersonaTutor = () => ({
+    estado: formData.estado || 'ACTIVO',
+    tipo_cliente: formData.tipo_cliente,
+    persona: {
+      tipo_identificacion: formData.tipo_identificacion || null,
+      identificacion: formData.identificacion || null,
+      nombres: formData.nombres || '',
+      apellidos: formData.apellidos || '',
+      fecha_nacimiento: formData.fecha_nacimiento || null,
+      genero: formData.genero || null,
+      telefono: formData.telefono || null,
+      email: formData.email || null,
+      direccion: formData.direccion || null,
+      provincia_codigo: formData.provincia_codigo || null,
+      canton_codigo: formData.canton_codigo || null,
+      parroquia_codigo: formData.parroquia_codigo || null,
+    },
+    ubicacion: formData.ubicacion?.latitud != null && formData.ubicacion.latitud !== ''
+      && formData.ubicacion?.longitud != null && formData.ubicacion.longitud !== ''
+      ? { latitud: Number(formData.ubicacion.latitud), longitud: Number(formData.ubicacion.longitud), referencia: formData.ubicacion.referencia || null }
+      : null,
+  });
+
   const handleGuardar = async () => {
     if (guardandoCliente) return;
     setGuardandoCliente(true);
@@ -542,12 +637,17 @@ export function DeportistasPage() {
         return;
       }
 
-      if (formData.requiere_representante_legal) {
-        const representante = formData.representante_legal || {};
-        if (!String(representante.nombres || '').trim() && !String(representante.apellidos || '').trim()) {
-          showNotificacion('Ingresa los datos del representante legal.', 'warning');
-          return;
-        }
+      const motivoTutor = validarTutorCliente();
+      if (motivoTutor) {
+        showNotificacion(motivoTutor, 'warning');
+        return;
+      }
+
+      if (formData.tipo_cliente === 'TUTOR') {
+        const respuesta = await gimnasioServicio.crearTutor(payloadPersonaTutor());
+        handleAbrirFicha(respuesta.datos);
+        showNotificacion('Tutor registrado. Ya puedes seleccionarlo en la ficha de cada deportista.', 'success');
+        return;
       }
 
       const payload = {
@@ -646,7 +746,9 @@ export function DeportistasPage() {
   const cargarFicha = async (deportista) => {
     setCargandoFicha(true);
     try {
-      const detalle = await gimnasioServicio.obtenerDeportistaPorId(deportista.id);
+      const detalle = deportista.id
+        ? await gimnasioServicio.obtenerDeportistaPorId(deportista.id)
+        : await gimnasioServicio.obtenerTutor(deportista.tutor_id);
       const datos = detalle.datos || {};
       setFormData({
         ...getInitialForm(),
@@ -669,20 +771,9 @@ export function DeportistasPage() {
           referencia: datos.ubicacion?.referencia || '',
         },
         requiere_representante_legal: booleanoBackend(datos.requiere_representante_legal),
-        representante_legal: datos.representante_legal
-          ? {
-              tipo_identificacion: datos.representante_legal.tipo_identificacion || 'CEDULA',
-              identificacion: datos.representante_legal.identificacion || '',
-              nombres: datos.representante_legal.nombres || '',
-              apellidos: datos.representante_legal.apellidos || '',
-              telefono: datos.representante_legal.telefono || '',
-              email: datos.representante_legal.email || '',
-              direccion: datos.representante_legal.direccion || '',
-              tipo_relacion: datos.representante_legal.tipo_relacion || 'REPRESENTANTE_LEGAL',
-              responsable_pago: booleanoBackend(datos.representante_legal.responsable_pago),
-            }
-          : getInitialForm().representante_legal,
+        representante_legal: mapearTutorDeFicha(datos.representante_legal),
       });
+      if (!deportista.id) return;
       setMembresiasCliente(detalle.datos?.membresias || []);
       await cargarAsignacionesYEntrenadores(deportista.id);
       await cargarProgresoCliente(deportista.id);
@@ -763,7 +854,25 @@ export function DeportistasPage() {
   };
 
   const handleGuardarDatosFicha = async () => {
+    const motivoTutor = validarTutorCliente();
+    if (motivoTutor) {
+      showNotificacion(motivoTutor, 'warning');
+      return;
+    }
     try {
+      if (!formData.id) {
+        const respuesta = await gimnasioServicio.actualizarTutor(formData.tutor_id, payloadPersonaTutor());
+        const tutor = respuesta.datos;
+        if (tutor?.id) {
+          handleAbrirFicha(tutor);
+          showNotificacion('Ficha de deportista creada. Ya puedes completar sus datos y su membresía.', 'success');
+        } else {
+          showNotificacion('Tutor actualizado.', 'success');
+          cargarFicha(tutor);
+        }
+        cargarDeportistas();
+        return;
+      }
       await gimnasioServicio.actualizarDeportista(formData.id, {
         ...formData,
         persona: {
@@ -806,19 +915,7 @@ export function DeportistasPage() {
         email: datosActualizados.persona_email || '',
         direccion: datosActualizados.persona_direccion || '',
         requiere_representante_legal: booleanoBackend(datosActualizados.requiere_representante_legal),
-        representante_legal: datosActualizados.representante_legal
-          ? {
-              tipo_identificacion: datosActualizados.representante_legal.tipo_identificacion || 'CEDULA',
-              identificacion: datosActualizados.representante_legal.identificacion || '',
-              nombres: datosActualizados.representante_legal.nombres || datosActualizados.representante_legal.nombre_completo || '',
-              apellidos: datosActualizados.representante_legal.apellidos || '',
-              telefono: datosActualizados.representante_legal.telefono || '',
-              email: datosActualizados.representante_legal.email || '',
-              direccion: datosActualizados.representante_legal.direccion || '',
-              tipo_relacion: datosActualizados.representante_legal.tipo_relacion || 'REPRESENTANTE_LEGAL',
-              responsable_pago: booleanoBackend(datosActualizados.representante_legal.responsable_pago),
-            }
-          : getInitialForm().representante_legal,
+        representante_legal: mapearTutorDeFicha(datosActualizados.representante_legal),
       }));
       showNotificacion('Datos del cliente actualizados', 'success');
       cargarDeportistas();
@@ -1043,7 +1140,26 @@ export function DeportistasPage() {
     });
   };
 
+  const abrirResumenContrato = async (m) => {
+    setResumenPdf(null);
+    setCargandoResumen(true);
+    try {
+      const blob = await gimnasioServicio.obtenerResumenContratoPdf(m.id);
+      setResumenPdf({ blob, url: URL.createObjectURL(blob), nombre: `contrato-${m.codigo_contrato || m.id}.pdf` });
+    } catch (error) {
+      showNotificacion('No se pudo generar el resumen del contrato.', 'error');
+    } finally {
+      setCargandoResumen(false);
+    }
+  };
+
+  const cerrarResumenContrato = () => {
+    if (resumenPdf?.url) URL.revokeObjectURL(resumenPdf.url);
+    setResumenPdf(null);
+  };
+
   const handleGuardarMembresia = async () => {
+    let membresiaCreada = null;
     try {
       if (!membresiaForm.plan_id || !membresiaForm.fecha_inicio) {
         showNotificacion('Completa los campos obligatorios de la membresía', 'warning');
@@ -1095,6 +1211,10 @@ export function DeportistasPage() {
           return;
         }
       }
+      if (!membresiaForm.id && String(planSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' && !membresiaForm.vigencia_fin) {
+        showNotificacion('Indica la fecha de fin de la vigencia del pase.', 'warning');
+        return;
+      }
       const payload = {
         ...membresiaForm,
         fecha_fin_solicitada: undefined,
@@ -1135,7 +1255,7 @@ export function DeportistasPage() {
         delete payload.cantidad_periodos_contratados;
         delete payload.fecha_primer_pago;
       }
-      if (requiereDescuento) {
+      if (!membresiaForm.id && requiereDescuento) {
         if (descuentoInvalido) {
           showNotificacion(
             descuentoMembresia.tipo === 'FIJO'
@@ -1161,13 +1281,11 @@ export function DeportistasPage() {
 
 
       if (membresiaForm.id) {
-        if (!requiereDescuento && membresiaForm.descuento_vigente?.id) {
-          payload.descuento_desactivar_id = Number(membresiaForm.descuento_vigente.id);
-        }
         await gimnasioServicio.actualizarMembresia(membresiaForm.id, payload);
         showNotificacion('Membresía actualizada con éxito', 'success');
       } else {
-        await gimnasioServicio.crearMembresia(payload);
+        const creada = await gimnasioServicio.crearMembresia(payload);
+        membresiaCreada = creada?.datos || creada || null;
         const esPaseDiario = String(planSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() === 'PASE_DIARIO';
         showNotificacion(
           esPaseDiario
@@ -1180,8 +1298,14 @@ export function DeportistasPage() {
       }
 
       setMembresiaForm(getInitialMembresia());
-      setVistaMembresia('listado');
       cargarFicha(formData);
+      // Al registrar se abre el detalle completo de la membresía nueva.
+      if (membresiaCreada?.id) {
+        setMembresiaDetalle(membresiaCreada);
+        setVistaMembresia('detalle');
+      } else {
+        setVistaMembresia('listado');
+      }
     } catch (error) {
       const estadoHttp = Number(error.response?.status || 0);
       const errores = error.response?.data?.errors;
@@ -1208,6 +1332,9 @@ export function DeportistasPage() {
     }
   };
 
+  // Tutor ya registrado que todavía no tiene ficha de deportista.
+  const tutorSinFicha = !formData.id && Boolean(formData.tutor_id);
+
   const renderCamposDatos = () => (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
       <Box component="nav" aria-label="Secciones de datos del cliente" sx={{
@@ -1218,7 +1345,13 @@ export function DeportistasPage() {
           Datos del cliente
         </Typography>
         <Stack spacing={.5}>
-          {SECCIONES_CLIENTE.map(({ id, nombre, descripcion, Icono }) => {
+          {SECCIONES_CLIENTE
+            .filter(({ id }) => {
+              // Un tutor no puede tener tutor; el solo tutor tampoco tiene datos deportivos.
+              if (id === 'representante') return formData.tipo_cliente === 'DEPORTISTA';
+              return id !== 'contacto' || formData.tipo_cliente !== 'TUTOR';
+            })
+            .map(({ id, nombre, descripcion, Icono }) => {
             const activo = seccionCliente === id;
             return (
               <Button key={id} type="button" fullWidth onClick={() => setSeccionCliente(id)}
@@ -1252,6 +1385,18 @@ export function DeportistasPage() {
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           <TextField
             select
+            label="Tipo de cliente"
+            name="tipo_cliente"
+            value={formData.tipo_cliente || 'DEPORTISTA'}
+            onChange={handleChange}
+            size="small"
+          >
+            {tutorSinFicha ? null : <MenuItem value="DEPORTISTA">Deportista</MenuItem>}
+            {formData.id ? null : <MenuItem value="TUTOR">Tutor</MenuItem>}
+            <MenuItem value="DEPORTISTA_TUTOR">Deportista y tutor</MenuItem>
+          </TextField>
+          <TextField
+            select
             label="Tipo de identificación"
             name="tipo_identificacion"
             value={formData.tipo_identificacion || 'CEDULA'}
@@ -1263,7 +1408,7 @@ export function DeportistasPage() {
             <MenuItem value="RUC">RUC</MenuItem>
             <MenuItem value="OTRO">Otro</MenuItem>
           </TextField>
-          <TextField label="Identificación" name="identificacion" value={formData.identificacion || ''} onChange={handleChange} size="small" />
+          <TextField label="Identificación" name="identificacion" value={formData.identificacion || ''} onChange={handleChange} size="small" required={formData.tipo_cliente === 'TUTOR'} />
           <TextField label="Nombres" name="nombres" value={formData.nombres || ''} onChange={handleChange} required size="small" />
           <TextField label="Apellidos" name="apellidos" value={formData.apellidos || ''} onChange={handleChange} size="small" />
           <TextField label="Correo" name="email" type="email" value={formData.email || ''} onChange={handleChange} size="small" />
@@ -1297,6 +1442,10 @@ export function DeportistasPage() {
             <MenuItem value="MASCULINO">Masculino</MenuItem>
             <MenuItem value="OTRO">Otro</MenuItem>
           </TextField>
+          <CampoActivo
+            checked={formData.estado === 'ACTIVO'}
+            onChange={(e) => setFormData((prev) => ({ ...prev, estado: e.target.checked ? 'ACTIVO' : 'INACTIVO' }))}
+          />
         </Box>
       </Box>
           ) : null}
@@ -1405,7 +1554,7 @@ export function DeportistasPage() {
           ))}
         </Box>
         <Box sx={{ mt: 2, border: '1px solid #e2e8f0', borderRadius: 2, p: 1.5, bgcolor: '#fcfcfd' }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between' }}>
             <Box>
               <Typography variant="body2" fontWeight={750}>Ubicación exacta en el mapa</Typography>
               <Typography variant="caption" color="text.secondary">
@@ -1442,47 +1591,15 @@ export function DeportistasPage() {
         </Box>
       </Box>
           ) : null}
-          {seccionCliente === 'cliente' ? (
-      <Box sx={formStyles.seccion}>
-        <Typography sx={formStyles.modalSeccionTitulo}>Datos del cliente</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-
-          <TextField
-            select
-            label="Sede principal"
-            name="sede_principal_id"
-            value={formData.sede_principal_id || ''}
-            onChange={handleChange}
-            size="small"
-          >
-            <MenuItem value="">No asignada</MenuItem>
-            {sedes.map((sede) => (
-              <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Estado"
-            name="estado"
-            value={formData.estado || 'PROSPECTO'}
-            onChange={handleChange}
-            size="small"
-          >
-            <MenuItem value="PROSPECTO">Prospecto</MenuItem>
-            <MenuItem value="ACTIVO">Activo</MenuItem>
-            <MenuItem value="INACTIVO">Inactivo</MenuItem>
-            <MenuItem value="SUSPENDIDO">Suspendido</MenuItem>
-          </TextField>
-        </Box>
-      </Box>
-          ) : null}
           {seccionCliente === 'representante' ? (
       <Box sx={formStyles.seccion}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }} justifyContent="space-between" spacing={1} sx={{ mb: 1.5 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', mb: 1.5 }}>
           <Box>
-            <Typography sx={formStyles.modalSeccionTitulo}>Representante legal</Typography>
+            <Typography sx={formStyles.modalSeccionTitulo}>Tutor</Typography>
             <Typography variant="body2" color="text.secondary">
-              Actívalo cuando el cliente necesite un representante legal o responsable de pago.
+              {esMenorDeEdad(formData.fecha_nacimiento)
+                ? 'El cliente es menor de edad: el tutor es obligatorio.'
+                : 'Actívalo cuando el cliente necesite un tutor o responsable de pago.'}
             </Typography>
           </Box>
           <FormControlLabel
@@ -1493,96 +1610,32 @@ export function DeportistasPage() {
                 onChange={handleChange}
               />
             }
-            label="Requiere representante legal"
+            label="Requiere tutor"
           />
         </Stack>
 
         {formData.requiere_representante_legal ? (
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-            <TextField
-              select
-              label="Tipo de identificación"
-              name="tipo_identificacion"
-              value={formData.representante_legal?.tipo_identificacion || 'CEDULA'}
-              onChange={handleRepresentanteChange}
-              size="small"
-            >
-              <MenuItem value="CEDULA">Cédula</MenuItem>
-              <MenuItem value="PASAPORTE">Pasaporte</MenuItem>
-              <MenuItem value="RUC">RUC</MenuItem>
-              <MenuItem value="OTRO">Otro</MenuItem>
-            </TextField>
-            <TextField
-              label="Identificación"
-              name="identificacion"
-              value={formData.representante_legal?.identificacion || ''}
-              onChange={handleRepresentanteChange}
-              size="small"
-            />
-            <TextField
-              select
-              label="Relación"
-              name="tipo_relacion"
-              value={formData.representante_legal?.tipo_relacion || 'REPRESENTANTE_LEGAL'}
-              onChange={handleRepresentanteChange}
-              size="small"
-            >
-              <MenuItem value="REPRESENTANTE_LEGAL">Representante legal</MenuItem>
-              <MenuItem value="MADRE">Madre</MenuItem>
-              <MenuItem value="PADRE">Padre</MenuItem>
-              <MenuItem value="TUTOR">Tutor</MenuItem>
-              <MenuItem value="OTRO">Otro</MenuItem>
-            </TextField>
-            <TextField
-              label="Nombres"
-              name="nombres"
-              value={formData.representante_legal?.nombres || ''}
-              onChange={handleRepresentanteChange}
-              required
-              size="small"
-            />
-            <TextField
-              label="Apellidos"
-              name="apellidos"
-              value={formData.representante_legal?.apellidos || ''}
-              onChange={handleRepresentanteChange}
-              size="small"
-            />
-            <TextField
-              label="Teléfono"
-              name="telefono"
-              value={formData.representante_legal?.telefono || ''}
-              onChange={handleRepresentanteChange}
-              size="small"
-            />
-            <TextField
-              label="Correo"
-              name="email"
-              type="email"
-              value={formData.representante_legal?.email || ''}
-              onChange={handleRepresentanteChange}
-              size="small"
-            />
-            <TextField
-              label="Dirección"
-              name="direccion"
-              value={formData.representante_legal?.direccion || ''}
-              onChange={handleRepresentanteChange}
-              size="small"
-              sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
-            />
-            <FormControlLabel
-              control={
-                <Switch
-                  name="responsable_pago"
-                  checked={Boolean(formData.representante_legal?.responsable_pago)}
-                  onChange={handleRepresentanteChange}
-                />
-              }
-              label="Responsable de pago"
-            />
-          </Box>
+          <SelectorTutor
+            tutor={formData.representante_legal}
+            excluirPersonaId={formData.persona_id}
+            onSeleccionar={handleSeleccionarTutor}
+            onCambiarVinculo={handleRepresentanteChange}
+            onQuitar={puedeQuitarTutor ? () => setDialogoQuitarTutor(true) : undefined}
+          />
         ) : null}
+        <HistorialTutores historial={formData.historial_tutores} />
+        <ModalConfirmacion
+          open={dialogoQuitarTutor}
+          titulo="Quitar tutor"
+          descripcion={`${tutorVigente?.nombre_completo || 'El tutor'} dejará de estar a cargo desde hoy. El vínculo queda en el historial.`}
+          textoConfirmar="Sí, quitar"
+          cargando={quitandoTutor}
+          onClose={() => setDialogoQuitarTutor(false)}
+          onConfirmar={confirmarQuitarTutor}
+        >
+          <TextField label="Motivo (opcional)" size="small" multiline minRows={2} value={motivoQuitarTutor}
+            onChange={(e) => setMotivoQuitarTutor(e.target.value)} slotProps={{ htmlInput: { maxLength: 250 } }} />
+        </ModalConfirmacion>
       </Box>
           ) : null}
           {seccionCliente === 'contacto' ? (
@@ -1663,7 +1716,7 @@ export function DeportistasPage() {
   const renderEntrenadorYHorario = () => (
     <Stack spacing={2}>
       {vistaAsignacion === 'formulario' ? <Box sx={formStyles.seccion}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2, gap: 2 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>Nueva asignación</Typography>
           <Box sx={{ ml: 'auto' }}><BotonVolver onClick={() => setVistaAsignacion('listado')} /></Box>
         </Stack>
@@ -1846,7 +1899,8 @@ export function DeportistasPage() {
     || (descuentoMembresia.tipo === 'PORCENTAJE' && descuentoNumerico > 100)
     || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
   );
-  const contratoNuevoVisible = !membresiaForm.id && String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() !== 'PASE_DIARIO';
+  const paseEnFormulario = String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO';
+  const contratoNuevoVisible = !membresiaForm.id && !paseEnFormulario;
   const periodosCalculados = contratoNuevoVisible && membresiaForm.fecha_fin_solicitada
     ? periodosParaCubrirFecha({
       inicio: membresiaForm.fecha_inicio,
@@ -1879,17 +1933,19 @@ export function DeportistasPage() {
       )
   );
   const sedesListas = (membresiaForm.sedes_habilitadas || []).length > 0;
-  const mostrarSedes = Boolean(membresiaForm.id) || fechasListas;
-  const mostrarComercial = Boolean(membresiaForm.id) || (fechasListas && sedesListas);
+  const mostrarSedes = !membresiaForm.id && fechasListas;
+  const mostrarComercial = !membresiaForm.id && fechasListas && sedesListas;
   const permiteCobroProgramado = Boolean(planMembresiaSeleccionado?.renovable) && !contratoNuevoVisible;
   const proximoCobroPreview = membresiaForm.proxima_fecha_cobro
     || calcularProximaFechaCobroPreview(membresiaForm.fecha_inicio, membresiaForm.dia_pago);
 
   const textoMembresia = (m, campo) => {
     if (campo === 'plan') return [m.plan_nombre, m.modalidad_nombre].filter(Boolean).join(' · ') || 'Sin plan';
-    if (campo === 'vigencia') return `${fechaMembresia(m.fecha_inicio)} – ${fechaMembresia(m.fecha_fin)}`;
-    if (campo === 'precio') return m.precio_aplicado == null ? '—' : Number(m.precio_aplicado).toFixed(2);
-    return String(m.estado || '');
+    if (campo === 'vigencia') return String(m.tipo_producto || '').toUpperCase() === 'PASE_DIARIO'
+      ? textoVigenciaPase(m, fechaMembresia)
+      : `${fechaMembresia(m.fecha_inicio)} – ${fechaMembresia(m.fecha_fin)}`;
+    if (campo === 'precio') return m.precio_aplicado == null ? '—' : `$${Number(m.precio_aplicado).toFixed(2)}`;
+    return presentarEstadoMembresia(m).label;
   };
   const membresiasFiltradas = membresiasCliente.filter((m) =>
     [m.plan_nombre, m.modalidad_nombre, m.codigo_contrato, m.estado, m.sede_nombre]
@@ -1904,7 +1960,9 @@ export function DeportistasPage() {
   const renderMembresia = () => (
     <Stack spacing={2}>
 
-      {vistaMembresia === 'formulario' ? <Box sx={formStyles.seccion}>
+      {vistaMembresia === 'formulario' ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: membresiaForm.id ? 'minmax(0, 1fr)' : '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+        {!membresiaForm.id && <MenuSeccionesMembresia secciones={SECCION_NUEVA_MEMBRESIA} seccion="nueva" />}
+        <Box sx={{ ...formStyles.seccion, minWidth: 0 }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           gap: 2, width: '100%', boxSizing: 'border-box',
           mb: 2, px: membresiaForm.id ? 1.5 : 0, py: membresiaForm.id ? 1.25 : 0,
@@ -1918,7 +1976,7 @@ export function DeportistasPage() {
             </Typography>
             {membresiaForm.id && (
               <Typography variant="caption" sx={{ color: uiTokens.colores.acentoTexto }}>
-                Modifica únicamente los datos administrativos permitidos; las cuotas pactadas se conservan.
+                Modifica únicamente los datos administrativos permitidos; las cuotas pactadas se conservan. Sedes y descuentos se cambian desde el detalle de la membresía.
               </Typography>
             )}
           </Box>
@@ -2007,12 +2065,13 @@ export function DeportistasPage() {
         {modalidadLista && (
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
           <TextField
-            label={String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO' ? 'Fecha de uso' : 'Fecha inicio'}
+            label={paseEnFormulario && membresiaForm.id ? 'Fecha de uso' : 'Fecha inicio'}
             name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
             onChange={handleMembresiaChange} required size="small"
-            disabled={Boolean(membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null)}
+            disabled={Boolean(membresiaForm.id && (membresiaForm.cantidad_periodos_contratados != null || (paseEnFormulario && membresiaForm.uso_con_venta)))}
             helperText={membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null
-              ? 'Fecha contractual: los días de congelación se compensan al reactivar.' : ''}
+              ? 'Fecha contractual: los días de congelación se compensan al reactivar.'
+              : (membresiaForm.id && paseEnFormulario && membresiaForm.uso_con_venta ? 'Este día ya tiene una venta: no se puede cambiar.' : '')}
             slotProps={{ inputLabel: { shrink: true } }}
           />
           {contratoNuevoVisible ? (
@@ -2028,6 +2087,19 @@ export function DeportistasPage() {
                 placeholder="Ej. 5"
               />
             </>
+          ) : paseEnFormulario && !membresiaForm.id ? (
+            <TextField label="Fecha fin" name="vigencia_fin" type="date" required size="small"
+              value={membresiaForm.vigencia_fin || ''}
+              onChange={handleMembresiaChange}
+              helperText="Hasta esta fecha se puede vender el pase."
+              slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: membresiaForm.fecha_inicio || undefined } }}
+            />
+          ) : paseEnFormulario ? (
+            <TextField label="Vigencia" size="small"
+              value={textoVigenciaPase(membresiaForm, fechaMembresia)}
+              helperText="Se cambia con Editar vigencia, en Acciones del contrato."
+              slotProps={{ input: { readOnly: true } }}
+            />
           ) : (
             <TextField label="Fecha fin del contrato" type="date" size="small"
               value={membresiaForm.fecha_fin || ''}
@@ -2070,7 +2142,7 @@ export function DeportistasPage() {
             />
           )}
 
-          {membresiaForm.id && !membresiaForm.cantidad_periodos_contratados ? (
+          {membresiaForm.id && membresiaForm.cantidad_periodos_contratados != null && !paseEnFormulario && booleanoBackend(planMembresiaSeleccionado?.renovable) ? (
             <>
           <Box
             sx={{
@@ -2097,6 +2169,9 @@ export function DeportistasPage() {
               sx={{ m: 0 }}
             />
           </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ gridColumn: '1 / -1', mt: -0.75 }}>
+            7 días antes del fin, si las cuotas están pagadas, se programa un período más. Su venta se emite al iniciar y se cobra en Ventas; sin pago no hay acceso.
+          </Typography>
 
 
             </>
@@ -2140,7 +2215,7 @@ export function DeportistasPage() {
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
           <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas *</Typography>
  
-          <Stack direction="row" spacing={1.2} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" spacing={1.2} useFlexGap sx={{ flexWrap: 'wrap' }}>
             {sedes.map((sede) => {
               const seleccionada = (membresiaForm.sedes_habilitadas || [])
                 .some((id) => String(id) === String(sede.id_sede));
@@ -2272,6 +2347,7 @@ export function DeportistasPage() {
             <BotonGuardar onClick={handleGuardarMembresia} />
           </Stack>
         )}
+        </Box>
       </Box> : null}
       {vistaMembresia === 'listado' && <Box sx={formStyles.seccion}>
         <GestionToolbar total={membresiasFiltradas.length} busqueda={buscarMembresia}
@@ -2294,22 +2370,22 @@ export function DeportistasPage() {
                 {m.modalidad_nombre && <Typography variant="caption" color="text.secondary">{m.modalidad_nombre}</Typography>}</TableCell>
               <TableCell>{textoMembresia(m, 'vigencia')}</TableCell>
               <TableCell>{textoMembresia(m, 'precio')}</TableCell>
-              <TableCell><StatusChip estado={String(m.estado || '').toLowerCase()} /></TableCell>
+              <TableCell><StatusChip estado={presentarEstadoMembresia(m).chip} label={presentarEstadoMembresia(m).label} /></TableCell>
               <TableCell align="center" sx={{ width: 116, minWidth: 116, whiteSpace: 'nowrap' }}>
-                <Stack direction="row" alignItems="center" justifyContent="center" spacing={1} sx={{ flexWrap: 'nowrap' }}>
-                  <Tooltip title="Editar membresía">
-                    <IconButton aria-label="Editar membresía" sx={{ ...dbanuStyles.actionEdit, m: 0, flexShrink: 0 }}
-                      onClick={() => handleEditarMembresia(m)}>
-                      <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Ver detalle de membresía">
-                    <IconButton aria-label="Ver detalle de membresía"
-                      sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'center', flexWrap: 'nowrap' }}>
+                  <Tooltip title="Gestionar contrato">
+                    <IconButton aria-label="Gestionar contrato" sx={{ ...dbanuStyles.actionEdit, m: 0, flexShrink: 0 }}
                       onClick={() => {
                         setMembresiaDetalle(m);
                         setVistaMembresia('detalle');
                       }}>
+                      <EditOutlinedIcon sx={{ fontSize: 17 }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Ver resumen del contrato (PDF)">
+                    <IconButton aria-label="Ver resumen del contrato"
+                      sx={{ ...dbanuStyles.actionView, m: 0, flexShrink: 0 }}
+                      onClick={() => abrirResumenContrato(m)}>
                       <VisibilityOutlinedIcon sx={{ fontSize: 18 }} />
                     </IconButton>
                   </Tooltip>
@@ -2320,9 +2396,11 @@ export function DeportistasPage() {
           </TableBody>
         </TablaGestion>
       </Box>}
+      <VisorPdf titulo="Resumen del contrato" pdf={resumenPdf} cargando={cargandoResumen} onCerrar={cerrarResumenContrato} />
       {vistaMembresia === 'detalle' && membresiaDetalle && (
         <DetalleMembresiaCliente
           membresia={membresiaDetalle}
+          sedes={sedes}
           onVolver={() => setVistaMembresia('listado')}
           onEditar={handleEditarMembresia}
           onActualizado={async () => {
@@ -2411,26 +2489,6 @@ export function DeportistasPage() {
     }
   };
 
-  const handleEliminarProgreso = async (p) => {
-    const confirmado = await confirmarAccion({
-      titulo: 'Eliminar registro de progreso',
-      texto: `¿Estás seguro que deseas eliminar el registro del ${fechaProgreso(p.fecha_registro)}?`,
-      textoConfirmar: 'Sí, eliminar',
-      icono: 'warning',
-    });
-
-    if (!confirmado) return;
-
-    try {
-      await entrenamientoServicio.eliminarProgreso(p.id);
-      showNotificacion('Registro eliminado con éxito', 'success');
-      if (progresoForm.id === p.id) setProgresoForm(getInitialProgreso());
-      cargarProgresoCliente(formData.id);
-    } catch (error) {
-      showNotificacion(error.response?.data?.mensaje || 'Error al eliminar el registro', 'error');
-    }
-  };
-
   const renderProgreso = () => {
     const imcPreview = calcularImcPreview(progresoForm.peso_kg, progresoForm.talla_cm);
     const estado = estadoImc(imcPreview);
@@ -2438,7 +2496,7 @@ export function DeportistasPage() {
     return (
       <Stack spacing={2}>
         <Box sx={formStyles.seccion}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
             <Typography sx={formStyles.modalSeccionTitulo}>
               {progresoForm.id ? 'Editar registro' : 'Nuevo registro de progreso'}
             </Typography>
@@ -2481,9 +2539,9 @@ export function DeportistasPage() {
               {progresosCliente.map((p) => {
                 const estadoFila = estadoImc(p.imc);
                 return (
-                  <Stack key={p.id} direction="row" alignItems="center" justifyContent="space-between"
-                    sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
-                    <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                  <Stack key={p.id} direction="row"
+                    sx={{ alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
+                    <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                       <Typography variant="body2" color="text.secondary">{fechaProgreso(p.fecha_registro)}</Typography>
                       <Typography variant="body2" fontWeight="500">{p.peso_kg ? `${Number(p.peso_kg).toFixed(1)} kg` : 'Sin peso'}</Typography>
                       {p.imc ? <Chip label={`IMC ${Number(p.imc).toFixed(1)} · ${estadoFila.label}`} size="small" color={estadoFila.color} /> : null}
@@ -2493,11 +2551,6 @@ export function DeportistasPage() {
                       <Tooltip title="Editar registro">
                         <IconButton size="small" onClick={() => handleEditarProgreso(p)}>
                           <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar registro">
-                        <IconButton size="small" sx={dbanuStyles.actionDelete} onClick={() => handleEliminarProgreso(p)}>
-                          <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -2685,7 +2738,7 @@ export function DeportistasPage() {
     <Stack spacing={2}>
       <PruebasRendimientoDeportista deportistaId={formData.id} onNotificacion={showNotificacion} />
       <Box sx={formStyles.seccion}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>
             {planEntrenamientoForm.id ? 'Editar plan' : 'Nuevo plan de entrenamiento'}
           </Typography>
@@ -2726,10 +2779,10 @@ export function DeportistasPage() {
         ) : (
           <Stack spacing={1}>
             {planesEntrenamiento.map((p) => (
-              <Stack key={p.id} direction="row" alignItems="center" justifyContent="space-between"
-                sx={{ border: p.id === planSeleccionadoId ? '1px solid #1e293b' : '1px solid #e2e8f0', borderRadius: 2, p: 1.25, cursor: 'pointer' }}
+              <Stack key={p.id} direction="row"
+                sx={{ alignItems: 'center', justifyContent: 'space-between', border: p.id === planSeleccionadoId ? '1px solid #1e293b' : '1px solid #e2e8f0', borderRadius: 2, p: 1.25, cursor: 'pointer' }}
                 onClick={() => handleSeleccionarPlan(p)}>
-                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                   <Chip label={p.estado} size="small" />
                   <Typography variant="body2" fontWeight="500">{p.nombre}</Typography>
                   <Typography variant="body2" color="text.secondary">{fechaPlan(p.fecha_inicio)} - {p.fecha_fin ? fechaPlan(p.fecha_fin) : 'Sin fin'}</Typography>
@@ -2748,7 +2801,7 @@ export function DeportistasPage() {
 
       {planSeleccionadoId ? (
         <Box sx={formStyles.seccion}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
             <Typography sx={formStyles.modalSeccionTitulo}>
               {rutinaForm.id ? 'Editar rutina' : 'Nueva rutina'} — {planesEntrenamiento.find((p) => p.id === planSeleccionadoId)?.nombre}
             </Typography>
@@ -2803,9 +2856,9 @@ export function DeportistasPage() {
                 {rutinasPlan.map((r) => {
                   const sugerido = pesoSugeridoPorPorcentaje(r, ultimosRm);
                   return (
-                    <Stack key={r.id} direction="row" alignItems="center" justifyContent="space-between"
-                      sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
-                      <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+                    <Stack key={r.id} direction="row"
+                      sx={{ alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                         <Chip label={`Sem ${r.semana} · ${r.dia}`} size="small" />
                         <Typography variant="body2" fontWeight="500">{r.ejercicio_nombre}</Typography>
                         <Typography variant="body2" color="text.secondary">{r.series} series{r.repeticiones ? ` x ${r.repeticiones}` : ''}</Typography>
@@ -2827,7 +2880,7 @@ export function DeportistasPage() {
       ) : null}
 
       <Box sx={formStyles.seccion}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>
             {rmForm.id ? 'Editar registro RM' : 'Nuevo registro RM'}
           </Typography>
@@ -2848,10 +2901,10 @@ export function DeportistasPage() {
           <TextField label="Peso" name="peso" type="number" value={rmForm.peso || ''} onChange={handleRmChange} required size="small" />
           <TextField label="Repeticiones" name="repeticiones" type="number" value={rmForm.tipo_registro === 'DIRECTO' ? 1 : rmForm.repeticiones || ''} onChange={handleRmChange} size="small"
             disabled={rmForm.tipo_registro === 'DIRECTO'} required={rmForm.tipo_registro === 'ESTIMADO'}
-            inputProps={{ min: 1, max: 10 }} helperText={rmForm.tipo_registro === 'ESTIMADO' ? '1 a 10 repeticiones · fórmula Epley' : 'Una repetición máxima real'} />
+            slotProps={{ htmlInput: { min: 1, max: 10 } }} helperText={rmForm.tipo_registro === 'ESTIMADO' ? '1 a 10 repeticiones · fórmula Epley' : 'Una repetición máxima real'} />
           <TextField label={rmForm.tipo_registro === 'DIRECTO' ? '1RM medida (kg)' : '1RM estimada (kg)'} size="small"
             value={rmForm.peso && rmForm.tipo_registro === 'DIRECTO' ? Number(rmForm.peso).toFixed(2) : rmForm.peso && Number(rmForm.repeticiones) >= 1 && Number(rmForm.repeticiones) <= 10 ? (Number(rmForm.peso) * (1 + Number(rmForm.repeticiones) / 30)).toFixed(2) : ''}
-            InputProps={{ readOnly: true }} helperText="Cálculo definitivo validado por Laravel" />
+            slotProps={{ input: { readOnly: true } }} helperText="Cálculo definitivo validado por Laravel" />
         </Box>
         <Box sx={{ mt: 1.5 }}>
           <TextField label="Observaciones" name="observaciones" value={rmForm.observaciones || ''} onChange={handleRmChange} size="small" fullWidth multiline minRows={2} />
@@ -2868,9 +2921,9 @@ export function DeportistasPage() {
         ) : (
           <Stack spacing={1}>
             {rmCliente.map((r) => (
-              <Stack key={r.id} direction="row" alignItems="center" justifyContent="space-between"
-                sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
-                <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+              <Stack key={r.id} direction="row"
+                sx={{ alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0', borderRadius: 2, p: 1.25 }}>
+                <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
                   <Typography variant="body2" color="text.secondary">{fechaRm(r.fecha_registro)}</Typography>
                   <Typography variant="body2" fontWeight="500">{r.ejercicio_nombre}</Typography>
                   <Chip label={`RM ${Number(r.rm_estimado).toFixed(1)}`} size="small" />
@@ -2911,12 +2964,18 @@ export function DeportistasPage() {
   }
 
   if (vista === 'ficha') {
+    // Las pestañas dependen de lo guardado, no del select mientras se edita.
+    const tabsFicha = !formData.id
+      ? [TABS_FICHA[0], TAB_REPRESENTADOS]
+      : formData.tutor_id || formData.representados_anteriores?.length ? [...TABS_FICHA, TAB_REPRESENTADOS] : TABS_FICHA;
     const nombreCliente = `${formData.nombres || ''} ${formData.apellidos || ''}`.trim() || formData.usuario_nombre || formData.name || formData.codigo_deportista;
     return (
       <Box className="page-wrapper">
         <PageHeader
           titulo={`Perfil integral de ${nombreCliente}`}
-          descripcion="Consulta y administra su información personal, membresías, valoraciones, entrenamientos y seguimiento deportivo."
+          descripcion={formData.id
+            ? 'Consulta y administra su información personal, membresías, valoraciones, entrenamientos y seguimiento deportivo.'
+            : 'Consulta y administra los datos del tutor y los deportistas a su cargo.'}
           icono={<PeopleAltOutlinedIcon />}
           acciones={<BotonVolver onClick={handleCancelarFicha} />}
         />
@@ -2929,7 +2988,7 @@ export function DeportistasPage() {
           <PestanasEstandar
             value={tabFicha}
             onChange={handleCambiarTabFicha}
-            opciones={TABS_FICHA}
+            opciones={tabsFicha}
           />
           <Box sx={{ bgcolor: '#fff', px: 2.5, py: 2.5 }}>
             {tabFicha === 'datos' && renderCamposDatos()}
@@ -2938,6 +2997,7 @@ export function DeportistasPage() {
             {tabFicha === 'membresia' && renderMembresia()}
             {tabFicha === 'progreso' && <InformeProgresoDeportista deportistaId={formData.id} onNotificacion={showNotificacion} />}
             {tabFicha === 'entrenamiento' && renderEntrenamiento()}
+            {tabFicha === 'representados' && <RepresentadosTutor representados={formData.representados} anteriores={formData.representados_anteriores} onAbrir={handleAbrirFicha} />}
           </Box>
           {tabFicha === 'datos' && (
             <Stack spacing={1.5}>

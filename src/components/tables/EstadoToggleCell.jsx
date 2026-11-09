@@ -27,7 +27,7 @@ export function EstadoToggleCell({
         checked={Boolean(activo)}
         onClick={(evento) => evento.stopPropagation()}
         onChange={ejecutarToggle}
-        inputProps={{ 'aria-label': activo ? tituloActivo : tituloInactivo }}
+        slotProps={{ input: { 'aria-label': activo ? tituloActivo : tituloInactivo } }}
         sx={{
           width: 32,
           height: 18,

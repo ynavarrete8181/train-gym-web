@@ -25,6 +25,7 @@ export function ModalConfirmacion({
   colorConfirmar = "success",
   iconoConfirmar,
   cargando = false,
+  confirmarDeshabilitado = false,
   onClose,
   onConfirmar,
 }) {
@@ -34,7 +35,7 @@ export function ModalConfirmacion({
       onClose={cargando ? undefined : onClose}
       fullWidth
       maxWidth="xs"
-      PaperProps={{ sx: { borderRadius: 3, overflow: "hidden" } }}
+      slotProps={{ paper: { sx: { borderRadius: 3, overflow: "hidden" } } }}
     >
       <Box sx={{ px: 2.5, pt: 2.5, pb: 2 }}>
         <Box sx={formStyles.modalHeader}>
@@ -67,7 +68,7 @@ export function ModalConfirmacion({
           color={colorConfirmar}
           startIcon={iconoConfirmar || <CheckCircleOutlineOutlinedIcon />}
           onClick={onConfirmar}
-          disabled={cargando}
+          disabled={cargando || confirmarDeshabilitado}
           sx={{ minWidth: 128, fontWeight: 800 }}
         >
           {textoConfirmar}

@@ -1,5 +1,7 @@
-import { Box, LinearProgress, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
+import { Box, LinearProgress, Paper, Stack, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
+import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
 const dinero = (valor) => Number(valor || 0).toLocaleString('es-EC', { style: 'currency', currency: 'USD' });
@@ -13,7 +15,7 @@ function Indicador({ titulo, real, meta, porcentaje, moneda = false }) {
       <Typography sx={{ fontSize: 18, fontWeight: 900, mt: .35 }}>
         {moneda ? dinero(real) : numero(real)} / {moneda ? dinero(meta) : numero(meta)}
       </Typography>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mt: .7 }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mt: .7 }}>
         <LinearProgress variant="determinate" value={Math.min(100, Math.max(0, valor))} sx={{ flex: 1, height: 6, borderRadius: 99 }} />
         <Typography sx={{ fontSize: 11, fontWeight: 900 }}>{valor.toFixed(1)}%</Typography>
       </Stack>
@@ -24,11 +26,12 @@ function Indicador({ titulo, real, meta, porcentaje, moneda = false }) {
 export function MetaComercialSeguimiento({ detalle }) {
   const meta = detalle?.meta || {};
   const responsables = detalle?.responsables || [];
+  const tabla = useTablaLocal(responsables, {});
 
   return (
     <Paper elevation={0} sx={{ overflow: 'hidden', mt: 2, border: '1px solid #e2e8f0', borderRadius: 2 }}>
       <Box sx={{ px: 2.5, py: 2.3 }}>
-        <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={1} sx={{ mb: 1.8 }}>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ justifyContent: 'space-between', mb: 1.8 }}>
           <Box>
             <Typography variant="h6" fontWeight={950}>{meta.sede || 'Meta comercial'}</Typography>
             <Typography variant="body2" color="text.secondary">Seguimiento consolidado del período {String(meta.mes || '').padStart(2, '0')}/{meta.anio}.</Typography>
@@ -47,7 +50,7 @@ export function MetaComercialSeguimiento({ detalle }) {
           <Box sx={{ px: 1.6, py: 1.1, bgcolor: '#f8fafc', borderBottom: `1px solid ${uiTokens.colores.borde}` }}>
             <Typography variant="subtitle2" fontWeight={900}>Cumplimiento por responsable</Typography>
           </Box>
-          <Table size="small">
+          <TablaGestion {...tabla.propsTabla}>
             <TableHead>
               <TableRow>
                 <TableCell>Responsable</TableCell>
@@ -58,7 +61,7 @@ export function MetaComercialSeguimiento({ detalle }) {
               </TableRow>
             </TableHead>
             <TableBody>
-              {responsables.map((r) => (
+              {tabla.visibles.map((r) => (
                 <TableRow hover key={r.usuario_id}>
                   <TableCell>{r.responsable}</TableCell>
                   <TableCell align="center">{dinero(r.real_ventas)} / {dinero(r.meta_ventas)} · {Number(r.cumplimiento_ventas || 0).toFixed(1)}%</TableCell>
@@ -75,7 +78,7 @@ export function MetaComercialSeguimiento({ detalle }) {
                 </TableRow>
               ) : null}
             </TableBody>
-          </Table>
+          </TablaGestion>
         </Box>
 
         {meta.observaciones ? (

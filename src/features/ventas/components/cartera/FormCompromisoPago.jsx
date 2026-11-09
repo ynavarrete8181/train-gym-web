@@ -19,13 +19,13 @@ export function FormCompromisoPago({
             label="Monto *"
             value={form.monto}
             onChange={(e) => setForm((actual) => ({ ...actual, monto: e.target.value }))}
-            inputProps={{ min: 0.01, step: 0.01 }}
+            slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}
           />
           <TextField
             type="date"
             size="small"
             label="Fecha *"
-            InputLabelProps={{ shrink: true }}
+            slotProps={{ inputLabel: { shrink: true } }}
             value={form.fecha_compromiso}
             onChange={(e) => setForm((actual) => ({ ...actual, fecha_compromiso: e.target.value }))}
           />

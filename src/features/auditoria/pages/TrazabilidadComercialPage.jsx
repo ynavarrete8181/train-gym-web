@@ -11,6 +11,7 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { ReporteExportaciones } from '../../reportes/components/ReporteExportaciones.jsx';
 import { trazabilidadComercialServicio } from '../services/trazabilidadComercialServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const opciones = (items = []) => (items || []).map((item) => ({ value: String(item), label: String(item) }));
 const fecha = (valor) => (valor ? new Date(valor).toLocaleString('es-EC') : '—');
@@ -42,7 +43,7 @@ export function TrazabilidadComercialPage() {
   const [filtros, setFiltros] = useState({
     busqueda: '',
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
-    hasta: hoy.toISOString().slice(0, 10),
+    hasta: hoyEcuador(),
     sede_id: [],
     proceso: [],
     accion: [],
@@ -51,7 +52,7 @@ export function TrazabilidadComercialPage() {
     referencia: '',
     descripcion: '',
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
 
   const cargar = async (params = filtros) => {
@@ -141,7 +142,7 @@ export function TrazabilidadComercialPage() {
           total={meta.total || 0}
           filtrados={meta.total || 0}
           page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 10}
+          rowsPerPage={meta.por_pagina || 5}
           onPageChange={(page) => {
             const nuevos = { ...filtros, page };
             setFiltros(nuevos);

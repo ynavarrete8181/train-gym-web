@@ -57,7 +57,7 @@ export function MetasComercialesPage() {
     nuevas: '',
     renovaciones: '',
     page: 1,
-    per_page: 10,
+    per_page: 5,
   });
 
   const avisar = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });

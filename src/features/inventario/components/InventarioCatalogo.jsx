@@ -19,8 +19,14 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { inventarioServicio } from '../services/inventarioServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const tiposMovimiento = ['AJUSTE_INICIAL', 'ENTRADA', 'SALIDA', 'AJUSTE', 'BAJA'];
+const TIPOS_VENTA = { SALIDA: 'SALIDA POR VENTA', REVERSO_VENTA: 'REVERSO POR EDICIÓN DE VENTA', REVERSO_ANULACION: 'REVERSO POR ANULACIÓN' };
+const textoTipoMovimiento = (item) => {
+  if (item.tipo_movimiento === 'SALIDA') return item.venta_id ? TIPOS_VENTA.SALIDA : 'SALIDA';
+  return TIPOS_VENTA[item.tipo_movimiento] || item.tipo_movimiento;
+};
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
@@ -240,11 +246,11 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotifi
   };
 
   if (tipo === 'categorias') {
-    return <Box sx={grid}><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} /><FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" /></Box>;
+    return <Box sx={grid}><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} /><CampoActivo name="activo" checked={formData.activo} onChange={onChange} /></Box>;
   }
 
   if (tipo === 'proveedores') {
-    return <Box sx={grid}><TextField label="RUC" name="ruc" value={formData.ruc || ''} onChange={onChange} size="small" /><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField label="Teléfono" name="telefono" value={formData.telefono || ''} onChange={onChange} size="small" /><TextField label="Email" name="email" value={formData.email || ''} onChange={onChange} size="small" /><FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" /><TextField label="Dirección" name="direccion" value={formData.direccion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} /></Box>;
+    return <Box sx={grid}><TextField label="RUC" name="ruc" value={formData.ruc || ''} onChange={onChange} size="small" /><TextField label="Nombre" name="nombre" value={formData.nombre || ''} onChange={onChange} required size="small" /><TextField label="Teléfono" name="telefono" value={formData.telefono || ''} onChange={onChange} size="small" /><TextField label="Email" name="email" value={formData.email || ''} onChange={onChange} size="small" /><TextField label="Dirección" name="direccion" value={formData.direccion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} /><CampoActivo name="activo" checked={formData.activo} onChange={onChange} /></Box>;
   }
 
   if (tipo === 'productos') {
@@ -292,7 +298,7 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotifi
               {formData.imagen_url ? (
                 <Box component="img" src={formData.imagen_url} alt={formData.nombre || 'Producto'} sx={{ width: '100%', height: 210, objectFit: 'cover' }} />
               ) : (
-                <Stack alignItems="center" spacing={.6} sx={{ color: 'text.secondary' }}>
+                <Stack spacing={.6} sx={{ alignItems: 'center', color: 'text.secondary' }}>
                   <PhotoCameraOutlinedIcon sx={{ fontSize: 38 }} />
                   <Typography variant="caption">Sin foto</Typography>
                 </Stack>
@@ -329,8 +335,8 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotifi
           </Box>
           <FormControlLabel control={<Switch name="controla_stock" checked={Boolean(formData.controla_stock)} onChange={onChange} />} label="Controla stock" />
           <FormControlLabel control={<Switch name="maneja_lotes" checked={Boolean(formData.maneja_lotes)} onChange={onChange} />} label="Maneja lotes / vencimiento" />
-          <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
           <TextField label="Descripción" name="descripcion" value={formData.descripcion || ''} onChange={onChange} size="small" multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
+          <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
         </Box>
 
         <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
@@ -463,12 +469,12 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro) {
 
   return [
     { key: 'producto', header: filtro('producto', 'Producto', opciones(meta.opciones_filtro?.producto)), render: (item) => <Box><Typography variant="body2" fontWeight="600">{item.producto_nombre}</Typography><Typography variant="caption" color="text.secondary">{item.producto_codigo}</Typography></Box> },
-    { key: 'tipo', header: filtro('tipo', 'Tipo', opciones(tiposMovimiento)), render: (item) => item.tipo_movimiento },
+    { key: 'tipo', header: filtro('tipo', 'Tipo', opciones([...tiposMovimiento, 'REVERSO_VENTA', 'REVERSO_ANULACION'])), render: textoTipoMovimiento },
     { key: 'cantidad', header: <TableCell key="cantidad">Cantidad</TableCell>, render: (item) => numero(item.cantidad) },
     { key: 'stock', header: <TableCell key="stock">Stock anterior / nuevo</TableCell>, render: (item) => `${numero(item.stock_anterior)} / ${numero(item.stock_nuevo)}` },
     { key: 'sede', header: filtro('sede', 'Sede', opciones(meta.opciones_filtro?.sede)), render: (item) => item.sede_nombre || 'Sin sede' },
     { key: 'estado_movimiento', header: <TableCell key="estado_movimiento">Estado</TableCell>, render: (item) => <Chip size="small" label={item.estado_nombre || item.estado_valor || 'Sin estado'} color={colorEstado(item.estado_color)} variant="outlined" /> },
-    { key: 'referencia', header: <TableCell key="referencia">Referencia</TableCell>, render: (item) => item.referencia || 'Sin referencia' },
+    { key: 'referencia', header: <TableCell key="referencia">Referencia</TableCell>, render: (item) => (item.venta_numero ? `${item.venta_numero} · ${String(item.venta_estado || '').toLowerCase()}` : item.referencia) || 'Sin referencia' },
   ];
 }
 

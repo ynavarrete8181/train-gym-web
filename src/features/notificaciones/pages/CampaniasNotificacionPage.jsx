@@ -9,8 +9,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx'
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx'
 import { PageHeader } from '../../../components/common/PageHeader.jsx'
-import { PaginacionTabla } from '../../../components/tables/PaginacionTabla.jsx'
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx'
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js'
 import { obtenerMensajeError } from '../../../services/mensajeError.js'
 import { confirmarAccion } from '../../../utils/confirmacion.js'
 import { ConfirmarEnvioCampaniaDialog } from '../components/campanias/ConfirmarEnvioCampaniaDialog.jsx'
@@ -27,13 +27,14 @@ const colorEstado = { COMPLETADA: 'success', COMPLETADA_CON_ERRORES: 'warning', 
 const etiquetaEstado = { COMPLETADA: 'ENVIADO', COMPLETADA_CON_ERRORES: 'ENVIADO CON ERRORES', EN_COLA: 'EN COLA' }
 
 export function CampaniasNotificacionPage({ soloHistorial = false }) {
-  const [lista, setLista] = useState({ data: [], total: 0, current_page: 1, per_page: 10 })
+  const [lista, setLista] = useState({ data: [], total: 0, current_page: 1, per_page: 5 })
   const [catalogos, setCatalogos] = useState({ plantillas: [], usuarios: [], usuarios_app: [], roles: [], sedes: [], unidades: [], carreras_areas: [] })
   const [modo, setModo] = useState('lista')
   const [paso, setPaso] = useState(0)
   const [form, setForm] = useState(formInicial)
   const [preview, setPreview] = useState(null)
   const [detalle, setDetalle] = useState(null)
+  const tablaDestinatarios = useTablaLocal(Array.isArray(detalle?.destinatarios) ? detalle.destinatarios : (detalle?.destinatarios?.data || []), {})
   const [confirmar, setConfirmar] = useState(null)
   const [aviso, setAviso] = useState(null)
   const [estadoFiltro, setEstadoFiltro] = useState('COMPLETADAS')
@@ -225,9 +226,9 @@ export function CampaniasNotificacionPage({ soloHistorial = false }) {
         <Box sx={{ p: 2 }}><Box component="iframe" title="Contenido del comunicado" srcDoc={detalle?.campania?.cuerpo_html || '<p>Sin contenido</p>'} sx={{ width: '100%', minHeight: 300, border: '1px solid #e1e8f0', borderRadius: 2, bgcolor: '#fff' }} /></Box>
       </Paper>
       <Typography sx={{ mb: 1, fontSize: 12.5, fontWeight: 850 }}>Resultados por destinatario</Typography>
-      <TablaGestion total={detalle?.destinatarios?.total || 0}>
+      <TablaGestion {...tablaDestinatarios.propsTabla}>
         <TableHead><TableRow><TableCell>Destinatario</TableCell><TableCell>Correo</TableCell><TableCell>Sistema</TableCell><TableCell>Correo</TableCell><TableCell>Push</TableCell><TableCell>Publicación app</TableCell><TableCell>Estado</TableCell></TableRow></TableHead>
-        <TableBody>{(detalle?.destinatarios?.data || []).map((d) => <TableRow key={d.id}><TableCell>{d.nombre_destinatario || '—'}</TableCell><TableCell>{d.correo_destino || '—'}</TableCell><TableCell><EstadoCanal valor={d.estado_interno} /></TableCell><TableCell><EstadoCanal valor={d.estado_correo} /></TableCell><TableCell><EstadoCanal valor={d.estado_push} /></TableCell><TableCell><EstadoCanal valor={d.estado_app} /></TableCell><TableCell><EstadoCanal valor={d.estado} /></TableCell></TableRow>)}</TableBody>
+        <TableBody>{tablaDestinatarios.visibles.map((d) => <TableRow key={d.id}><TableCell>{d.nombre_destinatario || '—'}</TableCell><TableCell>{d.correo_destino || '—'}</TableCell><TableCell><EstadoCanal valor={d.estado_interno} /></TableCell><TableCell><EstadoCanal valor={d.estado_correo} /></TableCell><TableCell><EstadoCanal valor={d.estado_push} /></TableCell><TableCell><EstadoCanal valor={d.estado_app} /></TableCell><TableCell><EstadoCanal valor={d.estado} /></TableCell></TableRow>)}</TableBody>
       </TablaGestion>
     </Paper>
     <NotificacionSnackbar mensaje={aviso?.mensaje} tipo={aviso?.tipo} onClose={() => setAviso(null)} />
@@ -241,7 +242,7 @@ export function CampaniasNotificacionPage({ soloHistorial = false }) {
         <TextField select size="small" label="Bandeja" value={estadoFiltro} onChange={(e) => { const estado = e.target.value; setEstadoFiltro(estado); cargar(1, lista.per_page, estado) }} sx={{ width: { xs: '100%', sm: 230 } }}><MenuItem value="">Todos</MenuItem><MenuItem value="BORRADOR">Borradores</MenuItem><MenuItem value="EN_PROCESO">En proceso</MenuItem><MenuItem value="COMPLETADAS">Enviados</MenuItem><MenuItem value="CON_ERRORES">Con errores</MenuItem></TextField>
         {!soloHistorial ? <Button variant="contained" startIcon={<AddOutlinedIcon />} onClick={() => { setEditandoId(null); setForm(formInicial()); setModo('crear') }}>Nueva campaña</Button> : <Box />}
       </Stack>
-      <TablaGestion total={items.length}>
+      <TablaGestion total={lista.total} filtrados={lista.total} page={lista.current_page} rowsPerPage={lista.per_page} onPageChange={(p) => cargar(p)} onRowsPerPageChange={(n) => cargar(1, n)}>
         <TableHead><TableRow><TableCell>Campaña</TableCell><TableCell>Canales</TableCell><TableCell>Destinatarios</TableCell><TableCell>Resultados</TableCell><TableCell>Estado</TableCell><TableCell align="right">Acciones</TableCell></TableRow></TableHead>
         <TableBody>{items.map((item) => <TableRow key={item.id}>
           <TableCell><Typography sx={{ fontSize: 12.5, fontWeight: 850 }}>{item.nombre}</Typography><Typography sx={{ fontSize: 11, color: 'text.secondary' }}>{item.descripcion || 'Sin descripción'}</Typography></TableCell>
@@ -251,7 +252,6 @@ export function CampaniasNotificacionPage({ soloHistorial = false }) {
           <TableCell align="right"><Tooltip title="Ver detalle"><IconButton onClick={() => abrirDetalle(item.id)}><VisibilityOutlinedIcon /></IconButton></Tooltip>{item.estado === 'BORRADOR' && <><Tooltip title="Editar"><IconButton color="info" onClick={() => editarBorrador(item)}><EditOutlinedIcon /></IconButton></Tooltip><Tooltip title="Enviar"><IconButton color="primary" onClick={() => setConfirmar(item)}><SendOutlinedIcon /></IconButton></Tooltip><Tooltip title="Eliminar"><IconButton color="error" onClick={() => eliminarBorrador(item)}><DeleteOutlineOutlinedIcon /></IconButton></Tooltip></>}</TableCell>
         </TableRow>)}</TableBody>
       </TablaGestion>
-      <PaginacionTabla total={lista.total} page={lista.current_page} rowsPerPage={lista.per_page} onPageChange={(p) => cargar(p)} onRowsPerPageChange={(n) => cargar(1, n)} />
     </Paper>
     <NotificacionSnackbar mensaje={aviso?.mensaje} tipo={aviso?.tipo} onClose={() => setAviso(null)} />
     <ConfirmarEnvioCampaniaDialog campania={confirmar} onClose={() => setConfirmar(null)} onConfirmar={enviar} />

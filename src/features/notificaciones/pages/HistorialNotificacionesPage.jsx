@@ -18,7 +18,7 @@ const colores = { ENVIADA: "success", COMPLETADA: "success", COMPLETADA_CON_ERRO
 const etiquetas = { COMPLETADA: "ENVIADO", COMPLETADA_CON_ERRORES: "ENVIADO CON ERRORES", EN_COLA: "EN COLA" };
 
 export function HistorialNotificacionesPage() {
-  const [lista, setLista] = useState({ data: [], total: 0, current_page: 1, per_page: 10 });
+  const [lista, setLista] = useState({ data: [], total: 0, current_page: 1, per_page: 5 });
   const [filtros, setFiltros] = useState({ tipo: "", estado: "" });
   const [detalle, setDetalle] = useState(null);
   const [aviso, setAviso] = useState(null);
@@ -115,7 +115,7 @@ export function HistorialNotificacionesPage() {
                 <TableCell><Chip size="small" label={etiquetas[item.estado] || item.estado} color={colores[item.estado] || "default"} /></TableCell>
                 <TableCell>{formatearFechaLocal(item.fecha)}</TableCell>
                 <TableCell align="right">
-                  <Stack direction="row" spacing={0.4} justifyContent="flex-end" flexWrap="nowrap">
+                  <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
                     <Tooltip title="Ver detalle">
                       <IconButton sx={dbanuStyles.actionView} onClick={() => ver(item)}><VisibilityOutlinedIcon sx={{ fontSize: 17 }} /></IconButton>
                     </Tooltip>

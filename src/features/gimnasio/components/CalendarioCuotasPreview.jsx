@@ -99,7 +99,7 @@ export function CalendarioCuotasPreview({ filas, precioPeriodo = null }) {
   if (!filas?.length) return null;
   return (
     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden', bgcolor: 'background.paper' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 1.5, py: 1.25, bgcolor: 'action.hover' }}>
+      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 1.25, bgcolor: 'action.hover' }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Vista previa del contrato</Typography>
         <Chip label={`${filas.length} ${filas.length === 1 ? 'período' : 'períodos'}`} size="small" variant="outlined" />
       </Stack>
@@ -134,8 +134,8 @@ export function CalendarioCuotasRegistradas({ periodos = [], cuotas = [] }) {
 
   return (
     <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden', bgcolor: 'background.paper' }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1}
-        sx={{ px: 1.5, py: 1.25, bgcolor: 'action.hover' }}>
+      <Stack direction="row" gap={1}
+        sx={{ alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 1.25, bgcolor: 'action.hover' }}>
         <Typography variant="subtitle2" fontWeight={800}>Contrato y calendario de cuotas</Typography>
         <Chip size="small" variant="outlined" label={`${cuotas.length} ${cuotas.length === 1 ? 'cuota' : 'cuotas'} registradas`} />
       </Stack>

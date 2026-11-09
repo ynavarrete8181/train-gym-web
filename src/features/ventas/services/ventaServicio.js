@@ -12,6 +12,8 @@ export const ventaServicio = {
   conciliarTurnoCaja: async (id, payload) => (await api.post(`/base/ventas/turnos-caja/${id}/conciliar`, payload)).data,
 
   obtenerVentas: async (params = { page: 1 }) => (await api.get('/base/ventas/ventas', { params })).data,
+  anularVentaPagada: async (id, motivo) => (await api.post(`/base/ventas/ventas/${id}/anular-pagada`, { motivo })).data,
+  anularVentaPos: async (id, motivo) => (await api.post(`/base/ventas/pos/${id}/anular`, { motivo })).data,
   obtenerDetalleVenta: async (id) => (await api.get(`/base/ventas/ventas/${id}/detalle`)).data,
   obtenerComprobantePdf: async (id) => (await api.get(`/base/ventas/ventas/${id}/comprobante.pdf`, { responseType: 'blob' })).data,
   obtenerCuentasAbiertasPos: async () => (await api.get('/base/ventas/pos/cuentas-abiertas')).data,

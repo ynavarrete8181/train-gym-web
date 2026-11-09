@@ -12,8 +12,11 @@ import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
+import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
+import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
+import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { VentaPosFormulario } from '../components/VentaPosFormulario.jsx';
@@ -31,6 +34,9 @@ export function VentasPage() {
   const [busquedaCuenta, setBusquedaCuenta] = useState('');
   const [filtroSede, setFiltroSede] = useState('TODAS');
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const [ventaAnular, setVentaAnular] = useState(null);
+  const [motivoAnular, setMotivoAnular] = useState('');
+  const [anulando, setAnulando] = useState(false);
   const [detallePdfUrl, setDetallePdfUrl] = useState('');
   const [detallePdfNombre, setDetallePdfNombre] = useState('Comprobante');
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
@@ -62,6 +68,21 @@ export function VentasPage() {
       setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudieron cargar las cuentas abiertas.', tipo: 'error' });
     } finally {
       setCargandoCuentas(false);
+    }
+  };
+
+  const anularVenta = async () => {
+    setAnulando(true);
+    try {
+      await ventaServicio.anularVentaPos(ventaAnular.id, motivoAnular.trim());
+      setNotificacion({ mensaje: `Venta ${ventaAnular.numero} anulada. Su historial se conserva.`, tipo: 'success' });
+      setVentaAnular(null);
+      setMotivoAnular('');
+      await cargarCuentas();
+    } catch (error) {
+      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo anular la venta.', tipo: 'error' });
+    } finally {
+      setAnulando(false);
     }
   };
 
@@ -174,22 +195,22 @@ export function VentasPage() {
           </Box>
 
           <Box sx={{ mt: 2, pt: 1.5, borderTop: '1px solid #ededed' }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} alignItems={{ xs: 'stretch', md: 'center' }} justifyContent="space-between" gap={2} sx={{ width: '100%' }}>
+          <Stack direction={{ xs: 'column', md: 'row' }} gap={2} sx={{ alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between', width: '100%' }}>
             <Box sx={{ flexShrink: 0, minWidth: 0 }}>
               <Typography variant="h6" sx={{ fontWeight: 950, color: '#161616' }}>Cuentas abiertas</Typography>
               <Typography variant="caption" sx={{ color: '#5c5c5c' }}>
                 {cargandoCuentas ? 'Consultando cuentas...' : `${cuentasFiltradas.length} de ${cuentasAbiertas.length} cuentas`}
               </Typography>
             </Box>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} justifyContent="flex-end" alignItems={{ xs: 'stretch', sm: 'center' }}
-              sx={{ ml: { md: 'auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, '& .MuiOutlinedInput-root': { height: 40 } }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}
+              sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'flex-end', ml: { md: 'auto' }, minWidth: 0, width: { xs: '100%', md: 'auto' }, '& .MuiOutlinedInput-root': { height: 40 } }}>
               <TextField size="small" value={busquedaCuenta} onChange={(e) => setBusquedaCuenta(e.target.value)}
                 placeholder="Buscar nombre, identificación o código"
-                InputProps={{ startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> }}
+                slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchOutlinedIcon sx={{ color: '#B18510' }} /></InputAdornment> } }}
                 sx={{ width: { xs: '100%', sm: 315 }, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }} />
               <TextField select size="small" value={filtroSede} onChange={(e) => setFiltroSede(e.target.value)}
                 aria-label="Filtrar por sede"
-                InputProps={{ startAdornment: <InputAdornment position="start"><FilterAltOutlinedIcon sx={{ color: '#B18510', fontSize: 19 }} /></InputAdornment> }}
+                slotProps={{ input: { startAdornment: <InputAdornment position="start"><FilterAltOutlinedIcon sx={{ color: '#B18510', fontSize: 19 }} /></InputAdornment> } }}
                 sx={{ width: { xs: '100%', sm: 195 }, flexShrink: 0, '& .MuiOutlinedInput-root': { borderRadius: 1.5 } }}>
                 <MenuItem value="TODAS">Todas las sedes</MenuItem>
                 {sedesDisponibles.map((sede) => <MenuItem key={sede} value={sede}>{sede}</MenuItem>)}
@@ -226,7 +247,8 @@ export function VentasPage() {
                 xl: 'repeat(4, minmax(0, 1fr))',
               },
               gap: 1.5,
-              alignItems: 'start',
+              alignItems: 'stretch',
+              gridAutoRows: '1fr',
             }}
           >
             {cuentasFiltradas.map((venta) => {
@@ -242,7 +264,7 @@ export function VentasPage() {
                     transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
                     '&:hover': { transform: 'translateY(-2px)', borderColor: '#D4A017', boxShadow: '0 9px 22px rgba(0,0,0,.11)' },
                   }}>
-                    <Stack direction="row" spacing={1.2} alignItems="center" sx={{ minWidth: 0 }}>
+                    <Stack direction="row" spacing={1.2} sx={{ alignItems: 'center', minWidth: 0 }}>
                       <Box sx={{
                         width: 45, height: 45, flexShrink: 0, display: 'grid', placeItems: 'center',
                         bgcolor: '#fff1c9', color: '#171717', borderRadius: '50%',
@@ -260,15 +282,21 @@ export function VentasPage() {
                       </Box>
                     </Stack>
                     <Stack spacing={.85} sx={{ mt: 1.6, mb: 1.4 }}>
-                      <Stack direction="row" alignItems="center" spacing={.8}>
+                      <Stack direction="row" spacing={.8} sx={{ alignItems: 'center', minWidth: 0 }}>
+                        <ReceiptLongOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
+                        <Typography variant="body2" sx={{ color: '#333', fontWeight: 700, fontFamily: 'monospace', letterSpacing: .2 }} noWrap title={venta.numero}>
+                          {venta.numero || `Venta #${venta.id}`}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" spacing={.8} sx={{ alignItems: 'center' }}>
                         <LocationOnOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
                         <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }}>{venta.sede_nombre || 'Sede no asignada'}</Typography>
                       </Stack>
-                      <Stack direction="row" alignItems="center" spacing={.8}>
+                      <Stack direction="row" spacing={.8} sx={{ alignItems: 'center' }}>
                         <CalendarMonthOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
                         <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }}>{fecha(venta.fecha_venta)}</Typography>
                       </Stack>
-                      <Stack direction="row" alignItems="center" spacing={.8}>
+                      <Stack direction="row" spacing={.8} sx={{ alignItems: 'center' }}>
                         <PersonOutlineOutlinedIcon sx={{ fontSize: 17, color: '#BD8E0B' }} />
                         <Typography variant="body2" sx={{ color: '#333', fontWeight: 600 }} noWrap>
                           Generada por: {venta.generado_por_tipo === 'SISTEMA' ? 'Sistema' : (venta.generado_por_nombre || 'Sin usuario')}
@@ -278,7 +306,23 @@ export function VentasPage() {
                       </Stack>
                     </Stack>
                     <Divider sx={{ mt: 'auto', mb: 1.2, borderColor: '#ededed' }} />
-                    <Stack direction="row" alignItems="end" justifyContent="space-between" gap={1}>
+                    <Box sx={{ mb: 1.1, py: .65, px: .9, bgcolor: '#fff8e9', borderRadius: 1.1 }}>
+                      <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ color: '#575757' }}>Valor total</Typography>
+                        <Typography variant="caption" sx={{ color: '#171717', fontWeight: 850 }}>{dinero(venta.subtotal ?? venta.total)}</Typography>
+                      </Stack>
+                      <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ color: '#575757' }}>Descuento</Typography>
+                        <Typography variant="caption" sx={{ color: Number(venta.descuento || 0) > 0 ? '#171717' : '#8a8a8a', fontWeight: 850 }}>
+                          {Number(venta.descuento || 0) > 0 ? `− ${dinero(venta.descuento)}` : 'Sin descuento'}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+                        <Typography variant="caption" sx={{ color: '#575757' }}>{Number(venta.descuento || 0) > 0 ? 'Valor con descuento' : 'Valor a pagar'}</Typography>
+                        <Typography variant="caption" sx={{ color: '#171717', fontWeight: 950 }}>{dinero(venta.total)}</Typography>
+                      </Stack>
+                    </Box>
+                    <Stack direction="row" gap={1} sx={{ alignItems: 'end', justifyContent: 'space-between' }}>
                       <Box>
                         <Typography variant="caption" sx={{ color: '#666', fontWeight: 700 }}>Saldo pendiente</Typography>
                         <Typography variant="h5" sx={{ color: '#171717', fontWeight: 950, lineHeight: 1.25 }}>{dinero(saldo)}</Typography>
@@ -307,6 +351,11 @@ export function VentasPage() {
                           borderColor: '#D4A017', color: '#171717', bgcolor: '#fff',
                           '&:hover': { borderColor: '#B58500', bgcolor: '#fff8e6' },
                         }}>Ver detalle</Button>
+                      {!estadoParcial ? (
+                        <Button variant="outlined" size="small" startIcon={<BlockOutlinedIcon />}
+                          onClick={() => { setVentaAnular(venta); setMotivoAnular(''); }}
+                          sx={{ ...dbanuStyles.cancelButton, gridColumn: '1 / -1', minHeight: 39, height: 39, width: '100%', m: 0, borderRadius: 1.3 }}>Anular venta</Button>
+                      ) : <Box sx={{ gridColumn: '1 / -1', minHeight: 39 }} />}
                     </Box>
                   </Box>
                 );
@@ -329,7 +378,7 @@ export function VentasPage() {
         onClose={() => !cargandoDetalle && cerrarDetalle()}
         fullWidth
         maxWidth="lg"
-        PaperProps={{ sx: { height: { xs: '94vh', md: '90vh' }, overflow: 'hidden', borderRadius: 1.5 } }}
+        slotProps={{ paper: { sx: { height: { xs: '94vh', md: '90vh' }, overflow: 'hidden', borderRadius: 1.5 } } }}
       >
         <DialogTitle
           sx={{
@@ -373,14 +422,13 @@ export function VentasPage() {
           ) : null}
         </DialogContent>
         <DialogActions sx={{ px: 2.2, py: 1.2, borderTop: '1px solid #e5e7eb', bgcolor: '#fff', gap: 1 }}>
-          <Button onClick={cerrarDetalle} sx={dbanuStyles.secondaryButtonRevive}>
-            Cerrar
-          </Button>
+          <BotonCancelar texto="Cerrar" onClick={cerrarDetalle} disabled={cargandoDetalle} />
           <Button
             startIcon={<DownloadOutlinedIcon />}
             onClick={descargarDetallePdf}
             disabled={!detallePdfBlob || cargandoDetalle}
-            sx={dbanuStyles.secondaryButtonRevive}
+            variant="outlined"
+            sx={dbanuStyles.backButton}
           >
             Descargar PDF
           </Button>
@@ -388,12 +436,28 @@ export function VentasPage() {
             startIcon={<PrintOutlinedIcon />}
             onClick={imprimirDetallePdf}
             disabled={!detallePdfUrl || cargandoDetalle}
-            sx={dbanuStyles.addButtonRevive}
+            variant="outlined"
+            sx={dbanuStyles.saveButton}
           >
             Imprimir
           </Button>
         </DialogActions>
       </Dialog>
+      <ModalConfirmacion
+        open={Boolean(ventaAnular)}
+        titulo="Anular venta"
+        descripcion={`${ventaAnular?.numero || ''} · ${ventaAnular?.cliente_nombre || 'Consumidor final'}. La venta queda como anulada en el historial. No se puede deshacer.`}
+        textoConfirmar="Sí, anular"
+
+        cargando={anulando}
+        confirmarDeshabilitado={motivoAnular.trim().length < 8}
+        onClose={() => !anulando && setVentaAnular(null)}
+        onConfirmar={anularVenta}
+      >
+        <TextField autoFocus fullWidth multiline minRows={2} size="small" required label="Motivo"
+          helperText="Escribe al menos 8 caracteres." value={motivoAnular}
+          onChange={(e) => setMotivoAnular(e.target.value)} sx={{ mt: 1 }} />
+      </ModalConfirmacion>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion((actual) => ({ ...actual, mensaje: '' }))} />
     </Box>
   );

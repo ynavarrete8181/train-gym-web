@@ -48,7 +48,9 @@ function esDashboard(opcion) {
   return opcion?.id_menu === 'DASHBOARD'
 }
 
-export function Sidebar({ width, collapsedWidth, abierto, onToggle, menuItems = [], vistaActual, onNavigate }) {
+export function Sidebar({ width, collapsedWidth, abierto: abiertoExterno, movil = false, onToggle, menuItems = [], vistaActual, onNavigate }) {
+  // En móvil el panel siempre se muestra completo; lo que cambia es si está abierto.
+  const abierto = movil || abiertoExterno
   const dashboard = useMemo(
     () => menuItems.flatMap((grupo) => grupo.subItems || []).find(esDashboard) || null,
     [menuItems],
@@ -85,6 +87,7 @@ export function Sidebar({ width, collapsedWidth, abierto, onToggle, menuItems = 
   const navegar = (opcion) => {
     setMenuContraido({ anchor: null, grupo: null })
     onNavigate(opcion)
+    if (movil) onToggle()
   }
 
   const anchoActual = abierto ? width : collapsedWidth
@@ -92,9 +95,12 @@ export function Sidebar({ width, collapsedWidth, abierto, onToggle, menuItems = 
   return (
     <>
       <Drawer
-        variant="permanent"
+        variant={movil ? 'temporary' : 'permanent'}
+        open={movil ? abiertoExterno : true}
+        onClose={onToggle}
+        ModalProps={{ keepMounted: true }}
         sx={{
-          width: anchoActual,
+          width: movil ? 0 : anchoActual,
           flexShrink: 0,
           whiteSpace: 'nowrap',
           '& .MuiDrawer-paper': {
@@ -132,7 +138,7 @@ export function Sidebar({ width, collapsedWidth, abierto, onToggle, menuItems = 
               </Box>
             </Stack>
           ) : null}
-          <Tooltip title={abierto ? 'Contraer menú' : 'Ampliar menú'} placement="right">
+          <Tooltip title={movil ? 'Cerrar menú' : abierto ? 'Contraer menú' : 'Ampliar menú'} placement="right">
             <IconButton
               onClick={onToggle}
               sx={{
@@ -274,7 +280,7 @@ export function Sidebar({ width, collapsedWidth, abierto, onToggle, menuItems = 
         onClose={() => setMenuContraido({ anchor: null, grupo: null })}
         anchorOrigin={{ vertical: 'center', horizontal: 'right' }}
         transformOrigin={{ vertical: 'center', horizontal: 'left' }}
-        PaperProps={{ sx: { ml: 1, width: 230, borderRadius: 2, border: `1px solid ${uiTokens.colores.borde}`, boxShadow: '0 14px 36px rgba(15, 23, 42, 0.18)' } }}
+        slotProps={{ paper: { sx: { ml: 1, width: 230, borderRadius: 2, border: `1px solid ${uiTokens.colores.borde}`, boxShadow: '0 14px 36px rgba(15, 23, 42, 0.18)' } } }}
       >
         <Box sx={{ px: 1.5, py: 1.2, bgcolor: uiTokens.colores.primarioSuave, borderBottom: `1px solid ${uiTokens.colores.bordeSuave}` }}>
           <Typography sx={{ fontSize: 12.5, fontWeight: 900, color: uiTokens.colores.primario }}>

@@ -102,7 +102,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId, o
           </TextField>
           <TextField size="small" type="number" label="Descuento" value={form.valor}
             onChange={(e) => cambiar('valor', e.target.value)}
-            inputProps={{ min: 0, max: form.tipo === 'PORCENTAJE' ? 100 : undefined, step: '0.01' }} />
+            slotProps={{ htmlInput: { min: 0, max: form.tipo === 'PORCENTAJE' ? 100 : undefined, step: '0.01' } }} />
           <Box sx={{ minWidth: 0 }}>
             <Typography component="label" htmlFor="beneficio-fecha-inicio" sx={{ display: 'block', mb: 0.75, fontSize: 12, fontWeight: 600, color: 'text.secondary' }}>
               Inicio de vigencia
@@ -129,7 +129,7 @@ export function DescuentosDeportistaPanel({ deportistaId, planId, modalidadId, o
             onChange={(e) => cambiar('motivo', e.target.value)}
             sx={{ gridColumn: { xs: '1', md: 'span 3' } }} />
         </Box>
-        <Stack direction="row" justifyContent="flex-end">
+        <Stack direction="row" sx={{ justifyContent: 'flex-end' }}>
           <BotonGuardar texto="Guardar" guardando={guardando} disabled={cargando} onClick={guardar} />
         </Stack>
         </>}

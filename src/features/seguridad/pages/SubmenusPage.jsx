@@ -45,6 +45,7 @@ import {
   listarRoles,
   moverFuncionRol,
 } from "../services/rolPermisoService.js";
+import { CampoActivo } from "../../../components/common/CampoActivo.jsx";
 
 const inicial = {
   id_userroles: [],
@@ -373,15 +374,10 @@ export function SubmenusPage() {
                 onClick={() => setSelectorIcono(true)}
                 onChange={(e) => cambiar("icono", e.target.value)}
               />
-              <TextField
-                select
-                label="Estado"
-                value={formulario.activo ? "1" : "0"}
-                onChange={(e) => cambiar("activo", e.target.value === "1")}
-              >
-                <MenuItem value="1">Activo</MenuItem>
-                <MenuItem value="0">Inactivo</MenuItem>
-              </TextField>
+              <CampoActivo
+                checked={formulario.activo}
+                onChange={(e) => cambiar("activo", e.target.checked)}
+              />
             </Box>
             <AccionesFormulario
               onCancelar={() => setModoFormulario(false)}

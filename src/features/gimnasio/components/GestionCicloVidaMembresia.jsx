@@ -6,6 +6,9 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import EventRepeatOutlinedIcon from '@mui/icons-material/EventRepeatOutlined';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { esPaseDiario } from './estadoMembresia.js';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
 import { BotonVistaPrevia } from '../../../components/common/BotonVistaPrevia.jsx';
@@ -24,6 +27,8 @@ const fechaLocal = () => {
   const valor = (tipo) => partes.find(parte => parte.type === tipo)?.value;
   return [valor('year'), valor('month'), valor('day')].join('-');
 };
+const ETIQUETAS_SUSPENSION = { PROGRAMADA: 'Programada', VIGENTE: 'Vigente', FINALIZADA: 'Finalizada', NO_APLICADA: 'No aplicada', CANCELADA: 'Cancelada' };
+const OPCIONES_SUSPENSIONES = { sinOrdenar: ['desde', 'hasta'] };
 const fechaLegible = (v) => {
   const a = String(v || '').slice(0, 10).split('-');
   return a.length === 3 ? [a[2], a[1], a[0]].join('/') : '—';
@@ -44,16 +49,17 @@ const mensajeError = (e) => {
  * Fase 3: previsualización de cuotas, ventas y pagos, y congelación financiera
  * validada exclusivamente por Laravel. Los pagos confirmados son inmutables.
  */
-export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, integrado = false }) {
+export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, integrado = false, modo = 'congelaciones' }) {
+  const [previewReapertura, setPreviewReapertura] = useState(null);
   const [ciclo, setCiclo] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [operacion, setOperacion] = useState('');
   const [tipo, setTipo] = useState('TIEMPO');
   const [busqueda, setBusqueda] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(5);
   const [detalleSuspension, setDetalleSuspension] = useState(null);
   const [motivoCancelacion, setMotivoCancelacion] = useState('');
+  const [vigenciaInicio, setVigenciaInicio] = useState('');
+  const [vigenciaFin, setVigenciaFin] = useState('');
   const [motivoCodigo, setMotivoCodigo] = useState('');
   const [motivosCatalogo, setMotivosCatalogo] = useState([]);
   const [previewReactivacion, setPreviewReactivacion] = useState(null);
@@ -274,6 +280,17 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     finally { setProcesando(false); }
   };
 
+  const editarVigencia = async () => {
+    setProcesando(true); setError('');
+    try {
+      await gimnasioServicio.editarVigenciaMembresia(membresia.id, { fecha_inicio: vigenciaInicio, fecha_fin: vigenciaFin, motivo: motivo.trim() });
+      setExito(`Vigencia actualizada: ${fechaLegible(vigenciaInicio)} – ${fechaLegible(vigenciaFin)}.`);
+      setOperacion(''); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
   const cancelarContrato = async () => {
     if (!motivoCodigo || motivo.trim().length < 8) {
       setError('Selecciona el motivo de cierre y escribe una justificación de al menos 8 caracteres.');
@@ -297,6 +314,36 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     finally { setProcesando(false); }
   };
 
+  const abrirReapertura = async () => {
+    setProcesando(true); setError(''); setExito('');
+    try {
+      setPreviewReapertura(await gimnasioServicio.previsualizarReaperturaMembresia(membresia.id));
+      setOperacion('reabrir'); setMotivo(''); setMotivoCodigo('');
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
+  const reabrirContrato = async () => {
+    if (!motivoCodigo || motivo.trim().length < 8) {
+      setError('Selecciona el motivo y escribe una justificación de al menos 8 caracteres.');
+      return;
+    }
+    const confirmado = await confirmarAccion({
+      titulo: 'Reabrir contrato de membresía',
+      texto: 'Es una acción excepcional y queda registrada. No restaura reservas ni el entrenador asignado.',
+      textoConfirmar: 'Sí, reabrir', icono: 'warning',
+    });
+    if (!confirmado) return;
+    setProcesando(true); setError('');
+    try {
+      await gimnasioServicio.reabrirMembresia(membresia.id, { motivo: motivo.trim(), motivo_codigo: motivoCodigo });
+      setExito('Contrato reabierto con trazabilidad completa.');
+      setOperacion(''); setPreviewReapertura(null); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
   const estado = String(ciclo?.estado || membresia?.estado || '').toUpperCase();
   const suspensiones = ciclo?.suspensiones || [];
   const tienePendiente = suspensiones.some(s => ['PROGRAMADA', 'VIGENTE'].includes(s.estado));
@@ -308,32 +355,81 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     s.tipo, s.estado, s.fecha_inicio, s.fecha_fin_prevista,
     movimientoDe(s)?.motivo,
   ].some(value => String(value || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC'))));
-  const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtradas.length / porPagina) || 1));
-  const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
-  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar'].includes(operacion);
+  const tabla = useTablaLocal(filtradas, {
+    desde: (s) => fechaLegible(s.fecha_inicio),
+    hasta: (s) => fechaLegible(s.fecha_fin_prevista),
+    modalidad: (s) => (s.tipo === 'TIEMPO' ? 'Tiempo / vacaciones' : 'Facturación'),
+    dias: (s) => String(s.dias_previstos ?? leerDetalleMovimiento(movimientoDe(s)).dias_previstos ?? '—'),
+    estado: (s) => ETIQUETAS_SUSPENSION[s.estado] || s.estado || '',
+  }, OPCIONES_SUSPENSIONES);
+  const { visibles } = tabla;
+  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar', 'reabrir', 'vigencia'].includes(operacion);
+  const esPase = esPaseDiario(membresia);
 
   return <Box sx={integrado ? { width: '100%', minWidth: 0 } : {
     ...formStyles.seccion, mt: 1.5, p: { xs: 1.5, sm: 2 },
   }}>
-    {(!integrado || mostrarFormulario) && <Stack direction="row" alignItems="center" justifyContent="space-between" gap={1.5} sx={{ mb: 1.5, width: '100%' }}>
+    {(!integrado || mostrarFormulario) && <Stack direction="row" gap={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
-          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : 'Gestión del ciclo de vida'}
+          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : 'Gestión del ciclo de vida'}
         </Typography>
       </Box>
-      <Box sx={{ ml: 'auto', flexShrink: 0 }}>
+      {!integrado && <Box sx={{ ml: 'auto', flexShrink: 0 }}>
         <BotonVolver onClick={mostrarFormulario ? () => { setOperacion(''); setEditandoSuspensionId(null); setPreview(null); setError(''); } : onVolver}/>
-      </Box>
+      </Box>}
     </Stack>}
     {cargando && <CircularProgress size={23}/>}
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
     {exito && <Alert severity="success" sx={{ mb: 2 }}>{exito}</Alert>}
     {ciclo && <>
-      {!mostrarFormulario && <>
+      {!mostrarFormulario && modo === 'contrato' && <Stack spacing={1.5}>
+        {estado === 'VENCIDA' && !esPase && <Alert severity="info">
+          Este contrato terminó su vigencia. Para continuar, añade una nueva membresía desde la lista.
+        </Alert>}
+        {estado === 'CANCELADA' && !ciclo?.puede_reabrir && <Alert severity="info">
+          Este contrato está cancelado. Solo un administrador puede reabrirlo.
+        </Alert>}
+        {esPase && <Alert severity="info">
+          Vigencia del pase: {ciclo?.vigencia_fin ? `${ciclo.vigencia_inicio ? `${fechaLegible(ciclo.vigencia_inicio)} – ` : 'hasta '}${fechaLegible(ciclo.vigencia_fin)}` : 'sin límite'}.
+        </Alert>}
+        {(ciclo?.puede_cancelar_contrato || ciclo?.puede_reabrir || puedeReactivar) ? (
+          <Typography variant="body2" color="text.secondary">
+            Las acciones quedan registradas con su motivo. Ventas, cobros y comprobantes se conservan.
+          </Typography>
+        ) : null}
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {puedeReactivar && <Button variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={() => { setOperacion('reactivar'); setMotivo(''); setMotivoCodigo('REGRESO'); setError(''); setPreviewReactivacion(null); }}>
+            Reactivar membresía
+          </Button>}
+          {ciclo?.puede_editar_vigencia && <Button variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={() => {
+              setOperacion('vigencia'); setMotivo(''); setError(''); setExito('');
+              setVigenciaInicio(String(ciclo.vigencia_inicio_sugerida || '').slice(0, 10));
+              setVigenciaFin(String(ciclo.vigencia_fin || '').slice(0, 10));
+            }}>
+            Editar vigencia
+          </Button>}
+          {ciclo?.puede_cancelar_contrato && <Button color="error" variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={() => { setOperacion('cancelar'); setMotivo(''); setMotivoCodigo('RETIRO_VOLUNTARIO'); setPreviewCancelacion(null); setError(''); }}>
+            Cancelar contrato
+          </Button>}
+          {ciclo?.puede_reabrir && <Button variant="outlined" disabled={procesando}
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={abrirReapertura}>
+            Reabrir contrato
+          </Button>}
+        </Box>
+      </Stack>}
+      {!mostrarFormulario && modo !== 'contrato' && <>
         <GestionToolbar
           total={filtradas.length}
           busqueda={busqueda}
-          onBusqueda={valor => { setBusqueda(valor); setPagina(1); }}
+          onBusqueda={setBusqueda}
           acciones={<Button startIcon={<AddOutlinedIcon />} disabled={estado !== 'ACTIVA' || tienePendiente || procesando}
             onClick={() => {
               setTipo('TIEMPO'); setInicio(fechaLocal()); setFin(''); setMotivo(''); setMotivoCodigo('VACACIONES');
@@ -343,13 +439,14 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
         {estado === 'ACTIVA' && tienePendiente && <Alert severity="info" sx={{ mb: 1.5 }}>
           Existe una congelación programada. No es posible registrar otra hasta que finalice o se resuelva la actual.
         </Alert>}
-        <TablaGestion total={suspensiones.length} filtrados={filtradas.length}
-          page={paginaActual} onPageChange={setPagina}
-          rowsPerPage={porPagina} onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
+        <TablaGestion {...tabla.propsTabla} total={suspensiones.length}>
           <TableHead><TableRow>
-            <TableCell>Desde</TableCell><TableCell>Hasta (incluido)</TableCell>
-            <TableCell>Modalidad</TableCell><TableCell align="center">Días previstos</TableCell>
-            <TableCell>Estado</TableCell><TableCell align="center">Acciones</TableCell>
+            <FilterHeaderCell {...tabla.filtro('desde')}>Desde</FilterHeaderCell>
+            <FilterHeaderCell {...tabla.filtro('hasta')}>Hasta (incluido)</FilterHeaderCell>
+            <FilterHeaderCell {...tabla.filtro('modalidad')}>Modalidad</FilterHeaderCell>
+            <FilterHeaderCell {...tabla.filtro('dias')} align="center">Días previstos</FilterHeaderCell>
+            <FilterHeaderCell {...tabla.filtro('estado')}>Estado</FilterHeaderCell>
+            <TableCell align="center">Acciones</TableCell>
           </TableRow></TableHead>
           <TableBody>
             {visibles.map(s => <TableRow key={s.id} hover>
@@ -365,8 +462,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
               </TableCell>
               <TableCell><Chip size="small" variant="outlined"
                 color={s.estado === 'VIGENTE' ? 'warning' : s.estado === 'FINALIZADA' ? 'success' : 'default'}
-                label={({ PROGRAMADA: 'Programada', VIGENTE: 'Vigente', FINALIZADA: 'Finalizada',
-                  NO_APLICADA: 'No aplicada', CANCELADA: 'Cancelada' })[s.estado] || s.estado} /></TableCell>
+                label={ETIQUETAS_SUSPENSION[s.estado] || s.estado} /></TableCell>
               <TableCell align="center">
                 <Tooltip title="Ver detalle de la congelación">
                   <IconButton size="small" aria-label="Ver congelación" sx={dbanuStyles.actionView}
@@ -397,7 +493,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
                 )}
               </TableCell>
             </TableRow>)}
-            {!filtradas.length && <TableRow><TableCell colSpan={6} align="center">
+            {!visibles.length && <TableRow><TableCell colSpan={6} align="center">
               <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                 {busqueda ? 'No hay congelaciones que coincidan con la búsqueda.' : 'Este contrato todavía no tiene congelaciones registradas.'}
               </Typography>
@@ -405,11 +501,6 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           </TableBody>
         </TablaGestion>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-          {ciclo?.puede_cancelar_contrato && <Button color="error" variant="outlined"
-            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
-            onClick={() => { setOperacion('cancelar'); setMotivo(''); setMotivoCodigo('RETIRO_VOLUNTARIO'); setPreviewCancelacion(null); setError(''); }}>
-            Cancelar contrato
-          </Button>}
         {puedeReactivar && <Box>
           <Button variant="outlined"
             sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
@@ -540,6 +631,47 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           <BotonVistaPrevia disabled={!fin || procesando} cargando={procesando && !preview} onClick={simularProrroga}/>
           <BotonGuardar texto="Guardar prórroga" guardando={procesando}
             disabled={!motivoCodigo || !fin || motivo.trim().length < 8} onClick={guardarProrroga}/>
+        </Box>
+      </Box>}
+      {operacion === 'reabrir' && <Box>
+        {previewReapertura?.confirmable ? <Alert severity="warning" sx={{ mb: 2 }}>
+          Es una acción excepcional. El contrato pasará a {previewReapertura.estado_resultante === 'ACTIVA' ? 'Activa' : previewReapertura.estado_resultante === 'VENCIDA' ? 'disponible para vender' : 'Pendiente de pago'}.
+          {previewReapertura.tiene_deuda ? ' Tiene ventas sin pago completo.' : ''}
+          {previewReapertura.requiere_reasignar_entrenador ? ' Hay que volver a asignar el entrenador.' : ''}
+        </Alert> : <Alert severity="info" sx={{ mb: 2 }}>{previewReapertura?.motivo_bloqueo}</Alert>}
+        {previewReapertura?.confirmable && <>
+          <TextField select size="small" fullWidth label="Motivo de reapertura" value={motivoCodigo}
+            onChange={e => setMotivoCodigo(e.target.value)}>
+            {motivosCatalogo.filter(m => m.operacion === 'REABRIR').map(m =>
+              <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
+          </TextField>
+          <TextField multiline minRows={2} size="small" fullWidth label="Justificación de reapertura"
+            required sx={{ mt: 2 }} value={motivo} onChange={e => setMotivo(e.target.value)}/>
+        </>}
+        <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreviewReapertura(null); }}/>
+          {previewReapertura?.confirmable && <BotonGuardar texto="Reabrir contrato" guardando={procesando}
+            disabled={!motivoCodigo || motivo.trim().length < 8} onClick={reabrirContrato}/>}
+        </Box>
+      </Box>}
+      {operacion === 'vigencia' && <Box>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Cambiar la vigencia no cobra ni crea una venta: cada día de uso se cobra en Ventas.
+          {ciclo?.dias_vendidos?.primero ? ` Debe incluir los días ya vendidos: del ${fechaLegible(ciclo.dias_vendidos.primero)} al ${fechaLegible(ciclo.dias_vendidos.ultimo)}.` : ''}
+        </Alert>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+          <TextField size="small" fullWidth required type="date" label="Fecha inicio" value={vigenciaInicio}
+            onChange={e => setVigenciaInicio(e.target.value)} slotProps={{ inputLabel: { shrink: true } }}/>
+          <TextField size="small" fullWidth required type="date" label="Fecha fin" value={vigenciaFin}
+            onChange={e => setVigenciaFin(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: vigenciaInicio || undefined } }}/>
+        </Box>
+        <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 2 }}
+          value={motivo} onChange={e => setMotivo(e.target.value)}/>
+        <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => setOperacion('')}/>
+          <BotonGuardar texto="Guardar vigencia" guardando={procesando}
+            disabled={!vigenciaInicio || !vigenciaFin || motivo.trim().length < 8} onClick={editarVigencia}/>
         </Box>
       </Box>}
       {operacion === 'cancelar' && <Box>

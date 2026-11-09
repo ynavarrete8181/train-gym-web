@@ -132,10 +132,6 @@ export const gimnasioServicio = {
     const { data } = await api.post('/base/gimnasio/planes', payload);
     return data;
   },
-  eliminarPlan: async (id) => {
-    const { data } = await api.delete(`/base/gimnasio/planes/${id}`);
-    return data;
-  },
   actualizarPlan: async (id, payload) => {
     const { data } = await api.put(`/base/gimnasio/planes/${id}`, payload);
     return data;
@@ -150,10 +146,6 @@ export const gimnasioServicio = {
   },
   actualizarModalidadPlan: async (planId, modalidadId, payload) => {
     const { data } = await api.put(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}`, payload);
-    return data;
-  },
-  eliminarModalidadPlan: async (planId, modalidadId) => {
-    const { data } = await api.delete(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}`);
     return data;
   },
 
@@ -172,6 +164,28 @@ export const gimnasioServicio = {
   },
   actualizarDeportista: async (id, payload) => {
     const { data } = await api.put(`/base/gimnasio/clientes/${id}`, payload);
+    return data;
+  },
+  quitarTutorCliente: async (deportistaId, motivo) => {
+    const { data } = await api.post(`/base/gimnasio/clientes/${deportistaId}/tutor/quitar`, { motivo: motivo || null });
+    return data;
+  },
+  buscarTutores: async (q, excluirPersonaId) => {
+    const { data } = await api.get('/base/gimnasio/tutores/buscar', {
+      params: { q, ...(excluirPersonaId ? { excluir_persona_id: excluirPersonaId } : {}) },
+    });
+    return data;
+  },
+  obtenerTutor: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/tutores/${id}`);
+    return data;
+  },
+  crearTutor: async (payload) => {
+    const { data } = await api.post('/base/gimnasio/tutores', payload);
+    return data;
+  },
+  actualizarTutor: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/tutores/${id}`, payload);
     return data;
   },
 
@@ -269,6 +283,10 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/cancelacion/preview`);
     return data.datos;
   },
+  editarVigenciaMembresia: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/membresias/${id}/vigencia`, payload);
+    return data.datos;
+  },
   cancelarContratoMembresia: async (id, payload) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/cancelacion`, payload);
     return data.datos;
@@ -280,6 +298,17 @@ export const gimnasioServicio = {
   obtenerExpedienteMembresia: async (id) => {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/expediente`);
     return data.datos;
+  },
+  actualizarConfiguracionMembresia: async (id, payload) => (await api.put(`/base/gimnasio/membresias/${id}/configuracion`, payload)).data.datos,
+  obtenerResumenContratoPdf: async (id) => (await api.get(`/base/gimnasio/membresias/${id}/resumen-pdf`, { responseType: 'blob' })).data,
+  actualizarSedesMembresia: async (id, payload) => (await api.put(`/base/gimnasio/membresias/${id}/sedes`, payload)).data.datos,
+  obtenerDescuentosMembresia: async (id) => (await api.get(`/base/gimnasio/membresias/${id}/descuentos`)).data.datos,
+  registrarDescuentoMembresia: async (id, payload) => (await api.post(`/base/gimnasio/membresias/${id}/descuentos`, payload)).data.datos,
+  actualizarDescuentoMembresia: async (id, descuentoId, payload) => (await api.put(`/base/gimnasio/membresias/${id}/descuentos/${descuentoId}`, payload)).data.datos,
+  finalizarDescuentoMembresia: async (id, descuentoId, motivo) => (await api.post(`/base/gimnasio/membresias/${id}/descuentos/${descuentoId}/finalizar`, { motivo })).data.datos,
+  obtenerMembresia: async (id) => {
+    const { data } = await api.get(`/base/gimnasio/membresias/${id}`);
+    return data;
   },
   previsualizarReaperturaMembresia: async (id) => {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/reapertura/preview`);
@@ -299,10 +328,6 @@ export const gimnasioServicio = {
   },
   renovarMembresia: async (id) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/renovar`);
-    return data;
-  },
-  eliminarMembresia: async (id) => {
-    const { data } = await api.delete(`/base/gimnasio/membresias/${id}`);
     return data;
   },
 
@@ -329,7 +354,7 @@ export const gimnasioServicio = {
     return data;
   },
   obtenerValoracionesDeportista: async (id, seccion) => {
-    const { data } = await api.get(`/base/gimnasio/clientes/${id}/valoraciones`, { params: { seccion } });
+    const { data } = await api.get(`/base/gimnasio/clientes/${id}/valoraciones`, { params: { seccion, incluir_inactivos: 1 } });
     return data;
   },
   crearValoracionDeportista: async (id, payload) => {
@@ -340,8 +365,8 @@ export const gimnasioServicio = {
     const { data } = await api.put(`/base/gimnasio/clientes/${id}/valoraciones/${registro}`, payload);
     return data;
   },
-  anularValoracionDeportista: async (id, registro) => {
-    const { data } = await api.delete(`/base/gimnasio/clientes/${id}/valoraciones/${registro}`);
+  cambiarEstadoValoracionDeportista: async (id, registro, activo) => {
+    const { data } = await api.patch(`/base/gimnasio/clientes/${id}/valoraciones/${registro}/estado`, { activo });
     return data;
   },
   obtenerControlesDeportista: async (id) => {

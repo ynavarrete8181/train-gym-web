@@ -6,6 +6,8 @@ import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
+const TIPOS_CLIENTE = { DEPORTISTA: 'Deportista', TUTOR: 'Tutor', DEPORTISTA_TUTOR: 'Deportista y tutor' };
+
 export function DeportistasTable({ deportistas, meta, cargando, filtrosColumna = {}, onFiltroColumna, onAbrirFicha, onPageChange, onRowsPerPageChange }) {
   const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 
@@ -24,14 +26,14 @@ export function DeportistasTable({ deportistas, meta, cargando, filtrosColumna =
           <FilterHeaderCell value={filtrosColumna.cedula} onChange={(v) => onFiltroColumna('cedula', v)} options={opciones(meta.opciones_filtro?.cedula)}>Cédula / documento</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.nombres} onChange={(v) => onFiltroColumna('nombres', v)} options={opciones(meta.opciones_filtro?.nombres)}>Cliente</FilterHeaderCell>
           <FilterHeaderCell value={filtrosColumna.telefono} onChange={(v) => onFiltroColumna('telefono', v)} options={opciones(meta.opciones_filtro?.telefono)}>Contacto</FilterHeaderCell>
-          <FilterHeaderCell value={filtrosColumna.sede} onChange={(v) => onFiltroColumna('sede', v)} options={opciones(meta.opciones_filtro?.sede)}>Sede</FilterHeaderCell>
-          <FilterHeaderCell value={filtrosColumna.estado} onChange={(v) => onFiltroColumna('estado', v)} options={[{ value: 'ACTIVO', label: 'Activo' }, { value: 'INACTIVO', label: 'Inactivo' }, { value: 'PROSPECTO', label: 'Prospecto' }, { value: 'SUSPENDIDO', label: 'Suspendido' }]}>Estado</FilterHeaderCell>
+          <FilterHeaderCell value={filtrosColumna.tipo_cliente} onChange={(v) => onFiltroColumna('tipo_cliente', v)} options={Object.entries(TIPOS_CLIENTE).map(([value, label]) => ({ value, label }))}>Tipo</FilterHeaderCell>
+          <FilterHeaderCell value={filtrosColumna.estado} onChange={(v) => onFiltroColumna('estado', v)} options={[{ value: 'ACTIVO', label: 'Activo' }, { value: 'INACTIVO', label: 'Inactivo' }]}>Estado</FilterHeaderCell>
           <TableCell align="right">Acciones</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
         {deportistas.map((deportista) => (
-          <TableRow key={deportista.id} hover>
+          <TableRow key={deportista.id ? `d-${deportista.id}` : `t-${deportista.tutor_id}`} hover>
             <TableCell>
               <Typography variant="body2" fontWeight="600" color="text.secondary">
                 {deportista.cedula || 'Sin documento'}
@@ -49,7 +51,7 @@ export function DeportistasTable({ deportistas, meta, cargando, filtrosColumna =
               <Typography variant="body2">{deportista.telefono || 'Sin teléfono'}</Typography>
             </TableCell>
             <TableCell>
-              <Typography variant="body2">{deportista.sede_nombre || 'No asignada'}</Typography>
+              <Typography variant="body2">{TIPOS_CLIENTE[deportista.tipo_cliente] || 'Deportista'}</Typography>
             </TableCell>
             <TableCell>
               <StatusChip estado={String(deportista.estado).toLowerCase()} />

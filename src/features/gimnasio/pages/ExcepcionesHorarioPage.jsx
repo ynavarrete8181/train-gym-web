@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import EventBusyOutlinedIcon from '@mui/icons-material/EventBusyOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import { Autocomplete, Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Autocomplete, Box, Button, IconButton, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
@@ -13,8 +13,10 @@ import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx'
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
-const hoy=new Date().toISOString().slice(0,10);
+const hoy=hoyEcuador();
 const ini={id:null,entrenador_id:'',sede_id:'',fecha_inicio:hoy,fecha_fin:hoy,hora_inicio:'',hora_fin:'',tipo:'NO_DISPONIBLE',motivo:'',observaciones:'',activo:true};
 const f=v=>String(v||'').slice(0,10), h=v=>String(v||'').slice(0,5);
 
@@ -41,8 +43,8 @@ export function ExcepcionesHorarioPage(){
         <TextField type="date" label="Hasta" size="small" value={form.fecha_fin} onChange={e=>setForm(a=>({...a,fecha_fin:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/>
         <Box sx={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:1}}><TextField type="time" label="Hora inicio" size="small" value={form.hora_inicio} onChange={e=>setForm(a=>({...a,hora_inicio:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/><TextField type="time" label="Hora fin" size="small" value={form.hora_fin} onChange={e=>setForm(a=>({...a,hora_fin:e.target.value}))} slotProps={{inputLabel:{shrink:true}}}/></Box>
         <TextField label="Motivo" size="small" value={form.motivo} onChange={e=>setForm(a=>({...a,motivo:e.target.value}))} required sx={{gridColumn:{md:'span 2'}}}/>
-        <FormControlLabel control={<Switch checked={Boolean(form.activo)} onChange={e=>setForm(a=>({...a,activo:e.target.checked}))}/>} label="Activo"/>
         <TextField label="Observaciones" size="small" value={form.observaciones||''} onChange={e=>setForm(a=>({...a,observaciones:e.target.value}))} multiline minRows={2} sx={{gridColumn:{md:'span 3'}}}/>
+        <CampoActivo checked={form.activo} onChange={e=>setForm(a=>({...a,activo:e.target.checked}))} />
       </Box>
       <AccionesFormulario onGuardar={guardar} onCancelar={()=>setVista('lista')}/>
     </Paper>

@@ -5,7 +5,7 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FitnessCenterOutlinedIcon from '@mui/icons-material/FitnessCenterOutlined';
 import MonitorWeightOutlinedIcon from '@mui/icons-material/MonitorWeightOutlined';
 import ViewWeekOutlinedIcon from '@mui/icons-material/ViewWeekOutlined';
-import { Box, Button, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, IconButton, MenuItem, Paper, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -18,12 +18,14 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { entrenamientoServicio } from '../services/entrenamientoServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const diasSemana = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO'];
 const estadosPlan = ['BORRADOR', 'ACTIVO', 'PAUSADO', 'FINALIZADO'];
 const tiposRm = ['DIRECTO', 'ESTIMADO'];
 const tiposCarga = ['LIBRE', 'KG', 'PORCENTAJE_RM', 'RPE'];
-const hoy = () => new Date().toISOString().slice(0, 10);
+const hoy = () => hoyEcuador();
 const fecha = (valor) => valor ? String(valor).slice(0, 10) : '';
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
@@ -259,8 +261,8 @@ function Formulario({ tipo, formData, catalogos, onChange, videoArchivo, onVideo
           <Typography variant="subtitle2" sx={{ mb: 1 }}>Ejemplo del ejercicio</Typography>
           <VistaPreviaEjercicioVideo archivo={videoArchivo} videoUrl={formData.video_url} recursoUrl={formData.url_recurso} />
         </Box>}
-        <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={onChange} />} label="Activo" />
         <TextField label="Instrucciones" name="instrucciones" value={formData.instrucciones || ''} onChange={onChange} size="small" multiline minRows={3} sx={{ gridColumn: { xs: 'auto', md: 'span 3' } }} />
+        <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
       </Box>
     );
   }

@@ -35,12 +35,20 @@ const tituloTipo = {
   MODIFICACION: 'Modificación administrativa',
   ACTUALIZAR_CONTRATO: 'Actualización contractual',
   RENOVACION_MANUAL: 'Renovación manual',
+  RENOVACION_AUTOMATICA: 'Renovación automática',
   CONGELAR: 'Congelación registrada',
   PROGRAMAR_CONGELACION: 'Congelación programada',
   REPROGRAMAR_CONGELACION: 'Cambio de fechas de congelación',
   CANCELAR_CONGELACION: 'Cancelación de congelación',
   REACTIVAR: 'Reactivación de membresía',
   CERRAR: 'Cierre de membresía',
+  EDITAR_VIGENCIA: 'Cambio de vigencia',
+  CAMBIAR_SEDES: 'Cambio de sedes',
+  CONFIGURAR_CONTRATO: 'Configuración del contrato',
+  DESCUENTO_REGISTRADO: 'Descuento registrado',
+  DESCUENTO_EDITADO: 'Descuento editado',
+  DESCUENTO_FINALIZADO: 'Descuento finalizado',
+  DESCUENTO_AJUSTADO: 'Descuento ajustado al contrato',
   REABRIR: 'Reapertura de membresía',
 };
 const fechaCampo = campo => /fecha|inicio|fin|vigencia|vencimiento/i.test(campo);
@@ -52,6 +60,11 @@ const etiquetaCampo = {
   dias_previstos: 'Días previstos', fecha_regreso: 'Regreso efectivo',
   fecha_inicio_original: 'Inicio original', fecha_fin_propuesta: 'Vencimiento propuesto',
   periodo_id: 'Período agregado', cuota_id: 'Cuota agregada',
+  vigencia_inicio_anterior: 'Inicio anterior', vigencia_inicio_nueva: 'Nuevo inicio',
+  vigencia_fin_anterior: 'Fin anterior', vigencia_fin_nueva: 'Nuevo fin',
+  sedes_anteriores: 'Sedes anteriores', sedes_nuevas: 'Sedes nuevas', valor: 'Descuento',
+  dias_gracia_anterior: 'Días de gracia anteriores', dias_gracia_nuevo: 'Días de gracia nuevos',
+  renovacion_anterior: 'Renovación automática anterior', renovacion_nueva: 'Renovación automática nueva',
   numero_periodo_nuevo: 'Número del período nuevo',
   precio: 'Importe de renovación', tipo: 'Modalidad',
   sedes_autorizadas: 'Sedes autorizadas', sede_id: 'Sede principal',
@@ -83,7 +96,26 @@ function Dato({ label, value, destacado = false }) {
 function DetalleEvento({ evento }) {
   const d = evento.detalle || {};
   const cambios = d.cambios && typeof d.cambios === 'object' ? Object.entries(d.cambios) : [];
-  const campos = evento.categoria === 'CICLO_VIDA'
+  const campos = evento.tipo === 'CONFIGURAR_CONTRATO'
+    ? [
+      ['dias_gracia_anterior', String(d.dias_gracia_anterior ?? '—')], ['dias_gracia_nuevo', String(d.dias_gracia_nuevo ?? '—')],
+      ['renovacion_anterior', d.renovacion_automatica_anterior ? 'Activada' : 'No'], ['renovacion_nueva', d.renovacion_automatica_nueva ? 'Activada' : 'No'],
+    ]
+    : evento.tipo === 'CAMBIAR_SEDES'
+    ? [['sedes_anteriores', d.sedes_anteriores], ['sedes_nuevas', d.sedes_nuevas]]
+    : String(evento.tipo || '').startsWith('DESCUENTO_')
+    ? [
+      ['valor', d.tipo === 'PORCENTAJE' ? `${d.valor} %` : `$${Number(d.valor || 0).toFixed(2)}`],
+      ['fecha_inicio', d.fecha_inicio],
+      ['fecha_fin', d.fecha_fin || 'Sin fin'],
+    ]
+    : evento.tipo === 'EDITAR_VIGENCIA'
+    ? [
+      ['vigencia_inicio_anterior', d.vigencia_inicio_anterior || 'Sin límite'],
+      ['vigencia_inicio_nueva', d.vigencia_inicio_nueva],
+      ['vigencia_fin_anterior', d.vigencia_fin_anterior || 'Sin límite'],
+      ['vigencia_fin_nueva', d.vigencia_fin_nueva],
+    ] : evento.categoria === 'CICLO_VIDA'
     ? [
       ['fecha_regreso', d.fecha_regreso || (evento.tipo === 'REACTIVAR' ? evento.fecha_efectiva : null)],
       ['fecha_inicio', d.inicio || d.fecha_inicio || evento.suspension?.fecha_inicio],
@@ -94,7 +126,7 @@ function DetalleEvento({ evento }) {
       ['fecha_fin_anterior', d.fecha_fin_anterior || d.fecha_fin_original || evento.suspension?.fecha_fin_original],
       ['fecha_fin_nueva', d.fecha_fin_nueva || d.fecha_fin_ajustada || evento.suspension?.fecha_fin_ajustada],
       ['tipo', d.tipo || evento.suspension?.tipo],
-    ] : evento.tipo === 'RENOVACION_MANUAL'
+    ] : ['RENOVACION_MANUAL', 'RENOVACION_AUTOMATICA'].includes(evento.tipo)
       ? [
         ['numero_periodo_nuevo', d.numero_periodo_nuevo],
         ['fecha_inicio', d.fecha_inicio],
@@ -141,6 +173,8 @@ function DetalleEvento({ evento }) {
 }
 
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 
@@ -148,13 +182,30 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
  * Historial real del contrato: listado con paginación de 5 y detalle interno.
  * Mantiene la lectura de eventos del servicio existente, sin alterar auditoría.
  */
+/** Fechas del período o vigencia que deja el movimiento, cuando las tiene. */
+const rangoEvento = (evento) => {
+  const d = evento.detalle || {};
+  if (evento.tipo === 'EDITAR_VIGENCIA') return [d.vigencia_inicio_nueva, d.vigencia_fin_nueva];
+  if (['RENOVACION_MANUAL', 'RENOVACION_AUTOMATICA'].includes(evento.tipo)) return [d.fecha_inicio, d.fecha_fin];
+  if (evento.suspension) return [evento.suspension.fecha_inicio, evento.suspension.fecha_fin_real || evento.suspension.fecha_fin_prevista];
+  return [d.fecha_inicio || d.inicio, d.fecha_fin || d.fin_previsto || d.fecha_fin_nueva];
+};
+
+const COLUMNAS_MOVIMIENTOS = {
+  movimiento: (evento) => tituloTipo[evento.tipo] || evento.tipo?.replaceAll('_', ' ') || 'Movimiento',
+  fecha: (evento) => fechaHora(evento.fecha),
+  inicio: (evento) => (rangoEvento(evento)[0] ? fecha(rangoEvento(evento)[0]) : '—'),
+  fin: (evento) => (rangoEvento(evento)[1] ? fecha(rangoEvento(evento)[1]) : '—'),
+  responsable: (evento) => evento.autor_nombre || 'Sistema / no disponible',
+  tipo: (evento) => (evento.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'),
+};
+const OPCIONES_MOVIMIENTOS = { sinOrdenar: ['fecha', 'inicio', 'fin'] };
+
 export function HistorialIntegralMembresia({ membresia }) {
   const [historial, setHistorial] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(5);
   const [seleccionado, setSeleccionado] = useState(null);
   const id = membresia?.id;
 
@@ -166,7 +217,6 @@ export function HistorialIntegralMembresia({ membresia }) {
     setError('');
     setSeleccionado(null);
     setBusqueda('');
-    setPagina(1);
     gimnasioServicio.obtenerHistorialIntegralMembresia(id)
       .then(datos => { if (vigente) setHistorial(datos); })
       .catch(e => {
@@ -182,25 +232,25 @@ export function HistorialIntegralMembresia({ membresia }) {
     tituloTipo[e.tipo] || e.tipo,
     e.categoria, e.fecha, e.fecha_efectiva, e.autor_nombre, e.motivo,
   ].some(v => String(v || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC')))), [eventos, busqueda]);
-  const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtrados.length / porPagina) || 1));
-  const visibles = filtrados.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
+  const tabla = useTablaLocal(filtrados, COLUMNAS_MOVIMIENTOS, OPCIONES_MOVIMIENTOS);
+  const { visibles } = tabla;
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
-    {cargando && <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
+    {cargando && <Stack direction="row" gap={1} sx={{ alignItems: 'center', mb: 1 }}>
       <CircularProgress size={18} />
       <Typography variant="body2">Consultando movimientos…</Typography>
     </Stack>}
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
     <GestionToolbar total={filtrados.length} busqueda={busqueda}
-      onBusqueda={valor => { setBusqueda(valor); setPagina(1); }} />
-    <TablaGestion total={eventos.length} filtrados={filtrados.length} cargando={cargando}
-      page={paginaActual} onPageChange={setPagina} rowsPerPage={porPagina}
-      onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
+      onBusqueda={setBusqueda} />
+    <TablaGestion {...tabla.propsTabla} total={eventos.length} cargando={cargando}>
       <TableHead><TableRow>
-        <TableCell>Movimiento</TableCell>
-        <TableCell>Fecha</TableCell>
-        <TableCell>Responsable</TableCell>
-        <TableCell>Tipo</TableCell>
+        <FilterHeaderCell {...tabla.filtro('movimiento')}>Movimiento</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('fecha')}>Registrado</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('inicio')}>Fecha inicio</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('fin')}>Fecha fin</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('responsable')}>Responsable</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('tipo')}>Tipo</FilterHeaderCell>
         <TableCell align="center">Acciones</TableCell>
       </TableRow></TableHead>
       <TableBody>
@@ -211,6 +261,8 @@ export function HistorialIntegralMembresia({ membresia }) {
             </Typography>
           </TableCell>
           <TableCell>{fechaHora(evento.fecha)}</TableCell>
+          <TableCell sx={{ whiteSpace: 'nowrap' }}>{COLUMNAS_MOVIMIENTOS.inicio(evento)}</TableCell>
+          <TableCell sx={{ whiteSpace: 'nowrap' }}>{COLUMNAS_MOVIMIENTOS.fin(evento)}</TableCell>
           <TableCell>{evento.autor_nombre || 'Sistema / no disponible'}</TableCell>
           <TableCell><Chip size="small" variant="outlined"
             label={evento.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'}/></TableCell>
@@ -225,8 +277,8 @@ export function HistorialIntegralMembresia({ membresia }) {
           </TableCell>
         </TableRow>)}
         {!cargando && !visibles.length && <TableRow>
-          <TableCell colSpan={5} align="center">
-            {busqueda ? 'No hay movimientos que coincidan con la búsqueda.' : 'Sin movimientos registrados.'}
+          <TableCell colSpan={7} align="center">
+            {eventos.length ? 'No hay movimientos con estos filtros.' : 'Sin movimientos registrados.'}
           </TableCell>
         </TableRow>}
       </TableBody>
@@ -238,7 +290,7 @@ export function HistorialIntegralMembresia({ membresia }) {
       fullWidth
       maxWidth="md"
       aria-labelledby="detalle-movimiento-membresia-titulo"
-      PaperProps={{ sx: { borderRadius: 2, maxHeight: '90vh' } }}
+      slotProps={{ paper: { sx: { borderRadius: 2, maxHeight: '90vh' } } }}
     >
       {seleccionado && <>
         <DialogTitle sx={{ ...formStyles.modalHeader, gap: 1.5, pr: 1.5 }}>

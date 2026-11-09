@@ -69,7 +69,9 @@ function filtrosVisibles(filtros = {}) {
     'sede_id',
   ]);
 
-  return Object.entries(filtros)
+  const { columnas = {}, ...resto } = filtros;
+
+  return Object.entries({ ...resto, ...columnas })
     .filter(([clave, valor]) => (
       !ignorar.has(clave)
       && valor !== ''

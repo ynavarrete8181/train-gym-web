@@ -3,8 +3,6 @@ import { Alert, Box, Button, Checkbox, Chip, Divider, FormControlLabel, IconButt
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
-import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
 import AddPhotoAlternateOutlinedIcon from '@mui/icons-material/AddPhotoAlternateOutlined';
 import HealthAndSafetyOutlinedIcon from '@mui/icons-material/HealthAndSafetyOutlined';
 import MonitorHeartOutlinedIcon from '@mui/icons-material/MonitorHeartOutlined';
@@ -16,7 +14,9 @@ import { FotosEvaluacionDeportista } from './FotosEvaluacionDeportista.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { StatusChip } from '../../../components/common/StatusChip.jsx';
+import { EstadoToggleCell } from '../../../components/tables/EstadoToggleCell.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
@@ -66,6 +66,13 @@ const indicadores = (datos = {}) => {
 };
 const mostrarIndicador = (valor, unidad = '') => valor === null ? '—' : `${valor.toFixed(2)}${unidad ? ` ${unidad}` : ''}`;
 const mostrarFecha = (fecha) => fecha ? String(fecha).substring(0, 10).split('-').reverse().join('/') : '—';
+const COLUMNAS_REGISTROS = {
+  fecha: (registro) => mostrarFecha(registro.fecha_registro),
+  registro: (registro) => registro.titulo || '',
+  proximo: (registro) => mostrarFecha(registro.proximo_control),
+  estado: (registro) => (registro.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'),
+};
+const OPCIONES_REGISTROS = { sinOrdenar: ['fecha', 'proximo'] };
 
 const CampoFecha = ({ etiqueta, valor, onChange, obligatorio = false }) => (
   <Box sx={{ minWidth: 0 }}>
@@ -78,7 +85,7 @@ const CampoFecha = ({ etiqueta, valor, onChange, obligatorio = false }) => (
       size="small"
       value={valor || ''}
       onChange={(evento) => onChange(evento.target.value)}
-      inputProps={{ 'aria-label': etiqueta }}
+      slotProps={{ htmlInput: { 'aria-label': etiqueta } }}
       sx={dbanuStyles.field}
     />
   </Box>
@@ -94,8 +101,6 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const [guardando, setGuardando] = useState(false);
   const [vista, setVista] = useState('listado');
   const [busqueda, setBusqueda] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(5);
   const [form, setForm] = useState(limpio);
   const [fotoNueva, setFotoNueva] = useState(null);
   const [fotoVista, setFotoVista] = useState('FRONTAL');
@@ -110,7 +115,6 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   const limpiarFoto = () => { setFotoNueva(null); setFotoVista('FRONTAL'); setConsentimientoFoto(false); };
   const [ver, setVer] = useState(null);
   const [editandoId, setEditandoId] = useState(null);
-  const [eliminarRegistro, setEliminarRegistro] = useState(null);
   const [error, setError] = useState('');
   const actual = secciones.find((s) => s.id === seccion) || secciones[0];
 
@@ -149,7 +153,8 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     return coincideTexto;
   }), [registros, busqueda]);
 
-  const paginaRegistros = filtrados.slice((pagina - 1) * porPagina, pagina * porPagina);
+  const tabla = useTablaLocal(filtrados, COLUMNAS_REGISTROS, OPCIONES_REGISTROS);
+  const paginaRegistros = tabla.visibles;
   const cambiar = (campo, valor) => setForm((prev) => ({ ...prev, [campo]: valor }));
   const iniciarEdicion = (registro) => {
     setEditandoId(registro.id);
@@ -162,18 +167,21 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
     });
     setControlEnCurso(null); limpiarFoto(); setVista('editar');
   };
-  const confirmarEliminacion = async () => {
-    if (!eliminarRegistro || guardando) return;
+  // Los registros no se eliminan: se inactivan y conservan su historial.
+  const cambiarEstadoRegistro = async (registro) => {
+    if (guardando) return;
+    const activar = registro.estado !== 'ACTIVO';
     setGuardando(true);
     try {
-      await gimnasioServicio.anularValoracionDeportista(deportistaId, eliminarRegistro.id);
+      await gimnasioServicio.cambiarEstadoValoracionDeportista(deportistaId, registro.id, activar);
       const res = await gimnasioServicio.obtenerValoracionesDeportista(deportistaId, seccion);
       setRegistros(Array.isArray(res.datos) ? res.datos : []);
-      setControles((prev) => prev.map((c) => c.registro_origen_id === eliminarRegistro.id && c.estado === 'PROGRAMADO' ? { ...c, estado: 'CANCELADO' } : c));
-      setVista('listado'); setVer(null); setEliminarRegistro(null);
-      onNotificacion?.('Registro anulado correctamente. Su historial se conserva.', 'success');
+      if (!activar) {
+        setControles((prev) => prev.map((c) => c.registro_origen_id === registro.id && c.estado === 'PROGRAMADO' ? { ...c, estado: 'CANCELADO' } : c));
+      }
+      onNotificacion?.(activar ? 'Registro activado.' : 'Registro inactivado. Su historial se conserva.', 'success');
     } catch (e) {
-      onNotificacion?.(e.response?.data?.mensaje || 'No se pudo anular el registro.', 'error');
+      onNotificacion?.(e.response?.data?.mensaje || 'No se pudo cambiar el estado del registro.', 'error');
     } finally { setGuardando(false); }
   };
   const iniciarRevision = (control) => {
@@ -248,7 +256,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
   if (!deportistaId) return <Alert severity="info">Guarda primero los datos del cliente.</Alert>;
 
   return <Box sx={{ mt: 0.5 }}>
-    <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} sx={{ mb: 2, gap: 1 }}>
+    <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', mb: 2, gap: 1 }}>
       <Box>
         <Typography sx={{ fontWeight: 850, fontSize: 15 }}>Ficha de valoración y seguimiento</Typography>
         <Typography sx={{ color: 'text.secondary', fontSize: 12 }}>Historial de antecedentes, controles físicos, objetivos y valoraciones.</Typography>
@@ -269,7 +277,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
             const activo = s.id === seccion;
             return <Button key={s.id} type="button" fullWidth
               aria-current={activo ? 'step' : undefined}
-              onClick={() => { setSeccion(s.id); setPagina(1); setForm(limpio()); setEditandoId(null); setControlEnCurso(null); limpiarFoto(); }}
+              onClick={() => { setSeccion(s.id); tabla.reiniciar(); setBusqueda(''); setForm(limpio()); setEditandoId(null); setControlEnCurso(null); limpiarFoto(); }}
               startIcon={<Icono sx={{ fontSize: 19 }} />}
               sx={{
                 justifyContent: 'flex-start', textAlign: 'left', textTransform: 'none',
@@ -294,7 +302,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
         </Stack>
       </Box>
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 1, p: { xs: 2, md: 2.5 }, minWidth: 0 }}>
-        {vista !== 'listado' && <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2, gap: 2 }}>
+        {vista !== 'listado' && <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2, gap: 2 }}>
           <Box>
             <Typography sx={{ fontWeight: 850, fontSize: 14 }}>{vista === 'nuevo' ? `Nuevo registro · ${actual.titulo}` : vista === 'editar' ? `Editar registro · ${actual.titulo}` : `Detalle · ${actual.titulo}`}</Typography>
           </Box>
@@ -363,7 +371,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
               return <TextField key={campo} size="small" label={etiqueta} fullWidth
                 type={(seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo)) || (seccion === 'objetivos' && ['valor_inicial','valor_meta'].includes(campo)) ? 'number' : 'text'}
                 multiline={Boolean(multilinea)} minRows={multilinea ? 2 : undefined}
-                inputProps={seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? { min: 0, max: campo === 'grasa_corporal_pct' ? 100 : undefined, step: 'any' } : undefined}
+                slotProps={{ htmlInput: seccion === 'evaluacion' && ['peso_kg','talla_cm','cintura_cm','grasa_corporal_pct'].includes(campo) ? { min: 0, max: campo === 'grasa_corporal_pct' ? 100 : undefined, step: 'any' } : undefined }}
                 value={form.datos[campo] ?? ''}
                 onChange={(e) => setForm((prev) => ({ ...prev, datos: { ...prev.datos, [campo]: e.target.value } }))}
                 sx={{ ...dbanuStyles.field, gridColumn: multilinea ? '1 / -1' : 'auto' }} />;
@@ -387,7 +395,7 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           </Box>}
           </Box>
           {seccion === 'evaluacion' && vista !== 'editar' && <Box sx={{ p: 1.75, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 0.5 }}>
               <AddPhotoAlternateOutlinedIcon sx={{ color: 'primary.main', fontSize: 19 }} />
               <Typography sx={{ fontSize: 13, fontWeight: 850 }}>Fotografía de evolución</Typography>
             </Stack>
@@ -433,17 +441,16 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
           <GestionToolbar
             total={filtrados.length}
             busqueda={busqueda}
-            onBusqueda={(valor) => { setBusqueda(valor); setPagina(1); }}
+            onBusqueda={setBusqueda}
             acciones={<Button startIcon={<AddOutlinedIcon />} onClick={() => { setVista('nuevo'); setEditandoId(null); setControlEnCurso(null); setForm(limpio()); limpiarFoto(); }} disabled={cargando || Boolean(error)}>Añadir</Button>}
 
           />
-          <TablaGestion total={registros.length} filtrados={filtrados.length} page={pagina} rowsPerPage={porPagina}
-            onPageChange={setPagina} onRowsPerPageChange={(cantidad) => { setPorPagina(cantidad); setPagina(1); }} cargando={cargando}>
+          <TablaGestion {...tabla.propsTabla} total={registros.length} cargando={cargando}>
             <TableHead><TableRow>
-              <TableCell>Fecha</TableCell>
-              <TableCell>Registro</TableCell>
-              <TableCell>Próximo control</TableCell>
-              <TableCell>Estado</TableCell>
+              <FilterHeaderCell {...tabla.filtro('fecha')}>Fecha</FilterHeaderCell>
+              <FilterHeaderCell {...tabla.filtro('registro')}>Registro</FilterHeaderCell>
+              <FilterHeaderCell {...tabla.filtro('proximo')}>Próximo control</FilterHeaderCell>
+              <FilterHeaderCell {...tabla.filtro('estado')}>Estado</FilterHeaderCell>
               <TableCell align="right">Acciones</TableCell>
             </TableRow></TableHead>
             <TableBody>
@@ -451,24 +458,28 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
                 <TableCell>{mostrarFecha(registro.fecha_registro)}</TableCell>
                 <TableCell>{registro.titulo}</TableCell>
                 <TableCell>{mostrarFecha(registro.proximo_control)}</TableCell>
-                <TableCell><StatusChip estado={String(registro.estado || 'ACTIVO').toLowerCase()} /></TableCell>
+                <TableCell>
+                  <EstadoToggleCell
+                    activo={registro.estado === 'ACTIVO'}
+                    onToggle={() => cambiarEstadoRegistro(registro)}
+                    confirmacion={registro.estado === 'ACTIVO' ? {
+                      titulo: 'Inactivar registro',
+                      texto: `«${registro.titulo}» dejará de contarse en el progreso y sus controles pendientes se cancelarán. Su historial se conserva.`,
+                    } : undefined}
+                  />
+                </TableCell>
                 <TableCell align="right">
                   <Tooltip title="Ver detalle">
                     <IconButton sx={dbanuStyles.actionView} onClick={() => { setVer(registro); setVista('detalle'); }}>
                       <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
-                  <Tooltip title="Editar registro">
+                  {registro.estado === 'ACTIVO' && <Tooltip title="Editar registro">
                     <IconButton sx={dbanuStyles.actionEdit} onClick={() => iniciarEdicion(registro)} disabled={guardando}>
                       <EditOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Anular registro">
-                    <IconButton sx={dbanuStyles.actionDelete} onClick={() => setEliminarRegistro(registro)} disabled={guardando}>
-                      <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
-                    </IconButton>
-                  </Tooltip>
-                  {seccion === 'evaluacion' && <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />}
+                  </Tooltip>}
+                  {seccion === 'evaluacion' && registro.estado === 'ACTIVO' && <Button size="small" variant="outlined" startIcon={<AddPhotoAlternateOutlinedIcon />}
                     sx={{ ml: 0.75, whiteSpace: 'nowrap' }}
                     onClick={() => { setVer(registro); setVista('detalle'); }}>
                     Añadir foto
@@ -499,15 +510,5 @@ export function FichaInicialDeportista({ deportistaId, onNotificacion }) {
       </Paper>
     </Box>
 
-    <Dialog open={Boolean(eliminarRegistro)} onClose={() => !guardando && setEliminarRegistro(null)} maxWidth="xs" fullWidth>
-      <DialogTitle>¿Anular registro?</DialogTitle>
-      <DialogContent><DialogContentText>
-        Se anulará «{eliminarRegistro?.titulo}». Dejará de aparecer en el historial activo y los reportes, pero se conservará para trazabilidad.
-      </DialogContentText></DialogContent>
-      <DialogActions>
-        <Button onClick={() => setEliminarRegistro(null)} disabled={guardando}>Cancelar</Button>
-        <Button color="error" onClick={confirmarEliminacion} disabled={guardando}>Anular registro</Button>
-      </DialogActions>
-    </Dialog>
   </Box>;
 }

@@ -25,11 +25,13 @@ import {
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const initialModalidad = () => ({
   id: null,
@@ -60,6 +62,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
   const [editando, setEditando] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const tabla = useTablaLocal(modalidades, {});
 
   const avisar = (mensaje, tipo = 'info') => setNotificacion({ mensaje, tipo });
 
@@ -208,27 +211,6 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
     }
   };
 
-  const eliminar = async (modalidad) => {
-    const confirmado = await confirmarAccion({
-      titulo: 'Eliminar modalidad',
-      texto: '¿Deseas eliminar la modalidad "' + modalidad.nombre + '"? Si ya está asociada a membresías, no podrá eliminarse.',
-      textoConfirmar: 'Sí, eliminar',
-      icono: 'warning',
-    });
-
-    if (!confirmado) return;
-
-    try {
-      await gimnasioServicio.eliminarModalidadPlan(plan.id, modalidad.id);
-      avisar('Modalidad eliminada con éxito', 'success');
-      await cargar();
-    } catch (error) {
-      const errores = error.response?.data?.errors;
-      const primero = errores ? Object.values(errores).flat()[0] : null;
-      avisar(primero || error.response?.data?.mensaje || 'No se pudo eliminar la modalidad.', 'error');
-    }
-  };
-
   return (
     <Box className={embedded ? undefined : 'page-wrapper'}>
       {!embedded ? (
@@ -244,16 +226,16 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
         <Box sx={formStyles.seccion}>
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.4fr .72fr .72fr .78fr .68fr .8fr .9fr .9fr' }, gap: 1, alignItems: 'start' }}>
             <TextField label="Nombre de modalidad" name="nombre" value={form.nombre} onChange={cambiar} required size="small" />
-            <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 7 }} />
-            <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana} onChange={cambiar} disabled={form.uso_ilimitado} size="small" inputProps={{ min: 1, max: 30 }} />
+            <TextField label="Días/sem." name="dias_por_semana" type="number" value={form.dias_por_semana} onChange={cambiar} disabled={form.uso_ilimitado} size="small" slotProps={{ htmlInput: { min: 1, max: 7 } }} />
+            <TextField label="Usos/sem." name="usos_por_semana" type="number" value={form.usos_por_semana} onChange={cambiar} disabled={form.uso_ilimitado} size="small" slotProps={{ htmlInput: { min: 1, max: 30 } }} />
             <TextField select label="Duración" name="tipo_duracion" value={form.tipo_duracion} onChange={cambiar} size="small">
               <MenuItem value="DIAS">Días</MenuItem>
               <MenuItem value="SEMANAS">Semanas</MenuItem>
               <MenuItem value="MESES">Meses</MenuItem>
               <MenuItem value="ANIOS">Años</MenuItem>
             </TextField>
-            <TextField label="Cantidad" name="duracion" type="number" value={form.duracion} onChange={cambiar} size="small" inputProps={{ min: 1 }} />
-            <TextField label="Precio ($)" name="precio_base" type="number" value={form.precio_base} onChange={cambiar} size="small" inputProps={{ min: 0, step: '0.01' }} />
+            <TextField label="Cantidad" name="duracion" type="number" value={form.duracion} onChange={cambiar} size="small" slotProps={{ htmlInput: { min: 1 } }} />
+            <TextField label="Precio ($)" name="precio_base" type="number" value={form.precio_base} onChange={cambiar} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
             <TextField select label="Modelo de cobro" name="modelo_cobro" value={form.modelo_cobro} onChange={cambiar} size="small">
               <MenuItem value="FIJO_POR_PERIODO">Fijo</MenuItem>
               <MenuItem value="PRORRATEO_POR_SEMANAS_UTILIZADAS">Prorrateado</MenuItem>
@@ -273,17 +255,17 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
               size="small"
               placeholder="Descripción breve de la modalidad"
             />
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+            <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
               <FormControlLabel control={<Switch size="small" name="uso_ilimitado" checked={Boolean(form.uso_ilimitado)} onChange={cambiar} />} label="Uso ilimitado" />
               <FormControlLabel control={<Switch size="small" name="permite_extension" checked={Boolean(form.permite_extension)} onChange={cambiar} />} label="Permite extensión" />
               <FormControlLabel control={<Switch size="small" name="extension_automatica" checked={Boolean(form.extension_automatica)} onChange={cambiar} disabled={!form.permite_extension} />} label="Extensión automática" />
               <FormControlLabel control={<Switch size="small" name="permite_rollover" checked={Boolean(form.permite_rollover)} onChange={cambiar} />} label="Rollover" />
-              <FormControlLabel control={<Switch size="small" name="activo" checked={Boolean(form.activo)} onChange={cambiar} />} label="Activa" />
+              <CampoActivo name="activo" checked={form.activo} onChange={cambiar} label="Activa" />
             </Stack>
           </Box>
 
           <Box sx={{ mt: 1, borderTop: '1px solid #edf2f7', pt: 1 }}>
-            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'stretch', md: 'center' }} spacing={1}>
+            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ alignItems: { xs: 'stretch', md: 'center' }, justifyContent: 'space-between' }}>
               <Box sx={{ flex: 1 }}>
                 <FormControlLabel
                   control={
@@ -302,7 +284,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                 </Typography>
               </Box>
 
-              <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
                 {form.precio_por_sede ? (
                   <Button
                     startIcon={<AddOutlinedIcon />}
@@ -318,7 +300,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
             {form.precio_por_sede && (form.precios_sede || []).length ? (
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1, mt: 1 }}>
                 {(form.precios_sede || []).map((fila, index) => (
-                  <Stack key={index} direction="row" spacing={1} alignItems="center">
+                  <Stack key={index} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
                     <TextField select label="Sede" size="small" value={fila.sede_id || ''} onChange={(e) => cambiarPrecio(index, 'sede_id', e.target.value)} sx={{ flex: 1 }}>
                       {sedes.map((sede) => <MenuItem key={sede.id_sede} value={sede.id_sede}>{sede.nombre}</MenuItem>)}
                     </TextField>
@@ -335,10 +317,8 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
 
             <Stack
               direction="row"
-              justifyContent="flex-end"
-              alignItems="center"
               spacing={1}
-              sx={{ mt: 1.25, width: '100%' }}
+              sx={{ alignItems: 'center', justifyContent: 'flex-end', mt: 1.25, width: '100%' }}
             >
               {form.id ? (
                 <Button onClick={nueva} sx={dbanuStyles.secondaryButtonRevive}>Cancelar edición</Button>
@@ -362,10 +342,8 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
           </Typography>
 
           <TablaGestion
-            total={modalidades.length}
-            filtrados={modalidades.length}
+            {...tabla.propsTabla}
             cargando={cargando}
-            textoResumen={modalidades.length + ' modalidad(es) configuradas'}
           >
             <TableHead>
               <TableRow>
@@ -379,7 +357,7 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
               </TableRow>
             </TableHead>
             <TableBody>
-              {modalidades.map((modalidad) => (
+              {tabla.visibles.map((modalidad) => (
                 <TableRow key={modalidad.id} hover>
                   <TableCell>
                     <Typography variant="body2" fontWeight={800}>{modalidad.nombre}</Typography>
@@ -397,15 +375,10 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                     <Chip size="small" label={modalidad.activo ? 'ACTIVA' : 'INACTIVA'} variant="outlined" sx={{ fontWeight: 800 }} />
                   </TableCell>
                   <TableCell align="center">
-                    <Stack direction="row" spacing={.5} justifyContent="center">
+                    <Stack direction="row" spacing={.5} sx={{ justifyContent: 'center' }}>
                       <Tooltip title="Editar modalidad">
                         <IconButton size="small" onClick={() => editar(modalidad)} sx={dbanuStyles.actionEdit}>
                           <EditOutlinedIcon sx={{ fontSize: 17 }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar modalidad">
-                        <IconButton size="small" onClick={() => eliminar(modalidad)} sx={dbanuStyles.actionDelete}>
-                          <DeleteOutlineOutlinedIcon sx={{ fontSize: 17 }} />
                         </IconButton>
                       </Tooltip>
                     </Stack>

@@ -269,7 +269,7 @@ export function TurnosCajaPage() {
                     </MenuItem>
                   ))}
                 </TextField>
-                <TextField label="Saldo inicial *" type="number" value={formApertura.saldo_inicial} onChange={(e) => setFormApertura((a) => ({ ...a, saldo_inicial: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
+                <TextField label="Saldo inicial *" type="number" value={formApertura.saldo_inicial} onChange={(e) => setFormApertura((a) => ({ ...a, saldo_inicial: e.target.value }))} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
                 <TextField label="Observaciones de apertura" value={formApertura.observaciones} onChange={(e) => setFormApertura((a) => ({ ...a, observaciones: e.target.value }))} multiline minRows={2} size="small" sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
               </Box>
             </Box>
@@ -301,7 +301,7 @@ export function TurnosCajaPage() {
                 <Typography variant="caption" color="text.secondary">Saldo inicial + cobros en efectivo. Transferencias, tarjetas, depósitos y otros medios no aumentan el efectivo físico de caja.</Typography>
               </Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
-                <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
+                <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
                 <TextField label="Observaciones de cierre" value={formCierre.observaciones} onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value }))} size="small" />
               </Box>
             </Box>
@@ -329,7 +329,7 @@ export function TurnosCajaPage() {
               </Box>
               <ResumenCobrosTurno turno={turnoCerrar} />
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
-                <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" inputProps={{ min: 0, step: '0.01' }} />
+                <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
                 <TextField label="Observaciones de conciliación" value={formCierre.observaciones} onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value }))} size="small" />
               </Box>
             </Box>
@@ -345,10 +345,10 @@ export function TurnosCajaPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader titulo="Turnos de caja" descripcion="Apertura, operación y cierre de las sesiones de caja por cajero y sede." icono={<AccessTimeOutlinedIcon />} />
+      <PageHeader titulo="Apertura y cierre de caja" descripcion="Abre tu caja al iniciar la jornada y ciérrala con el arqueo. A las 22:00 se cierra sola y queda pendiente de arqueo." icono={<AccessTimeOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         {turnoActual?.id ? (
-          <Box sx={{ px: 2, pt: 2, pb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ px: 2, pt: 2, pb: 2.5, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
             <Box>
               <Typography variant="subtitle2" fontWeight={700}>Turno abierto</Typography>
               <Typography variant="body2" color="text.secondary">{turnoActual.caja_nombre} · {turnoActual.sede_nombre} · desde {fechaHora(turnoActual.fecha_apertura)}</Typography>

@@ -21,6 +21,7 @@ import { confirmarAccion } from "../../../utils/confirmacion.js";
 import { BotonGuardar } from "../../../components/common/BotonGuardar.jsx";
 import { BotonVolver } from "../../../components/common/BotonVolver.jsx";
 import { ContextosUsuarioSelector } from "./contextosUsuario/ContextosUsuarioSelector.jsx";
+import { CampoActivo } from "../../../components/common/CampoActivo.jsx";
 
 const inicial = {
   persona_id: "",
@@ -298,15 +299,10 @@ export function UsuarioForm({
                       </MenuItem>
                     ))}
                   </TextField>
-                  <TextField
-                    select
-                    label="Estado"
-                    value={formulario.usr_estado}
-                    onChange={(evento) => cambiar("usr_estado", evento.target.value)}
-                  >
-                    <MenuItem value={1}>Activo</MenuItem>
-                    <MenuItem value={0}>Inactivo</MenuItem>
-                  </TextField>
+                  <CampoActivo
+                    checked={Number(formulario.usr_estado) === 1}
+                    onChange={(evento) => cambiar("usr_estado", evento.target.checked ? 1 : 0)}
+                  />
                 </Box>
                 {!usuario ? (
                   <Alert severity="info" variant="outlined" sx={{ mt: 1.5 }}>

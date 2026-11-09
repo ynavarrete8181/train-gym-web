@@ -2,9 +2,11 @@ import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import ArrowBackOutlinedIcon from '@mui/icons-material/ArrowBackOutlined';
-import { Alert, Box, Button, Chip, CircularProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, CircularProgress, Paper, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
+import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { FichaInicialDeportista } from './FichaInicialDeportista.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -17,6 +19,7 @@ export function TrabajoEntrenadorPanel({ tipo }) {
   const [error, setError] = useState('');
   const [seleccionado, setSeleccionado] = useState(null);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
+  const tabla = useTablaLocal(items, {});
 
   const esDeportistas = tipo === 'deportistas';
   const config = useMemo(() => esDeportistas
@@ -74,8 +77,7 @@ export function TrabajoEntrenadorPanel({ tipo }) {
         {esDeportistas ? 'No tienes deportistas activos asignados.' : 'No tienes horarios activos asignados.'}
       </Alert> : null}
 
-      {!cargando && !error && items.length > 0 ? <TableContainer>
-        <Table size="small">
+      {!cargando && !error && items.length > 0 ? <TablaGestion {...tabla.propsTabla}>
           <TableHead>
             <TableRow>
               {esDeportistas ? <>
@@ -98,7 +100,7 @@ export function TrabajoEntrenadorPanel({ tipo }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {items.map((item) => <TableRow key={item.id} hover>
+            {tabla.visibles.map((item) => <TableRow key={item.id} hover>
               {esDeportistas ? <>
                 <TableCell>
                   <Typography variant="body2" fontWeight={600}>{item.deportista_nombre || `${item.deportista_nombres || ''} ${item.deportista_apellidos || ''}`.trim() || '—'}</Typography>
@@ -120,8 +122,7 @@ export function TrabajoEntrenadorPanel({ tipo }) {
               </>}
             </TableRow>)}
           </TableBody>
-        </Table>
-      </TableContainer> : null}
+      </TablaGestion> : null}
     </Paper>
   </Box>;
 }

@@ -12,6 +12,7 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { EstadosConfiguracionTable } from '../components/EstadosConfiguracionTable.jsx';
 import { configuracionServicio } from '../services/configuracionServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const estadoInicial = () => ({
   id: null,
@@ -187,7 +188,7 @@ export function EstadosConfiguracionPage() {
                 </TextField>
                 <TextField label="Orden" name="orden" type="number" value={formData.orden} onChange={handleChange} required size="small" />
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', gridColumn: { xs: 'auto', md: 'span 3' } }}>
-                  <FormControlLabel control={<Switch name="activo" checked={Boolean(formData.activo)} onChange={handleChange} />} label="Activo" />
+                  <CampoActivo name="activo" checked={formData.activo} onChange={handleChange} />
                   <FormControlLabel control={<Switch name="es_inicial" checked={Boolean(formData.es_inicial)} onChange={handleChange} />} label="Inicial" />
                   <FormControlLabel control={<Switch name="es_final" checked={Boolean(formData.es_final)} onChange={handleChange} />} label="Final" />
                 </Box>

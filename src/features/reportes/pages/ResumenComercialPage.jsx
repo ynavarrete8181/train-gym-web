@@ -3,11 +3,14 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../components/FiltroColumna.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
 import { resumenComercialServicio } from '../services/ventas/resumenComercialServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
@@ -18,10 +21,9 @@ export function ResumenComercialPage() {
   const [cargando, setCargando] = useState(true);
   const [filtros, setFiltros] = useState({
     desde: new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().slice(0, 10),
-    hasta: hoy.toISOString().slice(0, 10),
+    hasta: hoyEcuador(),
     sede_id: [],
-    transacciones: '',
-    total_ventas: '',
+    columnas: {},
   });
 
   const cargar = async (params = filtros) => {
@@ -45,6 +47,7 @@ export function ResumenComercialPage() {
   const indicadores = datos.indicadores || {};
   const sedes = datos.catalogos?.sedes || [];
   const porSede = datos.por_sede || [];
+  const tabla = useTablaLocal(porSede, {});
 
   return (
     <Box className="page-wrapper">
@@ -84,16 +87,16 @@ export function ResumenComercialPage() {
           </Stack>
         </Stack>
 
-        <TablaGestion total={porSede.length} filtrados={porSede.length} cargando={cargando} textoResumen={`${porSede.length} sedes consultadas`}>
+        <TablaGestion {...tabla.propsTabla} cargando={cargando}>
           <TableHead>
             <TableRow>
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.transacciones} onChange={(valor) => aplicar({ transacciones: valor })}>Transacciones</FilterHeaderCell>
-              <FilterHeaderCell align="center" value={filtros.total_ventas} onChange={(valor) => aplicar({ total_ventas: valor })}>Ventas</FilterHeaderCell>
+              <FiltroColumna align="center" columna="transacciones" filtros={filtros} opciones={datos.opciones_filtro} aplicar={aplicar} formato={numero}>Transacciones</FiltroColumna>
+              <FiltroColumna align="center" columna="total_ventas" filtros={filtros} opciones={datos.opciones_filtro} aplicar={aplicar} formato={dinero}>Ventas</FiltroColumna>
             </TableRow>
           </TableHead>
           <TableBody>
-            {porSede.map((item) => (
+            {tabla.visibles.map((item) => (
               <TableRow key={item.sede} hover>
                 <TableCell>{item.sede}</TableCell>
                 <TableCell align="center" sx={{ textAlign: 'center !important' }}>{numero(item.transacciones)}</TableCell>

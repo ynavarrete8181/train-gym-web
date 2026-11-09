@@ -24,7 +24,7 @@ export function EvaluacionesFisicasPage() {
     <PageHeader titulo="Evaluaciones físicas" descripcion="Registra y consulta pruebas de rendimiento de los deportistas autorizados." />
     <Paper elevation={0} sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Stack direction="row" alignItems="center" gap={2}>
+      <Stack direction="row" gap={2} sx={{ alignItems: 'center' }}>
         <TextField select label="Deportista" size="small" value={deportistaId} onChange={(e) => setDeportistaId(e.target.value)}
           sx={{ width: { xs: '100%', md: 420 } }} helperText="Selecciona al deportista para visualizar sus evaluaciones.">
           <MenuItem value="">Seleccionar deportista</MenuItem>

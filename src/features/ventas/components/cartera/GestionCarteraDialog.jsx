@@ -93,7 +93,7 @@ export function GestionCarteraDialog({
                   type="date"
                   size="small"
                   label="Vencimiento"
-                  InputLabelProps={{ shrink: true }}
+                  slotProps={{ inputLabel: { shrink: true } }}
                   value={formCuenta.fecha_vencimiento}
                   onChange={(e) => setFormCuenta((actual) => ({ ...actual, fecha_vencimiento: e.target.value }))}
                 />
@@ -164,7 +164,7 @@ export function GestionCarteraDialog({
                 <Stack spacing={0.75} sx={{ mt: 1 }}>
                   {(detalle.gestiones || []).length ? detalle.gestiones.map((gestion) => (
                     <Box key={gestion.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 0.5, p: 1 }}>
-                      <Stack direction="row" justifyContent="space-between" gap={1}>
+                      <Stack direction="row" gap={1} sx={{ justifyContent: 'space-between' }}>
                         <Typography variant="body2" fontWeight={800}>
                           {gestion.tipo} · {gestion.resultado || 'Sin resultado'}
                         </Typography>
@@ -190,7 +190,7 @@ export function GestionCarteraDialog({
                 <Stack spacing={0.75} sx={{ mt: 1 }}>
                   {(detalle.compromisos || []).length ? detalle.compromisos.map((compromiso) => (
                     <Box key={compromiso.id} sx={{ border: 1, borderColor: 'divider', borderRadius: 0.5, p: 1 }}>
-                      <Stack direction="row" justifyContent="space-between" gap={1}>
+                      <Stack direction="row" gap={1} sx={{ justifyContent: 'space-between' }}>
                         <Typography variant="body2" fontWeight={800}>
                           {dinero(compromiso.monto)} · {fecha(compromiso.fecha_compromiso)}
                         </Typography>

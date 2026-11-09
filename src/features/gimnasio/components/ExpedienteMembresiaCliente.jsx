@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, CircularProgress, Stack, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material';
 import DownloadOutlinedIcon from '@mui/icons-material/DownloadOutlined';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { ventaServicio } from '../../ventas/services/ventaServicio.js';
@@ -11,10 +12,11 @@ const fechaHora = value => value ? new Date(String(value).replace(' ', 'T')).toL
 const dinero = value => new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(Number(value || 0));
 
 function TablaSimple({ columnas, filas, vacio }) {
-  return <TablaGestion total={filas.length} filtrados={filas.length} cargando={false} paginacion={false}>
+  const tabla = useTablaLocal(filas, {});
+  return <TablaGestion {...tabla.propsTabla}>
     <TableHead><TableRow>{columnas.map(c => <TableCell key={c.key}>{c.label}</TableCell>)}</TableRow></TableHead>
     <TableBody>
-      {filas.map((fila, i) => <TableRow key={fila.id || i} hover>
+      {tabla.visibles.map((fila, i) => <TableRow key={fila.id || i} hover>
         {columnas.map(c => <TableCell key={c.key}>{c.render ? c.render(fila) : (fila[c.key] ?? '—')}</TableCell>)}
       </TableRow>)}
       {!filas.length && <TableRow><TableCell colSpan={columnas.length} align="center">{vacio}</TableCell></TableRow>}
@@ -50,7 +52,7 @@ export function ExpedienteMembresiaCliente({ membresia, seccion }) {
     } finally { setDescargando(null); }
   };
 
-  if (cargando) return <Stack direction="row" gap={1} alignItems="center"><CircularProgress size={18}/><Typography variant="body2">Consultando expediente…</Typography></Stack>;
+  if (cargando) return <Stack direction="row" gap={1} sx={{ alignItems: 'center' }}><CircularProgress size={18}/><Typography variant="body2">Consultando expediente…</Typography></Stack>;
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!datos) return null;
 

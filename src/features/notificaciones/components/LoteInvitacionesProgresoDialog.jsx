@@ -14,7 +14,7 @@ export function LoteInvitacionesProgresoDialog({ abierto, lote, onCerrar }) {
   const color = lote.estado === 'ERROR' ? uiTokens.colores.peligro : lote.estado === 'COMPLETADO_CON_ERRORES' ? uiTokens.colores.advertencia : terminado ? uiTokens.colores.exito : uiTokens.colores.primario
   const errores = (lote.detalles || []).filter((d) => d.estado === 'ERROR')
 
-  return <Dialog open={abierto} onClose={terminado ? onCerrar : undefined} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, overflow: 'hidden' } }}>
+  return <Dialog open={abierto} onClose={terminado ? onCerrar : undefined} maxWidth="sm" fullWidth slotProps={{ paper: { sx: { borderRadius: 3, overflow: 'hidden' } } }}>
     <Box sx={formStyles.modalHeader}>
       <Box sx={{ ...formStyles.modalIcono, bgcolor: color }}><MarkEmailUnreadOutlinedIcon /></Box>
       <Box sx={{ minWidth: 0, flex: 1 }}><Stack direction="row" spacing={1} sx={{ alignItems: 'center', justifyContent: 'space-between' }}><Box><Typography sx={{ fontSize: 18, fontWeight: 900, color: uiTokens.colores.textoFuerte }}>Invitaciones de acceso</Typography><Typography sx={{ mt: .35, fontSize: 12.5, color: uiTokens.colores.textoMedio }}>Lote #{lote.id}</Typography></Box><Chip size="small" label={etiqueta(lote.estado)} variant="outlined" sx={{ fontWeight: 850, color, borderColor: color }} /></Stack></Box>

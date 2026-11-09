@@ -30,8 +30,7 @@ export function CicloVidaMembresiaResumen({ membresia }) {
   return (
     <Box sx={{ border: '1px solid', borderColor: uiTokens.colores.borde, borderRadius: 2,
       bgcolor: 'background.paper', overflow: 'hidden', mt: 2 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} alignItems={{ xs: 'flex-start', sm: 'center' }}
-        justifyContent="space-between" spacing={1} sx={{ p: 1.75, bgcolor: uiTokens.colores.primarioSuave }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', p: 1.75, bgcolor: uiTokens.colores.primarioSuave }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="subtitle2" fontWeight={800}>Gestión del ciclo de vida</Typography>
           <Typography variant="caption" color="text.secondary">
@@ -43,14 +42,14 @@ export function CicloVidaMembresiaResumen({ membresia }) {
       <Divider />
       <Box sx={{ p: 1.75 }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }, gap: 1.75 }}>
-          <Stack direction="row" gap={1} alignItems="flex-start">
+          <Stack direction="row" gap={1} sx={{ alignItems: 'flex-start' }}>
             <EventAvailableOutlinedIcon sx={{ color: 'text.secondary', fontSize: 20 }}/>
             <Box sx={{ minWidth: 0 }}>
               <Typography variant="caption" color="text.secondary">Vigencia registrada</Typography>
               <Typography variant="body2" fontWeight={700}>{fecha(membresia.fecha_inicio)} – {fecha(membresia.fecha_fin)}</Typography>
             </Box>
           </Stack>
-          <Stack direction="row" gap={1} alignItems="flex-start">
+          <Stack direction="row" gap={1} sx={{ alignItems: 'flex-start' }}>
             <ReceiptLongOutlinedIcon sx={{ color: 'text.secondary', fontSize: 20 }}/>
             <Box>
               <Typography variant="caption" color="text.secondary">Tipo de contrato</Typography>
@@ -59,7 +58,7 @@ export function CicloVidaMembresiaResumen({ membresia }) {
               </Typography>
             </Box>
           </Stack>
-          <Stack direction="row" gap={1} alignItems="flex-start">
+          <Stack direction="row" gap={1} sx={{ alignItems: 'flex-start' }}>
             <PauseCircleOutlineOutlinedIcon sx={{ color: 'text.secondary', fontSize: 20 }}/>
             <Box>
               <Typography variant="caption" color="text.secondary">Cuotas programadas sin emitir</Typography>

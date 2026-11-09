@@ -1,16 +1,17 @@
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { Chip, IconButton, Stack, TableBody, TableCell, TableHead, TableRow, Tooltip, Typography } from '@mui/material';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { CancelarMembresiaButton } from './CancelarMembresiaButton.jsx';
+import { esPaseDiario, presentarEstadoMembresia, textoVigenciaPase } from './estadoMembresia.js';
 
 const opciones = (valores = []) => valores.map((valor) => ({ value: String(valor), label: String(valor) }));
 const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC') : 'Sin fecha';
 
-export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onRenovar, onCancelada, onErrorCancelar, onPageChange, onRowsPerPageChange }) {
+export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {}, onFiltroColumna, onEditar, onRenovar, onVer, onResumen, onPageChange, onRowsPerPageChange }) {
   return (
     <TablaGestion
       total={meta.total || 0}
@@ -59,17 +60,17 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
               ) : null)}
             </TableCell>
             <TableCell>
-              <Typography variant="body2">{fecha(membresia.fecha_inicio)} - {fecha(membresia.fecha_fin)}</Typography>
+              <Typography variant="body2">{esPaseDiario(membresia) ? textoVigenciaPase(membresia, fecha) : `${fecha(membresia.fecha_inicio)} - ${fecha(membresia.fecha_fin)}`}</Typography>
               {membresia.fecha_congelacion_inicio ? (
                 <Typography variant="caption" color="text.secondary">Congelada desde {fecha(membresia.fecha_congelacion_inicio)}</Typography>
               ) : null}
             </TableCell>
             <TableCell>
               <Chip
-                label={membresia.estado_nombre || String(membresia.estado_valor || membresia.estado || '').replaceAll('_', ' ').toLowerCase().replace(/^./, (letra) => letra.toUpperCase())}
+                label={esPaseDiario(membresia) ? presentarEstadoMembresia(membresia).label : (membresia.estado_nombre || presentarEstadoMembresia(membresia).label)}
                 size="small"
                 variant="outlined"
-                sx={membresia.estado_color ? { color: membresia.estado_color, borderColor: membresia.estado_color } : undefined}
+                sx={membresia.estado_color && !esPaseDiario(membresia) ? { color: membresia.estado_color, borderColor: membresia.estado_color } : undefined}
               />
             </TableCell>
             <TableCell align="right">
@@ -81,12 +82,16 @@ export function MembresiasTable({ membresias, meta, cargando, filtrosColumna = {
                     </IconButton>
                   </Tooltip>
                 ) : null}
-                <Tooltip title="Editar membresía">
-                  <IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(membresia)}>
+                <Tooltip title="Gestionar contrato">
+                  <IconButton aria-label="Gestionar contrato" sx={dbanuStyles.actionEdit} onClick={() => onVer(membresia)}>
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
-                <CancelarMembresiaButton membresia={membresia} onCancelada={onCancelada} onError={onErrorCancelar} />
+                <Tooltip title="Ver resumen del contrato (PDF)">
+                  <IconButton aria-label="Ver resumen del contrato" sx={dbanuStyles.actionView} onClick={() => onResumen?.(membresia)}>
+                    <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
+                  </IconButton>
+                </Tooltip>
               </Stack>
             </TableCell>
           </TableRow>

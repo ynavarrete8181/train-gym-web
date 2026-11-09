@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
-import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
-import { Box, Button, CircularProgress, FormControlLabel, IconButton, MenuItem, Paper, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, Button, CircularProgress, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -20,6 +21,9 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { formStyles } from '../../../styles/formStyles.js';
 import { ventaServicio } from '../services/ventaServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
+import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
 
 const tiposVenta = ['PRODUCTO', 'MEMBRESIA', 'SERVICIO', 'OTRO'];
 const metodosPago = ['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'DEPOSITO', 'OTRO'];
@@ -87,6 +91,11 @@ export function VentasCatalogo({ tipo }) {
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const [reenviandoId, setReenviandoId] = useState(null);
+  const [ventaAnular, setVentaAnular] = useState(null);
+  const [comprobantePdf, setComprobantePdf] = useState(null);
+  const [cargandoPdf, setCargandoPdf] = useState(false);
+  const [motivoAnular, setMotivoAnular] = useState('');
+  const [anulando, setAnulando] = useState(false);
 
   const showNotificacion = (mensaje, tipoAviso = 'info') => setNotificacion({ mensaje, tipo: tipoAviso });
 
@@ -152,15 +161,23 @@ export function VentasCatalogo({ tipo }) {
     setFormData((actual) => ({ ...actual, [name]: inputType === 'checkbox' ? checked : value }));
   };
 
+  // El comprobante se abre en el visor de la página (iframe), con descarga e impresión.
   const handleVerPdf = async (item) => {
+    setComprobantePdf(null);
+    setCargandoPdf(true);
     try {
       const blob = await ventaServicio.obtenerComprobantePdf(item.venta_id);
-      const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setComprobantePdf({ blob, url: URL.createObjectURL(blob), nombre: `${item.numero || item.venta_numero || 'comprobante'}.pdf` });
     } catch (error) {
       showNotificacion(error.response?.data?.mensaje || 'No se pudo abrir el comprobante PDF', 'error');
+    } finally {
+      setCargandoPdf(false);
     }
+  };
+
+  const cerrarPdf = () => {
+    if (comprobantePdf?.url) URL.revokeObjectURL(comprobantePdf.url);
+    setComprobantePdf(null);
   };
 
   const handleReenviarComprobante = async (item) => {
@@ -182,6 +199,28 @@ export function VentasCatalogo({ tipo }) {
       showNotificacion(primero || error.response?.data?.mensaje || 'No se pudo reenviar el comprobante', 'error');
     } finally {
       setReenviandoId(null);
+    }
+  };
+
+  const anularVentaPagada = async () => {
+    setAnulando(true);
+    try {
+      const response = await ventaServicio.anularVentaPagada(ventaAnular.venta_id, motivoAnular.trim());
+      const devolucion = response.datos?.devolucion || {};
+      const devuelto = (devolucion.pagos || []).map((p) => `${String(p.metodo_pago).toLowerCase()} $${dinero(p.monto)}`).join(', ');
+      showNotificacion(
+        `Venta ${ventaAnular.venta_numero} anulada.${devuelto ? ` Devolución: ${devuelto}.` : ''}${devolucion.inventario_revertido ? ' El inventario regresó al stock.' : ''}`,
+        'success',
+      );
+      setVentaAnular(null);
+      setMotivoAnular('');
+      await cargar();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      const primero = errores ? Object.values(errores).flat()[0] : null;
+      showNotificacion(primero || error.response?.data?.mensaje || 'No se pudo anular la venta.', 'error');
+    } finally {
+      setAnulando(false);
     }
   };
 
@@ -246,10 +285,28 @@ export function VentasCatalogo({ tipo }) {
           onVerPdf={handleVerPdf}
           onReenviar={handleReenviarComprobante}
           reenviandoId={reenviandoId}
+          puedeAnular={Boolean(catalogos.puede_anular_pagadas)}
+          onAnular={(item) => { setVentaAnular(item); setMotivoAnular(''); }}
           onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }}
           onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
         />
       </Paper>
+      <VisorPdf titulo="Comprobante de venta" pdf={comprobantePdf} cargando={cargandoPdf} onCerrar={cerrarPdf} />
+      <ModalConfirmacion
+        open={Boolean(ventaAnular)}
+        titulo="Anular venta cobrada"
+        descripcion={`${ventaAnular?.venta_numero || ''} · ${ventaAnular?.cliente_nombre || 'Consumidor final'} · $${dinero(ventaAnular?.venta_total)}. El dinero se devuelve desde tu turno de caja por el mismo método de pago, los productos regresan al stock y a sus lotes, y el comprobante queda anulado. No se puede deshacer.`}
+        textoConfirmar="Sí, anular y devolver"
+
+        cargando={anulando}
+        confirmarDeshabilitado={motivoAnular.trim().length < 8}
+        onClose={() => !anulando && setVentaAnular(null)}
+        onConfirmar={anularVentaPagada}
+      >
+        <TextField autoFocus fullWidth multiline minRows={2} size="small" required label="Motivo"
+          helperText="Escribe al menos 8 caracteres." value={motivoAnular}
+          onChange={(e) => setMotivoAnular(e.target.value)} sx={{ mt: 1 }} />
+      </ModalConfirmacion>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>
   );
@@ -271,7 +328,6 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
         <MenuItem value="">Seleccione una sede</MenuItem>
         {(catalogos.sedes || []).map((item) => <MenuItem key={item.id} value={item.id}>{item.nombre}</MenuItem>)}
       </TextField>
-      <FormControlLabel control={<Switch name="activa" checked={Boolean(formData.activa)} onChange={onChange} />} label="Activa" sx={{ alignSelf: 'center' }} />
       <TextField
         label="Descripción"
         name="descripcion"
@@ -283,6 +339,7 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
         helperText="Se propone automáticamente una descripción general al seleccionar la sede; puedes ajustarla."
         sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }}
       />
+      <CampoActivo name="activa" checked={formData.activa} onChange={onChange} label="Activa" />
     </Box>;
   }
 
@@ -315,7 +372,7 @@ function Formulario({ tipo, formData, catalogos, onChange }) {
   </Box>;
 }
 
-function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar, onVerPdf, onReenviar, reenviandoId, onPageChange, onRowsPerPageChange }) {
+function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar, onVerPdf, onReenviar, reenviandoId, puedeAnular, onAnular, onPageChange, onRowsPerPageChange }) {
   const tieneAcciones = editable || tipo === 'comprobantes';
 
   return <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1} rowsPerPage={meta.por_pagina || 5} onPageChange={onPageChange} onRowsPerPageChange={onRowsPerPageChange} cargando={cargando}>
@@ -328,16 +385,17 @@ function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar
             <TableCell align="right">
               {editable ? <Tooltip title="Editar"><IconButton sx={dbanuStyles.actionEdit} onClick={() => onEditar(item)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip> : null}
               {tipo === 'comprobantes' ? (
-                <>
-                  <Tooltip title="Ver PDF">
-                    <IconButton sx={dbanuStyles.actionView || dbanuStyles.actionEdit} onClick={() => onVerPdf(item)}>
-                      <PictureAsPdfOutlinedIcon sx={{ fontSize: 17 }} />
+                <Stack direction="row" spacing={0.4} sx={{ justifyContent: 'flex-end', flexWrap: 'nowrap' }}>
+                  <Tooltip title="Ver comprobante (PDF)">
+                    <IconButton aria-label="Ver comprobante" sx={{ ...dbanuStyles.actionView, mr: 0 }} onClick={() => onVerPdf(item)}>
+                      <VisibilityOutlinedIcon sx={{ fontSize: 17 }} />
                     </IconButton>
                   </Tooltip>
                   <Tooltip title={String(item.estado || '').toUpperCase() === 'EMITIDO' ? 'Reenviar comprobante' : 'Disponible al emitir el comprobante'}>
                     <span>
                       <IconButton
-                        sx={dbanuStyles.actionEdit}
+                        aria-label="Reenviar comprobante"
+                        sx={{ ...dbanuStyles.actionEdit, mr: 0 }}
                         disabled={
                           String(item.estado || '').toUpperCase() !== 'EMITIDO'
                           || reenviandoId === item.id
@@ -350,7 +408,14 @@ function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar
                       </IconButton>
                     </span>
                   </Tooltip>
-                </>
+                  {puedeAnular && item.anulable ? (
+                    <Tooltip title="Anular venta cobrada">
+                      <IconButton aria-label="Anular venta cobrada" sx={dbanuStyles.actionDelete} onClick={() => onAnular(item)}>
+                        <BlockOutlinedIcon sx={{ fontSize: 17 }} />
+                      </IconButton>
+                    </Tooltip>
+                  ) : null}
+                </Stack>
               ) : null}
             </TableCell>
           ) : null}
@@ -380,7 +445,12 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
   ];
   if (tipo === 'pagos') return [
     { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.codigo_cobro || item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
-    { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero || '—' },
+    { key: 'venta', header: <TableCell key="venta">Venta / Comprobante</TableCell>, render: (item) => (
+      <Box>
+        <Typography variant="body2">{item.venta_numero || '—'}</Typography>
+        {item.comprobante_numero ? <Typography variant="caption" color="text.secondary">{item.comprobante_numero}</Typography> : null}
+      </Box>
+    ) },
     { key: 'cliente', header: <TableCell key="cliente">Cliente</TableCell>, render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
     { key: 'cobrador', header: <TableCell key="cobrador">Responsables</TableCell>, render: (item) => (
       <Box sx={{ minWidth: 160 }}>

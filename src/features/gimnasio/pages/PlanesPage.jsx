@@ -32,7 +32,6 @@ const getInitialForm = () => ({
   generar_venta: true,
   requiere_pago: true,
   requiere_entrenador: false,
-  requiere_ficha_inicial: false,
   renovable: true,
   requiere_modalidades: false,
   activo: true,
@@ -97,18 +96,6 @@ export function PlanesPage() {
     setFormData(getInitialForm());
     setSeccionPlan('generales');
     setVista('formulario');
-  };
-
-  const handleEliminar = async (plan) => {
-    const confirmado = await confirmarAccion({ titulo: 'Eliminar plan', texto: `¿Estás seguro que deseas eliminar el plan "${plan.nombre}"?`, textoConfirmar: 'Sí, eliminar', icono: 'warning' });
-    if (!confirmado) return;
-    try {
-      await gimnasioServicio.eliminarPlan(plan.id);
-      showNotificacion('Plan eliminado con éxito', 'success');
-      cargarPlanes();
-    } catch (error) {
-      showNotificacion(error?.response?.data?.mensaje || 'Error al eliminar el plan', 'error');
-    }
   };
 
   const handleAddPrecioSede = () => setFormData((prev) => ({ ...prev, precios_sede: [...(prev.precios_sede || []), { sede_id: '', precio: '' }] }));
@@ -328,7 +315,6 @@ export function PlanesPage() {
         generar_venta: Boolean(formData.generar_venta),
         requiere_pago: Boolean(formData.requiere_pago),
         requiere_entrenador: Boolean(formData.requiere_entrenador),
-        requiere_ficha_inicial: Boolean(formData.requiere_ficha_inicial),
         renovable: Boolean(formData.renovable),
         requiere_modalidades: Boolean(formData.requiere_modalidades),
         servicio_ids: (formData.servicio_ids || []).map(Number),
@@ -448,7 +434,6 @@ export function PlanesPage() {
                   <FormControlLabel control={<Switch name="renovable" checked={Boolean(formData.renovable)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Permite renovación" />
                   <FormControlLabel control={<Switch name="requiere_modalidades" checked={Boolean(formData.requiere_modalidades)} onChange={handleChange} disabled={formData.tipo_producto === 'PASE_DIARIO'} />} label="Tiene modalidades" />
                   <FormControlLabel control={<Switch name="requiere_entrenador" checked={Boolean(formData.requiere_entrenador)} onChange={handleChange} />} label="Requiere entrenador" />
-                  <FormControlLabel control={<Switch name="requiere_ficha_inicial" checked={Boolean(formData.requiere_ficha_inicial)} onChange={handleChange} />} label="Requiere ficha inicial" />
                 </Box>
                 {formData.requiere_pago && !formData.generar_venta && (
                   <Typography variant="body2" sx={{ mt: 1, color: 'warning.dark', fontWeight: 700 }}>
@@ -538,9 +523,9 @@ export function PlanesPage() {
                           <TextField label="Duración" name="duracion" type="number" value={formData.duracion} onChange={handleChange} required size="small" />
                         </>
                       )}
-                      <TextField label="Precio base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" inputProps={{ min: 0, step: '0.01' }} sx={{ ...dbanuStyles.field, minWidth: 0 }} />
+                      <TextField label="Precio base ($)" name="precio_base" type="number" value={formData.precio_base} onChange={handleChange} required size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} sx={{ ...dbanuStyles.field, minWidth: 0 }} />
                       {formData.tipo_producto !== 'PASE_DIARIO' && (
-                        <TextField label="Tarifa de inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" inputProps={{ min: 0, step: '0.01' }} />
+                        <TextField label="Tarifa de inscripción ($)" name="tarifa_inscripcion" type="number" value={formData.tarifa_inscripcion} onChange={handleChange} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
                       )}
                     </Box>
                   </Box>
@@ -569,7 +554,7 @@ export function PlanesPage() {
                                 </TextField>
                                 <TextField label="Precio ($)" type="number" size="small" value={fila.precio}
                                   onChange={(e) => handleUpdatePrecioSede(index, 'precio', e.target.value)}
-                                  inputProps={{ min: 0, step: '0.01' }}
+                                  slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
                                   sx={{ ...dbanuStyles.field, width: { xs: 104, sm: 130 }, flexShrink: 0 }} />
                                 <Tooltip title="Quitar tarifa">
                                   <IconButton size="small" onClick={() => handleRemovePrecioSede(index)}
@@ -610,7 +595,7 @@ export function PlanesPage() {
       <PageHeader titulo="Planes de membresía" descripcion="Administra los productos comerciales, vigencias y formas de cobro de Revive." icono={<ListAltOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || planes.length} busqueda={filtros.busqueda} onBusqueda={(v) => buscar({ ...filtros, busqueda: v })} acciones={<Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button>} />
-        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onModalidades={handleModalidadesPlan} onEliminar={handleEliminar} onCambiarEstado={handleCambiarEstado} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
+        <PlanesTable planes={planes} meta={meta} cargando={cargando} filtrosColumna={filtrosColumna} onFiltroColumna={(col, val) => setFiltrosColumna({ ...filtrosColumna, [col]: val })} onEditar={handleEditar} onModalidades={handleModalidadesPlan} onCambiarEstado={handleCambiarEstado} onPageChange={(p) => { const n = { ...filtros, page: p }; setFiltros(n); cargarPlanes(n); }} onRowsPerPageChange={(pp) => { const n = { ...filtros, page: 1, per_page: pp }; setFiltros(n); cargarPlanes(n); }} />
       </Paper>
       <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: '' })} />
     </Box>

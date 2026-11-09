@@ -42,7 +42,7 @@ export function MetasComercialesTable({
       total={meta.total || 0}
       filtrados={meta.total || 0}
       page={meta.pagina_actual || 1}
-      rowsPerPage={meta.por_pagina || 10}
+      rowsPerPage={meta.por_pagina || 5}
       onPageChange={onPageChange}
       onRowsPerPageChange={onRowsPerPageChange}
       cargando={cargando}

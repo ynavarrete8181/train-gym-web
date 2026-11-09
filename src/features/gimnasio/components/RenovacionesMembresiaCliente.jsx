@@ -4,6 +4,8 @@ import { Alert, Box, Button, CircularProgress, IconButton, Stack,
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
+import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
+import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
@@ -15,13 +17,19 @@ const importe = value => value == null ? '—' :
   new Intl.NumberFormat('es-EC', { style: 'currency', currency: 'USD' }).format(Number(value));
 
 /** Listado real de renovaciones, con alta y detalle internos al Paper 2. */
+const COLUMNAS_RENOVACIONES = {
+  fecha: (item) => fecha(item.fecha),
+  periodo: (item) => String(item.detalle?.numero_periodo_nuevo ?? '—'),
+  vigencia: (item) => `${fecha(item.detalle?.fecha_inicio)} – ${fecha(item.detalle?.fecha_fin)}`,
+  importe: (item) => importe(item.detalle?.precio),
+};
+const OPCIONES_RENOVACIONES = { sinOrdenar: ['fecha', 'vigencia'] };
+
 export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   const [historial, setHistorial] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
-  const [pagina, setPagina] = useState(1);
-  const [porPagina, setPorPagina] = useState(5);
   const [vista, setVista] = useState('listado');
   const [seleccionada, setSeleccionada] = useState(null);
   const id = membresia?.id;
@@ -37,7 +45,7 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
     setError('');
     try {
       const respuesta = await gimnasioServicio.obtenerHistorialIntegralMembresia(id);
-      setHistorial((respuesta?.eventos || []).filter(item => item.tipo === 'RENOVACION_MANUAL'));
+      setHistorial((respuesta?.eventos || []).filter(item => ['RENOVACION_MANUAL', 'RENOVACION_AUTOMATICA'].includes(item.tipo)));
     } catch (e) {
       setError(e?.response?.data?.mensaje || 'No se pudo consultar el historial de renovaciones.');
     } finally {
@@ -49,7 +57,6 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
     setVista('listado');
     setSeleccionada(null);
     setBusqueda('');
-    setPagina(1);
     cargar();
   }, [cargar]);
 
@@ -57,8 +64,8 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
     item.fecha, item.autor_nombre, item.motivo,
     item.detalle?.numero_periodo_nuevo, item.detalle?.fecha_inicio, item.detalle?.fecha_fin,
   ].some(valor => String(valor || '').toLowerCase().includes(busqueda.toLowerCase()))), [historial, busqueda]);
-  const paginaActual = Math.max(1, Math.min(pagina, Math.ceil(filtradas.length / porPagina) || 1));
-  const visibles = filtradas.slice((paginaActual - 1) * porPagina, paginaActual * porPagina);
+  const tabla = useTablaLocal(filtradas, COLUMNAS_RENOVACIONES, OPCIONES_RENOVACIONES);
+  const { visibles } = tabla;
 
   if (vista === 'formulario') return <DialogRenovacionMembresia
     abierto membresia={membresia} integrado
@@ -71,7 +78,7 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   if (vista === 'detalle' && seleccionada) {
     const d = seleccionada.detalle || {};
     return <Box sx={{ minWidth: 0 }}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1.5} sx={{ mb: 2 }}>
+      <Stack direction="row" gap={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="subtitle1" fontWeight={800}>Detalle de renovación</Typography>
         <BotonVolver onClick={() => { setSeleccionada(null); setVista('listado'); }}/>
       </Stack>
@@ -96,23 +103,21 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
-    {cargando && <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
+    {cargando && <Stack direction="row" gap={1} sx={{ alignItems: 'center', mb: 1 }}>
       <CircularProgress size={18}/><Typography variant="body2">Consultando renovaciones…</Typography>
     </Stack>}
     <GestionToolbar total={filtradas.length} busqueda={busqueda}
-      onBusqueda={valor => { setBusqueda(valor); setPagina(1); }}
+      onBusqueda={setBusqueda}
       acciones={<Tooltip title={puedeRenovar ? 'Añadir renovación' : motivoBloqueo}>
         <span><Button startIcon={<AddOutlinedIcon />} disabled={!puedeRenovar}
           onClick={() => setVista('formulario')}>Añadir</Button></span>
       </Tooltip>} />
-    <TablaGestion total={historial.length} filtrados={filtradas.length} cargando={cargando}
-      page={paginaActual} onPageChange={setPagina} rowsPerPage={porPagina}
-      onRowsPerPageChange={valor => { setPorPagina(valor); setPagina(1); }}>
+    <TablaGestion {...tabla.propsTabla} total={historial.length} cargando={cargando}>
       <TableHead><TableRow>
-        <TableCell>Fecha</TableCell>
-        <TableCell>Período</TableCell>
-        <TableCell>Vigencia</TableCell>
-        <TableCell>Importe</TableCell>
+        <FilterHeaderCell {...tabla.filtro('fecha')}>Fecha</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('periodo')}>Período</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('vigencia')}>Vigencia</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('importe')}>Importe</FilterHeaderCell>
         <TableCell align="center">Acciones</TableCell>
       </TableRow></TableHead>
       <TableBody>
@@ -133,7 +138,7 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
         })}
         {!cargando && !visibles.length && <TableRow>
           <TableCell colSpan={5} align="center">
-            {busqueda ? 'Sin renovaciones coincidentes.' : 'Este contrato no tiene renovaciones registradas.'}
+            {historial.length ? 'Sin renovaciones coincidentes.' : 'Este contrato no tiene renovaciones registradas.'}
           </TableCell>
         </TableRow>}
       </TableBody>

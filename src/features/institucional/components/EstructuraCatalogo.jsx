@@ -18,6 +18,7 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx'
 import { dbanuStyles } from '../../../styles/dbanuStyles.js'
 import { formStyles } from '../../../styles/formStyles.js'
 import { cambiarEstadoInstitucional, guardarCarreraArea, guardarSede, guardarUnidad, listarEstructura } from '../services/estructuraInstitucionalService.js'
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx'
 
 const configuracion = {
   sedes: {
@@ -255,7 +256,7 @@ export function EstructuraCatalogo({ seccion }) {
                 <TextField label="Código generado" value={codigoVista(seccion, form, datos)} slotProps={{ input: { readOnly: true } }} helperText="Se genera automáticamente según el tipo, la sede y el nombre." />
                 <Box sx={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: 2, alignItems: 'center' }}>
                   <Autocomplete multiple freeSolo options={[]} value={form.aliases || []} onChange={(_, aliases) => actualizar({ aliases })} renderInput={(params) => <TextField {...params} label="Alias alternativos (opcional)" placeholder={(form.aliases || []).length ? '' : 'Escribe un alias y presiona Enter'} />} />
-                  <Box sx={{ minHeight: 56, px: 1.5, display: 'flex', alignItems: 'center', border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#f8fafc' }}><FormControlLabel control={<Switch checked={form.activo} onChange={(e) => actualizar({ activo: e.target.checked })} />} label="Activo" /></Box>
+                  <CampoActivo checked={form.activo} onChange={(e) => actualizar({ activo: e.target.checked })} />
                 </Box>
               </Box>
               <AccionesFormulario onCancelar={() => setModoForm(false)} onGuardar={guardar} guardando={guardando} />
@@ -299,7 +300,7 @@ export function EstructuraCatalogo({ seccion }) {
                   </TableCell>
                   <TableCell>{fila.hora_apertura && fila.hora_cierre ? `${normalizarHora(fila.hora_apertura)} - ${normalizarHora(fila.hora_cierre)}` : '—'}</TableCell>
                   <TableCell>
-                    <Stack direction="row" spacing={0.5} useFlexGap flexWrap="wrap">
+                    <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
                       {fila.maneja_caja ? <Chip size="small" variant="outlined" label="Caja" /> : null}
                       {fila.maneja_inventario ? <Chip size="small" variant="outlined" label="Inventario" /> : null}
                       {fila.permite_reservas ? <Chip size="small" variant="outlined" label="Reservas" /> : null}

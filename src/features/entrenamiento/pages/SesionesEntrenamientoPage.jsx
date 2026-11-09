@@ -12,6 +12,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { entrenamientoServicio } from '../services/entrenamientoServicio.js';
+import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const estados = ['PROGRAMADA', 'EN_CURSO', 'COMPLETADA', 'CANCELADA'];
 const opcionesEstado = estados.map((estado) => ({ value: estado, label: estado.replaceAll('_', ' ') }));
@@ -23,7 +24,7 @@ export function SesionesEntrenamientoPage() {
   const pizarraRef = useRef(null);
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState({});
-  const [filtros, setFiltros] = useState({ busqueda: '', estado: [], page: 1, per_page: 10 });
+  const [filtros, setFiltros] = useState({ busqueda: '', estado: [], page: 1, per_page: 5 });
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState('');
   const [planes, setPlanes] = useState([]);
@@ -31,7 +32,7 @@ export function SesionesEntrenamientoPage() {
   const [pizarra, setPizarra] = useState(null);
   const [cargandoPizarra, setCargandoPizarra] = useState(false);
   const [modoPizarra, setModoPizarra] = useState('GENERAL');
-  const [selectorGeneral, setSelectorGeneral] = useState({ sede_id: 1, fecha: new Date().toISOString().slice(0, 10) });
+  const [selectorGeneral, setSelectorGeneral] = useState({ sede_id: 1, fecha: hoyEcuador() });
   const [pizarraGeneral, setPizarraGeneral] = useState(null);
 
   const cargar = async (siguientes = filtros) => {
@@ -98,7 +99,7 @@ export function SesionesEntrenamientoPage() {
         icono={<SportsGymnasticsOutlinedIcon />}
       />
       <Paper ref={pizarraRef} elevation={0} sx={{ p: 2.5, mb: 2, borderRadius: 3, bgcolor: '#0f172a', color: 'white' }}>
-        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} justifyContent="space-between" alignItems={{ lg: 'center' }}>
+        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={2} sx={{ alignItems: { lg: 'center' }, justifyContent: 'space-between' }}>
           <Box><Typography variant="h5" fontWeight="900">Pizarra de entrenamiento</Typography><Typography variant="body2" sx={{ color: 'rgba(255,255,255,.7)' }}>{modoPizarra === 'GENERAL' ? 'Rutina común para pases diarios y acceso general.' : 'Planes personalizados con series, %RM, kg/lb y transferencias.'}</Typography><Stack direction="row" spacing={1} sx={{ mt: 1.2 }}><Button size="small" variant={modoPizarra === 'GENERAL' ? 'contained' : 'outlined'} color="warning" onClick={() => setModoPizarra('GENERAL')}>Pizarra general</Button><Button size="small" variant={modoPizarra === 'PERSONAL' ? 'contained' : 'outlined'} color="warning" onClick={() => setModoPizarra('PERSONAL')}>Planes personalizados</Button></Stack></Box>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
             {modoPizarra === 'GENERAL' ? <>
@@ -115,17 +116,17 @@ export function SesionesEntrenamientoPage() {
               {dias.map((dia) => <MenuItem key={dia} value={dia}>{dia}</MenuItem>)}
             </TextField>
             </>}
-            <Button variant="outlined" color="inherit" onClick={() => modoPizarra === 'GENERAL' ? cargarPizarraGeneral() : cargarPizarra()} startIcon={<RefreshOutlinedIcon />}>Actualizar</Button>
-            <Button variant="outlined" color="inherit" onClick={() => pizarraRef.current?.requestFullscreen?.()} startIcon={<FullscreenOutlinedIcon />}>Pantalla</Button>
+            <Button variant="outlined" color="inherit" onClick={() => modoPizarra === 'GENERAL' ? cargarPizarraGeneral() : cargarPizarra()} startIcon={<RefreshOutlinedIcon />} sx={{ flexShrink: 0, whiteSpace: 'nowrap', width: 'auto' }}>Actualizar</Button>
+            <Button variant="outlined" color="inherit" onClick={() => pizarraRef.current?.requestFullscreen?.()} startIcon={<FullscreenOutlinedIcon />} sx={{ flexShrink: 0, whiteSpace: 'nowrap', width: 'auto' }}>Pantalla</Button>
           </Stack>
         </Stack>
         {modoPizarra === 'PERSONAL' && pizarra?.plan ? <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mt: 2 }}><Chip label={pizarra.plan.deportista_nombre} color="warning" /><Chip label={pizarra.plan.nombre} sx={{ bgcolor: 'rgba(255,255,255,.12)', color: 'white' }} /><Chip label={`${selector.dia} · Semana ${selector.semana}`} sx={{ bgcolor: 'rgba(255,255,255,.12)', color: 'white' }} /></Stack> : null}
-        {modoPizarra === 'GENERAL' && pizarraGeneral?.pizarra ? <Box sx={{ mt: 2 }}><Stack direction="row" spacing={1} useFlexGap flexWrap="wrap"><Chip label={pizarraGeneral.pizarra.sede_nombre} color="warning" /><Chip label={pizarraGeneral.pizarra.nombre} sx={{ bgcolor: 'rgba(255,255,255,.12)', color: 'white' }} /><Chip label={`${(pizarraGeneral.asistentes || []).length} asistentes habilitados`} color="success" /></Stack><Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,.75)' }}>{pizarraGeneral.pizarra.objetivo}</Typography>{(pizarraGeneral.asistentes || []).length ? <Stack direction="row" spacing={.7} useFlexGap flexWrap="wrap" sx={{ mt: 1.2 }}>{pizarraGeneral.asistentes.map((a) => <Chip key={a.membresia_id} size="small" label={`${a.name} · ${a.membresia}${a.ingreso_at ? ' · ingresó' : ''}`} sx={{ bgcolor: a.ingreso_at ? '#dcfce7' : '#fff7ed', color: '#0f172a' }} />)}</Stack> : null}</Box> : null}
+        {modoPizarra === 'GENERAL' && pizarraGeneral?.pizarra ? <Box sx={{ mt: 2 }}><Stack direction="row" spacing={1} useFlexGap sx={{ flexWrap: 'wrap' }}><Chip label={pizarraGeneral.pizarra.sede_nombre} color="warning" /><Chip label={pizarraGeneral.pizarra.nombre} sx={{ bgcolor: 'rgba(255,255,255,.12)', color: 'white' }} /><Chip label={`${(pizarraGeneral.asistentes || []).length} asistentes habilitados`} color="success" /></Stack><Typography variant="body2" sx={{ mt: 1, color: 'rgba(255,255,255,.75)' }}>{pizarraGeneral.pizarra.objetivo}</Typography>{(pizarraGeneral.asistentes || []).length ? <Stack direction="row" spacing={.7} useFlexGap sx={{ flexWrap: 'wrap', mt: 1.2 }}>{pizarraGeneral.asistentes.map((a) => <Chip key={a.membresia_id} size="small" label={`${a.name} · ${a.membresia}${a.ingreso_at ? ' · ingresó' : ''}`} sx={{ bgcolor: a.ingreso_at ? '#dcfce7' : '#fff7ed', color: '#0f172a' }} />)}</Stack> : null}</Box> : null}
         <Box sx={{ mt: 2, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', md: 'repeat(2,minmax(0,1fr))', xl: 'repeat(3,minmax(0,1fr))' } }}>
-          {modoPizarra === 'GENERAL' ? (pizarraGeneral?.ejercicios || []).map((ejercicio) => <Paper key={ejercicio.id} elevation={0} sx={{ p: 2, borderRadius: 2.5, bgcolor: '#f8fafc' }}><Typography fontWeight="900" color="#0f172a">{ejercicio.orden}. {ejercicio.ejercicio_nombre}</Typography><Typography variant="caption" color="text.secondary">{ejercicio.bloque} · {ejercicio.grupo_muscular} · {ejercicio.equipamiento}</Typography><Stack direction="row" spacing={.8} useFlexGap flexWrap="wrap" sx={{ mt: 1.5 }}><Chip size="small" label={`${ejercicio.series} series`} /><Chip size="small" label={ejercicio.repeticiones ? `${ejercicio.repeticiones} reps` : `${ejercicio.tiempo_segundos}s`} color="warning" />{ejercicio.descanso_segundos ? <Chip size="small" label={`Descanso ${ejercicio.descanso_segundos}s`} /> : null}</Stack><Typography variant="body2" sx={{ mt: 1.3, color: '#475569' }}>{ejercicio.indicaciones}</Typography></Paper>) : (pizarra?.rutinas || []).map((rutina) => <Paper key={rutina.id} elevation={0} sx={{ p: 2, borderRadius: 2.5, bgcolor: '#f8fafc' }}>
-            <Stack direction="row" justifyContent="space-between" spacing={1}><Box><Typography fontWeight="900" color="#0f172a">{rutina.orden}. {rutina.ejercicio_nombre}</Typography><Typography variant="caption" color="text.secondary">{rutina.bloque || 'General'} · {rutina.grupo_muscular}</Typography></Box>{rutina.rm_estimado ? <Chip size="small" label={`RM ${numero(rutina.rm_estimado)} kg`} color="success" /> : null}</Stack>
+          {modoPizarra === 'GENERAL' ? (pizarraGeneral?.ejercicios || []).map((ejercicio) => <Paper key={ejercicio.id} elevation={0} sx={{ p: 2, borderRadius: 2.5, bgcolor: '#f8fafc' }}><Typography fontWeight="900" color="#0f172a">{ejercicio.orden}. {ejercicio.ejercicio_nombre}</Typography><Typography variant="caption" color="text.secondary">{ejercicio.bloque} · {ejercicio.grupo_muscular} · {ejercicio.equipamiento}</Typography><Stack direction="row" spacing={.8} useFlexGap sx={{ flexWrap: 'wrap', mt: 1.5 }}><Chip size="small" label={`${ejercicio.series} series`} /><Chip size="small" label={ejercicio.repeticiones ? `${ejercicio.repeticiones} reps` : `${ejercicio.tiempo_segundos}s`} color="warning" />{ejercicio.descanso_segundos ? <Chip size="small" label={`Descanso ${ejercicio.descanso_segundos}s`} /> : null}</Stack><Typography variant="body2" sx={{ mt: 1.3, color: '#475569' }}>{ejercicio.indicaciones}</Typography></Paper>) : (pizarra?.rutinas || []).map((rutina) => <Paper key={rutina.id} elevation={0} sx={{ p: 2, borderRadius: 2.5, bgcolor: '#f8fafc' }}>
+            <Stack direction="row" spacing={1} sx={{ justifyContent: 'space-between' }}><Box><Typography fontWeight="900" color="#0f172a">{rutina.orden}. {rutina.ejercicio_nombre}</Typography><Typography variant="caption" color="text.secondary">{rutina.bloque || 'General'} · {rutina.grupo_muscular}</Typography></Box>{rutina.rm_estimado ? <Chip size="small" label={`RM ${numero(rutina.rm_estimado)} kg`} color="success" /> : null}</Stack>
             <Stack spacing={0.7} sx={{ mt: 1.5 }}>{(rutina.series_detalle || []).map((serie) => <Box key={serie.id} sx={{ px: 1.2, py: .8, borderRadius: 1.5, bgcolor: 'white', border: '1px solid #e2e8f0' }}><Typography variant="body2" fontWeight="800">S{serie.numero_serie} · {serie.repeticiones || '—'} reps · {serie.porcentaje_rm != null ? `${numero(serie.porcentaje_rm)}% RM` : serie.tipo_carga}</Typography><Typography variant="caption" color="text.secondary">{serie.carga_kg != null ? `${numero(serie.carga_kg)} kg · ${numero(serie.carga_lb)} lb` : 'Carga libre'}{serie.descanso_segundos ? ` · descanso ${serie.descanso_segundos}s` : ''}</Typography></Box>)}</Stack>
-            {(rutina.transferencias || []).map((transferencia) => <Box key={transferencia.id} sx={{ mt: 1.2, p: 1.1, borderRadius: 1.5, bgcolor: '#fff7ed', border: '1px solid #fed7aa' }}><Stack direction="row" spacing={.7} alignItems="center"><SwapHorizOutlinedIcon fontSize="small" color="warning" /><Typography variant="body2" fontWeight="900">{transferencia.ejercicio_nombre}</Typography></Stack><Typography variant="caption" color="text.secondary">Después de cada serie · {(transferencia.series || []).map((s) => s.repeticiones ? `${s.repeticiones} reps` : s.distancia_metros ? `${s.distancia_metros} m` : `${s.tiempo_segundos}s`).join(' / ')}</Typography></Box>)}
+            {(rutina.transferencias || []).map((transferencia) => <Box key={transferencia.id} sx={{ mt: 1.2, p: 1.1, borderRadius: 1.5, bgcolor: '#fff7ed', border: '1px solid #fed7aa' }}><Stack direction="row" spacing={.7} sx={{ alignItems: 'center' }}><SwapHorizOutlinedIcon fontSize="small" color="warning" /><Typography variant="body2" fontWeight="900">{transferencia.ejercicio_nombre}</Typography></Stack><Typography variant="caption" color="text.secondary">Después de cada serie · {(transferencia.series || []).map((s) => s.repeticiones ? `${s.repeticiones} reps` : s.distancia_metros ? `${s.distancia_metros} m` : `${s.tiempo_segundos}s`).join(' / ')}</Typography></Box>)}
           </Paper>)}
         </Box>
         {!cargandoPizarra && modoPizarra === 'PERSONAL' && pizarra && !(pizarra.rutinas || []).length ? <Typography sx={{ mt: 2, color: 'rgba(255,255,255,.7)' }}>No hay ejercicios configurados para esta semana y día.</Typography> : null}
@@ -142,7 +143,7 @@ export function SesionesEntrenamientoPage() {
           total={meta.total || 0}
           filtrados={meta.total || 0}
           page={meta.pagina_actual || 1}
-          rowsPerPage={meta.por_pagina || 10}
+          rowsPerPage={meta.por_pagina || 5}
           onPageChange={(page) => aplicar({ page })}
           onRowsPerPageChange={(per_page) => aplicar({ per_page })}
           cargando={cargando}

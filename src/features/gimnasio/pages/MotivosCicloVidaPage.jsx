@@ -13,6 +13,7 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
 const operaciones = [
   { value: 'CONGELAR', label: 'Congelaciones' },
@@ -95,7 +96,7 @@ export function MotivosCicloVidaPage() {
         ? <Button color="inherit" size="small" disabled={cargando} onClick={() => cargar()}>Reintentar</Button>
         : null}>{error}</Alert>}
       {edicion !== null ? <>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography sx={formStyles.modalSeccionTitulo}>
             {edicion === 'nuevo' ? 'Añadir motivo' : 'Editar motivo'}
           </Typography>
@@ -112,12 +113,9 @@ export function MotivosCicloVidaPage() {
           </TextField>
           <TextField size="small" label="Orden" type="number" value={form.orden}
             onChange={e => setForm(x => ({ ...x, orden: e.target.value }))}/>
-          <TextField select size="small" label="Estado" value={form.activo ? '1' : '0'}
-            onChange={e => setForm(x => ({ ...x, activo: e.target.value === '1' }))}>
-            <MenuItem value="1">Activo</MenuItem><MenuItem value="0">Inactivo</MenuItem>
-          </TextField>
           <TextField size="small" multiline minRows={2} label="Descripción (opcional)" value={form.descripcion || ''}
             onChange={e => setForm(x => ({ ...x, descripcion: e.target.value }))}/>
+          <CampoActivo checked={form.activo} onChange={e => setForm(x => ({ ...x, activo: e.target.checked }))}/>
         </Box>
         <AccionesFormulario sx={{ mt: 2 }} guardando={guardando} onCancelar={() => setEdicion(null)}
           onGuardar={guardar}/>

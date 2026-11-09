@@ -42,8 +42,8 @@ export function PublicacionAppCampania({ value, titulo, descripcion, onChange })
     </Stack>
 
       {value?.visible && <Stack spacing={1.3} sx={{ mt: 1.7 }}>
-      <TextField size="small" required label="Título en la app" value={value.titulo || ''} onChange={(e) => actualizar({ titulo: e.target.value })} inputProps={{ maxLength: 255 }} />
-      <TextField size="small" required multiline minRows={2} label="Descripción en la app" value={value.descripcion || ''} onChange={(e) => actualizar({ descripcion: e.target.value })} inputProps={{ maxLength: 1000 }} />
+      <TextField size="small" required label="Título en la app" value={value.titulo || ''} onChange={(e) => actualizar({ titulo: e.target.value })} slotProps={{ htmlInput: { maxLength: 255 } }} />
+      <TextField size="small" required multiline minRows={2} label="Descripción en la app" value={value.descripcion || ''} onChange={(e) => actualizar({ descripcion: e.target.value })} slotProps={{ htmlInput: { maxLength: 1000 } }} />
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ alignItems: { sm: 'center' } }}>
         <input ref={inputRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={cargarImagen} />
         {!value.imagen_archivo && <Button variant="outlined" startIcon={cargandoImagen ? <CircularProgress size={16} /> : <UploadFileOutlinedIcon />} disabled={cargandoImagen} onClick={() => inputRef.current?.click()}>

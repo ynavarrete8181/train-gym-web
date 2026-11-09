@@ -103,8 +103,4 @@ export const entrenamientoServicio = {
     const { data } = await api.put(`/base/entrenamiento/progreso/${id}`, payload);
     return data;
   },
-  eliminarProgreso: async (id) => {
-    const { data } = await api.delete(`/base/entrenamiento/progreso/${id}`);
-    return data;
-  },
 };
