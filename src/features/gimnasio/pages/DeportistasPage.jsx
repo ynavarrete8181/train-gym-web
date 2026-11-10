@@ -1219,7 +1219,9 @@ export function DeportistasPage() {
         ...membresiaForm,
         fecha_fin_solicitada: undefined,
         fecha_primer_pago: contratoNuevo ? undefined : membresiaForm.fecha_primer_pago,
-        cantidad_periodos_contratados: contratoNuevo ? cantidadCalculada : membresiaForm.cantidad_periodos_contratados,
+        // Solo un contrato nuevo lleva calendario de cuotas; un pase diario no.
+        cantidad_periodos_contratados: contratoNuevo ? cantidadCalculada
+          : (membresiaForm.id ? membresiaForm.cantidad_periodos_contratados : undefined),
         // El servidor fija fecha_fin según los períodos completos.
         fecha_fin: contratoNuevo ? undefined : membresiaForm.fecha_fin,
         // Los movimientos de congelación y reactivación tienen endpoints auditados.
