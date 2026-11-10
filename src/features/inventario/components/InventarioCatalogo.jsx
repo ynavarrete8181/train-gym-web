@@ -6,7 +6,12 @@ import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import LocalShippingOutlinedIcon from '@mui/icons-material/LocalShippingOutlined';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
-import { Avatar, Box, Button, Chip, Divider, FormControlLabel, IconButton, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import StorefrontOutlinedIcon from '@mui/icons-material/StorefrontOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import { Avatar, Box, Button, Chip, Divider, FormControlLabel, IconButton, InputAdornment, MenuItem, Paper, Stack, Switch, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
@@ -339,44 +344,18 @@ function Formulario({ tipo, formData, catalogos, onChange, setFormData, onNotifi
           <CampoActivo name="activo" checked={formData.activo} onChange={onChange} />
         </Box>
 
-        <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-          <Box sx={{ px: 1.6, py: 1.1, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-            <Typography variant="subtitle2" fontWeight={900}>Precios y stock por sede</Typography>
-            <Typography variant="caption" color="text.secondary">Cada sede puede vender al precio configurado y mantener su propio inventario.</Typography>
-          </Box>
-          <Stack divider={<Divider flexItem />} sx={{ px: 1.4 }}>
-            {sedes.map((sede) => {
-              const precio = (formData.precios_sede || []).find((x) => Number(x.sede_id) === Number(sede.id)) || {};
-              const stock = (formData.stocks_sede || []).find((x) => Number(x.sede_id) === Number(sede.id)) || {};
-              return (
-                <Box key={sede.id} sx={{ py: 1.2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(180px,1.4fr) 1fr 1fr 1fr' }, gap: 1, alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={900}>{sede.nombre}</Typography>
-                    <Typography variant="caption" color="text.secondary">Operación comercial e inventario</Typography>
-                  </Box>
-                  <TextField label="Precio venta" type="number" size="small" value={precio.precio ?? formData.precio_venta ?? 0} onChange={(e) => actualizarSede('precios_sede', sede.id, 'precio', e.target.value)} />
-                  <TextField
-                    label={stock.stock_inicial_editable === false ? 'Stock actual' : 'Stock inicial'}
-                    type="number"
-                    size="small"
-                    value={stock.stock_actual ?? 0}
-                    onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_actual', e.target.value)}
-                    disabled={!formData.controla_stock || stock.stock_inicial_editable === false}
-                    helperText={stock.stock_inicial_editable === false ? 'Bloqueado: ya existe Kardex posterior.' : 'Editable mientras no existan movimientos posteriores.'}
-                  />
-                  <TextField label="Stock mínimo" type="number" size="small" value={stock.stock_minimo ?? formData.stock_minimo ?? 0} onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_minimo', e.target.value)} disabled={!formData.controla_stock} />
-                </Box>
-              );
-            })}
-          </Stack>
-        </Box>
+        <PreciosStockSede
+          sedes={sedes}
+          formData={formData}
+          actualizarSede={actualizarSede}
+        />
 
         {formData.maneja_lotes ? (
           <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
             <Box sx={{ px: 1.6, py: 1.1, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 1 }}>
               <Box>
                 <Typography variant="subtitle2" fontWeight={900}>Lotes y vencimientos</Typography>
-                <Typography variant="caption" color="text.secondary">Opcional para bebidas, suplementos u otros productos con trazabilidad por lote.</Typography>
+                <Typography variant="caption" color="text.secondary">El stock de cada sede es la suma de sus lotes. Un lote nuevo se registra como ENTRADA en el Kardex; para cambiar un lote con movimientos usa Movimientos / Kardex.</Typography>
               </Box>
               <Button size="small" startIcon={<AddOutlinedIcon />} onClick={agregarLote} sx={dbanuStyles.addButtonRevive}>Añadir lote</Button>
             </Box>
@@ -512,4 +491,101 @@ function normalizar(tipo, data) {
   }
   if (!data.producto_id || !data.tipo_movimiento || !data.cantidad) return null;
   return { producto_id: Number(data.producto_id), sede_id: data.sede_id ? Number(data.sede_id) : null, lote_id: data.lote_id ? Number(data.lote_id) : null, tipo_movimiento: data.tipo_movimiento, cantidad: Number(data.cantidad), referencia: data.referencia || null, observaciones: data.observaciones || null };
+}
+
+const COLUMNAS_SEDE = { xs: '1fr', md: 'minmax(170px,1.3fr) repeat(3, minmax(110px,1fr)) minmax(150px,1fr)' };
+
+/** Precio y stock de cada sede en una tabla compacta: campos alineados y un estado claro por fila. */
+function PreciosStockSede({ sedes, formData, actualizarSede }) {
+  const encabezado = { fontSize: 10.5, fontWeight: 800, letterSpacing: '.04em', textTransform: 'uppercase', color: '#64748b' };
+  return (
+    <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, overflow: 'hidden', bgcolor: '#fff' }}>
+      <Box sx={{ px: 2, py: 1.4, display: 'flex', alignItems: 'center', gap: 1.2, borderBottom: '1px solid #e2e8f0', bgcolor: '#fafafa' }}>
+        <Box sx={{ width: 34, height: 34, borderRadius: 1.2, display: 'grid', placeItems: 'center', bgcolor: '#fff4d7', color: '#946a00' }}>
+          <StorefrontOutlinedIcon sx={{ fontSize: 19 }} />
+        </Box>
+        <Box>
+          <Typography variant="subtitle2" fontWeight={900}>Precios y stock por sede</Typography>
+          <Typography variant="caption" color="text.secondary">Cada sede vende a su propio precio y lleva su propio inventario.</Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ display: { xs: 'none', md: 'grid' }, gridTemplateColumns: COLUMNAS_SEDE, gap: 1.5, px: 2, py: 1, borderBottom: '1px solid #f1f5f9' }}>
+        <Typography sx={encabezado}>Sede</Typography>
+        <Typography sx={encabezado}>Precio de venta</Typography>
+        <Typography sx={encabezado}>{formData.maneja_lotes ? 'Stock (lotes)' : 'Stock'}</Typography>
+        <Typography sx={encabezado}>Stock mínimo</Typography>
+        <Typography sx={encabezado}>Estado</Typography>
+      </Box>
+
+      {sedes.map((sede, indice) => {
+        const precio = (formData.precios_sede || []).find((x) => Number(x.sede_id) === Number(sede.id)) || {};
+        const stock = (formData.stocks_sede || []).find((x) => Number(x.sede_id) === Number(sede.id)) || {};
+        // Con lotes, el stock de la sede es la suma de sus lotes activos.
+        const sumaLotes = (formData.lotes || [])
+          .filter((lote) => Number(lote.sede_id) === Number(sede.id) && lote.activo !== false)
+          .reduce((total, lote) => total + Number(lote.stock_actual || 0), 0);
+        const conKardex = stock.stock_inicial_editable === false;
+        const valorStock = formData.maneja_lotes ? sumaLotes : (stock.stock_actual ?? 0);
+        const minimo = Number(stock.stock_minimo ?? formData.stock_minimo ?? 0);
+        const bajo = formData.controla_stock && minimo > 0 && Number(valorStock) <= minimo;
+        const estado = !formData.controla_stock
+          ? { texto: 'Sin control de stock', icono: null, color: '#64748b', fondo: '#f1f5f9' }
+          : Number(valorStock) <= 0
+            ? { texto: 'Sin stock', icono: <WarningAmberOutlinedIcon />, color: '#b91c1c', fondo: '#fef2f2' }
+          : bajo
+            ? { texto: 'Stock bajo', icono: <WarningAmberOutlinedIcon />, color: '#9a3412', fondo: '#fff7ed' }
+            : formData.maneja_lotes
+              ? { texto: 'Según lotes', icono: <LayersOutlinedIcon />, color: '#1e40af', fondo: '#eff6ff' }
+              : conKardex
+                ? { texto: 'Con Kardex', icono: <LockOutlinedIcon />, color: '#475569', fondo: '#f1f5f9' }
+                : { texto: 'Stock inicial editable', icono: <EditNoteOutlinedIcon />, color: '#166534', fondo: '#f0fdf4' };
+        const ayuda = formData.maneja_lotes
+          ? 'Se calcula con los lotes de esta sede.'
+          : conKardex
+            ? 'Ya tiene movimientos: cambia el stock con un AJUSTE, ENTRADA o BAJA en Movimientos / Kardex.'
+            : 'Puedes corregir el stock inicial hasta el primer movimiento.';
+        return (
+          <Box key={sede.id} sx={{
+            display: 'grid', gridTemplateColumns: COLUMNAS_SEDE, gap: 1.5, px: 2, py: 1.4, alignItems: 'center',
+            borderTop: indice ? '1px solid #f1f5f9' : 0, '&:hover': { bgcolor: '#fcfcfd' },
+          }}>
+            <Typography variant="body2" fontWeight={900}>{sede.nombre}</Typography>
+            <TextField
+              aria-label={`Precio de venta en ${sede.nombre}`}
+              label="Precio de venta" type="number" size="small"
+              value={precio.precio ?? formData.precio_venta ?? 0}
+              onChange={(e) => actualizarSede('precios_sede', sede.id, 'precio', e.target.value)}
+              slotProps={{ input: { startAdornment: <InputAdornment position="start">$</InputAdornment> }, htmlInput: { min: 0, step: 0.01 } }}
+            />
+            <Tooltip title={ayuda} placement="top" arrow>
+              <TextField
+                label={formData.maneja_lotes ? 'Stock' : (conKardex ? 'Stock actual' : 'Stock inicial')}
+                type="number" size="small" value={valorStock}
+                onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_actual', e.target.value)}
+                disabled={formData.maneja_lotes || !formData.controla_stock || conKardex}
+                slotProps={{ htmlInput: { min: 0 } }}
+              />
+            </Tooltip>
+            <TextField
+              label="Stock mínimo" type="number" size="small"
+              value={stock.stock_minimo ?? formData.stock_minimo ?? 0}
+              onChange={(e) => actualizarSede('stocks_sede', sede.id, 'stock_minimo', e.target.value)}
+              disabled={!formData.controla_stock}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+            <Tooltip title={ayuda} placement="top" arrow>
+              <Chip
+                size="small" icon={estado.icono || undefined} label={estado.texto}
+                sx={{
+                  justifySelf: 'start', height: 26, fontWeight: 800, fontSize: 11.5, color: estado.color, bgcolor: estado.fondo,
+                  border: '1px solid', borderColor: 'transparent', '& .MuiChip-icon': { color: estado.color, fontSize: 15 },
+                }}
+              />
+            </Tooltip>
+          </Box>
+        );
+      })}
+    </Box>
+  );
 }
