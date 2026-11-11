@@ -51,7 +51,14 @@ const tituloTipo = {
   DESCUENTO_AJUSTADO: 'Descuento ajustado al contrato',
   DESCUENTO_RENOVADO: 'Descuento renovado',
   REABRIR: 'Reapertura de membresía',
+  EDICION_ADMINISTRATIVA: 'Edición administrativa',
+  PRORROGAR_CONGELACION: 'Prórroga de congelación',
+  CANCELAR_PROGRAMACION: 'Cancelación de programación',
+  CANCELAR: 'Cancelación de membresía',
 };
+// Un código sin etiqueta propia se muestra igual en formato de oración, nunca en mayúsculas.
+const textoTipo = (tipo, vacio) => tituloTipo[tipo]
+  || (tipo ? tipo.replaceAll('_', ' ').toLowerCase().replace(/^./, c => c.toUpperCase()) : vacio);
 const fechaCampo = campo => /fecha|inicio|fin|vigencia|vencimiento/i.test(campo);
 const etiquetaCampo = {
   fecha_inicio: 'Inicio', fecha_fin: 'Fin', fecha_fin_prevista: 'Fin autorizado',
@@ -193,11 +200,11 @@ const rangoEvento = (evento) => {
 };
 
 const COLUMNAS_MOVIMIENTOS = {
-  movimiento: (evento) => tituloTipo[evento.tipo] || evento.tipo?.replaceAll('_', ' ') || 'Movimiento',
+  movimiento: (evento) => textoTipo(evento.tipo, 'Movimiento'),
   fecha: (evento) => fechaHora(evento.fecha),
   inicio: (evento) => (rangoEvento(evento)[0] ? fecha(rangoEvento(evento)[0]) : '—'),
   fin: (evento) => (rangoEvento(evento)[1] ? fecha(rangoEvento(evento)[1]) : '—'),
-  responsable: (evento) => evento.autor_nombre || 'Sistema / no disponible',
+  responsable: (evento) => evento.autor_nombre || 'Sistema (automático)',
   tipo: (evento) => (evento.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'),
 };
 const OPCIONES_MOVIMIENTOS = { sinOrdenar: ['fecha', 'inicio', 'fin'] };
@@ -230,7 +237,7 @@ export function HistorialIntegralMembresia({ membresia }) {
 
   const eventos = useMemo(() => historial?.eventos || [], [historial]);
   const filtrados = useMemo(() => eventos.filter(e => [
-    tituloTipo[e.tipo] || e.tipo,
+    textoTipo(e.tipo, ''),
     e.categoria, e.fecha, e.fecha_efectiva, e.autor_nombre, e.motivo,
   ].some(v => String(v || '').toLocaleLowerCase('es-EC').includes(busqueda.toLocaleLowerCase('es-EC')))), [eventos, busqueda]);
   const tabla = useTablaLocal(filtrados, COLUMNAS_MOVIMIENTOS, OPCIONES_MOVIMIENTOS);
@@ -258,13 +265,13 @@ export function HistorialIntegralMembresia({ membresia }) {
         {visibles.map((evento, index) => <TableRow key={evento.id || `${evento.tipo}-${evento.fecha}-${index}`} hover>
           <TableCell>
             <Typography variant="body2" fontWeight={700}>
-              {tituloTipo[evento.tipo] || evento.tipo?.replaceAll('_', ' ') || 'Movimiento'}
+              {textoTipo(evento.tipo, 'Movimiento')}
             </Typography>
           </TableCell>
           <TableCell>{fechaHora(evento.fecha)}</TableCell>
           <TableCell sx={{ whiteSpace: 'nowrap' }}>{COLUMNAS_MOVIMIENTOS.inicio(evento)}</TableCell>
           <TableCell sx={{ whiteSpace: 'nowrap' }}>{COLUMNAS_MOVIMIENTOS.fin(evento)}</TableCell>
-          <TableCell>{evento.autor_nombre || 'Sistema / no disponible'}</TableCell>
+          <TableCell>{evento.autor_nombre || 'Sistema (automático)'}</TableCell>
           <TableCell><Chip size="small" variant="outlined"
             label={evento.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'}/></TableCell>
           <TableCell align="center">
@@ -307,7 +314,7 @@ export function HistorialIntegralMembresia({ membresia }) {
           <Box sx={{ minWidth: 0, flex: 1 }}>
             <Typography id="detalle-movimiento-membresia-titulo"
               variant="subtitle1" fontWeight={850} sx={{ overflowWrap: 'anywhere' }}>
-              {tituloTipo[seleccionado.tipo] || seleccionado.tipo?.replaceAll('_', ' ') || 'Detalle del movimiento'}
+              {textoTipo(seleccionado.tipo, 'Detalle del movimiento')}
             </Typography>
             <Typography variant="caption" color="text.secondary" display="block">
               {membresia?.codigo_contrato || 'Contrato'} · {fechaHora(seleccionado.fecha)}
@@ -329,7 +336,7 @@ export function HistorialIntegralMembresia({ membresia }) {
             mb: 2,
           }}>
             <Dato label="Responsable"
-              value={seleccionado.autor_nombre || 'Sistema / autor no disponible'} />
+              value={seleccionado.autor_nombre || 'Sistema (automático)'} />
             <Dato label="Tipo de movimiento"
               value={seleccionado.categoria === 'CICLO_VIDA' ? 'Ciclo de vida' : 'Comercial'} />
           </Box>

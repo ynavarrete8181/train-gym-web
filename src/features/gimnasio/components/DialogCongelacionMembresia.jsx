@@ -184,7 +184,7 @@ export function DialogCongelacionMembresia({
                 valor={diasReconocidos === '—' ? diasReconocidos : `${diasReconocidos} días`} destacado/>
               <Indicador etiqueta="Fecha efectiva de regreso" valor={fecha(suspension?.fecha_regreso)}/>
               <Indicador etiqueta="Último día de congelación" valor={fecha(suspension?.fecha_fin_real)}/>
-              <Indicador etiqueta="Reactivado por" valor={suspension?.autor_cierre || 'Sistema / usuario no disponible'}/>
+              <Indicador etiqueta="Reactivado por" valor={suspension?.autor_cierre || 'Sistema (automático)'}/>
             </Box>
           </> : <Typography variant="caption" color="text.secondary">
             {cancelada
@@ -225,7 +225,7 @@ export function DialogCongelacionMembresia({
           <Indicador etiqueta="Registrado por" valor={suspension?.autor_registro || movimiento?.autor_nombre || 'Usuario no disponible'}/>
           <Indicador etiqueta="Fecha de registro" valor={fecha(suspension?.registrado_at || movimiento?.created_at)}/>
           {suspension?.fecha_cierre && <Indicador etiqueta="Cerrado por"
-            valor={suspension.autor_cierre || 'Sistema / usuario no disponible'}/>}
+            valor={suspension.autor_cierre || 'Sistema (automático)'}/>}
           {suspension?.fecha_cierre && <Indicador etiqueta="Fecha del movimiento de cierre"
             valor={fecha(suspension.fecha_cierre)}/>}
         </Box>
