@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, IconButton, MenuItem, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, IconButton, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
 import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
 import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
@@ -41,6 +42,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   const [datos, setDatos] = useState({ contrato: {}, descuentos: [] });
   const [form, setForm] = useState(null);
   const [finalizar, setFinalizar] = useState(null);
+  const [detalleId, setDetalleId] = useState(null);
   const [motivoFin, setMotivoFin] = useState('');
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -144,8 +146,14 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
       <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 1.5 }} value={form.motivo}
         helperText="Escribe al menos 8 caracteres." onChange={(e) => cambiar('motivo', e.target.value)} />
       {ejemplo > 0 && <Alert severity="info" sx={{ mt: 1.5 }}>
-        Con el precio del contrato: {dinero(base)} − {dinero(ejemplo)} = {dinero(base - ejemplo)}. En Ventas se calcula con la tarifa de la sede del día.
+        Con el precio del contrato: {dinero(base)} − {dinero(ejemplo)} = {dinero(base - ejemplo)}. En Ventas se calcula con la tarifa de la sede donde se cobra.
       </Alert>}
+      {Number(form.valor) > 0 && (datos.tarifas || []).length > 0 && <Box sx={{ mt: 1.5 }}>
+        <PagaPorSede filas={(datos.tarifas || []).map((t) => {
+          const importe = Math.min(t.precio, form.tipo === 'PORCENTAJE' ? Math.round(t.precio * Number(form.valor)) / 100 : Number(form.valor));
+          return { ...t, descuento: importe, paga: t.precio - importe };
+        })} />
+      </Box>}
       <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 1.5 }}>
         <BotonCancelar disabled={guardando} onClick={() => setForm(null)} />
         <BotonGuardar texto={form.id ? 'Guardar descuento' : 'Registrar descuento'} guardando={guardando} disabled={!valido} onClick={guardar} />
@@ -173,17 +181,51 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
             <TableCell>{d.autorizado_nombre || '—'}</TableCell>
             <TableCell sx={{ maxWidth: 220, overflowWrap: 'anywhere' }}>{d.motivo || '—'}</TableCell>
             <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>
+              <Tooltip title="Ver dónde se aplica y cuánto paga en cada sede"><IconButton aria-label="Ver descuento por sede" sx={dbanuStyles.actionView}
+                onClick={() => setDetalleId(detalleId === d.id ? null : d.id)}><VisibilityOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
               {abierto && <Tooltip title="Editar descuento"><IconButton aria-label="Editar descuento" sx={dbanuStyles.actionEdit} onClick={() => editar(d)}>
                 <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>}
               {abierto && <Tooltip title="Finalizar descuento"><IconButton aria-label="Finalizar descuento" color="error" sx={{ ml: 1 }}
                 onClick={() => { setFinalizar(d); setMotivoFin(''); }}><StopCircleOutlinedIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>}
-              {!abierto && '—'}
             </TableCell>
           </TableRow>;
         })}
         {tabla.sinResultados && <TablaEstadoFila colSpan={7} texto="Esta membresía no tiene descuentos registrados." />}
       </TableBody>
     </TablaGestion>
+
+    {(() => {
+      const d = filas.find((x) => x.id === detalleId);
+      if (!d) return null;
+      return <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.5 }}>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1.2, gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="subtitle2" fontWeight={900}>Descuento de {textoDescuento(d)} · {fecha(d.fecha_inicio)} al {fecha(d.fecha_fin)}</Typography>
+          <Button size="small" onClick={() => setDetalleId(null)}>Cerrar</Button>
+        </Stack>
+        <PagaPorSede filas={d.por_sede || []} />
+        <Typography variant="subtitle2" fontWeight={900} sx={{ mt: 2, mb: 0.8 }}>Aplicado en</Typography>
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 640 }}>
+            <TableHead><TableRow>
+              {['Sede', 'Período', 'Venta', 'Precio', 'Descuento', 'Pagó'].map((t) => <TableCell key={t} sx={{ fontWeight: 800, fontSize: 12, color: '#64748b' }}>{t}</TableCell>)}
+            </TableRow></TableHead>
+            <TableBody>
+              {(d.aplicaciones || []).map((a, i) => <TableRow key={i}>
+                <TableCell sx={{ fontWeight: 700 }}>{a.sede_nombre || '—'}</TableCell>
+                <TableCell>Período {a.numero_periodo} · {fecha(a.fecha_inicio)}{a.fecha_fin && a.fecha_fin !== a.fecha_inicio ? ` al ${fecha(a.fecha_fin)}` : ''}</TableCell>
+                <TableCell>{a.venta_numero || 'Sin venta'}{a.venta_estado ? <Chip size="small" variant="outlined" label={String(a.venta_estado).toLowerCase()} sx={{ ml: 0.8, height: 20 }} /> : null}</TableCell>
+                <TableCell>{dinero(a.precio)}</TableCell>
+                <TableCell sx={{ color: 'success.dark' }}>−{dinero(a.descuento_importe)}</TableCell>
+                <TableCell sx={{ fontWeight: 900 }}>{dinero(a.paga)}</TableCell>
+              </TableRow>)}
+              {(d.aplicaciones || []).length === 0 && <TableRow><TableCell colSpan={6} align="center">
+                <Typography variant="caption" color="text.secondary">Todavía no se ha cobrado ningún período con este descuento.</Typography>
+              </TableCell></TableRow>}
+            </TableBody>
+          </Table>
+        </Box>
+      </Box>;
+    })()}
 
     <ModalConfirmacion
       open={Boolean(finalizar)}
@@ -200,4 +242,19 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
         helperText="Escribe al menos 8 caracteres." value={motivoFin} onChange={(e) => setMotivoFin(e.target.value)} />
     </ModalConfirmacion>
   </Stack>;
+}
+
+/** Mismo descuento, tarifa distinta en cada sede: cuánto paga el cliente en cada una. */
+function PagaPorSede({ filas }) {
+  if (!filas.length) return null;
+  return <Box>
+    <Typography variant="subtitle2" fontWeight={900} sx={{ mb: 0.8 }}>Paga en cada sede</Typography>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${Math.min(filas.length, 3)}, minmax(0, 1fr))` }, gap: 1 }}>
+      {filas.map((f) => <Box key={f.sede_id} sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, px: 1.5, py: 1, bgcolor: '#f8fafc' }}>
+        <Typography variant="body2" fontWeight={800}>{f.sede_nombre}</Typography>
+        <Typography variant="caption" color="text.secondary">Tarifa {dinero(f.precio)} − descuento {dinero(f.descuento)}</Typography>
+        <Typography sx={{ fontSize: 18, fontWeight: 900, color: 'success.dark' }}>Paga {dinero(f.paga)}</Typography>
+      </Box>)}
+    </Box>
+  </Box>;
 }
