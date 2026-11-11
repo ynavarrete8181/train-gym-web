@@ -1901,6 +1901,19 @@ export function DeportistasPage() {
     || (descuentoMembresia.tipo === 'PORCENTAJE' && descuentoNumerico > 100)
     || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
   );
+  // El descuento es general: en cada sede se aplica sobre su propia tarifa.
+  const sedesHabilitadasIds = (membresiaForm.sedes_habilitadas || []).map(String);
+  const pagaPorSede = !membresiaForm.id && requiereDescuento && !descuentoInvalido && planMembresiaSeleccionado
+    ? sedes
+      .filter((sede) => !sedesHabilitadasIds.length || sedesHabilitadasIds.includes(String(sede.id_sede)))
+      .map((sede) => {
+        const precio = Number(precioAplicableMembresia(planMembresiaSeleccionado, modalidadMembresiaSeleccionada, sede.id_sede) || 0);
+        const importe = descuentoMembresia.tipo === 'PORCENTAJE'
+          ? Math.round(precio * Math.min(100, Math.max(0, descuentoNumerico)) / 100 * 100) / 100
+          : Math.min(precio, Math.max(0, descuentoNumerico));
+        return { id: sede.id_sede, nombre: sede.nombre, precio, importe, paga: Math.max(0, precio - importe) };
+      })
+    : [];
   const paseEnFormulario = String(planMembresiaSeleccionado?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO';
   const contratoNuevoVisible = !membresiaForm.id && !paseEnFormulario;
   const periodosCalculados = contratoNuevoVisible && membresiaForm.fecha_fin_solicitada
@@ -2338,6 +2351,22 @@ export function DeportistasPage() {
                   ? 'Corrige el descuento para calcular el total'
                   : `Total a pagar: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}`}
               </Typography>
+            </Box>
+          )}
+          {pagaPorSede.length > 1 && (
+            <Box sx={{ mt: 1, px: 1.5, py: 1.15, borderRadius: 1.5, border: '1px dashed #cbd5e1' }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.6 }}>
+                El descuento vale en todas las sedes y se aplica sobre la tarifa de cada una:
+              </Typography>
+              <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 1 }}>
+                {pagaPorSede.map((fila) => (
+                  <Box key={fila.id} sx={{ px: 1.2, py: 0.6, borderRadius: 1, bgcolor: String(fila.id) === String(membresiaForm.sede_id) ? '#f0fdf4' : '#f8fafc', border: '1px solid #e2e8f0' }}>
+                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 800 }}>{fila.nombre}</Typography>
+                    <Typography variant="caption" color="text.secondary">${fila.precio.toFixed(2)} − ${fila.importe.toFixed(2)} = </Typography>
+                    <Typography variant="caption" sx={{ fontWeight: 900, color: 'success.dark' }}>paga ${fila.paga.toFixed(2)}</Typography>
+                  </Box>
+                ))}
+              </Stack>
             </Box>
           )}
         </Box>
