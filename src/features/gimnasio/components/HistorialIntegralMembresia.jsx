@@ -49,6 +49,7 @@ const tituloTipo = {
   DESCUENTO_EDITADO: 'Descuento editado',
   DESCUENTO_FINALIZADO: 'Descuento finalizado',
   DESCUENTO_AJUSTADO: 'Descuento ajustado al contrato',
+  DESCUENTO_RENOVADO: 'Descuento renovado',
   REABRIR: 'Reapertura de membresía',
 };
 const fechaCampo = campo => /fecha|inicio|fin|vigencia|vencimiento/i.test(campo);
