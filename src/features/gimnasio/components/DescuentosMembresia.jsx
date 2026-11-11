@@ -116,7 +116,8 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
     <Stack direction="row" gap={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
       <Typography variant="body2" color="text.secondary" sx={{ flex: '1 1 260px' }}>
         El descuento debe estar dentro del contrato: {fecha(contrato.inicio)} al {fecha(contrato.fin)}.
-        Si el contrato se renueva o se amplía, registra un descuento nuevo para las fechas nuevas.
+        Al renovarse, el descuento vigente continúa solo en el período nuevo con sus mismas fechas.
+        Para que no continúe, finalízalo.
       </Typography>
       {!form && <Button startIcon={<AddOutlinedIcon />} onClick={nuevo}>Agregar descuento</Button>}
     </Stack>
