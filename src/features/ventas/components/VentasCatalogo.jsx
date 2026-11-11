@@ -35,7 +35,10 @@ const hoyEcuador = () => new Intl.DateTimeFormat('en-CA', {
 }).format(new Date());
 const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : 'Sin fecha';
 const estadoBool = (valor) => (valor ? 'activo' : 'cerrado');
+// estadoTexto solo elige el color del chip; el texto visible es el nombre del catálogo de estados.
 const estadoTexto = (valor) => String(valor || '').toLowerCase().replace('pagada', 'activo').replace('confirmado', 'activo').replace('emitido', 'activo');
+const nombreEstado = (catalogo = [], valor) => catalogo.find((item) => String(item.valor_interno).toUpperCase() === String(valor || '').toUpperCase())?.nombre;
+const textoComprobante = { BORRADOR: 'Borrador', EMITIDO: 'Emitido', ANULADO: 'Anulado' };
 
 const descripcionCajaGeneral = (sedeNombre) => sedeNombre
   ? `Caja operativa para la gestión de cobros y ventas de la sede ${sedeNombre}.`
@@ -441,7 +444,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'concepto', header: <TableCell key="concepto">Concepto</TableCell>, render: (item) => item.concepto },
     { key: 'tipo', header: filtro('tipo', 'Tipo', opciones(meta.opciones_filtro?.tipo)), render: (item) => item.tipo_venta },
     { key: 'total', header: <TableCell key="total">Total</TableCell>, render: (item) => dinero(item.total) },
-    { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_venta)), render: (item) => <StatusChip estado={estadoTexto(item.estado_nombre || item.estado)} /> },
+    { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_venta)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} label={item.estado_nombre || nombreEstado(catalogos.estados_venta, item.estado)} /> },
   ];
   if (tipo === 'pagos') return [
     { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.codigo_cobro || item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
@@ -483,7 +486,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'deposito', header: <TableCell key="deposito" align="right">Depósito</TableCell>, render: (item) => dinero(item.deposito) },
     { key: 'otros', header: <TableCell key="otros" align="right">Otros</TableCell>, render: (item) => dinero(item.otros) },
     { key: 'total', header: <TableCell key="total" align="right">Total</TableCell>, render: (item) => <Typography variant="body2" fontWeight="800">{dinero(item.total_cobrado)}</Typography> },
-    { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} /> },
+    { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} label={nombreEstado(catalogos.estados_pago, item.estado)} /> },
   ];
   return [
     { key: 'numero', header: filtro('numero', 'Comprobante', null), render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.numero}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.emitido_at || item.created_at)}</Typography></Box> },
@@ -492,7 +495,7 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'correo', header: <TableCell key="correo">Correo</TableCell>, render: (item) => item.cliente_email || item.correo_destino || 'Sin correo' },
     { key: 'total', header: <TableCell key="total">Total</TableCell>, render: (item) => dinero(item.total) },
     { key: 'envio', header: <TableCell key="envio">Envío</TableCell>, render: (item) => <Box><Typography variant="body2">{Number(item.cantidad_envios || 0) > 0 ? `Enviado · ${item.cantidad_envios}` : 'Sin enviar'}</Typography><Typography variant="caption" color="text.secondary">{item.ultimo_envio_at ? fecha(item.ultimo_envio_at) : '—'}</Typography></Box> },
-    { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'BORRADOR', label: 'Borrador' }, { value: 'EMITIDO', label: 'Emitido' }, { value: 'ANULADO', label: 'Anulado' }]), render: (item) => <StatusChip estado={estadoTexto(item.estado)} /> },
+    { key: 'estado', header: filtro('estado', 'Estado', [{ value: 'BORRADOR', label: 'Borrador' }, { value: 'EMITIDO', label: 'Emitido' }, { value: 'ANULADO', label: 'Anulado' }]), render: (item) => <StatusChip estado={estadoTexto(item.estado)} label={textoComprobante[String(item.estado || '').toUpperCase()]} /> },
   ];
 }
 
