@@ -17,6 +17,7 @@ import { ConfirmarEnvioCampaniaDialog } from '../components/campanias/ConfirmarE
 import { SelectorCanalesCampania } from '../components/campanias/SelectorCanalesCampania.jsx'
 import { SelectorDestinatariosCampania } from '../components/campanias/SelectorDestinatariosCampania.jsx'
 import { PublicacionAppCampania } from '../components/campanias/PublicacionAppCampania.jsx'
+import { dbanuStyles } from '../../../styles/dbanuStyles.js'
 import { actualizarCampania, calcularDestinatarios, crearCampania, eliminarCampania, enviarCampania, listarCampanias, obtenerCampania, obtenerCatalogosCampania, reenviarErroresCampania } from '../services/campaniaService.js'
 
 const criteriosIniciales = { todos: false, usuarios: [], roles: [], sedes: [], unidades: [], carreras_areas: [], externos: [], vinculaciones: [] }
@@ -249,7 +250,7 @@ export function CampaniasNotificacionPage({ soloHistorial = false }) {
           <TableCell><Stack direction="row" spacing={.5} sx={{ flexWrap: 'wrap' }}>{item.canal_interno && <Chip size="small" label="Sistema" />}{item.canal_correo && <Chip size="small" label="Correo" />}{item.canal_push && <Chip size="small" label="Push" />}{item.publicar_inicio_app && <Chip size="small" color="primary" label="Carrusel" />}</Stack></TableCell>
           <TableCell>{item.total_destinatarios}</TableCell><TableCell>{item.total_enviados} enviados · {item.total_errores} errores</TableCell>
           <TableCell><Chip size="small" label={etiquetaEstado[item.estado] || item.estado} color={colorEstado[item.estado] || 'default'} /></TableCell>
-          <TableCell align="right"><Tooltip title="Ver detalle"><IconButton onClick={() => abrirDetalle(item.id)}><VisibilityOutlinedIcon /></IconButton></Tooltip>{item.estado === 'BORRADOR' && <><Tooltip title="Editar"><IconButton color="info" onClick={() => editarBorrador(item)}><EditOutlinedIcon /></IconButton></Tooltip><Tooltip title="Enviar"><IconButton color="primary" onClick={() => setConfirmar(item)}><SendOutlinedIcon /></IconButton></Tooltip><Tooltip title="Eliminar"><IconButton color="error" onClick={() => eliminarBorrador(item)}><DeleteOutlineOutlinedIcon /></IconButton></Tooltip></>}</TableCell>
+          <TableCell align="right"><Tooltip title="Ver detalle"><IconButton onClick={() => abrirDetalle(item.id)}><VisibilityOutlinedIcon /></IconButton></Tooltip>{item.estado === 'BORRADOR' && <><Tooltip title="Editar"><IconButton sx={dbanuStyles.actionEdit} onClick={() => editarBorrador(item)}><EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip><Tooltip title="Enviar"><IconButton color="primary" onClick={() => setConfirmar(item)}><SendOutlinedIcon /></IconButton></Tooltip><Tooltip title="Eliminar"><IconButton color="error" onClick={() => eliminarBorrador(item)}><DeleteOutlineOutlinedIcon /></IconButton></Tooltip></>}</TableCell>
         </TableRow>)}</TableBody>
       </TablaGestion>
     </Paper>
