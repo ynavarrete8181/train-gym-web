@@ -85,7 +85,7 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
         {[
           ['Fecha del movimiento', fecha(seleccionada.fecha)],
-          ['Responsable', seleccionada.autor_nombre || 'Sistema / no disponible'],
+          ['Responsable', seleccionada.autor_nombre || 'Sistema (automático)'],
           ['Período agregado', d.numero_periodo_nuevo ?? '—'],
           ['Fecha de inicio', fecha(d.fecha_inicio)],
           ['Fecha de finalización', fecha(d.fecha_fin)],
