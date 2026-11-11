@@ -12,6 +12,7 @@ import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
 import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { formStyles } from '../../../styles/formStyles.js';
+import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 
@@ -142,9 +143,9 @@ export function MotivosCicloVidaPage() {
               <TableCell>{operaciones.find(x => x.value === item.operacion)?.label || item.operacion}</TableCell>
               <TableCell><Chip size="small" variant="outlined" label={item.activo ? 'Activo' : 'Inactivo'}
                 color={item.activo ? 'success' : 'default'}/></TableCell>
-              <TableCell align="center"><Tooltip title="Editar motivo"><IconButton size="small"
+              <TableCell align="center"><Tooltip title="Editar motivo"><IconButton sx={dbanuStyles.actionEdit}
                 onClick={() => { setForm({ ...item }); setEdicion(item.id); setError(''); }}>
-                <EditOutlinedIcon fontSize="small"/></IconButton></Tooltip></TableCell>
+                <EditOutlinedIcon sx={{ fontSize: 17 }}/></IconButton></Tooltip></TableCell>
             </TableRow>)}
             {!filtrados.length && <TableRow><TableCell colSpan={5} align="center">
               {errorCarga

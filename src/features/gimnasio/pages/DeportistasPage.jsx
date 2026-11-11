@@ -2580,7 +2580,7 @@ export function DeportistasPage() {
                     </Stack>
                     <Stack direction="row" spacing={0.5}>
                       <Tooltip title="Editar registro">
-                        <IconButton size="small" onClick={() => handleEditarProgreso(p)}>
+                        <IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarProgreso(p)}>
                           <EditOutlinedIcon sx={{ fontSize: 17 }} />
                         </IconButton>
                       </Tooltip>
@@ -2820,7 +2820,7 @@ export function DeportistasPage() {
                   {p.entrenador_nombre ? <Typography variant="body2" color="text.secondary">Entrenador: {p.entrenador_nombre}</Typography> : null}
                 </Stack>
                 <Tooltip title="Editar plan">
-                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEditarPlanEntrenamiento(p); }}>
+                  <IconButton sx={dbanuStyles.actionEdit} onClick={(e) => { e.stopPropagation(); handleEditarPlanEntrenamiento(p); }}>
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
@@ -2897,7 +2897,7 @@ export function DeportistasPage() {
                         {sugerido ? <Chip label={`Sugerido: ${sugerido.toFixed(1)}`} size="small" color="info" /> : null}
                       </Stack>
                       <Tooltip title="Editar rutina">
-                        <IconButton size="small" onClick={() => handleEditarRutina(r)}>
+                        <IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarRutina(r)}>
                           <EditOutlinedIcon sx={{ fontSize: 17 }} />
                         </IconButton>
                       </Tooltip>
@@ -2961,7 +2961,7 @@ export function DeportistasPage() {
                   <Typography variant="body2" color="text.secondary">{r.tipo_registro}</Typography>
                 </Stack>
                 <Tooltip title="Editar registro">
-                  <IconButton size="small" onClick={() => handleEditarRm(r)}>
+                  <IconButton sx={dbanuStyles.actionEdit} onClick={() => handleEditarRm(r)}>
                     <EditOutlinedIcon sx={{ fontSize: 17 }} />
                   </IconButton>
                 </Tooltip>
