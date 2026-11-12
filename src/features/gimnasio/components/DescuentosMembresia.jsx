@@ -24,8 +24,10 @@ const ESTADOS = {
   VENCIDO: { chip: 'cerrado', label: 'Vencido' },
   FINALIZADO: { chip: 'cancelada', label: 'Finalizado' },
 };
+const textoSede = (d) => d.sede_nombre || 'Todas las sedes';
 const COLUMNAS = {
   descuento: (d) => textoDescuento(d),
+  sede: (d) => textoSede(d),
   desde: (d) => fecha(d.fecha_inicio),
   hasta: (d) => fecha(d.fecha_fin),
   estado: (d) => ESTADOS[d.estado]?.label || d.estado,
@@ -64,24 +66,27 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   const finContrato = String(contrato.fin || '').slice(0, 10);
   const fueraDelContrato = filas.filter((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && finContrato
     && (!d.fecha_fin || String(d.fecha_fin).slice(0, 10) > finContrato));
-  const base = Number(membresia.precio_aplicado || 0);
+  // Sedes autorizadas: un descuento puede valer en todas o solo en una de ellas.
+  const sedesMembresia = (membresia.sedes_habilitadas || []).filter((s) => s.activo !== false);
+  const tarifaSede = (datos.tarifas || []).find((t) => form?.sede_id && String(t.sede_id) === String(form.sede_id));
+  const base = Number(tarifaSede?.precio ?? membresia.precio_aplicado ?? 0);
   const ejemplo = form && Number(form.valor) > 0
     ? Math.min(base, form.tipo === 'PORCENTAJE' ? base * Number(form.valor) / 100 : Number(form.valor))
     : 0;
 
   const nuevo = () => {
     setExito(''); setError('');
-    setForm({ tipo: 'FIJO', valor: '', fecha_inicio: String(contrato.inicio || '').slice(0, 10), fecha_fin: String(contrato.fin || '').slice(0, 10), motivo: '' });
+    setForm({ tipo: 'FIJO', valor: '', sede_id: '', fecha_inicio: String(contrato.inicio || '').slice(0, 10), fecha_fin: String(contrato.fin || '').slice(0, 10), motivo: '' });
   };
   const editar = (d) => {
     setExito(''); setError('');
-    setForm({ id: d.id, tipo: d.tipo, valor: Number(d.valor), fecha_inicio: String(d.fecha_inicio).slice(0, 10), fecha_fin: String(d.fecha_fin || '').slice(0, 10), motivo: '' });
+    setForm({ id: d.id, tipo: d.tipo, valor: Number(d.valor), sede_id: d.sede_id ? String(d.sede_id) : '', fecha_inicio: String(d.fecha_inicio).slice(0, 10), fecha_fin: String(d.fecha_fin || '').slice(0, 10), motivo: '' });
   };
   const cambiar = (campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }));
 
   const guardar = async () => {
     setGuardando(true); setError('');
-    const payload = { tipo: form.tipo, valor: Number(form.valor), fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null, motivo: form.motivo.trim() };
+    const payload = { tipo: form.tipo, valor: Number(form.valor), sede_id: form.sede_id ? Number(form.sede_id) : null, fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null, motivo: form.motivo.trim() };
     try {
       if (form.id) await gimnasioServicio.actualizarDescuentoMembresia(membresia.id, form.id, payload);
       else await gimnasioServicio.registrarDescuentoMembresia(membresia.id, payload);
@@ -115,9 +120,8 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   return <Stack spacing={2}>
     <Stack direction="row" gap={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
       <Typography variant="body2" color="text.secondary" sx={{ flex: '1 1 260px' }}>
-        El descuento debe estar dentro del contrato: {fecha(contrato.inicio)} al {fecha(contrato.fin)}.
-        Al renovarse, el descuento vigente continúa solo en el período nuevo con sus mismas fechas.
-        Para que no continúe, finalízalo.
+        Dentro del contrato ({fecha(contrato.inicio)} al {fecha(contrato.fin)}), para todas las sedes o solo una.
+        Continúa solo al renovar; para que no siga, finalízalo.
       </Typography>
       {!form && <Button startIcon={<AddOutlinedIcon />} onClick={nuevo}>Agregar descuento</Button>}
     </Stack>
@@ -130,7 +134,12 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
 
     {form && <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
       <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>{form.id ? 'Editar descuento' : 'Nuevo descuento'}</Typography>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', lg: 'repeat(4, minmax(0, 1fr))' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 1.5 }}>
+        <TextField select size="small" label="Aplica en" value={form.sede_id} onChange={(e) => cambiar('sede_id', e.target.value)}
+          slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
+          <MenuItem value="">Todas las sedes</MenuItem>
+          {sedesMembresia.map((s) => <MenuItem key={s.sede_id} value={String(s.sede_id)}>Solo {s.sede_nombre}</MenuItem>)}
+        </TextField>
         <TextField select size="small" label="Tipo" value={form.tipo} onChange={(e) => cambiar('tipo', e.target.value)}>
           <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
           <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
@@ -147,10 +156,11 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
       <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 1.5 }} value={form.motivo}
         helperText="Escribe al menos 8 caracteres." onChange={(e) => cambiar('motivo', e.target.value)} />
       {ejemplo > 0 && <Alert severity="info" sx={{ mt: 1.5 }}>
-        Con el precio del contrato: {dinero(base)} − {dinero(ejemplo)} = {dinero(base - ejemplo)}. En Ventas se calcula con la tarifa de la sede donde se cobra.
+        {tarifaSede ? `En ${tarifaSede.sede_nombre}` : 'Con el precio del contrato'}: {dinero(base)} − {dinero(ejemplo)} = {dinero(base - ejemplo)}.
+        {tarifaSede ? ' En las demás sedes no cambia.' : ' En Ventas se calcula con la tarifa de la sede donde se cobra.'}
       </Alert>}
       {Number(form.valor) > 0 && (datos.tarifas || []).length > 0 && <Box sx={{ mt: 1.5 }}>
-        <PagaPorSede filas={(datos.tarifas || []).map((t) => {
+        <PagaPorSede filas={(datos.tarifas || []).filter((t) => !form.sede_id || String(t.sede_id) === String(form.sede_id)).map((t) => {
           const importe = Math.min(t.precio, form.tipo === 'PORCENTAJE' ? Math.round(t.precio * Number(form.valor)) / 100 : Number(form.valor));
           return { ...t, descuento: importe, paga: t.precio - importe };
         })} />
@@ -164,6 +174,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
     <TablaGestion {...tabla.propsTabla}>
       <TableHead><TableRow>
         <FilterHeaderCell {...tabla.filtro('descuento')}>Descuento</FilterHeaderCell>
+        <FilterHeaderCell {...tabla.filtro('sede')}>Sede</FilterHeaderCell>
         <FilterHeaderCell {...tabla.filtro('desde')}>Desde</FilterHeaderCell>
         <FilterHeaderCell {...tabla.filtro('hasta')}>Hasta</FilterHeaderCell>
         <FilterHeaderCell {...tabla.filtro('estado')}>Estado</FilterHeaderCell>
@@ -176,6 +187,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
           const abierto = ['VIGENTE', 'PROGRAMADO'].includes(d.estado);
           return <TableRow key={d.id} hover>
             <TableCell sx={{ fontWeight: 700 }}>{textoDescuento(d)}</TableCell>
+            <TableCell>{textoSede(d)}</TableCell>
             <TableCell>{fecha(d.fecha_inicio)}</TableCell>
             <TableCell>{fecha(d.fecha_fin)}</TableCell>
             <TableCell><StatusChip estado={ESTADOS[d.estado]?.chip} label={ESTADOS[d.estado]?.label || d.estado} /></TableCell>
@@ -191,7 +203,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
             </TableCell>
           </TableRow>;
         })}
-        {tabla.sinResultados && <TablaEstadoFila colSpan={7} texto="Esta membresía no tiene descuentos registrados." />}
+        {tabla.sinResultados && <TablaEstadoFila colSpan={8} texto="Esta membresía no tiene descuentos registrados." />}
       </TableBody>
     </TablaGestion>
 
@@ -200,7 +212,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
       if (!d) return null;
       return <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 2, p: 1.5 }}>
         <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1.2, gap: 1, flexWrap: 'wrap' }}>
-          <Typography variant="subtitle2" fontWeight={900}>Descuento de {textoDescuento(d)} · {fecha(d.fecha_inicio)} al {fecha(d.fecha_fin)}</Typography>
+          <Typography variant="subtitle2" fontWeight={900}>Descuento de {textoDescuento(d)} · {textoSede(d)} · {fecha(d.fecha_inicio)} al {fecha(d.fecha_fin)}</Typography>
           <Button size="small" onClick={() => setDetalleId(null)}>Cerrar</Button>
         </Stack>
         <PagaPorSede filas={d.por_sede || []} />

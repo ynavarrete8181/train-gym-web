@@ -793,7 +793,7 @@ export function DeportistasPage() {
     setMembresiaForm(getInitialMembresia());
     setAsignacionForm(getInitialAsignacion());
     setRequiereDescuento(false);
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' });
     setTurnosEntrenador([]);
 
     if (!formData.id) return;
@@ -822,7 +822,7 @@ export function DeportistasPage() {
     setVistaMembresia('listado');
     setVistaAsignacion('listado');
     setRequiereDescuento(false);
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' });
     setAsignacionForm(getInitialAsignacion());
     setMembresiaForm(getInitialMembresia());
     setProgresoForm(getInitialProgreso());
@@ -1105,7 +1105,7 @@ export function DeportistasPage() {
   const handleNuevaMembresia = () => {
     setMembresiaDetalle(null);
     setMembresiaForm(getInitialMembresia());
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' });
     setRequiereDescuento(false);
     setVistaMembresia('formulario');
   };
@@ -1282,6 +1282,7 @@ export function DeportistasPage() {
           motivo: descuentoMembresia.motivo.trim(),
           fecha_inicio: inicioDescuentoForm,
           fecha_fin: finDescuentoForm || null,
+          sede_id: sedeDescuentoId ? Number(sedeDescuentoId) : null,
         };
       }
 
@@ -1893,7 +1894,14 @@ export function DeportistasPage() {
         )
       : null;
   const descuentoNumerico = Number(descuentoMembresia.valor || 0);
-  const precioBaseResumen = Number(precioMembresiaPreview ?? 0);
+  const sedesHabilitadasIds = (membresiaForm.sedes_habilitadas || []).map(String);
+  // Un descuento puede valer solo en una sede autorizada; el resumen se calcula con la tarifa de esa sede.
+  const sedeDescuentoId = requiereDescuento && descuentoMembresia.sede_id
+    && sedesHabilitadasIds.includes(String(descuentoMembresia.sede_id)) ? String(descuentoMembresia.sede_id) : '';
+  const sedeResumenId = !membresiaForm.id && sedeDescuentoId ? sedeDescuentoId : membresiaForm.sede_id;
+  const precioBaseResumen = Number((!membresiaForm.id && sedeDescuentoId && planMembresiaSeleccionado
+    ? precioAplicableMembresia(planMembresiaSeleccionado, modalidadMembresiaSeleccionada, sedeDescuentoId)
+    : precioMembresiaPreview) ?? 0);
   const importeDescuentoPreview = !requiereDescuento || !Number.isFinite(descuentoNumerico)
     ? 0
     : descuentoMembresia.tipo === 'PORCENTAJE'
@@ -1912,14 +1920,14 @@ export function DeportistasPage() {
   const columnasFormulario = 'repeat(auto-fit, minmax(190px, 1fr))';
   // Máximo dos columnas (una sola si no caben dos de 200 px).
   const columnasDos = 'repeat(auto-fit, minmax(max(200px, calc((100% - 12px) / 2)), 1fr))';
-  // El descuento es general: en cada sede se aplica sobre su propia tarifa.
-  const sedesHabilitadasIds = (membresiaForm.sedes_habilitadas || []).map(String);
+  // Un descuento general se aplica sobre la tarifa de cada sede; uno de sede, solo en ella.
   const pagaPorSede = !membresiaForm.id && requiereDescuento && !descuentoInvalido && planMembresiaSeleccionado
     ? sedes
       .filter((sede) => !sedesHabilitadasIds.length || sedesHabilitadasIds.includes(String(sede.id_sede)))
       .map((sede) => {
         const precio = Number(precioAplicableMembresia(planMembresiaSeleccionado, modalidadMembresiaSeleccionada, sede.id_sede) || 0);
-        const importe = descuentoMembresia.tipo === 'PORCENTAJE'
+        const aplica = !sedeDescuentoId || String(sede.id_sede) === sedeDescuentoId;
+        const importe = !aplica ? 0 : descuentoMembresia.tipo === 'PORCENTAJE'
           ? Math.round(precio * Math.min(100, Math.max(0, descuentoNumerico)) / 100 * 100) / 100
           : Math.min(precio, Math.max(0, descuentoNumerico));
         return { id: sede.id_sede, nombre: sede.nombre, precio, importe, paga: Math.max(0, precio - importe) };
@@ -2334,6 +2342,20 @@ export function DeportistasPage() {
             label="Aplicar descuento" />
           {requiereDescuento && (
             <Box sx={{ mt: 1.25, display: 'grid', gridTemplateColumns: columnasDos, gap: 1.5 }}>
+              {sedesHabilitadasIds.length > 1 && (
+                <TextField fullWidth size="small" select label="Aplica en" value={sedeDescuentoId}
+                  onChange={(e) => setDescuentoMembresia((a) => ({ ...a, sede_id: e.target.value }))}
+                  helperText={sedeDescuentoId
+                    ? 'En las demás sedes paga la tarifa completa. Puedes agregar otro descuento por sede en Gestionar contrato → Descuentos.'
+                    : 'Se aplica sobre la tarifa de cada sede donde se cobre.'}
+                  slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
+                  sx={{ gridColumn: '1 / -1' }}>
+                  <MenuItem value="">Todas las sedes autorizadas</MenuItem>
+                  {sedes.filter((sede) => sedesHabilitadasIds.includes(String(sede.id_sede))).map((sede) => (
+                    <MenuItem key={sede.id_sede} value={String(sede.id_sede)}>Solo {sede.nombre}</MenuItem>
+                  ))}
+                </TextField>
+              )}
               <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, tipo: e.target.value }))}>
                 <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
@@ -2389,8 +2411,8 @@ export function DeportistasPage() {
             <Box sx={{ mt: 1.5, px: 1.5, py: 1.25, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0',
               display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', rowGap: 0.5, columnGap: 2 }}>
               <Typography variant="body2" color="text.secondary">
-                Precio{sedes.find((sede) => String(sede.id_sede) === String(membresiaForm.sede_id))?.nombre
-                  ? ` en ${sedes.find((sede) => String(sede.id_sede) === String(membresiaForm.sede_id)).nombre}` : ''}
+                Precio{sedes.find((sede) => String(sede.id_sede) === String(sedeResumenId))?.nombre
+                  ? ` en ${sedes.find((sede) => String(sede.id_sede) === String(sedeResumenId)).nombre}` : ''}
               </Typography>
               <Typography variant="body2" sx={{ textAlign: 'right' }}>${precioBaseResumen.toFixed(2)}</Typography>
               {requiereDescuento && <>
@@ -2416,7 +2438,7 @@ export function DeportistasPage() {
           {pagaPorSede.length > 1 && (
             <Box sx={{ mt: 1, px: 1.5, py: 1.15, borderRadius: 1.5, border: '1px dashed #cbd5e1' }}>
               <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.6 }}>
-                El descuento vale en todas las sedes y se aplica sobre la tarifa de cada una:
+                {sedeDescuentoId ? 'El descuento vale solo en una sede; en las demás paga la tarifa completa:' : 'El descuento vale en todas las sedes y se aplica sobre la tarifa de cada una:'}
               </Typography>
               <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 1 }}>
                 {pagaPorSede.map((fila) => (
