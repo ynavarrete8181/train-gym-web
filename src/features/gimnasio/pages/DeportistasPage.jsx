@@ -2050,7 +2050,8 @@ export function DeportistasPage() {
                 .filter((modalidad) => booleanoBackend(modalidad.activo));
               const textoPlan = booleanoBackend(plan.requiere_modalidades)
                 ? `${plan.nombre} · ${modalidadesActivas.length} modalidad(es)`
-                : `${plan.nombre} · $${Number(plan.precio_base || 0).toFixed(2)}`;
+                // Sin precio: depende de la sede y se muestra en el resumen.
+                : plan.nombre;
 
               return <MenuItem key={plan.id} value={plan.id}>{textoPlan}</MenuItem>;
             })}
