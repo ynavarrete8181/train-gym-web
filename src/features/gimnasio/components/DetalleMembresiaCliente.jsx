@@ -33,7 +33,6 @@ const importe = (valor) => {
     : '—';
 };
 
-export const SECCION_NUEVA_MEMBRESIA = [{ id: 'nueva', nombre: 'Datos del contrato', descripcion: 'Nueva asignación', Icono: CardMembershipOutlinedIcon }];
 
 const SECCIONES_MEMBRESIA = [
   { id: 'informacion', nombre: 'Información', descripcion: 'Datos del contrato', Icono: CardMembershipOutlinedIcon },
@@ -43,6 +42,13 @@ const SECCIONES_MEMBRESIA = [
   { id: 'contrato', nombre: 'Acciones del contrato', descripcion: 'Cancelar, reactivar o reabrir', Icono: GavelOutlinedIcon },
   { id: 'descuentos', nombre: 'Descuentos', descripcion: 'Beneficios dentro del contrato', Icono: DiscountOutlinedIcon },
   { id: 'historial', nombre: 'Historial', descripcion: 'Movimientos', Icono: HistoryOutlinedIcon },
+];
+
+// Al crear se ve el mismo menú: solo los datos del contrato están activos; el resto se habilita al guardar.
+export const SECCION_NUEVA_MEMBRESIA = [
+  { id: 'nueva', nombre: 'Datos del contrato', descripcion: 'Nueva asignación', Icono: CardMembershipOutlinedIcon },
+  ...SECCIONES_MEMBRESIA.filter((s) => s.id !== 'informacion')
+    .map((s) => ({ ...s, descripcion: 'Disponible al guardar', bloqueada: true })),
 ];
 
 function DatoContrato({ titulo, valor }) {
@@ -69,9 +75,9 @@ export function MenuSeccionesMembresia({ secciones, seccion, onSeleccionar }) {
       Secciones
     </Typography>
     <Stack spacing={0.5}>
-      {secciones.map(({ id, nombre: titulo, descripcion, Icono }) => {
+      {secciones.map(({ id, nombre: titulo, descripcion, Icono, bloqueada }) => {
         const activo = seccion === id;
-        return <Button key={id} type="button" fullWidth
+        return <Button key={id} type="button" fullWidth disabled={Boolean(bloqueada)}
           onClick={() => onSeleccionar?.(id)}
           aria-current={activo ? 'step' : undefined}
           startIcon={<Icono sx={{ fontSize: 19 }} />}

@@ -1997,9 +1997,8 @@ export function DeportistasPage() {
   const renderMembresia = () => (
     <Stack spacing={2}>
 
-      {vistaMembresia === 'formulario' ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: membresiaForm.id ? 'minmax(0, 1fr)' : '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
-        {/* Con una sola sección, el menú solo acompaña cuando hay espacio; en pantallas medianas el formulario usa todo el ancho. */}
-        {!membresiaForm.id && <Box sx={{ display: { xs: 'none', lg: 'block' } }}><MenuSeccionesMembresia secciones={SECCION_NUEVA_MEMBRESIA} seccion="nueva" /></Box>}
+      {vistaMembresia === 'formulario' ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: membresiaForm.id ? 'minmax(0, 1fr)' : '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+        {!membresiaForm.id && <MenuSeccionesMembresia secciones={SECCION_NUEVA_MEMBRESIA} seccion="nueva" />}
         <Box sx={{ ...formStyles.seccion, minWidth: 0 }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           gap: 2, width: '100%', boxSizing: 'border-box',
