@@ -49,7 +49,7 @@ import { DetalleMembresiaCliente, MenuSeccionesMembresia, SECCION_NUEVA_MEMBRESI
 import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
 import { esPaseDiario, membresiaEditable, presentarEstadoMembresia, textoVigenciaPase } from '../components/estadoMembresia.js';
 import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
-import { DescuentosNuevaMembresia, descuentoDeSede, importeDescuento } from '../components/DescuentosNuevaMembresia.jsx';
+import { DescuentosNuevaMembresia } from '../components/DescuentosNuevaMembresia.jsx';
 import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const nombreGeografico = (valor = '') =>
@@ -2330,33 +2330,10 @@ export function DeportistasPage() {
             descuentos={descuentosNuevos}
             onChange={setDescuentosNuevos}
             sedes={sedesDescuento}
+            todasLasSedes={sedes.map((sede) => ({ id: sede.id_sede, nombre: sede.nombre }))}
             inicio={membresiaForm.fecha_inicio}
             fin={finMembresiaForm}
           />
-          {sedesDescuento.length > 0 && (
-            <Box sx={{ mt: 1.5, px: 1.5, py: 1.25, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <Typography variant="body2" fontWeight={800} sx={{ mb: 0.75 }}>Paga en cada sede</Typography>
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) repeat(3, minmax(0, 1fr))', columnGap: 1.5, rowGap: 0.5 }}>
-                {['Sede', 'Tarifa', 'Descuento', 'Paga'].map((t, i) => <Typography key={t} variant="caption" color="text.secondary"
-                  sx={{ textAlign: i ? 'right' : 'left', fontWeight: 700 }}>{t}</Typography>)}
-                {sedesDescuento.map((sede) => {
-                  const regla = descuentoDeSede(descuentosNuevos, sede.id);
-                  const importe = importeDescuento(sede.precio, regla);
-                  const principal = String(sede.id) === String(membresiaForm.sede_id);
-                  return [
-                    <Typography key={`${sede.id}-n`} variant="body2" sx={{ fontWeight: principal ? 800 : 500 }}>
-                      {sede.nombre}{principal ? ' · principal' : ''}
-                    </Typography>,
-                    <Typography key={`${sede.id}-t`} variant="body2" sx={{ textAlign: 'right' }}>${sede.precio.toFixed(2)}</Typography>,
-                    <Typography key={`${sede.id}-d`} variant="body2" sx={{ textAlign: 'right' }}>{importe ? `− $${importe.toFixed(2)}` : '—'}</Typography>,
-                    <Typography key={`${sede.id}-p`} variant="body2" sx={{ textAlign: 'right', fontWeight: 900, color: 'success.dark' }}>
-                      ${Math.max(0, sede.precio - importe).toFixed(2)}
-                    </Typography>,
-                  ];
-                })}
-              </Box>
-            </Box>
-          )}
         </Box>
         )}
 
