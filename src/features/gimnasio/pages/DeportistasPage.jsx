@@ -1271,13 +1271,17 @@ export function DeportistasPage() {
           showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
           return;
         }
+        if (finDescuentoFueraDeRango) {
+          showNotificacion('Las fechas del descuento deben quedar dentro de la membresía.', 'warning');
+          return;
+        }
         payload.descuento = {
           ...(descuentoMembresia.id ? { id: descuentoMembresia.id } : {}),
           tipo: descuentoMembresia.tipo,
           valor: Number(descuentoMembresia.valor),
           motivo: descuentoMembresia.motivo.trim(),
-          fecha_inicio: descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio,
-          fecha_fin: descuentoMembresia.fecha_fin || null,
+          fecha_inicio: inicioDescuentoForm,
+          fecha_fin: finDescuentoForm || null,
         };
       }
 
@@ -1940,6 +1944,17 @@ export function DeportistasPage() {
     duracion: modalidadMembresiaSeleccionada?.duracion || planMembresiaSeleccionado?.duracion,
   }) : [];
   const cuotaFueraDePeriodo = calendarioContratoPreview.find((cuota) => cuota.vencimiento > cuota.fin);
+  // El descuento nace con las mismas fechas de la membresía; el administrador solo puede acortarlo.
+  const finMembresiaForm = paseEnFormulario
+    ? (membresiaForm.vigencia_fin || '')
+    : contratoNuevoVisible
+      ? (calendarioContratoPreview[calendarioContratoPreview.length - 1]?.fin || membresiaForm.fecha_fin_solicitada || '')
+      : (membresiaForm.fecha_fin || '');
+  const inicioDescuentoForm = descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || '';
+  const finDescuentoForm = descuentoMembresia.fecha_fin || finMembresiaForm;
+  const finDescuentoFueraDeRango = Boolean(finDescuentoForm && (
+    (finMembresiaForm && finDescuentoForm > finMembresiaForm) || (inicioDescuentoForm && finDescuentoForm < inicioDescuentoForm)
+  ));
   // Flujo de asignación progresivo: plan → modalidad → fechas → cuotas → sedes → descuento.
   const modalidadLista = Boolean(membresiaForm.plan_id)
     && (!booleanoBackend(planMembresiaSeleccionado?.requiere_modalidades) || Boolean(modalidadMembresiaSeleccionada));
@@ -2349,13 +2364,25 @@ export function DeportistasPage() {
                 placeholder="Ej. Beca deportiva, familiar"
                 sx={{ gridColumn: '1 / -1' }} />
               <TextField fullWidth size="small" type="date" label="Desde"
-                value={descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || ''}
+                value={inicioDescuentoForm}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_inicio: e.target.value }))}
-                slotProps={{ inputLabel: { shrink: true } }} />
-              <TextField fullWidth size="small" type="date" label="Hasta (opcional)" value={descuentoMembresia.fecha_fin}
+                helperText={inicioDescuentoForm === membresiaForm.fecha_inicio ? 'Igual al inicio de la membresía.' : ''}
+                slotProps={{ inputLabel: { shrink: true },
+                  htmlInput: { min: membresiaForm.fecha_inicio || undefined, max: finMembresiaForm || undefined } }} />
+              <TextField fullWidth size="small" type="date" label="Hasta" value={finDescuentoForm}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
-                helperText={descuentoMembresia.fecha_fin ? '' : 'Sin fecha: continúa en cada renovación hasta que lo finalices.'}
-                slotProps={{ inputLabel: { shrink: true } }} />
+                error={false}
+                sx={finDescuentoFueraDeRango ? {
+                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d89b25 !important', borderWidth: 1.5 },
+                  '& .MuiFormHelperText-root': { color: '#996515' },
+                } : undefined}
+                helperText={finDescuentoFueraDeRango
+                  ? 'Debe quedar entre el inicio del descuento y el fin de la membresía.'
+                  : finMembresiaForm && finDescuentoForm === finMembresiaForm
+                    ? 'Igual al fin de la membresía. Puedes acortarlo.'
+                    : finMembresiaForm ? 'Termina antes que la membresía.' : 'Sin fecha: continúa en cada renovación hasta que lo finalices.'}
+                slotProps={{ inputLabel: { shrink: true },
+                  htmlInput: { min: inicioDescuentoForm || undefined, max: finMembresiaForm || undefined } }} />
             </Box>
           )}
           {!membresiaForm.id && precioMembresiaPreview !== null && (
