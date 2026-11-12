@@ -1901,6 +1901,13 @@ export function DeportistasPage() {
     || (descuentoMembresia.tipo === 'PORCENTAJE' && descuentoNumerico > 100)
     || (descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null && descuentoNumerico > precioBaseResumen)
   );
+  // Un campo vacío todavía no es un error: solo se avisa cuando ya se escribió algo inválido.
+  const descuentoVacio = requiereDescuento && String(descuentoMembresia.valor ?? '').trim() === '';
+  const mostrarErrorDescuento = descuentoInvalido && !descuentoVacio;
+  // Las columnas dependen del espacio real del formulario, no del ancho de la ventana.
+  const columnasFormulario = 'repeat(auto-fit, minmax(190px, 1fr))';
+  // Máximo dos columnas (una sola si no caben dos de 200 px).
+  const columnasDos = 'repeat(auto-fit, minmax(max(200px, calc((100% - 12px) / 2)), 1fr))';
   // El descuento es general: en cada sede se aplica sobre su propia tarifa.
   const sedesHabilitadasIds = (membresiaForm.sedes_habilitadas || []).map(String);
   const pagaPorSede = !membresiaForm.id && requiereDescuento && !descuentoInvalido && planMembresiaSeleccionado
@@ -1975,8 +1982,9 @@ export function DeportistasPage() {
   const renderMembresia = () => (
     <Stack spacing={2}>
 
-      {vistaMembresia === 'formulario' ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: membresiaForm.id ? 'minmax(0, 1fr)' : '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
-        {!membresiaForm.id && <MenuSeccionesMembresia secciones={SECCION_NUEVA_MEMBRESIA} seccion="nueva" />}
+      {vistaMembresia === 'formulario' ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: membresiaForm.id ? 'minmax(0, 1fr)' : '230px minmax(0, 1fr)' }, gap: 2, alignItems: 'start' }}>
+        {/* Con una sola sección, el menú solo acompaña cuando hay espacio; en pantallas medianas el formulario usa todo el ancho. */}
+        {!membresiaForm.id && <Box sx={{ display: { xs: 'none', lg: 'block' } }}><MenuSeccionesMembresia secciones={SECCION_NUEVA_MEMBRESIA} seccion="nueva" /></Box>}
         <Box sx={{ ...formStyles.seccion, minWidth: 0 }}>
         <Box sx={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
           gap: 2, width: '100%', boxSizing: 'border-box',
@@ -2078,7 +2086,7 @@ export function DeportistasPage() {
 
         </Box>
         {modalidadLista && (
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mt: 1.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: columnasFormulario, gap: 1.5, mt: 1.5 }}>
           <TextField
             label={paseEnFormulario && membresiaForm.id ? 'Fecha de uso' : 'Fecha inicio'}
             name="fecha_inicio" type="date" value={membresiaForm.fecha_inicio || ''}
@@ -2290,7 +2298,7 @@ export function DeportistasPage() {
             </Typography>
           )}
           {permiteCobroProgramado && !membresiaForm.cantidad_periodos_contratados && (
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: columnasFormulario, gap: 1.5, mb: 1.5 }}>
               <TextField fullWidth size="small" label="Día de pago" name="dia_pago" type="number"
                 value={membresiaForm.dia_pago ?? ''} onChange={handleMembresiaChange}
                 slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: 1, max: 31 } }} />
@@ -2309,48 +2317,72 @@ export function DeportistasPage() {
               onChange={(e) => setRequiereDescuento(e.target.checked)} />}
             label="Aplicar descuento" />
           {requiereDescuento && (
-            <Box sx={{ mt: 1, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 1.5 }}>
+            <Box sx={{ mt: 1.25, display: 'grid', gridTemplateColumns: columnasDos, gap: 1.5 }}>
               <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, tipo: e.target.value }))}>
                 <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
                 <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
               </TextField>
-              <TextField fullWidth size="small" type="number" label="Descuento" value={descuentoMembresia.valor}
+              <TextField fullWidth size="small" type="number"
+                label={descuentoMembresia.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Valor del descuento'}
+                value={descuentoMembresia.valor}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
                 error={false}
-                sx={descuentoInvalido ? {
+                sx={mostrarErrorDescuento ? {
                   '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d89b25 !important', borderWidth: 1.5 },
                   '& .MuiFormHelperText-root': { color: '#996515' },
                 } : undefined}
-                helperText={descuentoInvalido
-                  ? descuentoMembresia.tipo === 'FIJO'
-                    ? `Máximo permitido: ${precioBaseResumen.toFixed(2)}`
-                    : 'Ingresa un porcentaje entre 0 y 100.'
-                  : descuentoMembresia.tipo === 'FIJO' && precioMembresiaPreview !== null
-                    ? `Hasta ${precioBaseResumen.toFixed(2)}`
+                helperText={descuentoMembresia.tipo === 'PORCENTAJE'
+                  ? (mostrarErrorDescuento ? 'Debe estar entre 1 y 100 %.' : 'Entre 1 y 100 %.')
+                  : precioMembresiaPreview !== null
+                    ? (mostrarErrorDescuento ? `No puede superar $${precioBaseResumen.toFixed(2)}.` : `Hasta $${precioBaseResumen.toFixed(2)}.`)
                     : ''}
-                slotProps={{ htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : (precioMembresiaPreview ?? undefined), step: 0.01 } }} />
+                slotProps={{
+                  input: descuentoMembresia.tipo === 'PORCENTAJE'
+                    ? { endAdornment: <InputAdornment position="end">%</InputAdornment> }
+                    : { startAdornment: <InputAdornment position="start">$</InputAdornment> },
+                  htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : (precioMembresiaPreview ?? undefined), step: 0.01 },
+                }} />
               <TextField fullWidth size="small" label="Motivo / autorización" value={descuentoMembresia.motivo}
-                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))} />
+                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))}
+                placeholder="Ej. Beca deportiva, familiar"
+                sx={{ gridColumn: '1 / -1' }} />
               <TextField fullWidth size="small" type="date" label="Desde"
                 value={descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || ''}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_inicio: e.target.value }))}
                 slotProps={{ inputLabel: { shrink: true } }} />
               <TextField fullWidth size="small" type="date" label="Hasta (opcional)" value={descuentoMembresia.fecha_fin}
                 onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
+                helperText={descuentoMembresia.fecha_fin ? '' : 'Sin fecha: continúa en cada renovación hasta que lo finalices.'}
                 slotProps={{ inputLabel: { shrink: true } }} />
             </Box>
           )}
           {!membresiaForm.id && precioMembresiaPreview !== null && (
-            <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 2,
-              px: 1.5, py: 1.15, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <Typography variant="body2">Precio: <strong>${precioBaseResumen.toFixed(2)}</strong></Typography>
-              <Typography variant="body2">Descuento: <strong>${importeDescuentoPreview.toFixed(2)}</strong></Typography>
-              <Typography variant="body2" sx={{ color: descuentoInvalido ? '#996515' : 'success.dark', fontWeight: 800 }}>
-                {descuentoInvalido
-                  ? 'Corrige el descuento para calcular el total'
-                  : `Total a pagar: ${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}`}
+            <Box sx={{ mt: 1.5, px: 1.5, py: 1.25, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0',
+              display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', rowGap: 0.5, columnGap: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Precio{sedes.find((sede) => String(sede.id_sede) === String(membresiaForm.sede_id))?.nombre
+                  ? ` en ${sedes.find((sede) => String(sede.id_sede) === String(membresiaForm.sede_id)).nombre}` : ''}
               </Typography>
+              <Typography variant="body2" sx={{ textAlign: 'right' }}>${precioBaseResumen.toFixed(2)}</Typography>
+              {requiereDescuento && <>
+                <Typography variant="body2" color="text.secondary">Descuento</Typography>
+                <Typography variant="body2" sx={{ textAlign: 'right' }}>
+                  {descuentoInvalido ? '—' : `− $${importeDescuentoPreview.toFixed(2)}`}
+                </Typography>
+              </>}
+              <Typography variant="body2" sx={{ fontWeight: 800, pt: 0.5, borderTop: '1px solid #e2e8f0' }}>Total a pagar</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 900, textAlign: 'right', pt: 0.5, borderTop: '1px solid #e2e8f0',
+                color: mostrarErrorDescuento ? '#996515' : 'success.dark' }}>
+                {descuentoVacio
+                  ? `$${precioBaseResumen.toFixed(2)}`
+                  : mostrarErrorDescuento ? 'Revisa el descuento' : `$${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}`}
+              </Typography>
+              {descuentoVacio && (
+                <Typography variant="caption" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>
+                  Ingresa el descuento para ver el total con descuento.
+                </Typography>
+              )}
             </Box>
           )}
           {pagaPorSede.length > 1 && (

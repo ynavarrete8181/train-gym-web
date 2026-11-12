@@ -7,8 +7,9 @@ export function PageHeader({ titulo, descripcion, acciones, icono, compact = fal
       className="page-header-container"
       elevation={0}
       sx={(theme) => ({
-        position: 'sticky',
-        top: { xs: 72, sm: 80 },
+        // Fijo solo en pantallas anchas: en móviles y tablets taparía buena parte del contenido.
+        position: { xs: 'relative', md: 'sticky' },
+        top: { xs: 0, md: 80 },
         zIndex: theme.zIndex.appBar - 1,
         display: 'flex',
         alignItems: 'center',
