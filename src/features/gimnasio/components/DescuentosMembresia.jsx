@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, IconButton, MenuItem, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
-import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import StopCircleOutlinedIcon from '@mui/icons-material/StopCircleOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
-import { BotonGuardar } from '../../../components/common/BotonGuardar.jsx';
+import { BotonAnadir } from '../../../components/common/BotonAnadir.jsx';
 import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
 import { StatusChip } from '../../../components/common/StatusChip.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
@@ -14,6 +12,7 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
+import { DialogDescuento } from './DialogDescuento.jsx';
 
 const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : 'Sin fin');
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -66,37 +65,33 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   const finContrato = String(contrato.fin || '').slice(0, 10);
   const fueraDelContrato = filas.filter((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && finContrato
     && (!d.fecha_fin || String(d.fecha_fin).slice(0, 10) > finContrato));
-  // Sedes autorizadas: un descuento puede valer en todas o solo en una de ellas.
-  const sedesMembresia = (membresia.sedes_habilitadas || []).filter((s) => s.activo !== false);
-  const tarifaSede = (datos.tarifas || []).find((t) => form?.sede_id && String(t.sede_id) === String(form.sede_id));
-  const base = Number(tarifaSede?.precio ?? membresia.precio_aplicado ?? 0);
-  const ejemplo = form && Number(form.valor) > 0
-    ? Math.min(base, form.tipo === 'PORCENTAJE' ? base * Number(form.valor) / 100 : Number(form.valor))
-    : 0;
+  // Sedes autorizadas con su tarifa: el modal solo ofrece estas.
+  const autorizadas = (membresia.sedes_habilitadas || []).filter((s) => s.activo !== false).map((s) => String(s.sede_id));
+  const sedesModal = (datos.tarifas || []).filter((t) => !autorizadas.length || autorizadas.includes(String(t.sede_id)))
+    .map((t) => ({ id: t.sede_id, nombre: t.sede_nombre, precio: Number(t.precio) }));
+  const inicioContrato = String(contrato.inicio || '').slice(0, 10);
+  const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guayaquil' }).format(new Date());
 
-  const nuevo = () => {
-    setExito(''); setError('');
-    setForm({ tipo: 'FIJO', valor: '', sede_id: '', fecha_inicio: String(contrato.inicio || '').slice(0, 10), fecha_fin: String(contrato.fin || '').slice(0, 10), motivo: '' });
-  };
+  const nuevo = () => { setExito(''); setError(''); setForm({ nuevo: true }); };
   const editar = (d) => {
     setExito(''); setError('');
     // Uno que ya empezó no se reescribe: el cambio rige desde una fecha y queda como registro nuevo.
     const inicio = String(d.fecha_inicio).slice(0, 10);
-    const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guayaquil' }).format(new Date());
     const siguiente = (f) => { const x = new Date(`${f}T12:00:00`); x.setDate(x.getDate() + 1); return x.toISOString().slice(0, 10); };
     const yaEmpezo = inicio <= hoy;
-    setForm({ id: d.id, yaEmpezo, inicioOriginal: inicio, tipo: d.tipo, valor: Number(d.valor), sede_id: d.sede_id ? String(d.sede_id) : '',
-      fecha_inicio: yaEmpezo ? (hoy > inicio ? hoy : siguiente(inicio)) : inicio, fecha_fin: String(d.fecha_fin || '').slice(0, 10), motivo: '' });
+    setForm({ id: d.id, inicioOriginal: yaEmpezo ? inicio : null, inicial: {
+      sede_id: d.sede_id, tipo: d.tipo, valor: Number(d.valor), motivo: '',
+      fecha_inicio: yaEmpezo ? (hoy > inicio ? hoy : siguiente(inicio)) : inicio,
+      fecha_fin: String(d.fecha_fin || '').slice(0, 10),
+    } });
   };
-  const cambiar = (campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }));
 
-  const guardar = async () => {
+  const guardar = async (payload) => {
     setGuardando(true); setError('');
-    const payload = { tipo: form.tipo, valor: Number(form.valor), sede_id: form.sede_id ? Number(form.sede_id) : null, fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null, motivo: form.motivo.trim() };
     try {
       if (form.id) await gimnasioServicio.actualizarDescuentoMembresia(membresia.id, form.id, payload);
       else await gimnasioServicio.registrarDescuentoMembresia(membresia.id, payload);
-      setExito(form.yaEmpezo ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento actualizado.' : 'Descuento registrado.');
+      setExito(form.inicioOriginal ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento actualizado.' : 'Descuento registrado.');
       setForm(null);
       await cargar();
       await onActualizado?.();
@@ -121,65 +116,36 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
     }
   };
 
-  const valido = form && Number(form.valor) > 0 && form.fecha_inicio && (form.fecha_fin || !contrato.fin) && form.motivo.trim().length >= 8;
-
   return <Stack spacing={2}>
     <Stack direction="row" gap={1.5} sx={{ flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
       <Typography variant="body2" color="text.secondary" sx={{ flex: '1 1 260px' }}>
         Dentro del contrato ({fecha(contrato.inicio)} al {fecha(contrato.fin)}), para todas las sedes o solo una.
         Continúa solo al renovar; para que no siga, finalízalo.
       </Typography>
-      {!form && <Button startIcon={<AddOutlinedIcon />} onClick={nuevo}>Agregar descuento</Button>}
+      <BotonAnadir onClick={nuevo} />
     </Stack>
-    {error && <Alert severity="error">{error}</Alert>}
+    {error && !form && <Alert severity="error">{error}</Alert>}
     {exito && <Alert severity="success">{exito}</Alert>}
     {fueraDelContrato.length > 0 && <Alert severity="warning">
       {fueraDelContrato.length === 1 ? 'Un descuento termina' : `${fueraDelContrato.length} descuentos terminan`} después del contrato ({fecha(contrato.fin)}).
       Se registró antes de esta regla: edítalo para que termine a más tardar ese día.
     </Alert>}
 
-    {form && <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-      <Typography variant="subtitle2" fontWeight={800} sx={{ mb: form.yaEmpezo ? 0.5 : 1.5 }}>{form.id ? 'Editar descuento' : 'Nuevo descuento'}</Typography>
-      {form.yaEmpezo && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-        Este descuento ya se está aplicando: el cambio se guarda como un registro nuevo y el actual queda en el historial.
-      </Typography>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 1.5 }}>
-        <TextField select size="small" label="Aplica en" value={form.sede_id} onChange={(e) => cambiar('sede_id', e.target.value)}
-          slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
-          <MenuItem value="">Todas las sedes</MenuItem>
-          {sedesMembresia.map((s) => <MenuItem key={s.sede_id} value={String(s.sede_id)}>Solo {s.sede_nombre}</MenuItem>)}
-        </TextField>
-        <TextField select size="small" label="Tipo" value={form.tipo} onChange={(e) => cambiar('tipo', e.target.value)}>
-          <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
-          <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
-        </TextField>
-        <TextField size="small" type="number" required label={form.tipo === 'FIJO' ? 'Descuento ($)' : 'Descuento (%)'} value={form.valor}
-          onChange={(e) => cambiar('valor', e.target.value)} slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
-        <TextField size="small" type="date" required label={form.yaEmpezo ? 'El cambio rige desde' : 'Fecha inicio'} value={form.fecha_inicio}
-          onChange={(e) => cambiar('fecha_inicio', e.target.value)}
-          helperText={form.yaEmpezo ? `Hasta el día anterior sigue el descuento actual (desde ${fecha(form.inicioOriginal)}).` : ''}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: (form.yaEmpezo ? form.inicioOriginal : String(contrato.inicio || '').slice(0, 10)) || undefined, max: String(contrato.fin || '').slice(0, 10) || undefined } }} />
-        <TextField size="small" type="date" required={Boolean(contrato.fin)} label="Fecha fin" value={form.fecha_fin}
-          onChange={(e) => cambiar('fecha_fin', e.target.value)}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.fecha_inicio || undefined, max: String(contrato.fin || '').slice(0, 10) || undefined } }} />
-      </Box>
-      <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 1.5 }} value={form.motivo}
-        helperText="Escribe al menos 8 caracteres." onChange={(e) => cambiar('motivo', e.target.value)} />
-      {ejemplo > 0 && <Alert severity="info" sx={{ mt: 1.5 }}>
-        {tarifaSede ? `En ${tarifaSede.sede_nombre}` : 'Con el precio del contrato'}: {dinero(base)} − {dinero(ejemplo)} = {dinero(base - ejemplo)}.
-        {tarifaSede ? ' En las demás sedes no cambia.' : ' En Ventas se calcula con la tarifa de la sede donde se cobra.'}
-      </Alert>}
-      {Number(form.valor) > 0 && (datos.tarifas || []).length > 0 && <Box sx={{ mt: 1.5 }}>
-        <PagaPorSede filas={(datos.tarifas || []).filter((t) => !form.sede_id || String(t.sede_id) === String(form.sede_id)).map((t) => {
-          const importe = Math.min(t.precio, form.tipo === 'PORCENTAJE' ? Math.round(t.precio * Number(form.valor)) / 100 : Number(form.valor));
-          return { ...t, descuento: importe, paga: t.precio - importe };
-        })} />
-      </Box>}
-      <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 1.5 }}>
-        <BotonCancelar disabled={guardando} onClick={() => setForm(null)} />
-        <BotonGuardar texto={form.id ? 'Guardar descuento' : 'Registrar descuento'} guardando={guardando} disabled={!valido} onClick={guardar} />
-      </Box>
-    </Box>}
+    <DialogDescuento
+      abierto={Boolean(form)}
+      inicial={form?.inicial || null}
+      sedes={sedesModal}
+      inicio={form?.inicioOriginal ? null : inicioContrato}
+      fin={finContrato}
+      inicioOriginal={form?.inicioOriginal || null}
+      otros={filas.filter((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && d.id !== form?.id)
+        .map((d) => ({ sede_id: d.sede_id, fecha_inicio: String(d.fecha_inicio).slice(0, 10), fecha_fin: d.fecha_fin ? String(d.fecha_fin).slice(0, 10) : null }))}
+      guardando={guardando}
+      error={form ? error : ''}
+      textoGuardar={form?.id ? 'Guardar cambios' : 'Registrar descuento'}
+      onCerrar={() => { setForm(null); setError(''); }}
+      onGuardar={guardar}
+    />
 
     <TablaGestion {...tabla.propsTabla}>
       <TableHead><TableRow>
