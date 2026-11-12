@@ -400,6 +400,8 @@ export function DeportistasPage() {
   const [requiereDescuento, setRequiereDescuento] = useState(false);
   // Descuentos de una membresía nueva: se agregan de uno en uno y se guardan con la membresía.
   const [descuentosNuevos, setDescuentosNuevos] = useState([]);
+  const [conDescuentos, setConDescuentos] = useState(false);
+  const [verSedesConDescuento, setVerSedesConDescuento] = useState(false);
   const [buscarMembresia, setBuscarMembresia] = useState('');
   const [paginaMembresia, setPaginaMembresia] = useState(1);
   const [porPaginaMembresia, setPorPaginaMembresia] = useState(5);
@@ -796,7 +798,7 @@ export function DeportistasPage() {
     setMembresiaForm(getInitialMembresia());
     setAsignacionForm(getInitialAsignacion());
     setRequiereDescuento(false);
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]); setConDescuentos(false);
     setTurnosEntrenador([]);
 
     if (!formData.id) return;
@@ -825,7 +827,7 @@ export function DeportistasPage() {
     setVistaMembresia('listado');
     setVistaAsignacion('listado');
     setRequiereDescuento(false);
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]); setConDescuentos(false);
     setAsignacionForm(getInitialAsignacion());
     setMembresiaForm(getInitialMembresia());
     setProgresoForm(getInitialProgreso());
@@ -1108,7 +1110,7 @@ export function DeportistasPage() {
   const handleNuevaMembresia = () => {
     setMembresiaDetalle(null);
     setMembresiaForm(getInitialMembresia());
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]);
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]); setConDescuentos(false);
     setRequiereDescuento(false);
     setVistaMembresia('formulario');
   };
@@ -1260,7 +1262,7 @@ export function DeportistasPage() {
         delete payload.cantidad_periodos_contratados;
         delete payload.fecha_primer_pago;
       }
-      if (!membresiaForm.id && descuentosNuevos.length) {
+      if (!membresiaForm.id && conDescuentos && descuentosNuevos.length) {
         const fueraDeRango = descuentosNuevos.some((d) =>
           (membresiaForm.fecha_inicio && d.fecha_inicio < membresiaForm.fecha_inicio)
           || (finMembresiaForm && (!d.fecha_fin || d.fecha_fin > finMembresiaForm))
@@ -2248,9 +2250,23 @@ export function DeportistasPage() {
             cuotas={membresiaForm.cuotas}
           />
         ) : null}
-        {mostrarSedes && (
+        {mostrarSedes && conDescuentos && !verSedesConDescuento && (
+          // Con descuentos, las sedes ya elegidas quedan en una línea para dar espacio a la tabla.
+          <Box sx={{ mt: 1.5, px: 1.5, py: 1, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc',
+            display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2" fontWeight={800}>Sedes autorizadas:</Typography>
+            <Typography variant="body2" sx={{ flex: '1 1 200px', minWidth: 0 }}>
+              {sedesDescuento.map((sede) => `${sede.nombre} $${sede.precio.toFixed(2)}`).join(' · ')}
+            </Typography>
+            <Button size="small" onClick={() => setVerSedesConDescuento(true)} sx={{ textTransform: 'none', fontWeight: 800 }}>Cambiar</Button>
+          </Box>
+        )}
+        {mostrarSedes && (!conDescuentos || verSedesConDescuento) && (
         <Box sx={{ mt: 1.5, p: 1.5, border: '1px solid #dbe5f0', borderRadius: 1.5, bgcolor: '#fafbfc' }}>
-          <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 0.5 }}>Sedes autorizadas *</Typography>
+          <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+            <Typography variant="subtitle2" fontWeight={800}>Sedes autorizadas *</Typography>
+            {conDescuentos && <Button size="small" onClick={() => setVerSedesConDescuento(false)} sx={{ textTransform: 'none', fontWeight: 800 }}>Listo</Button>}
+          </Stack>
  
           <Stack direction="row" spacing={1.2} useFlexGap sx={{ flexWrap: 'wrap' }}>
             {sedes.map((sede) => {
@@ -2291,7 +2307,13 @@ export function DeportistasPage() {
                     '&:focus-visible': { outline: '2px solid #14243c', outlineOffset: 2 },
                   }}
                 >
+                  {/* Precio normal de la sede: sin descuento es lo que paga. */}
                   {sede.nombre}
+                  {planMembresiaSeleccionado && (
+                    <Box component="span" sx={{ ml: 0.75, fontWeight: 700, opacity: 0.8 }}>
+                      · ${Number(precioAplicableMembresia(planMembresiaSeleccionado, modalidadMembresiaSeleccionada, sede.id_sede) || 0).toFixed(2)}
+                    </Box>
+                  )}
                 </Button>
               );
             })}
@@ -2326,14 +2348,25 @@ export function DeportistasPage() {
               </Box>
             </Box>
           )}
-          <DescuentosNuevaMembresia
-            descuentos={descuentosNuevos}
-            onChange={setDescuentosNuevos}
-            sedes={sedesDescuento}
-            todasLasSedes={sedes.map((sede) => ({ id: sede.id_sede, nombre: sede.nombre }))}
-            inicio={membresiaForm.fecha_inicio}
-            fin={finMembresiaForm}
-          />
+          <FormControlLabel sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
+            control={<Switch size="small" checked={conDescuentos}
+              onChange={(e) => { setConDescuentos(e.target.checked); setVerSedesConDescuento(false); if (!e.target.checked) setDescuentosNuevos([]); }} />}
+            label="Aplicar descuento" />
+          {!conDescuentos && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+              Sin descuento: paga el precio normal de cada sede.
+            </Typography>
+          )}
+          {conDescuentos && <Box sx={{ mt: 1.25 }}>
+            <DescuentosNuevaMembresia
+              descuentos={descuentosNuevos}
+              onChange={setDescuentosNuevos}
+              sedes={sedesDescuento}
+              todasLasSedes={sedes.map((sede) => ({ id: sede.id_sede, nombre: sede.nombre }))}
+              inicio={membresiaForm.fecha_inicio}
+              fin={finMembresiaForm}
+            />
+          </Box>}
         </Box>
         )}
 
