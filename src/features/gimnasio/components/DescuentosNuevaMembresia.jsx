@@ -35,9 +35,14 @@ const seCruzan = (a, b) => (a.fecha_inicio <= (b.fecha_fin || '9999-12-31')) && 
  * Descuentos de una membresía nueva: se agregan de uno en uno en un modal y se
  * listan en una tabla. Puede haber uno general y uno por sede autorizada.
  */
-export function DescuentosNuevaMembresia({ descuentos, onChange, sedes, inicio, fin }) {
+export function DescuentosNuevaMembresia({ descuentos, onChange, sedes, todasLasSedes = [], inicio, fin }) {
   const [form, setForm] = useState(null);
-  const nombreSede = (id) => (id ? sedes.find((s) => String(s.id) === String(id))?.nombre || 'Sede' : 'Todas las sedes');
+  const nombreSede = (id) => (id
+    ? (sedes.find((s) => String(s.id) === String(id)) || todasLasSedes.find((s) => String(s.id) === String(id)))?.nombre || 'Sede'
+    : 'Todas las sedes');
+  // Un descuento de una sede que luego se quitó de las autorizadas no se puede guardar.
+  const noAutorizada = (d) => Boolean(d.sede_id) && !sedes.some((s) => String(s.id) === String(d.sede_id));
+  const hayNoAutorizadas = descuentos.some(noAutorizada);
   const columnas = useMemo(() => ({
     sede: (d) => nombreSede(d.sede_id),
     descuento: (d) => textoValor(d),
@@ -90,6 +95,9 @@ export function DescuentosNuevaMembresia({ descuentos, onChange, sedes, inicio, 
       <BotonAnadir onClick={abrirNuevo} />
     </Box>
 
+    {hayNoAutorizadas && <Alert severity="warning" sx={{ mb: 1 }}>
+      Hay descuentos de sedes que ya no están autorizadas: edítalos o quítalos antes de guardar.
+    </Alert>}
     <TablaGestion {...tabla.propsTabla}>
       <TableHead><TableRow>
         <FilterHeaderCell {...tabla.filtro('sede')}>Aplica en</FilterHeaderCell>
@@ -100,7 +108,9 @@ export function DescuentosNuevaMembresia({ descuentos, onChange, sedes, inicio, 
       </TableRow></TableHead>
       <TableBody>
         {tabla.visibles.map((d) => <TableRow key={d.indice} hover>
-          <TableCell sx={{ fontWeight: 700 }}><Tooltip title={d.motivo}><span>{nombreSede(d.sede_id)}</span></Tooltip></TableCell>
+          <TableCell sx={{ fontWeight: 700, color: noAutorizada(d) ? '#996515' : undefined }}>
+            <Tooltip title={d.motivo}><span>{nombreSede(d.sede_id)}{noAutorizada(d) ? ' · no autorizada' : ''}</span></Tooltip>
+          </TableCell>
           <TableCell>{textoValor(d)}</TableCell>
           <TableCell>{fecha(d.fecha_inicio)}</TableCell>
           <TableCell>{fecha(d.fecha_fin)}</TableCell>
