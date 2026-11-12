@@ -80,7 +80,13 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   };
   const editar = (d) => {
     setExito(''); setError('');
-    setForm({ id: d.id, tipo: d.tipo, valor: Number(d.valor), sede_id: d.sede_id ? String(d.sede_id) : '', fecha_inicio: String(d.fecha_inicio).slice(0, 10), fecha_fin: String(d.fecha_fin || '').slice(0, 10), motivo: '' });
+    // Uno que ya empezó no se reescribe: el cambio rige desde una fecha y queda como registro nuevo.
+    const inicio = String(d.fecha_inicio).slice(0, 10);
+    const hoy = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guayaquil' }).format(new Date());
+    const siguiente = (f) => { const x = new Date(`${f}T12:00:00`); x.setDate(x.getDate() + 1); return x.toISOString().slice(0, 10); };
+    const yaEmpezo = inicio <= hoy;
+    setForm({ id: d.id, yaEmpezo, inicioOriginal: inicio, tipo: d.tipo, valor: Number(d.valor), sede_id: d.sede_id ? String(d.sede_id) : '',
+      fecha_inicio: yaEmpezo ? (hoy > inicio ? hoy : siguiente(inicio)) : inicio, fecha_fin: String(d.fecha_fin || '').slice(0, 10), motivo: '' });
   };
   const cambiar = (campo, valor) => setForm((actual) => ({ ...actual, [campo]: valor }));
 
@@ -90,7 +96,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
     try {
       if (form.id) await gimnasioServicio.actualizarDescuentoMembresia(membresia.id, form.id, payload);
       else await gimnasioServicio.registrarDescuentoMembresia(membresia.id, payload);
-      setExito(form.id ? 'Descuento actualizado.' : 'Descuento registrado.');
+      setExito(form.yaEmpezo ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento actualizado.' : 'Descuento registrado.');
       setForm(null);
       await cargar();
       await onActualizado?.();
@@ -133,7 +139,10 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
     </Alert>}
 
     {form && <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-      <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>{form.id ? 'Editar descuento' : 'Nuevo descuento'}</Typography>
+      <Typography variant="subtitle2" fontWeight={800} sx={{ mb: form.yaEmpezo ? 0.5 : 1.5 }}>{form.id ? 'Editar descuento' : 'Nuevo descuento'}</Typography>
+      {form.yaEmpezo && <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
+        Este descuento ya se está aplicando: el cambio se guarda como un registro nuevo y el actual queda en el historial.
+      </Typography>}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 1.5 }}>
         <TextField select size="small" label="Aplica en" value={form.sede_id} onChange={(e) => cambiar('sede_id', e.target.value)}
           slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}>
@@ -146,9 +155,10 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
         </TextField>
         <TextField size="small" type="number" required label={form.tipo === 'FIJO' ? 'Descuento ($)' : 'Descuento (%)'} value={form.valor}
           onChange={(e) => cambiar('valor', e.target.value)} slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
-        <TextField size="small" type="date" required label="Fecha inicio" value={form.fecha_inicio}
+        <TextField size="small" type="date" required label={form.yaEmpezo ? 'El cambio rige desde' : 'Fecha inicio'} value={form.fecha_inicio}
           onChange={(e) => cambiar('fecha_inicio', e.target.value)}
-          slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: String(contrato.inicio || '').slice(0, 10) || undefined, max: String(contrato.fin || '').slice(0, 10) || undefined } }} />
+          helperText={form.yaEmpezo ? `Hasta el día anterior sigue el descuento actual (desde ${fecha(form.inicioOriginal)}).` : ''}
+          slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: (form.yaEmpezo ? form.inicioOriginal : String(contrato.inicio || '').slice(0, 10)) || undefined, max: String(contrato.fin || '').slice(0, 10) || undefined } }} />
         <TextField size="small" type="date" required={Boolean(contrato.fin)} label="Fecha fin" value={form.fecha_fin}
           onChange={(e) => cambiar('fecha_fin', e.target.value)}
           slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.fecha_inicio || undefined, max: String(contrato.fin || '').slice(0, 10) || undefined } }} />

@@ -49,6 +49,7 @@ import { DetalleMembresiaCliente, MenuSeccionesMembresia, SECCION_NUEVA_MEMBRESI
 import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
 import { esPaseDiario, membresiaEditable, presentarEstadoMembresia, textoVigenciaPase } from '../components/estadoMembresia.js';
 import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { DescuentosNuevaMembresia, descuentoDeSede, importeDescuento } from '../components/DescuentosNuevaMembresia.jsx';
 import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const nombreGeografico = (valor = '') =>
@@ -397,6 +398,8 @@ export function DeportistasPage() {
   const [cargandoResumen, setCargandoResumen] = useState(false);
   const [descuentoMembresia, setDescuentoMembresia] = useState({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '' });
   const [requiereDescuento, setRequiereDescuento] = useState(false);
+  // Descuentos de una membresía nueva: se agregan de uno en uno y se guardan con la membresía.
+  const [descuentosNuevos, setDescuentosNuevos] = useState([]);
   const [buscarMembresia, setBuscarMembresia] = useState('');
   const [paginaMembresia, setPaginaMembresia] = useState(1);
   const [porPaginaMembresia, setPorPaginaMembresia] = useState(5);
@@ -793,7 +796,7 @@ export function DeportistasPage() {
     setMembresiaForm(getInitialMembresia());
     setAsignacionForm(getInitialAsignacion());
     setRequiereDescuento(false);
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' });
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]);
     setTurnosEntrenador([]);
 
     if (!formData.id) return;
@@ -822,7 +825,7 @@ export function DeportistasPage() {
     setVistaMembresia('listado');
     setVistaAsignacion('listado');
     setRequiereDescuento(false);
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' });
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]);
     setAsignacionForm(getInitialAsignacion());
     setMembresiaForm(getInitialMembresia());
     setProgresoForm(getInitialProgreso());
@@ -1105,7 +1108,7 @@ export function DeportistasPage() {
   const handleNuevaMembresia = () => {
     setMembresiaDetalle(null);
     setMembresiaForm(getInitialMembresia());
-    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' });
+    setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]);
     setRequiereDescuento(false);
     setVistaMembresia('formulario');
   };
@@ -1257,33 +1260,16 @@ export function DeportistasPage() {
         delete payload.cantidad_periodos_contratados;
         delete payload.fecha_primer_pago;
       }
-      if (!membresiaForm.id && requiereDescuento) {
-        if (descuentoInvalido) {
-          showNotificacion(
-            descuentoMembresia.tipo === 'FIJO'
-              ? `El descuento no puede superar el precio del plan (${precioBaseResumen.toFixed(2)}).`
-              : 'El porcentaje de descuento debe estar entre 0 y 100 %.',
-            'warning'
-          );
+      if (!membresiaForm.id && descuentosNuevos.length) {
+        const fueraDeRango = descuentosNuevos.some((d) =>
+          (membresiaForm.fecha_inicio && d.fecha_inicio < membresiaForm.fecha_inicio)
+          || (finMembresiaForm && (!d.fecha_fin || d.fecha_fin > finMembresiaForm))
+          || (d.sede_id && !sedesHabilitadasIds.includes(String(d.sede_id))));
+        if (fueraDeRango) {
+          showNotificacion('Hay descuentos fuera de las fechas o sedes de la membresía: edítalos antes de guardar.', 'warning');
           return;
         }
-        if (!descuentoMembresia.valor || Number(descuentoMembresia.valor) <= 0 || !descuentoMembresia.motivo.trim()) {
-          showNotificacion('Completa el valor y el motivo del descuento.', 'warning');
-          return;
-        }
-        if (finDescuentoFueraDeRango) {
-          showNotificacion('Las fechas del descuento deben quedar dentro de la membresía.', 'warning');
-          return;
-        }
-        payload.descuento = {
-          ...(descuentoMembresia.id ? { id: descuentoMembresia.id } : {}),
-          tipo: descuentoMembresia.tipo,
-          valor: Number(descuentoMembresia.valor),
-          motivo: descuentoMembresia.motivo.trim(),
-          fecha_inicio: inicioDescuentoForm,
-          fecha_fin: finDescuentoForm || null,
-          sede_id: sedeDescuentoId ? Number(sedeDescuentoId) : null,
-        };
+        payload.descuentos = descuentosNuevos.map((d) => ({ ...d }));
       }
 
 
@@ -1960,6 +1946,10 @@ export function DeportistasPage() {
       : (membresiaForm.fecha_fin || '');
   const inicioDescuentoForm = descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || '';
   const finDescuentoForm = descuentoMembresia.fecha_fin || finMembresiaForm;
+  const sedesDescuento = planMembresiaSeleccionado ? sedes
+    .filter((sede) => sedesHabilitadasIds.includes(String(sede.id_sede)))
+    .map((sede) => ({ id: sede.id_sede, nombre: sede.nombre,
+      precio: Number(precioAplicableMembresia(planMembresiaSeleccionado, modalidadMembresiaSeleccionada, sede.id_sede) || 0) })) : [];
   const finDescuentoFueraDeRango = Boolean(finDescuentoForm && (
     (finMembresiaForm && finDescuentoForm > finMembresiaForm) || (inicioDescuentoForm && finDescuentoForm < inicioDescuentoForm)
   ));
@@ -2336,119 +2326,35 @@ export function DeportistasPage() {
               </Box>
             </Box>
           )}
-          <FormControlLabel sx={{ m: 0, '& .MuiFormControlLabel-label': { fontSize: 13, fontWeight: 700 } }}
-            control={<Switch size="small" checked={requiereDescuento}
-              onChange={(e) => setRequiereDescuento(e.target.checked)} />}
-            label="Aplicar descuento" />
-          {requiereDescuento && (
-            <Box sx={{ mt: 1.25, display: 'grid', gridTemplateColumns: columnasDos, gap: 1.5 }}>
-              {sedesHabilitadasIds.length > 1 && (
-                <TextField fullWidth size="small" select label="Aplica en" value={sedeDescuentoId}
-                  onChange={(e) => setDescuentoMembresia((a) => ({ ...a, sede_id: e.target.value }))}
-                  helperText={sedeDescuentoId
-                    ? 'En las demás sedes paga la tarifa completa. Puedes agregar otro descuento por sede en Gestionar contrato → Descuentos.'
-                    : 'Se aplica sobre la tarifa de cada sede donde se cobre.'}
-                  slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
-                  sx={{ gridColumn: '1 / -1' }}>
-                  <MenuItem value="">Todas las sedes autorizadas</MenuItem>
-                  {sedes.filter((sede) => sedesHabilitadasIds.includes(String(sede.id_sede))).map((sede) => (
-                    <MenuItem key={sede.id_sede} value={String(sede.id_sede)}>Solo {sede.nombre}</MenuItem>
-                  ))}
-                </TextField>
-              )}
-              <TextField fullWidth size="small" select label="Tipo de descuento" value={descuentoMembresia.tipo}
-                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, tipo: e.target.value }))}>
-                <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
-                <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
-              </TextField>
-              <TextField fullWidth size="small" type="number"
-                label={descuentoMembresia.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Valor del descuento'}
-                value={descuentoMembresia.valor}
-                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, valor: e.target.value }))}
-                error={false}
-                sx={mostrarErrorDescuento ? {
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d89b25 !important', borderWidth: 1.5 },
-                  '& .MuiFormHelperText-root': { color: '#996515' },
-                } : undefined}
-                helperText={descuentoMembresia.tipo === 'PORCENTAJE'
-                  ? (mostrarErrorDescuento ? 'Debe estar entre 1 y 100 %.' : 'Entre 1 y 100 %.')
-                  : precioMembresiaPreview !== null
-                    ? (mostrarErrorDescuento ? `No puede superar $${precioBaseResumen.toFixed(2)}.` : `Hasta $${precioBaseResumen.toFixed(2)}.`)
-                    : ''}
-                slotProps={{
-                  input: descuentoMembresia.tipo === 'PORCENTAJE'
-                    ? { endAdornment: <InputAdornment position="end">%</InputAdornment> }
-                    : { startAdornment: <InputAdornment position="start">$</InputAdornment> },
-                  htmlInput: { min: 0.01, max: descuentoMembresia.tipo === 'PORCENTAJE' ? 100 : (precioMembresiaPreview ?? undefined), step: 0.01 },
-                }} />
-              <TextField fullWidth size="small" label="Motivo / autorización" value={descuentoMembresia.motivo}
-                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, motivo: e.target.value }))}
-                placeholder="Ej. Beca deportiva, familiar"
-                sx={{ gridColumn: '1 / -1' }} />
-              <TextField fullWidth size="small" type="date" label="Desde"
-                value={inicioDescuentoForm}
-                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_inicio: e.target.value }))}
-                helperText={inicioDescuentoForm === membresiaForm.fecha_inicio ? 'Igual al inicio de la membresía.' : ''}
-                slotProps={{ inputLabel: { shrink: true },
-                  htmlInput: { min: membresiaForm.fecha_inicio || undefined, max: finMembresiaForm || undefined } }} />
-              <TextField fullWidth size="small" type="date" label="Hasta" value={finDescuentoForm}
-                onChange={(e) => setDescuentoMembresia((a) => ({ ...a, fecha_fin: e.target.value }))}
-                error={false}
-                sx={finDescuentoFueraDeRango ? {
-                  '& .MuiOutlinedInput-notchedOutline': { borderColor: '#d89b25 !important', borderWidth: 1.5 },
-                  '& .MuiFormHelperText-root': { color: '#996515' },
-                } : undefined}
-                helperText={finDescuentoFueraDeRango
-                  ? 'Debe quedar entre el inicio del descuento y el fin de la membresía.'
-                  : finMembresiaForm && finDescuentoForm === finMembresiaForm
-                    ? 'Igual al fin de la membresía. Puedes acortarlo.'
-                    : finMembresiaForm ? 'Termina antes que la membresía.' : 'Sin fecha: continúa en cada renovación hasta que lo finalices.'}
-                slotProps={{ inputLabel: { shrink: true },
-                  htmlInput: { min: inicioDescuentoForm || undefined, max: finMembresiaForm || undefined } }} />
-            </Box>
-          )}
-          {!membresiaForm.id && precioMembresiaPreview !== null && (
-            <Box sx={{ mt: 1.5, px: 1.5, py: 1.25, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0',
-              display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', rowGap: 0.5, columnGap: 2 }}>
-              <Typography variant="body2" color="text.secondary">
-                Precio{sedes.find((sede) => String(sede.id_sede) === String(sedeResumenId))?.nombre
-                  ? ` en ${sedes.find((sede) => String(sede.id_sede) === String(sedeResumenId)).nombre}` : ''}
-              </Typography>
-              <Typography variant="body2" sx={{ textAlign: 'right' }}>${precioBaseResumen.toFixed(2)}</Typography>
-              {requiereDescuento && <>
-                <Typography variant="body2" color="text.secondary">Descuento</Typography>
-                <Typography variant="body2" sx={{ textAlign: 'right' }}>
-                  {descuentoInvalido ? '—' : `− $${importeDescuentoPreview.toFixed(2)}`}
-                </Typography>
-              </>}
-              <Typography variant="body2" sx={{ fontWeight: 800, pt: 0.5, borderTop: '1px solid #e2e8f0' }}>Total a pagar</Typography>
-              <Typography variant="body2" sx={{ fontWeight: 900, textAlign: 'right', pt: 0.5, borderTop: '1px solid #e2e8f0',
-                color: mostrarErrorDescuento ? '#996515' : 'success.dark' }}>
-                {descuentoVacio
-                  ? `$${precioBaseResumen.toFixed(2)}`
-                  : mostrarErrorDescuento ? 'Revisa el descuento' : `$${Math.max(0, precioBaseResumen - importeDescuentoPreview).toFixed(2)}`}
-              </Typography>
-              {descuentoVacio && (
-                <Typography variant="caption" color="text.secondary" sx={{ gridColumn: '1 / -1' }}>
-                  Ingresa el descuento para ver el total con descuento.
-                </Typography>
-              )}
-            </Box>
-          )}
-          {pagaPorSede.length > 1 && (
-            <Box sx={{ mt: 1, px: 1.5, py: 1.15, borderRadius: 1.5, border: '1px dashed #cbd5e1' }}>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.6 }}>
-                {sedeDescuentoId ? 'El descuento vale solo en una sede; en las demás paga la tarifa completa:' : 'El descuento vale en todas las sedes y se aplica sobre la tarifa de cada una:'}
-              </Typography>
-              <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 1 }}>
-                {pagaPorSede.map((fila) => (
-                  <Box key={fila.id} sx={{ px: 1.2, py: 0.6, borderRadius: 1, bgcolor: String(fila.id) === String(membresiaForm.sede_id) ? '#f0fdf4' : '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 800 }}>{fila.nombre}</Typography>
-                    <Typography variant="caption" color="text.secondary">${fila.precio.toFixed(2)} − ${fila.importe.toFixed(2)} = </Typography>
-                    <Typography variant="caption" sx={{ fontWeight: 900, color: 'success.dark' }}>paga ${fila.paga.toFixed(2)}</Typography>
-                  </Box>
-                ))}
-              </Stack>
+          <DescuentosNuevaMembresia
+            descuentos={descuentosNuevos}
+            onChange={setDescuentosNuevos}
+            sedes={sedesDescuento}
+            inicio={membresiaForm.fecha_inicio}
+            fin={finMembresiaForm}
+          />
+          {sedesDescuento.length > 0 && (
+            <Box sx={{ mt: 1.5, px: 1.5, py: 1.25, borderRadius: 1.5, bgcolor: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <Typography variant="body2" fontWeight={800} sx={{ mb: 0.75 }}>Paga en cada sede</Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.4fr) repeat(3, minmax(0, 1fr))', columnGap: 1.5, rowGap: 0.5 }}>
+                {['Sede', 'Tarifa', 'Descuento', 'Paga'].map((t, i) => <Typography key={t} variant="caption" color="text.secondary"
+                  sx={{ textAlign: i ? 'right' : 'left', fontWeight: 700 }}>{t}</Typography>)}
+                {sedesDescuento.map((sede) => {
+                  const regla = descuentoDeSede(descuentosNuevos, sede.id);
+                  const importe = importeDescuento(sede.precio, regla);
+                  const principal = String(sede.id) === String(membresiaForm.sede_id);
+                  return [
+                    <Typography key={`${sede.id}-n`} variant="body2" sx={{ fontWeight: principal ? 800 : 500 }}>
+                      {sede.nombre}{principal ? ' · principal' : ''}
+                    </Typography>,
+                    <Typography key={`${sede.id}-t`} variant="body2" sx={{ textAlign: 'right' }}>${sede.precio.toFixed(2)}</Typography>,
+                    <Typography key={`${sede.id}-d`} variant="body2" sx={{ textAlign: 'right' }}>{importe ? `− $${importe.toFixed(2)}` : '—'}</Typography>,
+                    <Typography key={`${sede.id}-p`} variant="body2" sx={{ textAlign: 'right', fontWeight: 900, color: 'success.dark' }}>
+                      ${Math.max(0, sede.precio - importe).toFixed(2)}
+                    </Typography>,
+                  ];
+                })}
+              </Box>
             </Box>
           )}
         </Box>
