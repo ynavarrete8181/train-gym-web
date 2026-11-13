@@ -67,6 +67,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   const [inicio, setInicio] = useState(fechaLocal());
   const [fin, setFin] = useState('');
   const [motivo, setMotivo] = useState('');
+  const [nuevoPrecio, setNuevoPrecio] = useState('');
+  const [desdePeriodo, setDesdePeriodo] = useState('');
   const [preview, setPreview] = useState(null);
   const [vistaPreviaAbierta, setVistaPreviaAbierta] = useState(false);
   const [resumenGuardado, setResumenGuardado] = useState(null);
@@ -280,6 +282,26 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     finally { setProcesando(false); }
   };
 
+  // Cambiar el precio pactado desde un período (solo administradores; el backend lo valida).
+  const periodosContrato = [...(membresia?.periodos || [])].sort((a, b) => Number(a.numero_periodo) - Number(b.numero_periodo));
+  const periodoCobrado = (p) => ['PAGADA', 'PARCIAL'].includes(String(p.venta_estado || '').toUpperCase());
+  const abrirCambioPrecio = () => {
+    const primeroSinCobrar = periodosContrato.find((p) => !periodoCobrado(p)) || periodosContrato[periodosContrato.length - 1];
+    setOperacion('precio'); setMotivo(''); setError(''); setExito('');
+    setNuevoPrecio(String(ciclo?.tarifa_vigente ?? ciclo?.precio_contrato ?? ''));
+    setDesdePeriodo(primeroSinCobrar ? String(primeroSinCobrar.numero_periodo) : '');
+  };
+  const cambiarPrecio = async () => {
+    setProcesando(true); setError('');
+    try {
+      await gimnasioServicio.cambiarPrecioMembresia(membresia.id, { precio: Number(nuevoPrecio), desde_periodo: Number(desdePeriodo), motivo: motivo.trim() });
+      setExito(`Precio del contrato actualizado a $${Number(nuevoPrecio).toFixed(2)} desde el período ${desdePeriodo}. Queda en el historial.`);
+      setOperacion(''); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
   const editarVigencia = async () => {
     setProcesando(true); setError('');
     try {
@@ -363,7 +385,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     estado: (s) => ETIQUETAS_SUSPENSION[s.estado] || s.estado || '',
   }, OPCIONES_SUSPENSIONES);
   const { visibles } = tabla;
-  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar', 'reabrir', 'vigencia'].includes(operacion);
+  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar', 'reabrir', 'vigencia', 'precio'].includes(operacion);
   const esPase = esPaseDiario(membresia);
 
   return <Box sx={integrado ? { width: '100%', minWidth: 0 } : {
@@ -372,7 +394,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     {(!integrado || mostrarFormulario) && <Stack direction="row" gap={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
-          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : 'Gestión del ciclo de vida'}
+          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : operacion === 'precio' ? 'Cambiar precio del contrato' : 'Gestión del ciclo de vida'}
         </Typography>
       </Box>
       {!integrado && <Box sx={{ ml: 'auto', flexShrink: 0 }}>
@@ -412,6 +434,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
               setVigenciaFin(String(ciclo.vigencia_fin || '').slice(0, 10));
             }}>
             Editar vigencia
+          </Button>}
+          {ciclo?.puede_cambiar_precio && <Button variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={abrirCambioPrecio}>
+            Cambiar precio
           </Button>}
           {ciclo?.puede_cancelar_contrato && <Button color="error" variant="outlined"
             sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
@@ -672,6 +699,30 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           <BotonCancelar disabled={procesando} onClick={() => setOperacion('')}/>
           <BotonGuardar texto="Guardar vigencia" guardando={procesando}
             disabled={!vigenciaInicio || !vigenciaFin || motivo.trim().length < 8} onClick={editarVigencia}/>
+        </Box>
+      </Box>}
+      {operacion === 'precio' && <Box>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Precio pactado actual: ${Number(ciclo?.precio_contrato || 0).toFixed(2)}. Tarifa vigente de la sede: ${Number(ciclo?.tarifa_vigente || 0).toFixed(2)}.
+          Los períodos sin cobrar pasan al precio nuevo (con su descuento recalculado); lo ya cobrado no cambia. Queda en el historial.
+        </Alert>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+          <TextField size="small" fullWidth required type="number" label="Nuevo precio" value={nuevoPrecio}
+            onChange={e => setNuevoPrecio(e.target.value)} slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}/>
+          <TextField select size="small" fullWidth required label="Desde el período" value={desdePeriodo}
+            onChange={e => setDesdePeriodo(e.target.value)}>
+            {periodosContrato.map((p) => <MenuItem key={p.numero_periodo} value={String(p.numero_periodo)}>
+              Período {p.numero_periodo} · {fechaLegible(p.fecha_inicio)} – {fechaLegible(p.fecha_fin)} · ${Number(p.precio || 0).toFixed(2)}
+              {periodoCobrado(p) ? ` · cobrado $${Number(p.venta_total || 0).toFixed(2)}` : ' · sin cobrar'}
+            </MenuItem>)}
+          </TextField>
+        </Box>
+        <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 2 }}
+          value={motivo} onChange={e => setMotivo(e.target.value)} helperText="Escribe al menos 8 caracteres."/>
+        <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => setOperacion('')}/>
+          <BotonGuardar texto="Guardar precio" guardando={procesando}
+            disabled={!(Number(nuevoPrecio) > 0) || !desdePeriodo || motivo.trim().length < 8} onClick={cambiarPrecio}/>
         </Box>
       </Box>}
       {operacion === 'cancelar' && <Box>
