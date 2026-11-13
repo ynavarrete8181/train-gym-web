@@ -22,6 +22,7 @@ const FORM_GESTION_INICIAL = {
   tipo: 'LLAMADA',
   resultado: 'CONTACTADO',
   detalle: '',
+  detalle_auto: true,
   proxima_gestion_at: '',
 };
 
@@ -29,6 +30,7 @@ const FORM_COMPROMISO_INICIAL = {
   monto: '',
   fecha_compromiso: '',
   observaciones: '',
+  observaciones_auto: true,
 };
 
 export function CarteraPage() {
@@ -155,10 +157,26 @@ export function CarteraPage() {
     }
   };
 
+  // Textos sugeridos según el flujo de cobranza; el usuario puede editarlos o borrarlos.
+  const textoMinuscula = (v) => String(v || '').toLowerCase().replaceAll('_', ' ');
+  const montoTexto = (v) => `$${Number(v || 0).toFixed(2)}`;
+  const fechaTexto = (v) => (v ? String(v).slice(0, 10).split('-').reverse().join('/') : '');
+  const cuentaTexto = () => `la venta ${detalle?.venta_numero || ''} de ${detalle?.cliente_nombre || 'cliente'} (saldo pendiente ${montoTexto(detalle?.saldo_pendiente)})`;
+  const textoGestion = (f) => `Gestión de cobranza por ${textoMinuscula(f.tipo)} sobre ${cuentaTexto()}. Resultado: ${textoMinuscula(f.resultado) || 'sin resultado'}.${f.proxima_gestion_at ? ` Próxima gestión: ${fechaTexto(f.proxima_gestion_at)}.` : ''}`;
+  const textoCompromiso = (f) => `Compromiso de pago${f.monto ? ` de ${montoTexto(f.monto)}` : ''}${f.fecha_compromiso ? ` para el ${fechaTexto(f.fecha_compromiso)}` : ''} sobre ${cuentaTexto()}.`;
+  const vistaConTexto = (form, campo, generar) => (form[`${campo}_auto`] ? { ...form, [campo]: generar(form) } : form);
+  const setterConTexto = (setForm, campo, generar) => (cambio) => setForm((actual) => {
+    const vista = vistaConTexto(actual, campo, generar);
+    const siguiente = typeof cambio === 'function' ? cambio(vista) : cambio;
+    return siguiente[campo] !== vista[campo] ? { ...siguiente, [`${campo}_auto`]: false } : { ...siguiente, [campo]: actual[campo] };
+  });
+  const formGestionVista = vistaConTexto(formGestion, 'detalle', textoGestion);
+  const formCompromisoVista = vistaConTexto(formCompromiso, 'observaciones', textoCompromiso);
+
   const registrarGestion = async () => {
     if (!detalle?.id) return;
 
-    if (!formGestion.detalle.trim()) {
+    if (!formGestionVista.detalle.trim()) {
       notificar('Ingresa el detalle de la gestión.', 'warning');
       return;
     }
@@ -168,7 +186,7 @@ export function CarteraPage() {
       await carteraServicio.registrarGestion(detalle.id, {
         tipo: formGestion.tipo,
         resultado: formGestion.resultado || null,
-        detalle: formGestion.detalle,
+        detalle: formGestionVista.detalle,
         proxima_gestion_at: formGestion.proxima_gestion_at || null,
       });
 
@@ -195,7 +213,7 @@ export function CarteraPage() {
       await carteraServicio.registrarCompromiso(detalle.id, {
         monto: Number(formCompromiso.monto),
         fecha_compromiso: formCompromiso.fecha_compromiso,
-        observaciones: formCompromiso.observaciones || null,
+        observaciones: formCompromisoVista.observaciones || null,
       });
 
       setFormCompromiso(FORM_COMPROMISO_INICIAL);
@@ -293,10 +311,10 @@ export function CarteraPage() {
         turnoActual={turnoActual}
         formCuenta={formCuenta}
         setFormCuenta={setFormCuenta}
-        formGestion={formGestion}
-        setFormGestion={setFormGestion}
-        formCompromiso={formCompromiso}
-        setFormCompromiso={setFormCompromiso}
+        formGestion={formGestionVista}
+        setFormGestion={setterConTexto(setFormGestion, 'detalle', textoGestion)}
+        formCompromiso={formCompromisoVista}
+        setFormCompromiso={setterConTexto(setFormCompromiso, 'observaciones', textoCompromiso)}
         onCerrar={() => setDialogoAbierto(false)}
         onGuardarCuenta={guardarSeguimiento}
         onRegistrarGestion={registrarGestion}

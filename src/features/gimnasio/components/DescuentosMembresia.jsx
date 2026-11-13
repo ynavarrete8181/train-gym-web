@@ -175,7 +175,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
               {abierto && <Tooltip title="Editar descuento"><IconButton aria-label="Editar descuento" sx={dbanuStyles.actionEdit} onClick={() => editar(d)}>
                 <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>}
               {abierto && <Tooltip title="Finalizar descuento"><IconButton aria-label="Finalizar descuento" color="error" sx={{ ml: 1 }}
-                onClick={() => { setFinalizar(d); setMotivoFin(''); }}><StopCircleOutlinedIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>}
+                onClick={() => { setFinalizar(d); setMotivoFin(`Finalización del descuento ${textoDescuento(d)} (${textoSede(d)}) desde el ${fecha(hoy)}: deja de aplicarse en Ventas y en las próximas renovaciones.`); }}><StopCircleOutlinedIcon sx={{ fontSize: 18 }} /></IconButton></Tooltip>}
             </TableCell>
           </TableRow>;
         })}

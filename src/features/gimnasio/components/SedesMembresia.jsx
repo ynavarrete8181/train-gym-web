@@ -19,7 +19,8 @@ export function SedesMembresia({ membresia, sedes = [], onActualizado }) {
   const [actuales, setActuales] = useState([]);
   const [seleccion, setSeleccion] = useState([]);
   const [principal, setPrincipal] = useState(null);
-  const [motivo, setMotivo] = useState('');
+  const [motivoTexto, setMotivo] = useState('');
+  const [motivoAuto, setMotivoAuto] = useState(true);
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
@@ -50,13 +51,20 @@ export function SedesMembresia({ membresia, sedes = [], onActualizado }) {
     setSeleccion((actual) => (actual.includes(id) ? actual.filter((x) => x !== id) : [...actual, id]));
   };
 
+  // Motivo sugerido con las sedes que se agregan o quitan; el usuario puede editarlo.
+  const nombreSedeId = (id) => sedes.find((s) => Number(s.id) === Number(id))?.nombre || `sede ${id}`;
+  const agregadas = seleccion.filter((id) => !actuales.includes(id)).map(nombreSedeId);
+  const quitadas = actuales.filter((id) => !seleccion.includes(id)).map(nombreSedeId);
+  const motivoSugerido = `Actualización de sedes de la membresía ${membresia?.codigo || ''}:${agregadas.length ? ` se habilita ${agregadas.join(', ')}.` : ''}${quitadas.length ? ` se quita ${quitadas.join(', ')}.` : ''}${!agregadas.length && !quitadas.length ? ' sin cambios.' : ''} Quedan: ${seleccion.map(nombreSedeId).join(', ') || 'ninguna'}.`;
+  const motivo = motivoAuto ? motivoSugerido : motivoTexto;
+
   const guardar = async () => {
     if (!seleccion.length) { setError('Habilita al menos una sede.'); return; }
     setGuardando(true); setError('');
     try {
       await gimnasioServicio.actualizarSedesMembresia(membresia.id, { sedes_habilitadas: seleccion, motivo: motivo.trim() });
       setExito('Sedes actualizadas. El cambio quedó en el historial.');
-      setMotivo('');
+      setMotivo(''); setMotivoAuto(true);
       await cargar();
       await onActualizado?.();
     } catch (e) {
@@ -100,7 +108,7 @@ export function SedesMembresia({ membresia, sedes = [], onActualizado }) {
     </Stack>
     {cambiado && <>
       <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" value={motivo}
-        helperText="Escribe al menos 8 caracteres." onChange={(e) => setMotivo(e.target.value)} />
+        helperText="Escribe al menos 8 caracteres." onChange={(e) => { setMotivo(e.target.value); setMotivoAuto(false); }} />
       <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0 }}>
         <BotonCancelar disabled={guardando} onClick={() => { setSeleccion(actuales); setMotivo(''); setError(''); }} />
         <BotonGuardar texto="Guardar sedes" guardando={guardando} disabled={motivo.trim().length < 8} onClick={guardar} />

@@ -957,7 +957,7 @@ export function DeportistasPage() {
 
   const handleAsignacionChange = (e) => {
     const { name, value } = e.target;
-    setAsignacionForm(prev => ({ ...prev, [name]: value }));
+    setAsignacionForm(prev => ({ ...prev, [name]: value, ...(name === 'observaciones' ? { observaciones_editada: true } : {}) }));
   };
 
   const handleGuardarAsignacion = async () => {
@@ -986,7 +986,7 @@ export function DeportistasPage() {
         entrenador_horario_id: Number(asignacionForm.entrenador_horario_id),
         membresia_id: Number(membresiaCompatible.id),
         sede_id: Number(sedeHorario),
-        observaciones: asignacionForm.observaciones || null,
+        observaciones: observacionesAsignacion || null,
       });
       showNotificacion('Cliente asignado correctamente', 'success');
       setAsignacionForm(getInitialAsignacion());
@@ -1604,7 +1604,10 @@ export function DeportistasPage() {
             excluirPersonaId={formData.persona_id}
             onSeleccionar={handleSeleccionarTutor}
             onCambiarVinculo={handleRepresentanteChange}
-            onQuitar={puedeQuitarTutor ? () => setDialogoQuitarTutor(true) : undefined}
+            onQuitar={puedeQuitarTutor ? () => {
+              setMotivoQuitarTutor(`Se retira a ${tutorVigente?.nombre_completo || 'el tutor'} como tutor de ${[formData.nombres, formData.apellidos].filter(Boolean).join(' ') || 'el cliente'} desde el ${new Date().toLocaleDateString('es-EC')}.`);
+              setDialogoQuitarTutor(true);
+            } : undefined}
           />
         ) : null}
         <HistorialTutores historial={formData.historial_tutores} />
@@ -1664,6 +1667,11 @@ export function DeportistasPage() {
     (turno) => String(turno.id) === String(asignacionForm.entrenador_horario_id),
   ) || (turnosEntrenador.length === 1 ? turnosEntrenador[0] : null);
 
+  // Observación sugerida de la asignación; el usuario puede editarla o borrarla.
+  const entrenadorAsignacion = entrenadoresDisp.find((ent) => String(ent.id) === String(asignacionForm.entrenador_id));
+  const nombreEntrenadorAsignacion = entrenadorAsignacion ? (`${entrenadorAsignacion.nombres || ''} ${entrenadorAsignacion.apellidos || ''}`.trim() || entrenadorAsignacion.name) : '';
+  const observacionesAsignacion = asignacionForm.observaciones_editada ? asignacionForm.observaciones
+    : (nombreEntrenadorAsignacion ? `Asignación de ${[formData.nombres, formData.apellidos].filter(Boolean).join(' ') || 'el cliente'} con ${nombreEntrenadorAsignacion}${horarioAsignacionSeleccionado ? ` en el turno ${horarioAsignacionSeleccionado.nombre ? `${horarioAsignacionSeleccionado.nombre} · ` : ''}${horarioAsignacionSeleccionado.dia_semana} ${String(horarioAsignacionSeleccionado.hora_inicio).slice(0, 5)}-${String(horarioAsignacionSeleccionado.hora_fin).slice(0, 5)} (${horarioAsignacionSeleccionado.sede_nombre})` : ''}.` : '');
   const capacidadHorarioSeleccionado = Number(horarioAsignacionSeleccionado?.capacidad ?? 15);
   const asignadosHorarioSeleccionado = Number(horarioAsignacionSeleccionado?.asignados ?? 0);
   const disponiblesHorarioSeleccionado = Number(
@@ -1741,8 +1749,9 @@ export function DeportistasPage() {
           <TextField
             label="Observaciones"
             name="observaciones"
-            value={asignacionForm.observaciones}
+            value={observacionesAsignacion}
             onChange={handleAsignacionChange}
+            multiline
             size="small"
           />
         </Box>
