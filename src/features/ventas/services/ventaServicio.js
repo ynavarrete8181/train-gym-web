@@ -27,6 +27,7 @@ export const ventaServicio = {
   actualizarVenta: async (id, payload) => (await api.put(`/base/ventas/ventas/${id}`, payload)).data,
   obtenerPagos: async (params = { page: 1 }) => (await api.get('/base/ventas/pagos', { params })).data,
   crearPago: async (payload) => (await api.post('/base/ventas/pagos', payload)).data,
+  corregirMetodoPago: async (id, payload) => (await api.put(`/base/ventas/pagos/${id}/metodo`, payload)).data,
   obtenerComprobantes: async (params = { page: 1 }) => (await api.get('/base/ventas/comprobantes', { params })).data,
   reenviarComprobante: async (id) => (await api.post(`/base/ventas/comprobantes/${id}/reenviar`)).data,
 };
