@@ -14,6 +14,15 @@ import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { DialogDescuento } from './DialogDescuento.jsx';
 
+// Resume las ventas pendientes que el backend ajustó (y las ya cobradas que no tocó).
+const textoRecalculo = (respuesta) => {
+  const r = respuesta?.ventas_recalculadas || respuesta?.datos?.ventas_recalculadas;
+  if (!r) return '';
+  const monto = (v) => `$${Number(v || 0).toFixed(2)}`;
+  const partes = (r.actualizadas || []).map((f) => `período ${f.periodo}: ${monto(f.total_antes)} → ${monto(f.total_despues)}`);
+  const cobradas = (r.cobradas || []).map((f) => f.periodo);
+  return `${partes.length ? ` Ventas pendientes ajustadas (${partes.join('; ')}).` : ''}${cobradas.length ? ` Período${cobradas.length > 1 ? 's' : ''} ${cobradas.join(', ')} ya cobrado${cobradas.length > 1 ? 's' : ''}: no se modifica${cobradas.length > 1 ? 'n' : ''}.` : ''}`;
+};
 const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : 'Sin fin');
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const textoDescuento = (d) => (d.tipo === 'PORCENTAJE' ? `${Number(d.valor)} %` : dinero(d.valor));
@@ -89,9 +98,10 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   const guardar = async (payload) => {
     setGuardando(true); setError('');
     try {
-      if (form.id) await gimnasioServicio.actualizarDescuentoMembresia(membresia.id, form.id, payload);
-      else await gimnasioServicio.registrarDescuentoMembresia(membresia.id, payload);
-      setExito(form.inicioOriginal ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento actualizado.' : 'Descuento registrado.');
+      const respuesta = form.id
+        ? await gimnasioServicio.actualizarDescuentoMembresia(membresia.id, form.id, payload)
+        : await gimnasioServicio.registrarDescuentoMembresia(membresia.id, payload);
+      setExito(`${form.inicioOriginal ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento actualizado.' : 'Descuento registrado.'}${textoRecalculo(respuesta)}`);
       setForm(null);
       await cargar();
       await onActualizado?.();
@@ -105,8 +115,8 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   const confirmarFinalizar = async () => {
     setGuardando(true); setError('');
     try {
-      await gimnasioServicio.finalizarDescuentoMembresia(membresia.id, finalizar.id, motivoFin.trim());
-      setExito('Descuento finalizado. Desde hoy ya no se aplica en Ventas.');
+      const respuesta = await gimnasioServicio.finalizarDescuentoMembresia(membresia.id, finalizar.id, motivoFin.trim());
+      setExito(`Descuento finalizado. Desde hoy ya no se aplica en Ventas.${textoRecalculo(respuesta)}`);
       setFinalizar(null); setMotivoFin('');
       await cargar();
     } catch (e) {
