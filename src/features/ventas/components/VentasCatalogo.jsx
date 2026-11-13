@@ -101,6 +101,28 @@ export function VentasCatalogo({ tipo }) {
   const [anulando, setAnulando] = useState(false);
 
   const showNotificacion = (mensaje, tipoAviso = 'info') => setNotificacion({ mensaje, tipo: tipoAviso });
+  // Corrección del método de un cobro (solo administradores).
+  const [correccion, setCorreccion] = useState(null);
+  const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
+  const metodoActual = (item) => ['efectivo', 'transferencia', 'tarjeta', 'deposito', 'otros']
+    .find((m) => Number(item[m] || 0) > 0)?.toUpperCase().replace('OTROS', 'OTRO') || 'EFECTIVO';
+  const abrirCorreccion = (item) => setCorreccion({ item, metodo_pago: metodoActual(item) === 'EFECTIVO' ? 'TRANSFERENCIA' : 'EFECTIVO', referencia: '', motivo: '' });
+  const guardarCorreccion = async () => {
+    setGuardandoCorreccion(true);
+    try {
+      await ventaServicio.corregirMetodoPago(correccion.item.id, {
+        metodo_pago: correccion.metodo_pago, referencia: correccion.referencia.trim() || null, motivo: correccion.motivo.trim(),
+      });
+      showNotificacion('Método de pago corregido. Si el turno ya estaba cerrado, quedó pendiente de conciliar.', 'success');
+      setCorreccion(null);
+      await cargar();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      showNotificacion((errores && Object.values(errores).flat()[0]) || error.response?.data?.mensaje || 'No se pudo corregir el cobro.', 'error');
+    } finally {
+      setGuardandoCorreccion(false);
+    }
+  };
 
   const cargar = async (parametros = filtros) => {
     setCargando(true);
@@ -244,7 +266,7 @@ export function VentasCatalogo({ tipo }) {
     }
   };
 
-  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos), [tipo, meta, filtrosColumna, catalogos]);
+  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion), [tipo, meta, filtrosColumna, catalogos]);
 
   if (vista === 'formulario') {
     return (
@@ -295,6 +317,29 @@ export function VentasCatalogo({ tipo }) {
         />
       </Paper>
       <VisorPdf titulo="Comprobante de venta" pdf={comprobantePdf} cargando={cargandoPdf} onCerrar={cerrarPdf} />
+      <ModalConfirmacion
+        open={Boolean(correccion)}
+        titulo="Corregir método de pago"
+        descripcion={correccion ? `${correccion.item.codigo_cobro} · ${correccion.item.cliente_nombre || 'Cliente'} · ${dinero(correccion.item.total_cobrado)}. Registrado como ${metodoActual(correccion.item).toLowerCase()}. El monto no cambia; queda en el historial con el motivo.` : ''}
+        textoConfirmar="Sí, corregir"
+        cargando={guardandoCorreccion}
+        confirmarDeshabilitado={!correccion || correccion.motivo.trim().length < 8 || correccion.metodo_pago === metodoActual(correccion.item) && !correccion.referencia.trim()}
+        onClose={() => !guardandoCorreccion && setCorreccion(null)}
+        onConfirmar={guardarCorreccion}
+      >
+        {correccion && <Stack spacing={1.5} sx={{ mt: 1 }}>
+          <TextField select size="small" label="Método correcto" value={correccion.metodo_pago}
+            onChange={(e) => setCorreccion((c) => ({ ...c, metodo_pago: e.target.value }))}>
+            {[['EFECTIVO', 'Efectivo'], ['TRANSFERENCIA', 'Transferencia'], ['TARJETA', 'Tarjeta'], ['DEPOSITO', 'Depósito'], ['OTRO', 'Otro']]
+              .map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
+          </TextField>
+          {correccion.metodo_pago !== 'EFECTIVO' && <TextField size="small" label="N.º de comprobante / referencia" value={correccion.referencia}
+            onChange={(e) => setCorreccion((c) => ({ ...c, referencia: e.target.value }))} placeholder="Ej. 602185233" />}
+          <TextField multiline minRows={2} size="small" required label="Motivo u observación" value={correccion.motivo}
+            onChange={(e) => setCorreccion((c) => ({ ...c, motivo: e.target.value }))}
+            helperText="Escribe al menos 8 caracteres. Ej. Se registró en efectivo pero fue transferencia." />
+        </Stack>}
+      </ModalConfirmacion>
       <ModalConfirmacion
         open={Boolean(ventaAnular)}
         titulo="Anular venta cobrada"
@@ -429,7 +474,7 @@ function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar
   </TablaGestion>;
 }
 
-function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
+function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
   const filtro = (key, label, opts) => <FilterHeaderCell key={key} value={filtros[key]} onChange={(v) => onFiltro(key, v)} options={opts}>{label}</FilterHeaderCell>;
   if (tipo === 'cajas') return [
     { key: 'codigo', header: <TableCell key="codigo">Código</TableCell>, render: (item) => <Typography variant="body2" fontWeight="600">{item.codigo}</Typography> },
@@ -487,6 +532,13 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos) {
     { key: 'otros', header: <TableCell key="otros" align="right">Otros</TableCell>, render: (item) => dinero(item.otros) },
     { key: 'total', header: <TableCell key="total" align="right">Total</TableCell>, render: (item) => <Typography variant="body2" fontWeight="800">{dinero(item.total_cobrado)}</Typography> },
     { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} label={nombreEstado(catalogos.estados_pago, item.estado)} /> },
+    // Solo administradores: corregir el método de un cobro mal registrado.
+    ...(catalogos.puede_anular_pagadas ? [{ key: 'acciones', header: <TableCell key="acciones" align="center">Acciones</TableCell>, render: (item) => (
+      item.estado === 'CONFIRMADO' && Number(item.total_cobrado || 0) > 0
+        ? <Tooltip title="Corregir método de pago"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
+            <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+        : '—'
+    ) }] : []),
   ];
   return [
     { key: 'numero', header: filtro('numero', 'Comprobante', null), render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.numero}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.emitido_at || item.created_at)}</Typography></Box> },
