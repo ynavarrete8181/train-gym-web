@@ -39,6 +39,7 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { confirmarAccion } from '../../../utils/confirmacion.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
+import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
 
 const initialModalidad = () => ({
   id: null,
@@ -68,6 +69,23 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
   const [form, setForm] = useState(initialModalidad());
   const [editando, setEditando] = useState(true);
   const [cargando, setCargando] = useState(true);
+  // Aviso al cambiar tarifa con contratos vigentes: solo nuevas contrataciones o también en su próxima renovación.
+  const [avisoTarifa, setAvisoTarifa] = useState(null);
+  const [guardandoTarifa, setGuardandoTarifa] = useState(false);
+  const confirmarTarifa = async () => {
+    setGuardandoTarifa(true);
+    try {
+      await gimnasioServicio.actualizarModalidadPlan(plan.id, form.id, { ...avisoTarifa.payload, aplicar_vigentes: avisoTarifa.aplicar });
+      avisar(avisoTarifa.aplicar
+        ? `Tarifa actualizada. ${avisoTarifa.contratos.length} contrato(s) vigente(s) renovarán con la tarifa nueva.`
+        : 'Tarifa actualizada solo para nuevas contrataciones.', 'success');
+      setAvisoTarifa(null); setEditando(true); setForm(initialModalidad());
+      await cargar();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      avisar((errores && Object.values(errores).flat()[0]) || error.response?.data?.mensaje || 'No se pudo guardar la modalidad.', 'error');
+    } finally { setGuardandoTarifa(false); }
+  };
   // Historial de tarifas por sede: desde cuándo y hasta cuándo rigió cada precio.
   const [historial, setHistorial] = useState(null);
   const verHistorial = async (modalidad) => {
@@ -214,6 +232,18 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
       };
 
       if (form.id) {
+        // Si cambió la tarifa de alguna sede y hay contratos vigentes, se pregunta a quién aplica.
+        const original = modalidades.find((m) => m.id === form.id)?.precios_sede || [];
+        const precioOriginal = (sede) => Number(original.find((p) => String(p.sede_id) === String(sede))?.precio ?? NaN);
+        const cambios = payload.precios_sede.filter((p) => Math.abs(precioOriginal(p.sede_id) - p.precio) > 0.009 || Number.isNaN(precioOriginal(p.sede_id)))
+          .map((p) => ({ ...p, antes: precioOriginal(p.sede_id), nombre: sedes.find((s) => String(s.id_sede ?? s.id) === String(p.sede_id))?.nombre || 'Sede' }));
+        if (cambios.length) {
+          const contratos = await gimnasioServicio.obtenerContratosVigentesModalidad(plan.id, form.id, cambios.map((c) => c.sede_id));
+          if (contratos.length) {
+            setAvisoTarifa({ payload, cambios, contratos, aplicar: false });
+            return;
+          }
+        }
         await gimnasioServicio.actualizarModalidadPlan(plan.id, form.id, payload);
       } else {
         await gimnasioServicio.crearModalidadPlan(plan.id, payload);
@@ -418,6 +448,41 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
               ) : null}
             </TableBody>
           </TablaGestion>
+          <ModalConfirmacion
+            open={Boolean(avisoTarifa)}
+            titulo="Cambio de tarifa"
+            descripcion={avisoTarifa ? `${avisoTarifa.cambios.map((c) => `${c.nombre}: ${Number.isNaN(c.antes) ? 'nueva' : `$${c.antes.toFixed(2)}`} → $${Number(c.precio).toFixed(2)}`).join(' · ')}. Hay ${avisoTarifa.contratos.length} contrato(s) vigente(s) con esta modalidad.` : ''}
+            textoConfirmar="Sí, guardar"
+            cargando={guardandoTarifa}
+            onClose={() => !guardandoTarifa && setAvisoTarifa(null)}
+            onConfirmar={confirmarTarifa}
+          >
+            {avisoTarifa && <Stack spacing={1.25} sx={{ mt: 1 }}>
+              <TextField select size="small" label="¿A quién aplica?" value={avisoTarifa.aplicar ? 'SI' : 'NO'}
+                onChange={(e) => setAvisoTarifa((a) => ({ ...a, aplicar: e.target.value === 'SI' }))}>
+                <MenuItem value="NO">Solo nuevas contrataciones (los vigentes mantienen su precio)</MenuItem>
+                <MenuItem value="SI">También a los contratos vigentes, desde su próxima renovación</MenuItem>
+              </TextField>
+              <Typography variant="caption" color="text.secondary">
+                El período actual y lo cobrado no cambian. Un contrato con precio específico se respeta. Queda en el historial de cada contrato.
+              </Typography>
+              <Box sx={{ maxHeight: 220, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 1 }}>
+                <Table size="small">
+                  <TableHead><TableRow>
+                    {['Cliente', 'Contrato', 'Precio actual', 'Próxima renovación'].map((t) => <TableCell key={t} sx={{ fontWeight: 800 }}>{t}</TableCell>)}
+                  </TableRow></TableHead>
+                  <TableBody>
+                    {avisoTarifa.contratos.map((c) => <TableRow key={c.id}>
+                      <TableCell>{c.cliente}</TableCell>
+                      <TableCell>{c.codigo_contrato}{c.precio_renovacion_modo === 'FIJO' ? ' · precio específico' : ''}</TableCell>
+                      <TableCell>${Number(c.precio_aplicado || 0).toFixed(2)}</TableCell>
+                      <TableCell>{c.fecha_fin ? String(c.fecha_fin).slice(0, 10).split('-').reverse().join('/') : '—'}</TableCell>
+                    </TableRow>)}
+                  </TableBody>
+                </Table>
+              </Box>
+            </Stack>}
+          </ModalConfirmacion>
           <Dialog open={Boolean(historial)} onClose={() => setHistorial(null)} fullWidth maxWidth="sm">
             <DialogTitle sx={{ ...formStyles.modalHeader, py: 1.25 }}>
               <Box sx={{ flex: 1, minWidth: 0 }}>

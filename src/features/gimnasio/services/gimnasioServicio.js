@@ -291,6 +291,10 @@ export const gimnasioServicio = {
     const { data } = await api.put(`/base/gimnasio/membresias/${id}/precio`, payload);
     return data.datos;
   },
+  obtenerContratosVigentesModalidad: async (planId, modalidadId, sedes) => {
+    const { data } = await api.get(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}/contratos-vigentes`, { params: { sedes } });
+    return data.datos || [];
+  },
   obtenerHistorialTarifas: async (planId, modalidadId) => {
     const { data } = await api.get(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}/tarifas`);
     return data.datos || [];
