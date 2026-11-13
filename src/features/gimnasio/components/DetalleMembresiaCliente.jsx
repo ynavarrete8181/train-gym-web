@@ -48,7 +48,7 @@ const SECCIONES_MEMBRESIA = [
 export const SECCION_NUEVA_MEMBRESIA = [
   { id: 'nueva', nombre: 'Datos del contrato', descripcion: 'Nueva asignación', Icono: CardMembershipOutlinedIcon },
   ...SECCIONES_MEMBRESIA.filter((s) => s.id !== 'informacion')
-    .map((s) => ({ ...s, descripcion: 'Disponible al guardar', bloqueada: true })),
+    .map((s) => (s.id === 'sedes' ? s : { ...s, descripcion: 'Disponible al guardar', bloqueada: true })),
 ];
 
 function DatoContrato({ titulo, valor }) {
