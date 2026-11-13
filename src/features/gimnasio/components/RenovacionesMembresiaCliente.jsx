@@ -90,6 +90,8 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
           ['Fecha de inicio', fecha(d.fecha_inicio)],
           ['Fecha de finalización', fecha(d.fecha_fin)],
           ['Importe registrado', importe(d.precio)],
+          ...(d.origen_precio ? [['Precio tomado de', d.origen_precio.charAt(0).toUpperCase() + d.origen_precio.slice(1)]] : []),
+          ...(d.precio_anterior && Number(d.precio_anterior) !== Number(d.precio) ? [['Precio del período anterior', importe(d.precio_anterior)]] : []),
         ].map(([titulo, valor]) => <Box key={titulo}>
           <Typography variant="caption" color="text.secondary">{titulo}</Typography>
           <Typography variant="body2" fontWeight={800}>{valor}</Typography>
