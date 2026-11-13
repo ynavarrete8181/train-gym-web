@@ -53,6 +53,7 @@ const tituloTipo = {
   REABRIR: 'Reapertura de membresía',
   EDICION_ADMINISTRATIVA: 'Edición administrativa',
   CAMBIO_PRECIO: 'Cambio de precio del contrato',
+  PRECIO_RENOVACION: 'Precio de renovación configurado',
   PRORROGAR_CONGELACION: 'Prórroga de congelación',
   CANCELAR_PROGRAMACION: 'Cancelación de programación',
   CANCELAR: 'Cancelación de membresía',

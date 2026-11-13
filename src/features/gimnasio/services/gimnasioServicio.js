@@ -283,6 +283,10 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/cancelacion/preview`);
     return data.datos;
   },
+  configurarPrecioRenovacion: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/membresias/${id}/precio-renovacion`, payload);
+    return data.datos;
+  },
   cambiarPrecioMembresia: async (id, payload) => {
     const { data } = await api.put(`/base/gimnasio/membresias/${id}/precio`, payload);
     return data.datos;

@@ -69,6 +69,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   const [motivo, setMotivo] = useState('');
   const [nuevoPrecio, setNuevoPrecio] = useState('');
   const [desdePeriodo, setDesdePeriodo] = useState('');
+  const [modoRenovacion, setModoRenovacion] = useState('CONTRATO');
+  const [precioRenovacion, setPrecioRenovacion] = useState('');
   const [preview, setPreview] = useState(null);
   const [vistaPreviaAbierta, setVistaPreviaAbierta] = useState(false);
   const [resumenGuardado, setResumenGuardado] = useState(null);
@@ -283,13 +285,38 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   };
 
   // Cambiar el precio pactado desde un período (solo administradores; el backend lo valida).
-  const periodosContrato = [...(membresia?.periodos || [])].sort((a, b) => Number(a.numero_periodo) - Number(b.numero_periodo));
-  const periodoCobrado = (p) => ['PAGADA', 'PARCIAL'].includes(String(p.venta_estado || '').toUpperCase());
+  const periodosContrato = [...(ciclo?.periodos_contrato || membresia?.periodos || [])].sort((a, b) => Number(a.numero_periodo) - Number(b.numero_periodo));
+  const periodoCobrado = (p) => Boolean(p.cobrado) || ['PAGADA', 'PARCIAL'].includes(String(p.venta_estado || '').toUpperCase());
+  const dinero = (v) => `$${Number(v || 0).toFixed(2)}`;
+  const textoModoRenovacion = (modo, precio) => (modo === 'TARIFA' ? `tarifa vigente de la sede (hoy ${dinero(ciclo?.tarifa_vigente)})`
+    : modo === 'FIJO' ? `precio programado ${dinero(precio)}` : `precio del contrato (${dinero(ciclo?.precio_contrato)})`);
+  // Motivos prellenados con los valores; el administrador puede ajustarlos.
+  const motivoCambioPrecio = (precio, desde) => `Actualización del precio pactado de ${dinero(ciclo?.precio_contrato)} a ${dinero(precio)} desde el período ${desde || '—'} (tarifa vigente de la sede: ${dinero(ciclo?.tarifa_vigente)}).`;
+  const motivoRenovacion = (modo, precio) => `La próxima renovación se hará con el ${textoModoRenovacion(modo, precio)}. El período actual mantiene ${dinero(ciclo?.precio_contrato)}.`;
+  const abrirPrecioRenovacion = () => {
+    const modo = ciclo?.precio_renovacion_modo || 'CONTRATO';
+    const precio = ciclo?.precio_renovacion ?? ciclo?.tarifa_vigente ?? '';
+    setOperacion('renovacion_precio'); setError(''); setExito('');
+    setModoRenovacion(modo); setPrecioRenovacion(String(precio)); setMotivo(motivoRenovacion(modo, precio));
+  };
+  const guardarPrecioRenovacion = async () => {
+    setProcesando(true); setError('');
+    try {
+      await gimnasioServicio.configurarPrecioRenovacion(membresia.id, {
+        modo: modoRenovacion, precio: modoRenovacion === 'FIJO' ? Number(precioRenovacion) : null, motivo: motivo.trim(),
+      });
+      setExito(`Listo: la próxima renovación usará el ${textoModoRenovacion(modoRenovacion, precioRenovacion)}.`);
+      setOperacion(''); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
   const abrirCambioPrecio = () => {
-    const primeroSinCobrar = periodosContrato.find((p) => !periodoCobrado(p)) || periodosContrato[periodosContrato.length - 1];
-    setOperacion('precio'); setMotivo(''); setError(''); setExito('');
-    setNuevoPrecio(String(ciclo?.tarifa_vigente ?? ciclo?.precio_contrato ?? ''));
-    setDesdePeriodo(primeroSinCobrar ? String(primeroSinCobrar.numero_periodo) : '');
+    const primeroSinCobrar = periodosContrato.find((p) => !periodoCobrado(p));
+    const precio = ciclo?.tarifa_vigente ?? ciclo?.precio_contrato ?? '';
+    const desde = primeroSinCobrar ? String(primeroSinCobrar.numero_periodo) : '';
+    setOperacion('precio'); setError(''); setExito('');
+    setNuevoPrecio(String(precio)); setDesdePeriodo(desde); setMotivo(motivoCambioPrecio(precio, desde));
   };
   const cambiarPrecio = async () => {
     setProcesando(true); setError('');
@@ -385,7 +412,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     estado: (s) => ETIQUETAS_SUSPENSION[s.estado] || s.estado || '',
   }, OPCIONES_SUSPENSIONES);
   const { visibles } = tabla;
-  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar', 'reabrir', 'vigencia', 'precio'].includes(operacion);
+  const mostrarFormulario = ['congelar', 'editar', 'reactivar', 'prorrogar', 'cancelar', 'reabrir', 'vigencia', 'precio', 'renovacion_precio'].includes(operacion);
   const esPase = esPaseDiario(membresia);
 
   return <Box sx={integrado ? { width: '100%', minWidth: 0 } : {
@@ -394,7 +421,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     {(!integrado || mostrarFormulario) && <Stack direction="row" gap={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
-          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : operacion === 'precio' ? 'Cambiar precio del contrato' : 'Gestión del ciclo de vida'}
+          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : operacion === 'precio' ? 'Cambiar precio del contrato' : operacion === 'renovacion_precio' ? 'Precio de renovación' : 'Gestión del ciclo de vida'}
         </Typography>
       </Box>
       {!integrado && <Box sx={{ ml: 'auto', flexShrink: 0 }}>
@@ -420,6 +447,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
             Las acciones quedan registradas con su motivo. Ventas, cobros y comprobantes se conservan.
           </Typography>
         ) : null}
+        {ciclo?.puede_cambiar_precio && <Typography variant="body2" color="text.secondary">
+          Precio pactado: {dinero(ciclo?.precio_contrato)} · Al renovar: {textoModoRenovacion(ciclo?.precio_renovacion_modo || 'CONTRATO', ciclo?.precio_renovacion)}.
+        </Typography>}
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
           {puedeReactivar && <Button variant="outlined"
             sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
@@ -434,6 +464,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
               setVigenciaFin(String(ciclo.vigencia_fin || '').slice(0, 10));
             }}>
             Editar vigencia
+          </Button>}
+          {ciclo?.puede_cambiar_precio && <Button variant="outlined"
+            sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
+            onClick={abrirPrecioRenovacion}>
+            Precio de renovación
           </Button>}
           {ciclo?.puede_cambiar_precio && <Button variant="outlined"
             sx={{ width: 'auto', flex: '0 0 auto', textTransform: 'none', fontWeight: 800 }}
@@ -704,14 +739,16 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
       {operacion === 'precio' && <Box>
         <Alert severity="info" sx={{ mb: 2 }}>
           Precio pactado actual: ${Number(ciclo?.precio_contrato || 0).toFixed(2)}. Tarifa vigente de la sede: ${Number(ciclo?.tarifa_vigente || 0).toFixed(2)}.
-          Los períodos sin cobrar pasan al precio nuevo (con su descuento recalculado); lo ya cobrado no cambia. Queda en el historial.
+          Corrige períodos ya creados y sin cobrar (con su descuento recalculado); lo cobrado no cambia. Para el próximo mes usa "Precio de renovación".
         </Alert>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
           <TextField size="small" fullWidth required type="number" label="Nuevo precio" value={nuevoPrecio}
-            onChange={e => setNuevoPrecio(e.target.value)} slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}/>
+            onChange={e => { setNuevoPrecio(e.target.value); setMotivo(motivoCambioPrecio(e.target.value, desdePeriodo)); }}
+            slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}/>
           <TextField select size="small" fullWidth required label="Desde el período" value={desdePeriodo}
-            onChange={e => setDesdePeriodo(e.target.value)}>
-            {periodosContrato.map((p) => <MenuItem key={p.numero_periodo} value={String(p.numero_periodo)}>
+            onChange={e => { setDesdePeriodo(e.target.value); setMotivo(motivoCambioPrecio(nuevoPrecio, e.target.value)); }}
+            helperText={periodosContrato.every(periodoCobrado) ? 'Todos los períodos ya están cobrados: usa "Precio de renovación" para el próximo.' : ''}>
+            {periodosContrato.map((p) => <MenuItem key={p.numero_periodo} value={String(p.numero_periodo)} disabled={periodoCobrado(p)}>
               Período {p.numero_periodo} · {fechaLegible(p.fecha_inicio)} – {fechaLegible(p.fecha_fin)} · ${Number(p.precio || 0).toFixed(2)}
               {periodoCobrado(p) ? ` · cobrado $${Number(p.venta_total || 0).toFixed(2)}` : ' · sin cobrar'}
             </MenuItem>)}
@@ -723,6 +760,29 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           <BotonCancelar disabled={procesando} onClick={() => setOperacion('')}/>
           <BotonGuardar texto="Guardar precio" guardando={procesando}
             disabled={!(Number(nuevoPrecio) > 0) || !desdePeriodo || motivo.trim().length < 8} onClick={cambiarPrecio}/>
+        </Box>
+      </Box>}
+      {operacion === 'renovacion_precio' && <Box>
+        <Alert severity="info" sx={{ mb: 2 }}>
+          Define con qué precio nace el próximo período al renovar (automática o manual). El período actual y lo cobrado no cambian; queda en el historial.
+        </Alert>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5 }}>
+          <TextField select size="small" fullWidth required label="Al renovar usar" value={modoRenovacion}
+            onChange={e => { setModoRenovacion(e.target.value); setMotivo(motivoRenovacion(e.target.value, precioRenovacion)); }}>
+            <MenuItem value="CONTRATO">Precio del contrato ({dinero(ciclo?.precio_contrato)})</MenuItem>
+            <MenuItem value="TARIFA">Tarifa vigente de la sede (hoy {dinero(ciclo?.tarifa_vigente)})</MenuItem>
+            <MenuItem value="FIJO">Precio específico</MenuItem>
+          </TextField>
+          {modoRenovacion === 'FIJO' && <TextField size="small" fullWidth required type="number" label="Precio para la renovación" value={precioRenovacion}
+            onChange={e => { setPrecioRenovacion(e.target.value); setMotivo(motivoRenovacion('FIJO', e.target.value)); }}
+            slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }}/>}
+        </Box>
+        <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 2 }}
+          value={motivo} onChange={e => setMotivo(e.target.value)} helperText="Se llena solo con los valores; puedes ajustarlo."/>
+        <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
+          <BotonCancelar disabled={procesando} onClick={() => setOperacion('')}/>
+          <BotonGuardar texto="Guardar" guardando={procesando}
+            disabled={(modoRenovacion === 'FIJO' && !(Number(precioRenovacion) > 0)) || motivo.trim().length < 8} onClick={guardarPrecioRenovacion}/>
         </Box>
       </Box>}
       {operacion === 'cancelar' && <Box>
