@@ -14,22 +14,32 @@ const mensajeError = (e) => {
 export function ConfiguracionContrato({ membresia, onActualizado }) {
   const inicial = { dias_gracia: Number(membresia.dias_gracia || 0), renovacion_automatica: Boolean(membresia.renovacion_automatica) };
   const [form, setForm] = useState(inicial);
-  const [motivo, setMotivo] = useState('');
+  const [motivoTexto, setMotivo] = useState('');
+  const [motivoAuto, setMotivoAuto] = useState(true);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  useEffect(() => { setForm(inicial); setMotivo(''); }, [membresia?.id, membresia?.dias_gracia, membresia?.renovacion_automatica]);
+  useEffect(() => { setForm(inicial); setMotivo(''); setMotivoAuto(true); }, [membresia?.id, membresia?.dias_gracia, membresia?.renovacion_automatica]);
 
   const cambiado = Number(form.dias_gracia) !== inicial.dias_gracia || form.renovacion_automatica !== inicial.renovacion_automatica;
   const permiteRenovacion = membresia.cantidad_periodos_contratados != null;
+  // Motivo sugerido con lo que cambia; el usuario puede editarlo o completarlo.
+  const siNo = (v) => (v ? 'activada' : 'desactivada');
+  const cambios = [
+    Number(form.dias_gracia) !== inicial.dias_gracia && `días de gracia ${inicial.dias_gracia} → ${Number(form.dias_gracia || 0)}`,
+    form.renovacion_automatica !== inicial.renovacion_automatica && `renovación automática ${siNo(inicial.renovacion_automatica)} → ${siNo(form.renovacion_automatica)}`,
+  ].filter(Boolean);
+  const motivo = motivoAuto
+    ? (cambios.length ? `Configuración del contrato ${membresia?.codigo || ''}: ${cambios.join('; ')}.` : '')
+    : motivoTexto;
 
   const guardar = async () => {
     setGuardando(true); setError('');
     try {
       await gimnasioServicio.actualizarConfiguracionMembresia(membresia.id, { ...form, dias_gracia: Number(form.dias_gracia), motivo: motivo.trim() });
       setExito('Configuración guardada. El cambio quedó en el historial.');
-      setMotivo('');
+      setMotivo(''); setMotivoAuto(true);
       await onActualizado?.();
     } catch (e) {
       setError(mensajeError(e));
@@ -57,7 +67,7 @@ export function ConfiguracionContrato({ membresia, onActualizado }) {
     </Box>
     {cambiado && <>
       <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 1.5 }}
-        helperText="Escribe al menos 8 caracteres." value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        helperText="Escribe al menos 8 caracteres." value={motivo} onChange={(e) => { setMotivo(e.target.value); setMotivoAuto(false); }} />
       <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 1.5 }}>
         <BotonCancelar disabled={guardando} onClick={() => { setForm(inicial); setMotivo(''); setError(''); }} />
         <BotonGuardar texto="Guardar configuración" guardando={guardando} disabled={motivo.trim().length < 8} onClick={guardar} />

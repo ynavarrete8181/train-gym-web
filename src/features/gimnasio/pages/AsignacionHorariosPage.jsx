@@ -49,6 +49,16 @@ export function AsignacionHorariosPage() {
   const [cargando, setCargando] = useState(true);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
 
+  // Observación sugerida con los datos de la asignación; el usuario puede editarla o borrarla.
+  const fechaTexto = (v) => (v ? v.split('-').reverse().join('/') : '');
+  const entrenadorForm = opcionesEntrenador.find((e) => String(e.id) === String(form.entrenador_id));
+  const sedeForm = (catalogos.sedes || []).find((x) => String(x.id) === String(form.sede_id));
+  const jornadaForm = (catalogos.jornadas || []).find((j) => String(j.id) === String(form.jornada_id));
+  const observacionSugerida = entrenadorForm && sedeForm && jornadaForm
+    ? `${form.id ? 'Actualización del horario' : 'Asignación de horario'} de ${[entrenadorForm.nombres, entrenadorForm.apellidos].filter(Boolean).join(' ') || entrenadorForm.name} en ${sedeForm.nombre}: jornada ${jornadaForm.nombre} (${(jornadaForm.dias_semana || []).map((d) => d.slice(0, 3).toLowerCase()).join(', ')} ${hora(jornadaForm.hora_inicio)}-${hora(jornadaForm.hora_fin)}), vigente desde el ${fechaTexto(form.fecha_inicio)}${form.fecha_fin ? ` hasta el ${fechaTexto(form.fecha_fin)}` : ' sin fecha final'}.`
+    : '';
+  const observacionesForm = form.observaciones_editada ? form.observaciones : observacionSugerida;
+
   const cargar = async (params = filtros) => {
     setCargando(true);
     try {
@@ -113,7 +123,7 @@ export function AsignacionHorariosPage() {
       fecha_inicio: form.fecha_inicio,
       fecha_fin: form.fecha_fin || null,
       activo: Boolean(form.activo),
-      observaciones: form.observaciones || null,
+      observaciones: observacionesForm || null,
     };
 
     try {
@@ -143,6 +153,7 @@ export function AsignacionHorariosPage() {
       fecha_fin: fecha(item.fecha_fin),
       activo: item.activo !== false,
       observaciones: item.observaciones || '',
+      observaciones_editada: Boolean(item.observaciones),
     });
     setVista('formulario');
   };
@@ -230,7 +241,7 @@ export function AsignacionHorariosPage() {
               <TextField label="Vigente desde" type="date" size="small" value={form.fecha_inicio} onChange={(e) => setForm((a) => ({ ...a, fecha_inicio: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} required />
               <TextField label="Vigente hasta" type="date" size="small" value={form.fecha_fin} onChange={(e) => setForm((a) => ({ ...a, fecha_fin: e.target.value }))} slotProps={{ inputLabel: { shrink: true } }} helperText="Vacío = sin fecha final" />
 
-              <TextField label="Observaciones" size="small" value={form.observaciones} onChange={(e) => setForm((a) => ({ ...a, observaciones: e.target.value }))} multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
+              <TextField label="Observaciones" size="small" value={observacionesForm} onChange={(e) => setForm((a) => ({ ...a, observaciones: e.target.value, observaciones_editada: true }))} multiline minRows={2} sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
               <CampoActivo checked={form.activo} onChange={(e) => setForm((a) => ({ ...a, activo: e.target.checked }))} />
             </Box>
 

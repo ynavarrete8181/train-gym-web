@@ -353,7 +353,7 @@ export function VentasPage() {
                         }}>Ver detalle</Button>
                       {!estadoParcial ? (
                         <Button variant="outlined" size="small" startIcon={<BlockOutlinedIcon />}
-                          onClick={() => { setVentaAnular(venta); setMotivoAnular(''); }}
+                          onClick={() => { setVentaAnular(venta); setMotivoAnular(`Anulación de la cuenta ${venta.numero || ''} de ${venta.cliente_nombre || 'consumidor final'} por ${dinero(venta.total)} (cuenta abierta sin cobros registrados); queda anulada en el historial.`); }}
                           sx={{ ...dbanuStyles.cancelButton, gridColumn: '1 / -1', minHeight: 39, height: 39, width: '100%', m: 0, borderRadius: 1.3 }}>Anular venta</Button>
                       ) : <Box sx={{ gridColumn: '1 / -1', minHeight: 39 }} />}
                     </Box>

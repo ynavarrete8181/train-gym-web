@@ -106,12 +106,23 @@ export function VentasCatalogo({ tipo }) {
   const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
   const metodoActual = (item) => ['efectivo', 'transferencia', 'tarjeta', 'deposito', 'otros']
     .find((m) => Number(item[m] || 0) > 0)?.toUpperCase().replace('OTROS', 'OTRO') || 'EFECTIVO';
-  const abrirCorreccion = (item) => setCorreccion({ item, metodo_pago: metodoActual(item) === 'EFECTIVO' ? 'TRANSFERENCIA' : 'EFECTIVO', referencia: '', motivo: '' });
+  const abrirCorreccion = (item) => setCorreccion({ item, metodo_pago: metodoActual(item) === 'EFECTIVO' ? 'TRANSFERENCIA' : 'EFECTIVO', referencia: '', motivo: '', motivo_auto: true });
+  // Motivo sugerido con los datos del cobro; se actualiza hasta que el usuario lo edita.
+  const textoCorreccion = (c) => {
+    const actual = metodoActual(c.item).toLowerCase();
+    const nuevo = c.metodo_pago.toLowerCase();
+    const ref = c.referencia.trim() ? ` con comprobante/referencia ${c.referencia.trim()}` : '';
+    return actual === nuevo
+      ? `Se completa la referencia del cobro ${c.item.codigo_cobro || ''} de ${c.item.cliente_nombre || 'cliente'} por $${dinero(c.item.total_cobrado)}, pagado por ${nuevo}${ref}.`
+      : `Corrección del método de pago del cobro ${c.item.codigo_cobro || ''} de ${c.item.cliente_nombre || 'cliente'} por $${dinero(c.item.total_cobrado)}: se registró como ${actual} por error, el pago real fue por ${nuevo}${ref}.`;
+  };
+  const motivoCorreccion = correccion ? (correccion.motivo_auto ? textoCorreccion(correccion) : correccion.motivo) : '';
+  const motivoVentaAnular = (v) => `Anulación de la venta ${v.venta_numero || ''} de ${v.cliente_nombre || 'consumidor final'} por $${dinero(v.venta_total)}: el dinero se devuelve desde el turno de caja por el mismo método de pago, los productos regresan al stock y el comprobante queda anulado.`;
   const guardarCorreccion = async () => {
     setGuardandoCorreccion(true);
     try {
       await ventaServicio.corregirMetodoPago(correccion.item.id, {
-        metodo_pago: correccion.metodo_pago, referencia: correccion.referencia.trim() || null, motivo: correccion.motivo.trim(),
+        metodo_pago: correccion.metodo_pago, referencia: correccion.referencia.trim() || null, motivo: motivoCorreccion.trim(),
       });
       showNotificacion('Método de pago corregido. Si el turno ya estaba cerrado, quedó pendiente de conciliar.', 'success');
       setCorreccion(null);
@@ -311,7 +322,7 @@ export function VentasCatalogo({ tipo }) {
           onReenviar={handleReenviarComprobante}
           reenviandoId={reenviandoId}
           puedeAnular={Boolean(catalogos.puede_anular_pagadas)}
-          onAnular={(item) => { setVentaAnular(item); setMotivoAnular(''); }}
+          onAnular={(item) => { setVentaAnular(item); setMotivoAnular(motivoVentaAnular(item)); }}
           onPageChange={(page) => { const nuevos = { ...filtros, page }; setFiltros(nuevos); cargar(nuevos); }}
           onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
         />
@@ -323,7 +334,7 @@ export function VentasCatalogo({ tipo }) {
         descripcion={correccion ? `${correccion.item.codigo_cobro} · ${correccion.item.cliente_nombre || 'Cliente'} · ${dinero(correccion.item.total_cobrado)}. Registrado como ${metodoActual(correccion.item).toLowerCase()}. El monto no cambia; queda en el historial con el motivo.` : ''}
         textoConfirmar="Sí, corregir"
         cargando={guardandoCorreccion}
-        confirmarDeshabilitado={!correccion || correccion.motivo.trim().length < 8 || correccion.metodo_pago === metodoActual(correccion.item) && !correccion.referencia.trim()}
+        confirmarDeshabilitado={!correccion || motivoCorreccion.trim().length < 8 || correccion.metodo_pago === metodoActual(correccion.item) && !correccion.referencia.trim()}
         onClose={() => !guardandoCorreccion && setCorreccion(null)}
         onConfirmar={guardarCorreccion}
       >
@@ -335,8 +346,8 @@ export function VentasCatalogo({ tipo }) {
           </TextField>
           {correccion.metodo_pago !== 'EFECTIVO' && <TextField size="small" label="N.º de comprobante / referencia" value={correccion.referencia}
             onChange={(e) => setCorreccion((c) => ({ ...c, referencia: e.target.value }))} placeholder="Ej. 602185233" />}
-          <TextField multiline minRows={2} size="small" required label="Motivo u observación" value={correccion.motivo}
-            onChange={(e) => setCorreccion((c) => ({ ...c, motivo: e.target.value }))}
+          <TextField multiline minRows={2} size="small" required label="Motivo u observación" value={motivoCorreccion}
+            onChange={(e) => setCorreccion((c) => ({ ...c, motivo: e.target.value, motivo_auto: false }))}
             helperText="Escribe al menos 8 caracteres. Ej. Se registró en efectivo pero fue transferencia." />
         </Stack>}
       </ModalConfirmacion>

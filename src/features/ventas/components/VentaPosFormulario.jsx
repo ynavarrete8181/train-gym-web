@@ -107,6 +107,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const [errorBeneficio, setErrorBeneficio] = useState('');
   const [impuesto, setImpuesto] = useState(0);
   const [observaciones, setObservaciones] = useState('');
+  const [observacionesAuto, setObservacionesAuto] = useState(true);
   const [pagos, setPagos] = useState([
     { clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', recibido: '0.00', montoManual: false, recibidoManual: false },
   ]);
@@ -142,6 +143,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
           setDescuento(Number(ventaInicial.descuento || 0));
           setImpuesto(Number(ventaInicial.impuesto || 0));
           setObservaciones(ventaInicial.observaciones || '');
+          setObservacionesAuto(!ventaInicial.observaciones);
           setCarrito((ventaInicial.detalles || []).map((fila, indice) => {
             const contractual = Boolean(ventaInicial.membresia_id) && (
               String(fila.tipo_item || '').toUpperCase() === 'MEMBRESIA'
@@ -260,6 +262,12 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
   const saldoDespuesPago = Math.max(0, saldoCobro - totalPagos);
   const excedentePagos = Math.max(0, totalPagos - saldoCobro);
   const totalItems = carrito.reduce((acc, item) => acc + Number(item.cantidad || 0), 0);
+  // Observación sugerida con el detalle de la venta; el usuario puede editarla o borrarla.
+  const metodosTexto = pagos.filter((p) => Number(p.monto || 0) > 0)
+    .map((p) => `${String(p.metodo_pago).toLowerCase()} ${dinero(p.monto)}${p.referencia ? ` (ref. ${p.referencia})` : ''}`).join(', ');
+  const observacionSugerida = carrito.length ? `${esCuentaAbierta ? `Cobro de la cuenta ${ventaInicial?.numero || ''}` : 'Venta'} a ${cliente?.nombre || 'consumidor final'}: ${carrito
+    .map((item) => `${Number(item.cantidad || 1)} × ${item.descripcion} (${dinero(item.total_linea)})`).join('; ')}. Total ${dinero(total)}${Number(descuento || 0) > 0 ? `, descuento ${dinero(descuento)}` : ''}${metodosTexto ? `. Pago: ${metodosTexto}` : ''}.` : '';
+  const observacionesVista = observacionesAuto ? observacionSugerida : observaciones;
 
   // La primera forma de pago propone el saldo completo. Al editar manualmente
   // el monto, se respeta el valor ingresado (pagos divididos).
@@ -467,7 +475,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
         membresia_id: membresiaCarrito?.membresia_id || null,
         descuento: Number(descuento || 0),
         impuesto: Number(impuesto || 0),
-        observaciones: observaciones || null,
+        observaciones: observacionesVista || null,
         detalles: carrito.map(({ clave, bloqueado, ...item }) => item),
       };
 
@@ -956,7 +964,7 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   </Stack>
                 </Box>
 
-                <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observaciones} onChange={(e) => setObservaciones(e.target.value)} sx={{ mt: 1.4 }} />
+                <TextField fullWidth multiline minRows={2} size="small" label="Observaciones" value={observacionesVista} onChange={(e) => { setObservaciones(e.target.value); setObservacionesAuto(false); }} sx={{ mt: 1.4 }} helperText="Se arma con el detalle de la venta; puedes editarla." />
                 <Stack direction="row" spacing={1} useFlexGap sx={{ mt: 1.6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                   <BotonCancelar onClick={onVolver} disabled={guardando} />
                   <Button

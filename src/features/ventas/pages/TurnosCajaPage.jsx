@@ -106,9 +106,30 @@ export function TurnosCajaPage() {
       caja_id: cajasSede.length === 1 ? String(cajasSede[0].id) : '',
       saldo_inicial: 0,
       observaciones: '',
+      observaciones_auto: true,
     });
     setVista('abrir');
   };
+
+  // Observaciones sugeridas según el flujo: se arman con los datos y el usuario puede editarlas.
+  const dineroTexto = (v) => `$${Number(v || 0).toFixed(2)}`;
+  const textoApertura = () => {
+    const caja = (catalogos.cajas || []).find((c) => String(c.id) === String(formApertura.caja_id));
+    const sede = (catalogos.sedes || []).find((x) => String(x.id) === String(sedeApertura));
+    return `Apertura de ${caja?.nombre || 'caja'}${sede ? ` en ${sede.nombre}` : ''} con fondo inicial de ${dineroTexto(formApertura.saldo_inicial)}.`;
+  };
+  const textoCierre = (tipo) => {
+    const t = turnoCerrar || {};
+    const esperado = Number(t.efectivo_esperado_actual ?? t.efectivo_esperado ?? 0);
+    const contado = formCierre.efectivo_contado === '' ? null : Number(formCierre.efectivo_contado);
+    const cifras = `efectivo esperado ${dineroTexto(esperado)}${contado === null ? '' : `, contado ${dineroTexto(contado)}, diferencia ${dineroTexto(contado - esperado)}`}`;
+    const cobros = `${t.cantidad_cobros || 0} cobro(s) por ${dineroTexto(t.total_cobrado)} (efectivo ${dineroTexto(t.efectivo_cobrado)}, transferencias ${dineroTexto(t.transferencia_cobrada)})`;
+    return tipo === 'conciliar'
+      ? `Conciliación del cierre automático de ${t.caja_nombre || 'caja'} (${t.sede_nombre || ''}): ${cifras}. ${cobros}.`
+      : `Cierre de ${t.caja_nombre || 'caja'} (${t.sede_nombre || ''}): ${cifras}. ${cobros}.`;
+  };
+  const obsApertura = formApertura.observaciones_auto ? textoApertura() : formApertura.observaciones;
+  const obsCierre = (tipo) => (formCierre.observaciones_auto ? textoCierre(tipo) : formCierre.observaciones);
 
   const abrirTurno = async () => {
     if (!sedeApertura) {
@@ -128,7 +149,7 @@ export function TurnosCajaPage() {
       await ventaServicio.abrirTurnoCaja({
         caja_id: Number(formApertura.caja_id),
         saldo_inicial: Number(formApertura.saldo_inicial || 0),
-        observaciones: formApertura.observaciones || null,
+        observaciones: obsApertura || null,
       });
       showNotificacion('Turno de caja abierto correctamente.', 'success');
       setVista('lista');
@@ -142,13 +163,13 @@ export function TurnosCajaPage() {
 
   const prepararCierre = (turno) => {
     setTurnoCerrar(turno);
-    setFormCierre({ efectivo_contado: '', observaciones: '' });
+    setFormCierre({ efectivo_contado: '', observaciones: '', observaciones_auto: true });
     setVista('cerrar');
   };
 
   const prepararConciliacion = (turno) => {
     setTurnoCerrar(turno);
-    setFormCierre({ efectivo_contado: '', observaciones: '' });
+    setFormCierre({ efectivo_contado: '', observaciones: '', observaciones_auto: true });
     setVista('conciliar');
   };
 
@@ -161,7 +182,7 @@ export function TurnosCajaPage() {
     try {
       await ventaServicio.cerrarTurnoCaja(turnoCerrar.id, {
         efectivo_contado: Number(formCierre.efectivo_contado),
-        observaciones: formCierre.observaciones || null,
+        observaciones: obsCierre('cerrar') || null,
       });
       showNotificacion('Turno de caja cerrado correctamente.', 'success');
       setVista('lista');
@@ -183,7 +204,7 @@ export function TurnosCajaPage() {
     try {
       await ventaServicio.conciliarTurnoCaja(turnoCerrar.id, {
         efectivo_contado: Number(formCierre.efectivo_contado),
-        observaciones: formCierre.observaciones || null,
+        observaciones: obsCierre('conciliar') || null,
       });
       showNotificacion('Arqueo de caja conciliado correctamente.', 'success');
       setVista('lista');
@@ -270,7 +291,7 @@ export function TurnosCajaPage() {
                   ))}
                 </TextField>
                 <TextField label="Saldo inicial *" type="number" value={formApertura.saldo_inicial} onChange={(e) => setFormApertura((a) => ({ ...a, saldo_inicial: e.target.value }))} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
-                <TextField label="Observaciones de apertura" value={formApertura.observaciones} onChange={(e) => setFormApertura((a) => ({ ...a, observaciones: e.target.value }))} multiline minRows={2} size="small" sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
+                <TextField label="Observaciones de apertura" value={obsApertura} helperText="Se arma con los datos; puedes editarla." onChange={(e) => setFormApertura((a) => ({ ...a, observaciones: e.target.value, observaciones_auto: false }))} multiline minRows={2} size="small" sx={{ gridColumn: { xs: 'auto', md: 'span 2' } }} />
               </Box>
             </Box>
           </Box>
@@ -302,7 +323,7 @@ export function TurnosCajaPage() {
               </Box>
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
                 <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
-                <TextField label="Observaciones de cierre" value={formCierre.observaciones} onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value }))} size="small" />
+                <TextField label="Observaciones de cierre" value={obsCierre('cerrar')} multiline minRows={2} helperText="Se arma con los datos; puedes editarla." onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value, observaciones_auto: false }))} size="small" />
               </Box>
             </Box>
           </Box>
@@ -330,7 +351,7 @@ export function TurnosCajaPage() {
               <ResumenCobrosTurno turno={turnoCerrar} />
               <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 1.5 }}>
                 <TextField label="Efectivo contado *" type="number" value={formCierre.efectivo_contado} onChange={(e) => setFormCierre((a) => ({ ...a, efectivo_contado: e.target.value }))} size="small" slotProps={{ htmlInput: { min: 0, step: '0.01' } }} />
-                <TextField label="Observaciones de conciliación" value={formCierre.observaciones} onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value }))} size="small" />
+                <TextField label="Observaciones de conciliación" value={obsCierre('conciliar')} multiline minRows={2} helperText="Se arma con los datos; puedes editarla." onChange={(e) => setFormCierre((a) => ({ ...a, observaciones: e.target.value, observaciones_auto: false }))} size="small" />
               </Box>
             </Box>
           </Box>

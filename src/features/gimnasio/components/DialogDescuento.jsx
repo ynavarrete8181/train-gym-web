@@ -30,23 +30,30 @@ export function DialogDescuento({
   useEffect(() => {
     if (abierto) setForm({
       sede_id: inicial?.sede_id ? String(inicial.sede_id) : '', tipo: inicial?.tipo || 'PORCENTAJE',
-      valor: inicial?.valor != null && inicial.valor !== '' ? String(inicial.valor) : '', motivo: inicial?.motivo || '',
+      valor: inicial?.valor != null && inicial.valor !== '' ? String(inicial.valor) : '', motivo: inicial?.motivo || '', motivo_auto: !inicial?.motivo,
       fecha_inicio: inicial?.fecha_inicio || inicio || '', fecha_fin: inicial?.fecha_fin ?? (fin || ''),
     });
   }, [abierto]);
   if (!abierto || !form) return null;
 
-  const cambiar = (campo, valor) => setForm((a) => ({ ...a, [campo]: valor }));
+  const cambiar = (campo, valor) => setForm((a) => ({ ...a, [campo]: valor, ...(campo === 'motivo' ? { motivo_auto: false } : {}) }));
   const nombreSede = (id) => (id ? sedes.find((s) => String(s.id) === String(id))?.nombre || 'Sede' : 'todas las sedes');
   const sedesDelDescuento = form.sede_id ? sedes.filter((s) => String(s.id) === String(form.sede_id)) : sedes;
   const topeFijo = sedesDelDescuento.length ? Math.min(...sedesDelDescuento.map((s) => s.precio)) : null;
   const valor = Number(form.valor);
+  // Motivo sugerido con los datos del descuento; el administrador lo completa (beca, convenio…) o lo reescribe.
+  const textoValor = (t, v) => (t === 'PORCENTAJE' ? `${Number(v)} %` : dinero(v));
+  const rango = `del ${fecha(form.fecha_inicio)} al ${fecha(form.fecha_fin)}`;
+  const motivoSugerido = !(valor > 0) ? '' : inicial
+    ? `Cambio del descuento en ${nombreSede(form.sede_id)}: ${textoValor(inicial.tipo, inicial.valor)} → ${textoValor(form.tipo, valor)}, ${inicioOriginal ? `rige desde el ${fecha(form.fecha_inicio)} hasta el ${fecha(form.fecha_fin)}` : rango}.`
+    : `Descuento de ${textoValor(form.tipo, valor)} en ${nombreSede(form.sede_id)} ${rango}, autorizado por administración.`;
+  const motivo = form.motivo_auto ? motivoSugerido : form.motivo;
   const desdeMinimo = inicioOriginal || inicio;
   const errores = {
     valor: String(form.valor).trim() === '' ? '' : (!(valor > 0) ? 'Debe ser mayor que 0.'
       : form.tipo === 'PORCENTAJE' && valor > 100 ? 'Debe estar entre 1 y 100 %.'
         : form.tipo === 'FIJO' && topeFijo !== null && valor > topeFijo ? `No puede superar ${dinero(topeFijo)}.` : ''),
-    motivo: form.motivo.trim() && form.motivo.trim().length < 8 ? 'Escribe al menos 8 caracteres.' : '',
+    motivo: motivo.trim() && motivo.trim().length < 8 ? 'Escribe al menos 8 caracteres.' : '',
     fechas: !form.fecha_inicio ? 'Indica desde cuándo rige.'
       : inicioOriginal && form.fecha_inicio <= inicioOriginal ? `El cambio debe regir después del ${fecha(inicioOriginal)}.`
         : (inicio && form.fecha_inicio < inicio) || (fin && (!form.fecha_fin || form.fecha_fin > fin))
@@ -54,10 +61,10 @@ export function DialogDescuento({
     cruce: otros.some((d) => String(d.sede_id || '') === String(form.sede_id || '') && seCruzan(d, form))
       ? `Ya hay un descuento para ${nombreSede(form.sede_id)} en esas fechas.` : '',
   };
-  const valido = valor > 0 && form.motivo.trim().length >= 8 && !Object.values(errores).some(Boolean);
+  const valido = valor > 0 && motivo.trim().length >= 8 && !Object.values(errores).some(Boolean);
   const guardar = () => onGuardar({
     sede_id: form.sede_id ? Number(form.sede_id) : null, tipo: form.tipo, valor: Number(form.valor),
-    motivo: form.motivo.trim(), fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null,
+    motivo: motivo.trim(), fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null,
   });
 
   return <Dialog open onClose={guardando ? undefined : onCerrar} fullWidth maxWidth="sm" aria-labelledby="dialog-descuento-titulo"
@@ -99,9 +106,9 @@ export function DialogDescuento({
             : { startAdornment: <InputAdornment position="start">$</InputAdornment> },
           htmlInput: { min: 0.01, step: 0.01 },
         }} />
-      <TextField size="small" label={inicial ? 'Motivo del cambio / autorización' : 'Motivo / autorización'} value={form.motivo}
+      <TextField size="small" label={inicial ? 'Motivo del cambio / autorización' : 'Motivo / autorización'} value={motivo} multiline minRows={2}
         onChange={(e) => cambiar('motivo', e.target.value)} placeholder="Ej. Beca deportiva, familiar"
-        error={Boolean(errores.motivo)} helperText={errores.motivo || ' '} sx={{ gridColumn: '1 / -1' }} />
+        error={Boolean(errores.motivo)} helperText={errores.motivo || 'Se arma con los datos; agrega la razón (beca, convenio…) o edítalo.'} sx={{ gridColumn: '1 / -1' }} />
       <TextField size="small" type="date" label={inicioOriginal ? 'El cambio rige desde' : 'Desde'} value={form.fecha_inicio}
         onChange={(e) => cambiar('fecha_inicio', e.target.value)}
         slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: desdeMinimo || undefined, max: fin || undefined } }}
