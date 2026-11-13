@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  Table,
   FormControlLabel,
   IconButton,
   MenuItem,
@@ -61,6 +68,18 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
   const [form, setForm] = useState(initialModalidad());
   const [editando, setEditando] = useState(true);
   const [cargando, setCargando] = useState(true);
+  // Historial de tarifas por sede: desde cuándo y hasta cuándo rigió cada precio.
+  const [historial, setHistorial] = useState(null);
+  const verHistorial = async (modalidad) => {
+    setHistorial({ modalidad, tramos: null });
+    try {
+      const tramos = await gimnasioServicio.obtenerHistorialTarifas(plan.id, modalidad.id);
+      setHistorial({ modalidad, tramos });
+    } catch {
+      setHistorial({ modalidad, tramos: [], error: true });
+    }
+  };
+  const fechaHora = (v) => (v ? new Date(String(v).replace(' ', 'T')).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' }) : 'Hoy');
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
   const tabla = useTablaLocal(modalidades, {});
 
@@ -376,6 +395,11 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
                   </TableCell>
                   <TableCell align="center">
                     <Stack direction="row" spacing={.5} sx={{ justifyContent: 'center' }}>
+                      <Tooltip title="Historial de tarifas">
+                        <IconButton size="small" onClick={() => verHistorial(modalidad)} sx={dbanuStyles.actionView}>
+                          <HistoryOutlinedIcon sx={{ fontSize: 17 }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Editar modalidad">
                         <IconButton size="small" onClick={() => editar(modalidad)} sx={dbanuStyles.actionEdit}>
                           <EditOutlinedIcon sx={{ fontSize: 17 }} />
@@ -394,6 +418,42 @@ export function PlanModalidadesView({ plan, sedes = [], onVolver, onActualizado,
               ) : null}
             </TableBody>
           </TablaGestion>
+          <Dialog open={Boolean(historial)} onClose={() => setHistorial(null)} fullWidth maxWidth="sm">
+            <DialogTitle sx={{ ...formStyles.modalHeader, py: 1.25 }}>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="h6" fontWeight={850} sx={{ fontSize: { xs: 16, sm: 18 } }}>Historial de tarifas</Typography>
+                <Typography variant="caption" color="text.secondary">{historial?.modalidad?.nombre} · los contratos conservan el precio con el que se firmaron</Typography>
+              </Box>
+            </DialogTitle>
+            <Divider />
+            <DialogContent sx={{ px: { xs: 1.5, sm: 2.5 }, py: 2 }}>
+              {historial?.tramos === null ? <Typography variant="body2">Cargando…</Typography> : (
+                <Box sx={{ overflowX: 'auto' }}>
+                  <Table size="small">
+                    <TableHead><TableRow>
+                      {['Sede', 'Precio', 'Desde', 'Hasta', 'Cambió'].map((t) => <TableCell key={t} sx={{ fontWeight: 800 }}>{t}</TableCell>)}
+                    </TableRow></TableHead>
+                    <TableBody>
+                      {(historial?.tramos || []).map((t, i) => <TableRow key={i}>
+                        <TableCell>{t.sede_nombre}</TableCell>
+                        <TableCell sx={{ fontWeight: 800 }}>${Number(t.precio).toFixed(2)}</TableCell>
+                        <TableCell>{fechaHora(t.vigente_desde)}</TableCell>
+                        <TableCell>{t.vigente_hasta ? fechaHora(t.vigente_hasta) : <Chip size="small" color="success" variant="outlined" label="Vigente" />}</TableCell>
+                        <TableCell>{t.usuario || '—'}</TableCell>
+                      </TableRow>)}
+                      {(historial?.tramos || []).length === 0 && <TableRow><TableCell colSpan={5} align="center">
+                        {historial?.error ? 'No se pudo cargar el historial.' : 'Sin cambios de tarifa registrados.'}
+                      </TableCell></TableRow>}
+                    </TableBody>
+                  </Table>
+                </Box>
+              )}
+            </DialogContent>
+            <Divider />
+            <DialogActions sx={{ ...dbanuStyles.dialogActions }}>
+              <Button variant="outlined" onClick={() => setHistorial(null)}>Cerrar</Button>
+            </DialogActions>
+          </Dialog>
         </Box>
       </Paper>
 

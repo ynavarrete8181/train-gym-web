@@ -283,6 +283,14 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/cancelacion/preview`);
     return data.datos;
   },
+  cambiarPrecioMembresia: async (id, payload) => {
+    const { data } = await api.put(`/base/gimnasio/membresias/${id}/precio`, payload);
+    return data.datos;
+  },
+  obtenerHistorialTarifas: async (planId, modalidadId) => {
+    const { data } = await api.get(`/base/gimnasio/planes/${planId}/modalidades/${modalidadId}/tarifas`);
+    return data.datos || [];
+  },
   editarVigenciaMembresia: async (id, payload) => {
     const { data } = await api.put(`/base/gimnasio/membresias/${id}/vigencia`, payload);
     return data.datos;
