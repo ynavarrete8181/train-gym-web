@@ -87,7 +87,8 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
     // Uno que ya empezó no se reescribe: el cambio rige desde una fecha y queda como registro nuevo.
     const inicio = String(d.fecha_inicio).slice(0, 10);
     const siguiente = (f) => { const x = new Date(`${f}T12:00:00`); x.setDate(x.getDate() + 1); return x.toISOString().slice(0, 10); };
-    const yaEmpezo = inicio <= hoy;
+    // Solo se versiona si ya empezó y ya se cobró una venta con él; si no, se corrige en el mismo registro.
+    const yaEmpezo = inicio <= hoy && Boolean(d.cobrado);
     setForm({ id: d.id, inicioOriginal: yaEmpezo ? inicio : null, inicial: {
       sede_id: d.sede_id, tipo: d.tipo, valor: Number(d.valor), motivo: '',
       fecha_inicio: yaEmpezo ? (hoy > inicio ? hoy : siguiente(inicio)) : inicio,
@@ -101,7 +102,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
       const respuesta = form.id
         ? await gimnasioServicio.actualizarDescuentoMembresia(membresia.id, form.id, payload)
         : await gimnasioServicio.registrarDescuentoMembresia(membresia.id, payload);
-      setExito(`${form.inicioOriginal ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento actualizado.' : 'Descuento registrado.'}${textoRecalculo(respuesta)}`);
+      setExito(`${form.inicioOriginal ? 'Cambio registrado: el descuento anterior queda en el historial.' : form.id ? 'Descuento corregido; la corrección queda en el historial.' : 'Descuento registrado.'}${textoRecalculo(respuesta)}`);
       setForm(null);
       await cargar();
       await onActualizado?.();
