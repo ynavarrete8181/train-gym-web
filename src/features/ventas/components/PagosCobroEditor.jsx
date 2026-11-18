@@ -5,7 +5,7 @@ import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlin
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
@@ -21,7 +21,15 @@ export const METODOS_PAGO = [
   { codigo: 'DEPOSITO', etiqueta: 'Depósito', Icono: ReceiptOutlinedIcon },
 ];
 
-const pagoInicial = () => ({ clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', recibido: '0.00', montoManual: false, recibidoManual: false });
+/** Bancos más usados; se puede escribir otro. */
+export const BANCOS = [
+  'Banco Pichincha', 'Banco Guayaquil', 'Produbanco', 'Banco del Pacífico', 'Banco Internacional',
+  'Banco Bolivariano', 'Banco del Austro', 'Banco de Machala', 'Banco General Rumiñahui', 'Banco de Loja',
+  'Banco ProCredit', 'Cooperativa JEP', 'Cooperativa Jardín Azuayo', 'BanEcuador',
+];
+const CON_BANCO = ['TRANSFERENCIA', 'DEPOSITO'];
+
+const pagoInicial = () => ({ clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', banco: '', recibido: '0.00', montoManual: false, recibidoManual: false });
 
 /**
  * Estado de las formas de pago de un cobro. La primera forma propone el saldo
@@ -45,7 +53,7 @@ export function usePagosCobro(saldoCobro) {
       pago.clave === clave
         ? { ...pago, [campo]: valor, ...(campo === 'monto' ? { montoManual: true } : {}),
             ...(campo === 'recibido' ? { recibidoManual: true } : {}),
-            ...(campo === 'metodo_pago' ? { referencia: '', recibido: pago.monto, recibidoManual: false } : {}) }
+            ...(campo === 'metodo_pago' ? { referencia: '', banco: '', recibido: pago.monto, recibidoManual: false } : {}) }
         : pago
     )));
   };
@@ -53,7 +61,7 @@ export function usePagosCobro(saldoCobro) {
   const agregarPago = () => {
     setPagos((actual) => [
       ...actual,
-      { clave: `PAGO-${Date.now()}-${actual.length + 1}`, metodo_pago: 'EFECTIVO', monto: '', referencia: '', recibido: '', montoManual: true, recibidoManual: false },
+      { clave: `PAGO-${Date.now()}-${actual.length + 1}`, metodo_pago: 'EFECTIVO', monto: '', referencia: '', banco: '', recibido: '', montoManual: true, recibidoManual: false },
     ]);
   };
 
@@ -67,7 +75,7 @@ export function usePagosCobro(saldoCobro) {
   const excedentePagos = Math.max(0, totalPagos - saldoCobro);
   const saldoDespuesPago = Math.max(0, saldoCobro - totalPagos);
   const metodosTexto = pagos.filter((p) => Number(p.monto || 0) > 0)
-    .map((p) => `${String(p.metodo_pago).toLowerCase()} ${dinero(p.monto)}${p.referencia ? ` (ref. ${p.referencia})` : ''}`).join(', ');
+    .map((p) => `${String(p.metodo_pago).toLowerCase()} ${dinero(p.monto)}${p.referencia || p.banco ? ` (${[p.referencia ? `N.º ${p.referencia}` : '', p.banco].filter(Boolean).join(', ')})` : ''}`).join(', ');
 
   /** Mensaje del primer problema que impide cobrar, o null si se puede cobrar. */
   const errorPagos = () => {
@@ -75,6 +83,10 @@ export function usePagosCobro(saldoCobro) {
     if (excedentePagos > 0.00001) return 'La suma de los pagos no puede superar el saldo pendiente.';
     if (pagos.some((pago) => pago.metodo_pago === 'EFECTIVO' && pago.recibido !== '' && Number(pago.recibido || 0) < Number(pago.monto || 0))) {
       return 'En efectivo, el valor recibido no puede ser menor que el monto aplicado.';
+    }
+    const sinDetalle = pagos.find((pago) => Number(pago.monto || 0) > 0 && CON_BANCO.includes(pago.metodo_pago) && (!pago.referencia.trim() || !pago.banco.trim()));
+    if (sinDetalle) {
+      return `Escribe el número de comprobante y el banco de la ${sinDetalle.metodo_pago === 'DEPOSITO' ? 'papeleta de depósito' : 'transferencia'}.`;
     }
     return null;
   };
@@ -92,7 +104,8 @@ export function usePagosCobro(saldoCobro) {
         monto,
         efectivo_recibido: esEfectivo ? recibido : null,
         cambio_entregado: esEfectivo ? cambio : null,
-        referencia: pago.referencia || null,
+        referencia: pago.referencia.trim() || null,
+        banco: esEfectivo ? null : (pago.banco.trim() || null),
         observaciones: esEfectivo ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.` : 'Cobro registrado desde POS.',
       };
     });
@@ -195,6 +208,21 @@ export function PagosCobroEditor({ cobro, saldoCobro }) {
                 </Box>
               )}
             </Box>
+            {CON_BANCO.includes(pago.metodo_pago) ? (
+              <Box sx={{ mt: 1.3 }}>
+                <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
+                  Banco
+                </Typography>
+                <Autocomplete freeSolo size="small" options={BANCOS} value={pago.banco}
+                  onChange={(_, valor) => actualizarPago(pago.clave, 'banco', valor || '')}
+                  onInputChange={(_, valor) => actualizarPago(pago.clave, 'banco', valor || '')}
+                  renderInput={(params) => (
+                    <TextField {...params} placeholder="Ej.: Banco Pichincha"
+                      slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': 'Banco' } }}
+                      sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
+                  )} />
+              </Box>
+            ) : null}
             {pago.metodo_pago === 'EFECTIVO' && monto > 0 && (
               <Box sx={{
                 mt: 1.2, px: 1.5, py: 1, border: '1px solid rgba(8, 127, 91, .35)',

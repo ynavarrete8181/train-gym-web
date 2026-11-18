@@ -485,6 +485,24 @@ function TablaVentas({ tipo, items, columnas, meta, cargando, editable, onEditar
   </TablaGestion>;
 }
 
+const fechaCorta = (valor) => String(valor || '').slice(0, 10).split('-').reverse().join('/');
+
+/** Monto de un método de pago con el número de comprobante y el banco de cada pago. */
+function MontoConDetalle({ item, metodo, monto }) {
+  const pagos = (item.detalle_pagos || []).filter((pago) => pago.metodo === metodo && (pago.referencia || pago.banco));
+  return (
+    <Box sx={{ textAlign: 'right', minWidth: pagos.length ? 150 : 0 }}>
+      <Typography variant="body2">{dinero(monto)}</Typography>
+      {pagos.map((pago) => (
+        <Box key={`${pago.referencia}-${pago.banco}`} sx={{ mt: .3 }}>
+          {pago.referencia ? <Typography variant="caption" sx={{ display: 'block', color: '#171717', fontWeight: 750 }}>N.º {pago.referencia}</Typography> : null}
+          {pago.banco ? <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{pago.banco}</Typography> : null}
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
 function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
   const filtro = (key, label, opts) => <FilterHeaderCell key={key} value={filtros[key]} onChange={(v) => onFiltro(key, v)} options={opts}>{label}</FilterHeaderCell>;
   if (tipo === 'cajas') return [
@@ -504,11 +522,25 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
   ];
   if (tipo === 'pagos') return [
     { key: 'operacion', header: <TableCell key="operacion">Cobro</TableCell>, render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.codigo_cobro || item.operacion_cobro_id}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.fecha_pago)}</Typography></Box> },
-    { key: 'venta', header: <TableCell key="venta">Venta / Comprobante</TableCell>, render: (item) => (
-      <Box>
-        <Typography variant="body2">{item.venta_numero || '—'}</Typography>
-        {item.comprobante_numero ? <Typography variant="caption" color="text.secondary">{item.comprobante_numero}</Typography> : null}
-      </Box>
+    { key: 'venta', header: <TableCell key="venta">Cuentas pagadas</TableCell>, render: (item) => (
+      item.detalle_cuentas?.length ? (
+        <Box sx={{ minWidth: 230 }}>
+          {item.detalle_cuentas.map((cuenta) => (
+            <Box key={cuenta.venta} sx={{ '& + &': { mt: .7 } }}>
+              <Typography variant="body2" fontWeight={650}>{cuenta.cliente} · {dinero(cuenta.monto)}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {[cuenta.concepto, cuenta.periodo_inicio ? `${fechaCorta(cuenta.periodo_inicio)} al ${fechaCorta(cuenta.periodo_fin)}` : null].filter(Boolean).join(' · ')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{[cuenta.venta, cuenta.contrato].filter(Boolean).join(' · ')}</Typography>
+            </Box>
+          ))}
+        </Box>
+      ) : (
+        <Box>
+          <Typography variant="body2">{item.venta_numero || '—'}</Typography>
+          {item.comprobante_numero ? <Typography variant="caption" color="text.secondary">{item.comprobante_numero}</Typography> : null}
+        </Box>
+      )
     ) },
     { key: 'cliente', header: <TableCell key="cliente">Cliente</TableCell>, render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
     { key: 'cobrador', header: <TableCell key="cobrador">Responsables</TableCell>, render: (item) => (
@@ -537,9 +569,9 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
           </Typography>
         </Box>
       ) : '—' },
-    { key: 'transferencia', header: <TableCell key="transferencia" align="right">Transferencia</TableCell>, render: (item) => dinero(item.transferencia) },
-    { key: 'tarjeta', header: <TableCell key="tarjeta" align="right">Tarjeta</TableCell>, render: (item) => dinero(item.tarjeta) },
-    { key: 'deposito', header: <TableCell key="deposito" align="right">Depósito</TableCell>, render: (item) => dinero(item.deposito) },
+    { key: 'transferencia', header: <TableCell key="transferencia" align="right">Transferencia</TableCell>, render: (item) => <MontoConDetalle item={item} metodo="TRANSFERENCIA" monto={item.transferencia} /> },
+    { key: 'tarjeta', header: <TableCell key="tarjeta" align="right">Tarjeta</TableCell>, render: (item) => <MontoConDetalle item={item} metodo="TARJETA" monto={item.tarjeta} /> },
+    { key: 'deposito', header: <TableCell key="deposito" align="right">Depósito</TableCell>, render: (item) => <MontoConDetalle item={item} metodo="DEPOSITO" monto={item.deposito} /> },
     { key: 'otros', header: <TableCell key="otros" align="right">Otros</TableCell>, render: (item) => dinero(item.otros) },
     { key: 'total', header: <TableCell key="total" align="right">Total</TableCell>, render: (item) => <Typography variant="body2" fontWeight="800">{dinero(item.total_cobrado)}</Typography> },
     { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} label={nombreEstado(catalogos.estados_pago, item.estado)} /> },
