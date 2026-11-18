@@ -8,6 +8,7 @@ import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
+import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import { Box, Button, CircularProgress, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
@@ -24,6 +25,7 @@ import { ventaServicio } from '../services/ventaServicio.js';
 import { CampoActivo } from '../../../components/common/CampoActivo.jsx';
 import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.jsx';
 import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
+import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
 
 const tiposVenta = ['PRODUCTO', 'MEMBRESIA', 'SERVICIO', 'OTRO'];
 const metodosPago = ['EFECTIVO', 'TARJETA', 'TRANSFERENCIA', 'DEPOSITO', 'OTRO'];
@@ -132,6 +134,38 @@ export function VentasCatalogo({ tipo }) {
       showNotificacion((errores && Object.values(errores).flat()[0]) || error.response?.data?.mensaje || 'No se pudo corregir el cobro.', 'error');
     } finally {
       setGuardandoCorreccion(false);
+    }
+  };
+
+  // Completar o corregir el banco y el número de una transferencia o depósito (solo administradores).
+  const [bancoCobro, setBancoCobro] = useState(null);
+  const [instituciones, setInstituciones] = useState([]);
+  const [guardandoBanco, setGuardandoBanco] = useState(false);
+  const abrirBanco = async (item) => {
+    const metodo = Number(item.transferencia || 0) > 0 ? 'TRANSFERENCIA' : 'DEPOSITO';
+    const actual = (item.detalle_pagos || []).find((p) => p.metodo === metodo) || {};
+    setBancoCobro({ item, metodo_pago: metodo, institucion_financiera_id: '', referencia: actual.referencia || '', banco_actual: actual.banco || '' });
+    if (!instituciones.length) {
+      try { setInstituciones(await configuracionServicio.listarInstitucionesFinancieras({ activas: 1 })); }
+      catch { showNotificacion('No se pudo cargar la lista de bancos.', 'error'); }
+    }
+  };
+  const guardarBanco = async () => {
+    setGuardandoBanco(true);
+    try {
+      await ventaServicio.completarBancoCobro(bancoCobro.item.operacion_cobro_id, {
+        metodo_pago: bancoCobro.metodo_pago,
+        institucion_financiera_id: Number(bancoCobro.institucion_financiera_id),
+        referencia: bancoCobro.referencia.trim() || null,
+      });
+      showNotificacion(`Banco del cobro ${bancoCobro.item.codigo_cobro || ''} guardado.`, 'success');
+      setBancoCobro(null);
+      await cargar();
+    } catch (error) {
+      const errores = error.response?.data?.errors;
+      showNotificacion((errores && Object.values(errores).flat()[0]) || error.response?.data?.mensaje || 'No se pudo guardar el banco.', 'error');
+    } finally {
+      setGuardandoBanco(false);
     }
   };
 
@@ -277,7 +311,7 @@ export function VentasCatalogo({ tipo }) {
     }
   };
 
-  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion), [tipo, meta, filtrosColumna, catalogos]);
+  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion, abrirBanco), [tipo, meta, filtrosColumna, catalogos, instituciones]);
 
   if (vista === 'formulario') {
     return (
@@ -328,6 +362,38 @@ export function VentasCatalogo({ tipo }) {
         />
       </Paper>
       <VisorPdf titulo="Comprobante de venta" pdf={comprobantePdf} cargando={cargandoPdf} onCerrar={cerrarPdf} />
+      <ModalConfirmacion
+        open={Boolean(bancoCobro)}
+        titulo={bancoCobro?.banco_actual ? 'Cambiar banco' : 'Completar banco'}
+        descripcion={bancoCobro ? `${bancoCobro.item.codigo_cobro} · ${bancoCobro.item.cliente_nombre || 'Cliente'} · ${dinero(bancoCobro.item.total_cobrado)}. El monto y el método no cambian; queda en el historial del pago.` : ''}
+        textoConfirmar="Sí, guardar"
+        cargando={guardandoBanco}
+        confirmarDeshabilitado={!bancoCobro || !bancoCobro.institucion_financiera_id || !bancoCobro.referencia.trim()}
+        onClose={() => !guardandoBanco && setBancoCobro(null)}
+        onConfirmar={guardarBanco}
+      >
+        {bancoCobro && <Stack spacing={1.5} sx={{ mt: 1 }}>
+          {Number(bancoCobro.item.transferencia || 0) > 0 && Number(bancoCobro.item.deposito || 0) > 0 ? (
+            <TextField select size="small" label="Pago" value={bancoCobro.metodo_pago}
+              onChange={(e) => setBancoCobro((b) => ({ ...b, metodo_pago: e.target.value }))}>
+              <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
+              <MenuItem value="DEPOSITO">Depósito</MenuItem>
+            </TextField>
+          ) : null}
+          {bancoCobro.banco_actual ? <Typography variant="caption" color="text.secondary">Banco actual: {bancoCobro.banco_actual}</Typography> : null}
+          <TextField select size="small" label="Banco o cooperativa" required value={bancoCobro.institucion_financiera_id}
+            onChange={(e) => setBancoCobro((b) => ({ ...b, institucion_financiera_id: e.target.value }))}
+            slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}>
+            <option value="">Selecciona el banco o cooperativa</option>
+            {[['BANCO', 'Bancos'], ['COOPERATIVA', 'Cooperativas'], ['MUTUALISTA', 'Mutualistas'], ['OTRA', 'Otras']].map(([tipoInst, grupo]) => {
+              const lista = instituciones.filter((i) => i.tipo === tipoInst);
+              return lista.length ? <optgroup key={tipoInst} label={grupo}>{lista.map((i) => <option key={i.id} value={String(i.id)}>{i.nombre}</option>)}</optgroup> : null;
+            })}
+          </TextField>
+          <TextField size="small" required label="N.º de comprobante" value={bancoCobro.referencia}
+            onChange={(e) => setBancoCobro((b) => ({ ...b, referencia: e.target.value }))} placeholder="Ej. 602185233" />
+        </Stack>}
+      </ModalConfirmacion>
       <ModalConfirmacion
         open={Boolean(correccion)}
         titulo="Corregir método de pago"
@@ -503,7 +569,7 @@ function MontoConDetalle({ item, metodo, monto }) {
   );
 }
 
-function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
+function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir, onBanco) {
   const filtro = (key, label, opts) => <FilterHeaderCell key={key} value={filtros[key]} onChange={(v) => onFiltro(key, v)} options={opts}>{label}</FilterHeaderCell>;
   if (tipo === 'cajas') return [
     { key: 'codigo', header: <TableCell key="codigo">Código</TableCell>, render: (item) => <Typography variant="body2" fontWeight="600">{item.codigo}</Typography> },
@@ -578,8 +644,15 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
     // Solo administradores: corregir el método de un cobro mal registrado.
     ...(catalogos.puede_anular_pagadas ? [{ key: 'acciones', header: <TableCell key="acciones" align="center">Acciones</TableCell>, render: (item) => (
       item.estado === 'CONFIRMADO' && Number(item.total_cobrado || 0) > 0
-        ? <Tooltip title="Corregir método de pago"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
-            <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+        ? <Stack direction="row" spacing={.6} sx={{ justifyContent: 'center' }}>
+            <Tooltip title="Corregir método de pago"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
+              <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+            {Number(item.transferencia || 0) > 0 || Number(item.deposito || 0) > 0 ? (
+              <Tooltip title={(item.detalle_pagos || []).some((p) => ['TRANSFERENCIA', 'DEPOSITO'].includes(p.metodo) && !p.banco) ? 'Completar banco' : 'Cambiar banco'}>
+                <IconButton aria-label="Completar banco" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onBanco(item)}>
+                  <AccountBalanceOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+            ) : null}
+          </Stack>
         : '—'
     ) }] : []),
   ];
