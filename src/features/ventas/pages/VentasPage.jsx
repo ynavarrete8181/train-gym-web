@@ -13,6 +13,7 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import AccountBalanceWalletOutlinedIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
+import FamilyRestroomOutlinedIcon from '@mui/icons-material/FamilyRestroomOutlined';
 import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, InputAdornment, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { NotificacionSnackbar } from '../../../components/common/NotificacionSnackbar.jsx';
 import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
@@ -20,10 +21,42 @@ import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { VentaPosFormulario } from '../components/VentaPosFormulario.jsx';
+import { CobroTutorDialog, conceptoCuenta } from '../components/CobroTutorDialog.jsx';
 import { ventaServicio } from '../services/ventaServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => valor ? new Date(valor).toLocaleDateString('es-EC') : 'Sin fecha';
+const iniciales = (nombre) => String(nombre || '').split(/\s+/).filter(Boolean).slice(0, 2).map((parte) => parte[0].toUpperCase()).join('');
+
+/**
+ * Las cuentas de clientes con un tutor responsable de pago se muestran juntas, a
+ * nombre del tutor, para cobrarlas en una sola operación. Las demás van solas.
+ */
+const agruparPorResponsable = (cuentas) => {
+  const items = [];
+  const grupos = new Map();
+  cuentas.forEach((cuenta) => {
+    if (!cuenta.responsable_persona_id) {
+      items.push({ tipo: 'cuenta', clave: `c-${cuenta.id}`, venta: cuenta });
+      return;
+    }
+    let grupo = grupos.get(cuenta.responsable_persona_id);
+    if (!grupo) {
+      grupo = {
+        tipo: 'grupo', clave: `g-${cuenta.responsable_persona_id}`, cuentas: [],
+        responsable_persona_id: cuenta.responsable_persona_id,
+        responsable_nombre: cuenta.responsable_nombre,
+        responsable_identificacion: cuenta.responsable_identificacion,
+      };
+      grupos.set(cuenta.responsable_persona_id, grupo);
+      items.push(grupo);
+    }
+    grupo.cuentas.push(cuenta);
+  });
+  // La cuenta propia del tutor va primero; luego las de sus representados.
+  grupos.forEach((grupo) => grupo.cuentas.sort((a, b) => Number(b.responsable_es_titular) - Number(a.responsable_es_titular)));
+  return items;
+};
 
 export function VentasPage() {
   const [vista, setVista] = useState('lista');
@@ -41,15 +74,18 @@ export function VentasPage() {
   const [detallePdfNombre, setDetallePdfNombre] = useState('Comprobante');
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
   const [detallePdfBlob, setDetallePdfBlob] = useState(null);
+  const [grupoCobro, setGrupoCobro] = useState(null);
   const sedesDisponibles = Array.from(new Set(cuentasAbiertas.map((cuenta) => String(cuenta.sede_nombre || '').trim()).filter(Boolean)))
     .sort((a, b) => a.localeCompare(b, 'es-EC'));
-  const cuentasFiltradas = cuentasAbiertas.filter((venta) => {
-    if (filtroSede !== 'TODAS' && String(venta.sede_nombre || '') !== filtroSede) return false;
-    const texto = busquedaCuenta.trim().toLocaleLowerCase('es-EC');
-    if (!texto) return true;
-    return [venta.cliente_nombre, venta.cliente_identificacion, venta.codigo_deportista, venta.numero, venta.sede_nombre]
-      .some((valor) => String(valor || '').toLocaleLowerCase('es-EC').includes(texto));
-  });
+  const textoBusqueda = busquedaCuenta.trim().toLocaleLowerCase('es-EC');
+  const coincide = (valores) => !textoBusqueda || valores.some((valor) => String(valor || '').toLocaleLowerCase('es-EC').includes(textoBusqueda));
+  // Al buscar al tutor o a cualquiera de sus representados aparece el grupo completo.
+  const itemsFiltrados = agruparPorResponsable(cuentasAbiertas.filter((venta) => filtroSede === 'TODAS' || String(venta.sede_nombre || '') === filtroSede))
+    .filter((item) => (item.tipo === 'grupo'
+      ? coincide([item.responsable_nombre, item.responsable_identificacion])
+        || item.cuentas.some((venta) => coincide([venta.cliente_nombre, venta.cliente_identificacion, venta.codigo_deportista, venta.numero, venta.sede_nombre]))
+      : coincide([item.venta.cliente_nombre, item.venta.cliente_identificacion, item.venta.codigo_deportista, item.venta.numero, item.venta.sede_nombre])));
+  const cuentasFiltradas = itemsFiltrados.flatMap((item) => (item.tipo === 'grupo' ? item.cuentas : [item.venta]));
   const totalPendiente = cuentasAbiertas.reduce((total, venta) =>
     total + Math.max(0, Number(venta.saldo_pendiente ?? venta.total ?? 0)), 0);
   const pagosParciales = cuentasAbiertas.filter((venta) => String(venta.estado || '').toUpperCase() === 'PARCIAL').length;
@@ -113,20 +149,41 @@ export function VentasPage() {
     setDetallePdfNombre('Comprobante');
   };
 
-  const abrirDetalle = async (venta) => {
+  const mostrarPdf = async (cargar, nombre) => {
     setCargandoDetalle(true);
     try {
       if (detallePdfUrl) URL.revokeObjectURL(detallePdfUrl);
-      const blob = await ventaServicio.obtenerComprobantePdf(venta.id);
+      const blob = await cargar();
       const url = URL.createObjectURL(blob);
       setDetallePdfBlob(blob);
-      setDetallePdfNombre(venta.numero || 'Comprobante');
+      setDetallePdfNombre(nombre || 'Comprobante');
       setDetallePdfUrl(url);
     } catch (error) {
       setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo cargar el comprobante PDF.', tipo: 'error' });
     } finally {
       setCargandoDetalle(false);
     }
+  };
+
+  const abrirDetalle = (venta) => mostrarPdf(() => ventaServicio.obtenerComprobantePdf(venta.id), venta.numero);
+
+  const abrirCobroTutor = (grupo) => {
+    if (!turnoActual?.id) {
+      setNotificacion({ mensaje: 'Modo consulta: para cobrar debes tener un turno de caja propio abierto.', tipo: 'warning' });
+      return;
+    }
+    setGrupoCobro(grupo);
+  };
+
+  const alCobrarTutor = (resultado) => {
+    setGrupoCobro(null);
+    const saldo = Number(resultado.saldo_pendiente || 0);
+    setNotificacion({
+      mensaje: `Cobro ${resultado.codigo_cobro} de ${resultado.responsable_nombre} por ${dinero(resultado.total_cobrado)} registrado${saldo > 0 ? `. Queda pendiente ${dinero(saldo)}.` : '.'}`,
+      tipo: 'success',
+    });
+    cargarCuentas();
+    mostrarPdf(() => ventaServicio.obtenerComprobanteCobroPdf(resultado.codigo_cobro), resultado.codigo_cobro);
   };
 
   const descargarDetallePdf = () => {
@@ -251,12 +308,83 @@ export function VentasPage() {
               gridAutoRows: '1fr',
             }}
           >
-            {cuentasFiltradas.map((venta) => {
+            {itemsFiltrados.map((item) => {
+                if (item.tipo === 'grupo') {
+                  const totalGrupo = item.cuentas.reduce((total, cuenta) => total + Math.max(0, Number(cuenta.saldo_pendiente ?? cuenta.total ?? 0)), 0);
+                  return (
+                    <Box key={item.clave} sx={{
+                      position: 'relative', minWidth: 0, overflow: 'hidden',
+                      border: '1px solid #e5e5e5', borderTop: '4px solid #171717', borderRadius: 2,
+                      bgcolor: '#fff', p: 1.7, display: 'flex', flexDirection: 'column', minHeight: 298,
+                      boxShadow: '0 5px 16px rgba(0,0,0,.055)',
+                      transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+                      '&:hover': { transform: 'translateY(-2px)', borderColor: '#D4A017', boxShadow: '0 9px 22px rgba(0,0,0,.11)' },
+                    }}>
+                      <Stack direction="row" spacing={1.2} sx={{ alignItems: 'center', minWidth: 0 }}>
+                        <Box sx={{
+                          width: 45, height: 45, flexShrink: 0, display: 'grid', placeItems: 'center',
+                          bgcolor: '#171717', color: '#f1e2ad', borderRadius: '50%', fontWeight: 950, fontSize: 15,
+                        }}>
+                          {iniciales(item.responsable_nombre)}
+                        </Box>
+                        <Box sx={{ minWidth: 0, flex: 1 }}>
+                          <Typography variant="subtitle2" sx={{ color: '#171717', fontWeight: 900, lineHeight: 1.25 }} title={item.responsable_nombre}>
+                            {item.responsable_nombre}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: '#666', display: 'block', mt: .2 }}>
+                            {item.responsable_identificacion || 'Sin identificación'}
+                          </Typography>
+                        </Box>
+                      </Stack>
+                      <Chip size="small" icon={<FamilyRestroomOutlinedIcon sx={{ fontSize: 16 }} />}
+                        label={`Tutor · paga ${item.cuentas.length} ${item.cuentas.length === 1 ? 'cuenta' : 'cuentas'}`}
+                        sx={{ alignSelf: 'flex-start', mt: 1.1, fontWeight: 850, bgcolor: '#fff8e9', color: '#805b00', border: '1px solid #e6c46c', '& .MuiChip-icon': { color: '#B18510' } }} />
+                      <Stack sx={{ mt: 1.2, mb: 1.2 }}>
+                        {item.cuentas.map((cuenta, indice) => (
+                          <Stack key={cuenta.id} direction="row" spacing={.8} sx={{ alignItems: 'center', py: .7, borderTop: indice ? '1px solid #f0f0f0' : 'none' }}>
+                            <Box sx={{ minWidth: 0, flex: 1 }}>
+                              <Typography variant="body2" sx={{ color: '#171717', fontWeight: 800 }} noWrap title={cuenta.cliente_nombre}>
+                                {cuenta.cliente_nombre}{cuenta.responsable_es_titular ? ' (tutor)' : ''}
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: '#666', display: 'block' }} noWrap title={`${cuenta.numero} · ${conceptoCuenta(cuenta)}`}>
+                                {conceptoCuenta(cuenta)}
+                              </Typography>
+                            </Box>
+                            <Typography variant="body2" sx={{ color: '#171717', fontWeight: 900 }}>{dinero(cuenta.saldo_pendiente ?? cuenta.total)}</Typography>
+                            <Tooltip title={`Ver ${cuenta.numero}`}>
+                              <IconButton size="small" onClick={() => abrirDetalle(cuenta)} aria-label={`Ver la cuenta de ${cuenta.cliente_nombre}`} sx={{ color: '#B18510' }}>
+                                <VisibilityOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        ))}
+                      </Stack>
+                      <Divider sx={{ mt: 'auto', mb: 1.2, borderColor: '#ededed' }} />
+                      <Stack direction="row" gap={1} sx={{ alignItems: 'end', justifyContent: 'space-between' }}>
+                        <Box>
+                          <Typography variant="caption" sx={{ color: '#666', fontWeight: 700 }}>Total a pagar</Typography>
+                          <Typography variant="h5" sx={{ color: '#171717', fontWeight: 950, lineHeight: 1.25 }}>{dinero(totalGrupo)}</Typography>
+                        </Box>
+                        <Chip size="small" label="Un solo pago" sx={{ bgcolor: '#fff0c6', color: '#805b00', border: '1px solid #e6c46c', fontWeight: 850 }} />
+                      </Stack>
+                      <Button variant="contained" size="small" startIcon={<PointOfSaleOutlinedIcon />}
+                        onClick={() => abrirCobroTutor(item)} disabled={!turnoActual?.id}
+                        title={!turnoActual?.id ? 'Abre tu turno de caja para cobrar.' : ''}
+                        sx={{
+                          mt: 1.45, minHeight: 39, textTransform: 'none', fontWeight: 850, borderRadius: 1.3,
+                          bgcolor: '#D4A017', color: '#171717', boxShadow: 'none',
+                          '&:hover': { bgcolor: '#BE8E0D', boxShadow: 'none' },
+                          '&.Mui-disabled': { bgcolor: '#ebebeb', color: '#8a8a8a' },
+                        }}>Cobrar al tutor</Button>
+                    </Box>
+                  );
+                }
+                const venta = item.venta;
                 const saldo = Number(venta.saldo_pendiente ?? venta.total ?? 0);
                 const nombre = venta.cliente_nombre || 'Consumidor final';
                 const estadoParcial = String(venta.estado || '').toUpperCase() === 'PARCIAL';
                 return (
-                  <Box key={venta.id} sx={{
+                  <Box key={item.clave} sx={{
                     position: 'relative', minWidth: 0, overflow: 'hidden',
                     border: '1px solid #e5e5e5', borderTop: '4px solid #D4A017', borderRadius: 2,
                     bgcolor: '#fff', p: 1.7, display: 'flex', flexDirection: 'column', minHeight: 298,
@@ -443,6 +571,12 @@ export function VentasPage() {
           </Button>
         </DialogActions>
       </Dialog>
+      <CobroTutorDialog
+        grupo={grupoCobro}
+        onClose={() => setGrupoCobro(null)}
+        onCobrado={alCobrarTutor}
+        avisar={(mensaje, tipo) => setNotificacion({ mensaje, tipo })}
+      />
       <ModalConfirmacion
         open={Boolean(ventaAnular)}
         titulo="Anular venta"

@@ -23,6 +23,8 @@ export const ventaServicio = {
   actualizarCuentaPos: async (id, payload) => (await api.put(`/base/ventas/pos/${id}`, payload)).data,
   cobrarVentaPos: async (payload) => (await api.post('/base/ventas/pos/cobrar', payload)).data,
   cobrarCuentaPos: async (id, payload) => (await api.post(`/base/ventas/pos/${id}/cobrar`, payload)).data,
+  cobrarGrupoPos: async (payload) => (await api.post('/base/ventas/pos/cobrar-grupo', payload)).data,
+  obtenerComprobanteCobroPdf: async (codigo) => (await api.get(`/base/ventas/pos/cobros/${encodeURIComponent(codigo)}/comprobante.pdf`, { responseType: 'blob' })).data,
   crearVenta: async (payload) => (await api.post('/base/ventas/ventas', payload)).data,
   actualizarVenta: async (id, payload) => (await api.put(`/base/ventas/ventas/${id}`, payload)).data,
   obtenerPagos: async (params = { page: 1 }) => (await api.get('/base/ventas/pagos', { params })).data,
