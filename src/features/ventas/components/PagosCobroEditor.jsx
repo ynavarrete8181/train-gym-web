@@ -5,9 +5,10 @@ import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlin
 import CreditCardOutlinedIcon from '@mui/icons-material/CreditCardOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined';
-import { Alert, Autocomplete, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
+import { BANCOS_ECUADOR } from '../config/bancosConfig.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const DORADO_REVIVE = uiTokens.colores.acento;
@@ -21,12 +22,6 @@ export const METODOS_PAGO = [
   { codigo: 'DEPOSITO', etiqueta: 'Depósito', Icono: ReceiptOutlinedIcon },
 ];
 
-/** Bancos más usados; se puede escribir otro. */
-export const BANCOS = [
-  'Banco Pichincha', 'Banco Guayaquil', 'Produbanco', 'Banco del Pacífico', 'Banco Internacional',
-  'Banco Bolivariano', 'Banco del Austro', 'Banco de Machala', 'Banco General Rumiñahui', 'Banco de Loja',
-  'Banco ProCredit', 'Cooperativa JEP', 'Cooperativa Jardín Azuayo', 'BanEcuador',
-];
 const CON_BANCO = ['TRANSFERENCIA', 'DEPOSITO'];
 
 const pagoInicial = () => ({ clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', banco: '', recibido: '0.00', montoManual: false, recibidoManual: false });
@@ -199,7 +194,7 @@ export function PagosCobroEditor({ cobro, saldoCobro }) {
               ) : (
                 <Box>
                   <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
-                    {pago.metodo_pago === 'TARJETA' ? 'Referencia del voucher' : pago.metodo_pago === 'DEPOSITO' ? 'Número de depósito' : 'Referencia de transferencia'}
+                    {pago.metodo_pago === 'TARJETA' ? 'Referencia del voucher' : pago.metodo_pago === 'DEPOSITO' ? 'Número de depósito' : 'Número de comprobante'}
                   </Typography>
                   <TextField size="small" fullWidth
                     placeholder="Número de comprobante"
@@ -213,14 +208,18 @@ export function PagosCobroEditor({ cobro, saldoCobro }) {
                 <Typography variant="caption" sx={{ fontWeight: 850, color: '#404040', display: 'block', mb: .7 }}>
                   Banco
                 </Typography>
-                <Autocomplete freeSolo size="small" options={BANCOS} value={pago.banco}
-                  onChange={(_, valor) => actualizarPago(pago.clave, 'banco', valor || '')}
-                  onInputChange={(_, valor) => actualizarPago(pago.clave, 'banco', valor || '')}
-                  renderInput={(params) => (
-                    <TextField {...params} placeholder="Ej.: Banco Pichincha"
-                      slotProps={{ htmlInput: { ...params.inputProps, 'aria-label': 'Banco' } }}
-                      sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4 } }} />
-                  )} />
+                {/* Lista nativa: en el celular abre el selector del teléfono. */}
+                <TextField select fullWidth size="small" value={pago.banco}
+                  onChange={(e) => actualizarPago(pago.clave, 'banco', e.target.value)}
+                  slotProps={{ select: { native: true }, htmlInput: { 'aria-label': 'Banco' } }}
+                  sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4, bgcolor: '#fff' } }}>
+                  <option value="">Selecciona el banco</option>
+                  {BANCOS_ECUADOR.map(({ grupo, opciones }) => (
+                    <optgroup key={grupo} label={grupo}>
+                      {opciones.map((banco) => <option key={banco} value={banco}>{banco}</option>)}
+                    </optgroup>
+                  ))}
+                </TextField>
               </Box>
             ) : null}
             {pago.metodo_pago === 'EFECTIVO' && monto > 0 && (
