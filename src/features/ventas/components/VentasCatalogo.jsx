@@ -8,7 +8,6 @@ import BlockOutlinedIcon from '@mui/icons-material/BlockOutlined';
 import PointOfSaleOutlinedIcon from '@mui/icons-material/PointOfSaleOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import ShoppingCartOutlinedIcon from '@mui/icons-material/ShoppingCartOutlined';
-import AccountBalanceOutlinedIcon from '@mui/icons-material/AccountBalanceOutlined';
 import { Box, Button, CircularProgress, IconButton, MenuItem, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { AccionesFormulario } from '../../../components/common/AccionesFormulario.jsx';
 import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
@@ -106,16 +105,42 @@ export function VentasCatalogo({ tipo }) {
   // Corrección del método de un cobro (solo administradores).
   const [correccion, setCorreccion] = useState(null);
   const [guardandoCorreccion, setGuardandoCorreccion] = useState(false);
+  // Bancos y cooperativas activos para la corrección de transferencias y depósitos.
+  const [instituciones, setInstituciones] = useState([]);
   const metodoActual = (item) => ['efectivo', 'transferencia', 'tarjeta', 'deposito', 'otros']
     .find((m) => Number(item[m] || 0) > 0)?.toUpperCase().replace('OTROS', 'OTRO') || 'EFECTIVO';
-  const abrirCorreccion = (item) => setCorreccion({ item, metodo_pago: metodoActual(item) === 'EFECTIVO' ? 'TRANSFERENCIA' : 'EFECTIVO', referencia: '', motivo: '', motivo_auto: true });
+  const CON_BANCO = ['TRANSFERENCIA', 'DEPOSITO'];
+  const pagoDe = (item, metodo) => (item.detalle_pagos || []).find((p) => p.metodo === metodo) || {};
+  const abrirCorreccion = async (item) => {
+    const actual = metodoActual(item);
+    const pago = pagoDe(item, actual);
+    // Una transferencia o depósito abre con su número y banco para completarlos o corregirlos.
+    setCorreccion({
+      item, metodo_pago: actual === 'EFECTIVO' ? 'TRANSFERENCIA' : actual,
+      referencia: actual === 'EFECTIVO' ? '' : (pago.referencia || ''),
+      institucion_financiera_id: actual === 'EFECTIVO' ? '' : String(pago.institucion_financiera_id || ''),
+      motivo: '', motivo_auto: true,
+    });
+    if (!instituciones.length) {
+      try { setInstituciones(await configuracionServicio.listarInstitucionesFinancieras({ activas: 1 })); }
+      catch { showNotificacion('No se pudo cargar la lista de bancos.', 'error'); }
+    }
+  };
+  const nombreBanco = (id) => instituciones.find((i) => String(i.id) === String(id))?.nombre || '';
+  const sinCambios = (c) => {
+    const pago = pagoDe(c.item, c.metodo_pago);
+    return c.metodo_pago === metodoActual(c.item)
+      && c.referencia.trim() === String(pago.referencia || '').trim()
+      && String(c.institucion_financiera_id || '') === String(pago.institucion_financiera_id || '');
+  };
   // Motivo sugerido con los datos del cobro; se actualiza hasta que el usuario lo edita.
   const textoCorreccion = (c) => {
     const actual = metodoActual(c.item).toLowerCase();
     const nuevo = c.metodo_pago.toLowerCase();
-    const ref = c.referencia.trim() ? ` con comprobante/referencia ${c.referencia.trim()}` : '';
+    const banco = CON_BANCO.includes(c.metodo_pago) ? nombreBanco(c.institucion_financiera_id) : '';
+    const ref = `${c.referencia.trim() ? ` con comprobante ${c.referencia.trim()}` : ''}${banco ? ` de ${banco}` : ''}`;
     return actual === nuevo
-      ? `Se completa la referencia del cobro ${c.item.codigo_cobro || ''} de ${c.item.cliente_nombre || 'cliente'} por $${dinero(c.item.total_cobrado)}, pagado por ${nuevo}${ref}.`
+      ? `Se completan los datos del cobro ${c.item.codigo_cobro || ''} de ${c.item.cliente_nombre || 'cliente'} por $${dinero(c.item.total_cobrado)}, pagado por ${nuevo}${ref}.`
       : `Corrección del método de pago del cobro ${c.item.codigo_cobro || ''} de ${c.item.cliente_nombre || 'cliente'} por $${dinero(c.item.total_cobrado)}: se registró como ${actual} por error, el pago real fue por ${nuevo}${ref}.`;
   };
   const motivoCorreccion = correccion ? (correccion.motivo_auto ? textoCorreccion(correccion) : correccion.motivo) : '';
@@ -123,10 +148,19 @@ export function VentasCatalogo({ tipo }) {
   const guardarCorreccion = async () => {
     setGuardandoCorreccion(true);
     try {
-      await ventaServicio.corregirMetodoPago(correccion.item.id, {
+      const mismoMetodo = correccion.metodo_pago === metodoActual(correccion.item);
+      const datos = {
         metodo_pago: correccion.metodo_pago, referencia: correccion.referencia.trim() || null, motivo: motivoCorreccion.trim(),
-      });
-      showNotificacion('Método de pago corregido. Si el turno ya estaba cerrado, quedó pendiente de conciliar.', 'success');
+        institucion_financiera_id: CON_BANCO.includes(correccion.metodo_pago) ? Number(correccion.institucion_financiera_id) : null,
+      };
+      // Mismo método: solo cambian número y banco, en todos los pagos del cobro (también los de tutor).
+      if (mismoMetodo && CON_BANCO.includes(correccion.metodo_pago)) {
+        await ventaServicio.completarBancoCobro(correccion.item.operacion_cobro_id, datos);
+        showNotificacion(`Datos del cobro ${correccion.item.codigo_cobro || ''} guardados.`, 'success');
+      } else {
+        await ventaServicio.corregirMetodoPago(correccion.item.id, datos);
+        showNotificacion('Método de pago corregido. Si el turno ya estaba cerrado, quedó pendiente de conciliar.', 'success');
+      }
       setCorreccion(null);
       await cargar();
     } catch (error) {
@@ -134,38 +168,6 @@ export function VentasCatalogo({ tipo }) {
       showNotificacion((errores && Object.values(errores).flat()[0]) || error.response?.data?.mensaje || 'No se pudo corregir el cobro.', 'error');
     } finally {
       setGuardandoCorreccion(false);
-    }
-  };
-
-  // Completar o corregir el banco y el número de una transferencia o depósito (solo administradores).
-  const [bancoCobro, setBancoCobro] = useState(null);
-  const [instituciones, setInstituciones] = useState([]);
-  const [guardandoBanco, setGuardandoBanco] = useState(false);
-  const abrirBanco = async (item) => {
-    const metodo = Number(item.transferencia || 0) > 0 ? 'TRANSFERENCIA' : 'DEPOSITO';
-    const actual = (item.detalle_pagos || []).find((p) => p.metodo === metodo) || {};
-    setBancoCobro({ item, metodo_pago: metodo, institucion_financiera_id: '', referencia: actual.referencia || '', banco_actual: actual.banco || '' });
-    if (!instituciones.length) {
-      try { setInstituciones(await configuracionServicio.listarInstitucionesFinancieras({ activas: 1 })); }
-      catch { showNotificacion('No se pudo cargar la lista de bancos.', 'error'); }
-    }
-  };
-  const guardarBanco = async () => {
-    setGuardandoBanco(true);
-    try {
-      await ventaServicio.completarBancoCobro(bancoCobro.item.operacion_cobro_id, {
-        metodo_pago: bancoCobro.metodo_pago,
-        institucion_financiera_id: Number(bancoCobro.institucion_financiera_id),
-        referencia: bancoCobro.referencia.trim() || null,
-      });
-      showNotificacion(`Banco del cobro ${bancoCobro.item.codigo_cobro || ''} guardado.`, 'success');
-      setBancoCobro(null);
-      await cargar();
-    } catch (error) {
-      const errores = error.response?.data?.errors;
-      showNotificacion((errores && Object.values(errores).flat()[0]) || error.response?.data?.mensaje || 'No se pudo guardar el banco.', 'error');
-    } finally {
-      setGuardandoBanco(false);
     }
   };
 
@@ -311,7 +313,7 @@ export function VentasCatalogo({ tipo }) {
     }
   };
 
-  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion, abrirBanco), [tipo, meta, filtrosColumna, catalogos, instituciones]);
+  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion), [tipo, meta, filtrosColumna, catalogos, instituciones]);
 
   if (vista === 'formulario') {
     return (
@@ -363,44 +365,13 @@ export function VentasCatalogo({ tipo }) {
       </Paper>
       <VisorPdf titulo="Comprobante de venta" pdf={comprobantePdf} cargando={cargandoPdf} onCerrar={cerrarPdf} />
       <ModalConfirmacion
-        open={Boolean(bancoCobro)}
-        titulo={bancoCobro?.banco_actual ? 'Cambiar banco' : 'Completar banco'}
-        descripcion={bancoCobro ? `${bancoCobro.item.codigo_cobro} · ${bancoCobro.item.cliente_nombre || 'Cliente'} · ${dinero(bancoCobro.item.total_cobrado)}. El monto y el método no cambian; queda en el historial del pago.` : ''}
-        textoConfirmar="Sí, guardar"
-        cargando={guardandoBanco}
-        confirmarDeshabilitado={!bancoCobro || !bancoCobro.institucion_financiera_id || !bancoCobro.referencia.trim()}
-        onClose={() => !guardandoBanco && setBancoCobro(null)}
-        onConfirmar={guardarBanco}
-      >
-        {bancoCobro && <Stack spacing={1.5} sx={{ mt: 1 }}>
-          {Number(bancoCobro.item.transferencia || 0) > 0 && Number(bancoCobro.item.deposito || 0) > 0 ? (
-            <TextField select size="small" label="Pago" value={bancoCobro.metodo_pago}
-              onChange={(e) => setBancoCobro((b) => ({ ...b, metodo_pago: e.target.value }))}>
-              <MenuItem value="TRANSFERENCIA">Transferencia</MenuItem>
-              <MenuItem value="DEPOSITO">Depósito</MenuItem>
-            </TextField>
-          ) : null}
-          {bancoCobro.banco_actual ? <Typography variant="caption" color="text.secondary">Banco actual: {bancoCobro.banco_actual}</Typography> : null}
-          <TextField select size="small" label="Banco o cooperativa" required value={bancoCobro.institucion_financiera_id}
-            onChange={(e) => setBancoCobro((b) => ({ ...b, institucion_financiera_id: e.target.value }))}
-            slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}>
-            <option value="">Selecciona el banco o cooperativa</option>
-            {[['BANCO', 'Bancos'], ['COOPERATIVA', 'Cooperativas'], ['MUTUALISTA', 'Mutualistas'], ['OTRA', 'Otras']].map(([tipoInst, grupo]) => {
-              const lista = instituciones.filter((i) => i.tipo === tipoInst);
-              return lista.length ? <optgroup key={tipoInst} label={grupo}>{lista.map((i) => <option key={i.id} value={String(i.id)}>{i.nombre}</option>)}</optgroup> : null;
-            })}
-          </TextField>
-          <TextField size="small" required label="N.º de comprobante" value={bancoCobro.referencia}
-            onChange={(e) => setBancoCobro((b) => ({ ...b, referencia: e.target.value }))} placeholder="Ej. 602185233" />
-        </Stack>}
-      </ModalConfirmacion>
-      <ModalConfirmacion
         open={Boolean(correccion)}
         titulo="Corregir método de pago"
         descripcion={correccion ? `${correccion.item.codigo_cobro} · ${correccion.item.cliente_nombre || 'Cliente'} · ${dinero(correccion.item.total_cobrado)}. Registrado como ${metodoActual(correccion.item).toLowerCase()}. El monto no cambia; queda en el historial con el motivo.` : ''}
         textoConfirmar="Sí, corregir"
         cargando={guardandoCorreccion}
-        confirmarDeshabilitado={!correccion || motivoCorreccion.trim().length < 8 || correccion.metodo_pago === metodoActual(correccion.item) && !correccion.referencia.trim()}
+        confirmarDeshabilitado={!correccion || motivoCorreccion.trim().length < 8 || sinCambios(correccion)
+          || (CON_BANCO.includes(correccion.metodo_pago) && (!correccion.referencia.trim() || !correccion.institucion_financiera_id))}
         onClose={() => !guardandoCorreccion && setCorreccion(null)}
         onConfirmar={guardarCorreccion}
       >
@@ -411,7 +382,18 @@ export function VentasCatalogo({ tipo }) {
               .map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
           </TextField>
           {correccion.metodo_pago !== 'EFECTIVO' && <TextField size="small" label="N.º de comprobante / referencia" value={correccion.referencia}
+            required={CON_BANCO.includes(correccion.metodo_pago)}
             onChange={(e) => setCorreccion((c) => ({ ...c, referencia: e.target.value }))} placeholder="Ej. 602185233" />}
+          {CON_BANCO.includes(correccion.metodo_pago) && <TextField select size="small" label="Banco o cooperativa" required
+            value={correccion.institucion_financiera_id}
+            onChange={(e) => setCorreccion((c) => ({ ...c, institucion_financiera_id: e.target.value }))}
+            slotProps={{ select: { native: true }, inputLabel: { shrink: true } }}>
+            <option value="">Selecciona el banco o cooperativa</option>
+            {[['BANCO', 'Bancos'], ['COOPERATIVA', 'Cooperativas'], ['MUTUALISTA', 'Mutualistas'], ['OTRA', 'Otras']].map(([tipoInst, grupo]) => {
+              const lista = instituciones.filter((i) => i.tipo === tipoInst);
+              return lista.length ? <optgroup key={tipoInst} label={grupo}>{lista.map((i) => <option key={i.id} value={String(i.id)}>{i.nombre}</option>)}</optgroup> : null;
+            })}
+          </TextField>}
           <TextField multiline minRows={2} size="small" required label="Motivo u observación" value={motivoCorreccion}
             onChange={(e) => setCorreccion((c) => ({ ...c, motivo: e.target.value, motivo_auto: false }))}
             helperText="Escribe al menos 8 caracteres. Ej. Se registró en efectivo pero fue transferencia." />
@@ -569,7 +551,7 @@ function MontoConDetalle({ item, metodo, monto }) {
   );
 }
 
-function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir, onBanco) {
+function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
   const filtro = (key, label, opts) => <FilterHeaderCell key={key} value={filtros[key]} onChange={(v) => onFiltro(key, v)} options={opts}>{label}</FilterHeaderCell>;
   if (tipo === 'cajas') return [
     { key: 'codigo', header: <TableCell key="codigo">Código</TableCell>, render: (item) => <Typography variant="body2" fontWeight="600">{item.codigo}</Typography> },
@@ -644,15 +626,8 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir, o
     // Solo administradores: corregir el método de un cobro mal registrado.
     ...(catalogos.puede_anular_pagadas ? [{ key: 'acciones', header: <TableCell key="acciones" align="center">Acciones</TableCell>, render: (item) => (
       item.estado === 'CONFIRMADO' && Number(item.total_cobrado || 0) > 0
-        ? <Stack direction="row" spacing={.6} sx={{ justifyContent: 'center' }}>
-            <Tooltip title="Corregir método de pago"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
-              <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-            {Number(item.transferencia || 0) > 0 || Number(item.deposito || 0) > 0 ? (
-              <Tooltip title={(item.detalle_pagos || []).some((p) => ['TRANSFERENCIA', 'DEPOSITO'].includes(p.metodo) && !p.banco) ? 'Completar banco' : 'Cambiar banco'}>
-                <IconButton aria-label="Completar banco" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onBanco(item)}>
-                  <AccountBalanceOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-            ) : null}
-          </Stack>
+        ? <Tooltip title="Corregir método, número o banco"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
+            <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
         : '—'
     ) }] : []),
   ];
