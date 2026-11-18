@@ -61,7 +61,7 @@ export function CobroTutorDialog({ grupo, onClose, onCobrado, avisar }) {
         responsable_persona_id: grupo.responsable_persona_id,
         venta_ids: elegidas.map((cuenta) => cuenta.id),
         observaciones: observacionesVista || null,
-        pagos: cobro.pagosParaEnviar().map(({ metodo_pago, monto, efectivo_recibido, referencia, banco }) => ({ metodo_pago, monto, efectivo_recibido, referencia, banco })),
+        pagos: cobro.pagosParaEnviar().map(({ metodo_pago, monto, efectivo_recibido, referencia, institucion_financiera_id }) => ({ metodo_pago, monto, efectivo_recibido, referencia, institucion_financiera_id })),
       });
       onCobrado(response.datos || response);
     } catch (error) {

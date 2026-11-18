@@ -8,7 +8,16 @@ import DeleteOutlineOutlinedIcon from '@mui/icons-material/DeleteOutlineOutlined
 import { Alert, Box, Button, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
-import { BANCOS_ECUADOR } from '../config/bancosConfig.js';
+import { configuracionServicio } from '../../configuracion/services/configuracionServicio.js';
+
+const TIPOS = [['BANCO', 'Bancos'], ['COOPERATIVA', 'Cooperativas'], ['MUTUALISTA', 'Mutualistas'], ['OTRA', 'Otras']];
+// Una sola consulta por sesión del catálogo de bancos y cooperativas activos.
+let institucionesCache = null;
+const cargarInstituciones = () => {
+  institucionesCache = institucionesCache || configuracionServicio.listarInstitucionesFinancieras({ activas: 1 })
+    .catch((error) => { institucionesCache = null; throw error; });
+  return institucionesCache;
+};
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const DORADO_REVIVE = uiTokens.colores.acento;
@@ -24,7 +33,7 @@ export const METODOS_PAGO = [
 
 const CON_BANCO = ['TRANSFERENCIA', 'DEPOSITO'];
 
-const pagoInicial = () => ({ clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', banco: '', recibido: '0.00', montoManual: false, recibidoManual: false });
+const pagoInicial = () => ({ clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0.00', referencia: '', institucion_financiera_id: '', recibido: '0.00', montoManual: false, recibidoManual: false });
 
 /**
  * Estado de las formas de pago de un cobro. La primera forma propone el saldo
@@ -32,6 +41,17 @@ const pagoInicial = () => ({ clave: 'PAGO-1', metodo_pago: 'EFECTIVO', monto: '0
  */
 export function usePagosCobro(saldoCobro) {
   const [pagos, setPagos] = useState([pagoInicial()]);
+  const [instituciones, setInstituciones] = useState([]);
+  const [errorInstituciones, setErrorInstituciones] = useState('');
+
+  useEffect(() => {
+    let vigente = true;
+    cargarInstituciones()
+      .then((lista) => { if (vigente) { setInstituciones(lista); setErrorInstituciones(''); } })
+      .catch(() => { if (vigente) setErrorInstituciones('No se pudo cargar la lista de bancos. Recarga la página.'); });
+    return () => { vigente = false; };
+  }, []);
+  const nombreInstitucion = (id) => instituciones.find((i) => String(i.id) === String(id))?.nombre || '';
 
   useEffect(() => {
     setPagos((actual) => {
@@ -48,7 +68,7 @@ export function usePagosCobro(saldoCobro) {
       pago.clave === clave
         ? { ...pago, [campo]: valor, ...(campo === 'monto' ? { montoManual: true } : {}),
             ...(campo === 'recibido' ? { recibidoManual: true } : {}),
-            ...(campo === 'metodo_pago' ? { referencia: '', banco: '', recibido: pago.monto, recibidoManual: false } : {}) }
+            ...(campo === 'metodo_pago' ? { referencia: '', institucion_financiera_id: '', recibido: pago.monto, recibidoManual: false } : {}) }
         : pago
     )));
   };
@@ -56,7 +76,7 @@ export function usePagosCobro(saldoCobro) {
   const agregarPago = () => {
     setPagos((actual) => [
       ...actual,
-      { clave: `PAGO-${Date.now()}-${actual.length + 1}`, metodo_pago: 'EFECTIVO', monto: '', referencia: '', banco: '', recibido: '', montoManual: true, recibidoManual: false },
+      { clave: `PAGO-${Date.now()}-${actual.length + 1}`, metodo_pago: 'EFECTIVO', monto: '', referencia: '', institucion_financiera_id: '', recibido: '', montoManual: true, recibidoManual: false },
     ]);
   };
 
@@ -70,7 +90,7 @@ export function usePagosCobro(saldoCobro) {
   const excedentePagos = Math.max(0, totalPagos - saldoCobro);
   const saldoDespuesPago = Math.max(0, saldoCobro - totalPagos);
   const metodosTexto = pagos.filter((p) => Number(p.monto || 0) > 0)
-    .map((p) => `${String(p.metodo_pago).toLowerCase()} ${dinero(p.monto)}${p.referencia || p.banco ? ` (${[p.referencia ? `N.º ${p.referencia}` : '', p.banco].filter(Boolean).join(', ')})` : ''}`).join(', ');
+    .map((p) => { const banco = nombreInstitucion(p.institucion_financiera_id); return `${String(p.metodo_pago).toLowerCase()} ${dinero(p.monto)}${p.referencia || banco ? ` (${[p.referencia ? `N.º ${p.referencia}` : '', banco].filter(Boolean).join(', ')})` : ''}`; }).join(', ');
 
   /** Mensaje del primer problema que impide cobrar, o null si se puede cobrar. */
   const errorPagos = () => {
@@ -79,7 +99,7 @@ export function usePagosCobro(saldoCobro) {
     if (pagos.some((pago) => pago.metodo_pago === 'EFECTIVO' && pago.recibido !== '' && Number(pago.recibido || 0) < Number(pago.monto || 0))) {
       return 'En efectivo, el valor recibido no puede ser menor que el monto aplicado.';
     }
-    const sinDetalle = pagos.find((pago) => Number(pago.monto || 0) > 0 && CON_BANCO.includes(pago.metodo_pago) && (!pago.referencia.trim() || !pago.banco.trim()));
+    const sinDetalle = pagos.find((pago) => Number(pago.monto || 0) > 0 && CON_BANCO.includes(pago.metodo_pago) && (!pago.referencia.trim() || !pago.institucion_financiera_id));
     if (sinDetalle) {
       return `Escribe el número de comprobante y el banco de la ${sinDetalle.metodo_pago === 'DEPOSITO' ? 'papeleta de depósito' : 'transferencia'}.`;
     }
@@ -100,20 +120,20 @@ export function usePagosCobro(saldoCobro) {
         efectivo_recibido: esEfectivo ? recibido : null,
         cambio_entregado: esEfectivo ? cambio : null,
         referencia: pago.referencia.trim() || null,
-        banco: esEfectivo ? null : (pago.banco.trim() || null),
+        institucion_financiera_id: esEfectivo || !pago.institucion_financiera_id ? null : Number(pago.institucion_financiera_id),
         observaciones: esEfectivo ? `Cobro POS. Recibido ${dinero(recibido)}. Cambio ${dinero(cambio)}.` : 'Cobro registrado desde POS.',
       };
     });
 
   return {
-    pagos, actualizarPago, agregarPago, quitarPago, reiniciarPagos,
+    pagos, actualizarPago, agregarPago, quitarPago, reiniciarPagos, instituciones, errorInstituciones,
     totalPagos, excedentePagos, saldoDespuesPago, metodosTexto, errorPagos, pagosParaEnviar,
   };
 }
 
 /** Formas de pago de un cobro: método, valor, efectivo recibido y cambio. */
 export function PagosCobroEditor({ cobro, saldoCobro }) {
-  const { pagos, actualizarPago, agregarPago, quitarPago, totalPagos, excedentePagos, saldoDespuesPago } = cobro;
+  const { pagos, actualizarPago, agregarPago, quitarPago, totalPagos, excedentePagos, saldoDespuesPago, instituciones, errorInstituciones } = cobro;
   return (
     <Stack spacing={1.25}>
       {pagos.map((pago, indice) => {
@@ -209,16 +229,20 @@ export function PagosCobroEditor({ cobro, saldoCobro }) {
                   Banco
                 </Typography>
                 {/* Lista nativa: en el celular abre el selector del teléfono. */}
-                <TextField select fullWidth size="small" value={pago.banco}
-                  onChange={(e) => actualizarPago(pago.clave, 'banco', e.target.value)}
+                <TextField select fullWidth size="small" value={pago.institucion_financiera_id}
+                  onChange={(e) => actualizarPago(pago.clave, 'institucion_financiera_id', e.target.value)}
+                  error={Boolean(errorInstituciones)} helperText={errorInstituciones || undefined}
                   slotProps={{ select: { native: true }, htmlInput: { 'aria-label': 'Banco' } }}
                   sx={{ ...dbanuStyles.field, '& .MuiOutlinedInput-root': { borderRadius: 1.4, bgcolor: '#fff' } }}>
-                  <option value="">Selecciona el banco</option>
-                  {BANCOS_ECUADOR.map(({ grupo, opciones }) => (
-                    <optgroup key={grupo} label={grupo}>
-                      {opciones.map((banco) => <option key={banco} value={banco}>{banco}</option>)}
-                    </optgroup>
-                  ))}
+                  <option value="">Selecciona el banco o cooperativa</option>
+                  {TIPOS.map(([tipo, grupo]) => {
+                    const opciones = instituciones.filter((i) => i.tipo === tipo);
+                    return opciones.length ? (
+                      <optgroup key={tipo} label={grupo}>
+                        {opciones.map((i) => <option key={i.id} value={String(i.id)}>{i.nombre}</option>)}
+                      </optgroup>
+                    ) : null;
+                  })}
                 </TextField>
               </Box>
             ) : null}

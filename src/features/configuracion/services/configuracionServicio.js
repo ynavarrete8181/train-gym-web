@@ -17,4 +17,18 @@ export const configuracionServicio = {
     const { data } = await api.patch(`/base/configuracion/estados/${id}/desactivar`);
     return data;
   },
+  listarInstitucionesFinancieras: async (params = {}) => {
+    const { data } = await api.get('/base/configuracion/instituciones-financieras', { params });
+    return data.datos || [];
+  },
+  guardarInstitucionFinanciera: async (payload, id = null) => {
+    const { data } = id
+      ? await api.put(`/base/configuracion/instituciones-financieras/${id}`, payload)
+      : await api.post('/base/configuracion/instituciones-financieras', payload);
+    return data;
+  },
+  cambiarEstadoInstitucionFinanciera: async (id, activo) => {
+    const { data } = await api.patch(`/base/configuracion/instituciones-financieras/${id}/estado`, { activo });
+    return data;
+  },
 };

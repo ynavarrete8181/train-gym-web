@@ -25,6 +25,7 @@ const nombresPaginas = {
   EstructuraInstitucionalPage: 'Estructura operativa',
   IntegracionesPage: 'Configuración de APIs',
   EstadosConfiguracionPage: 'Estados',
+  InstitucionesFinancierasPage: 'Instituciones financieras',
   CampaniasNotificacionPage: 'Campañas y envíos',
   NotificacionesUsuariosPage: 'Invitaciones de acceso',
   PlantillasCorreoPage: 'Plantillas de correo',
