@@ -247,6 +247,20 @@ export function VentasCatalogo({ tipo }) {
     }
   };
 
+  // Comprobante de un cobro: a nombre de quien pagó, con todas las cuentas que cubrió.
+  const handleVerCobroPdf = async (item) => {
+    setComprobantePdf(null);
+    setCargandoPdf(true);
+    try {
+      const blob = await ventaServicio.obtenerComprobanteCobroPdf(item.codigo_cobro);
+      setComprobantePdf({ blob, url: URL.createObjectURL(blob), nombre: `${item.codigo_cobro}.pdf` });
+    } catch (error) {
+      showNotificacion(error.response?.data?.mensaje || 'No se pudo abrir el comprobante del cobro', 'error');
+    } finally {
+      setCargandoPdf(false);
+    }
+  };
+
   const cerrarPdf = () => {
     if (comprobantePdf?.url) URL.revokeObjectURL(comprobantePdf.url);
     setComprobantePdf(null);
@@ -313,7 +327,7 @@ export function VentasCatalogo({ tipo }) {
     }
   };
 
-  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion), [tipo, meta, filtrosColumna, catalogos, instituciones]);
+  const columnas = useMemo(() => columnasPorTipo(tipo, meta, filtrosColumna, aplicarFiltroColumna, catalogos, abrirCorreccion, handleVerCobroPdf), [tipo, meta, filtrosColumna, catalogos, instituciones]);
 
   if (vista === 'formulario') {
     return (
@@ -363,7 +377,7 @@ export function VentasCatalogo({ tipo }) {
           onRowsPerPageChange={(perPage) => { const nuevos = { ...filtros, page: 1, per_page: perPage }; setFiltros(nuevos); cargar(nuevos); }}
         />
       </Paper>
-      <VisorPdf titulo="Comprobante de venta" pdf={comprobantePdf} cargando={cargandoPdf} onCerrar={cerrarPdf} />
+      <VisorPdf titulo={tipo === "pagos" ? "Comprobante de cobro" : "Comprobante de venta"} pdf={comprobantePdf} cargando={cargandoPdf} onCerrar={cerrarPdf} />
       <ModalConfirmacion
         open={Boolean(correccion)}
         titulo="Corregir método de pago"
@@ -551,7 +565,7 @@ function MontoConDetalle({ item, metodo, monto }) {
   );
 }
 
-function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
+function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir, onVerCobro) {
   const filtro = (key, label, opts) => <FilterHeaderCell key={key} value={filtros[key]} onChange={(v) => onFiltro(key, v)} options={opts}>{label}</FilterHeaderCell>;
   if (tipo === 'cajas') return [
     { key: 'codigo', header: <TableCell key="codigo">Código</TableCell>, render: (item) => <Typography variant="body2" fontWeight="600">{item.codigo}</Typography> },
@@ -623,18 +637,30 @@ function columnasPorTipo(tipo, meta, filtros, onFiltro, catalogos, onCorregir) {
     { key: 'otros', header: <TableCell key="otros" align="right">Otros</TableCell>, render: (item) => dinero(item.otros) },
     { key: 'total', header: <TableCell key="total" align="right">Total</TableCell>, render: (item) => <Typography variant="body2" fontWeight="800">{dinero(item.total_cobrado)}</Typography> },
     { key: 'estado', header: filtro('estado', 'Estado', opcionesEstados(catalogos.estados_pago)), render: (item) => <StatusChip estado={estadoTexto(item.estado)} label={nombreEstado(catalogos.estados_pago, item.estado)} /> },
-    // Solo administradores: corregir el método de un cobro mal registrado.
-    ...(catalogos.puede_anular_pagadas ? [{ key: 'acciones', header: <TableCell key="acciones" align="center">Acciones</TableCell>, render: (item) => (
-      item.estado === 'CONFIRMADO' && Number(item.total_cobrado || 0) > 0
-        ? <Tooltip title="Corregir método, número o banco"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
-            <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
-        : '—'
-    ) }] : []),
+    // Ver el comprobante del cobro (todas las cuentas que pagó); corregir, solo administradores.
+    { key: 'acciones', header: <TableCell key="acciones" align="center">Acciones</TableCell>, render: (item) => (
+      <Stack direction="row" spacing={.6} sx={{ justifyContent: 'center' }}>
+        {item.codigo_cobro ? <Tooltip title="Ver comprobante del cobro"><IconButton aria-label="Ver comprobante del cobro" sx={{ ...dbanuStyles.actionView, mr: 0 }} onClick={() => onVerCobro(item)}>
+          <VisibilityOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip> : null}
+        {catalogos.puede_anular_pagadas && item.estado === 'CONFIRMADO' && Number(item.total_cobrado || 0) > 0
+          ? <Tooltip title="Corregir método, número o banco"><IconButton aria-label="Corregir método de pago" sx={{ ...dbanuStyles.actionEdit, mr: 0 }} onClick={() => onCorregir(item)}>
+              <EditOutlinedIcon sx={{ fontSize: 17 }} /></IconButton></Tooltip>
+          : null}
+      </Stack>
+    ) },
   ];
   return [
     { key: 'numero', header: filtro('numero', 'Comprobante', null), render: (item) => <Box><Typography variant="body2" fontWeight="700">{item.numero}</Typography><Typography variant="caption" color="text.secondary">{fecha(item.emitido_at || item.created_at)}</Typography></Box> },
     { key: 'venta', header: <TableCell key="venta">Venta</TableCell>, render: (item) => item.venta_numero || '—' },
-    { key: 'cliente', header: filtro('cliente', 'Cliente', opciones(meta.opciones_filtro?.cliente)), render: (item) => <Box><Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography><Typography variant="caption" color="text.secondary">{item.cliente_identificacion || 'Sin identificación'}</Typography></Box> },
+    { key: 'cliente', header: filtro('cliente', 'Cliente', opciones(meta.opciones_filtro?.cliente)), render: (item) => (
+      <Box>
+        <Typography variant="body2">{item.cliente_nombre || 'Consumidor final'}</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{item.cliente_identificacion || 'Sin identificación'}</Typography>
+        {item.pagador_nombre && item.pagador_nombre !== item.cliente_nombre
+          ? <Typography variant="caption" sx={{ display: 'block', color: '#805b00', fontWeight: 750 }}>Pagó el tutor: {item.pagador_nombre}{item.codigo_cobro ? ` · ${item.codigo_cobro}` : ''}</Typography>
+          : null}
+      </Box>
+    ) },
     { key: 'correo', header: <TableCell key="correo">Correo</TableCell>, render: (item) => item.cliente_email || item.correo_destino || 'Sin correo' },
     { key: 'total', header: <TableCell key="total">Total</TableCell>, render: (item) => dinero(item.total) },
     { key: 'envio', header: <TableCell key="envio">Envío</TableCell>, render: (item) => <Box><Typography variant="body2">{Number(item.cantidad_envios || 0) > 0 ? `Enviado · ${item.cantidad_envios}` : 'Sin enviar'}</Typography><Typography variant="caption" color="text.secondary">{item.ultimo_envio_at ? fecha(item.ultimo_envio_at) : '—'}</Typography></Box> },
