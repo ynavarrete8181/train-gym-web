@@ -56,9 +56,10 @@ export function ComoSeRenueva({ membresia, onActualizado }) {
   const seProgramaEl = sumarDias(fin, -7);
   const renueva = Boolean(membresia?.renovacion_automatica);
   const precio = montoPrecioRenovacion(ciclo);
-  // Descuento general que seguirá vigente al empezar el próximo período.
+  // Al renovar, sigue el descuento general vigente al terminar el período actual (llegue hasta
+  // su fin o no tenga fin): el sistema lo copia al nuevo período hasta que se finalice.
   const descuento = descuentos.find((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && !d.sede_id
-    && String(d.fecha_inicio).slice(0, 10) <= inicioSiguiente && (!d.fecha_fin || String(d.fecha_fin).slice(0, 10) >= inicioSiguiente));
+    && String(d.fecha_inicio).slice(0, 10) <= fin && (!d.fecha_fin || String(d.fecha_fin).slice(0, 10) >= fin));
   const importe = descuento ? importeDescuento(precio, descuento) : 0;
 
   return <Box sx={{ p: 1.75, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, bgcolor: '#fcfcfd' }}>
@@ -81,7 +82,7 @@ export function ComoSeRenueva({ membresia, onActualizado }) {
       </Dato>
       <Dato titulo="Descuento que sigue">
         {descuento
-          ? <>{descuento.tipo === 'PORCENTAJE' ? `${Number(descuento.valor)} %` : dinero(descuento.valor)} · {descuento.fecha_fin ? `hasta el ${fecha(descuento.fecha_fin)}` : 'hasta que se desactive'}</>
+          ? <>{descuento.tipo === 'PORCENTAJE' ? `${Number(descuento.valor)} %` : dinero(descuento.valor)} · sigue al renovar hasta que se finalice</>
           : 'Sin descuento'}
       </Dato>
     </Box>

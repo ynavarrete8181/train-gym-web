@@ -50,6 +50,7 @@ const tituloTipo = {
   DESCUENTO_FINALIZADO: 'Descuento finalizado',
   VENTAS_RECALCULADAS: 'Ventas ajustadas al descuento',
   CORRECCION_DATOS: 'Corrección de datos',
+  RENOVACION_ANULADA: 'Renovación anulada',
   DESCUENTO_AJUSTADO: 'Descuento ajustado al contrato',
   DESCUENTO_RENOVADO: 'Descuento renovado',
   REABRIR: 'Reapertura de membresía',
