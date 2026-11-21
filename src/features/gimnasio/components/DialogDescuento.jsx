@@ -10,7 +10,7 @@ import { formStyles } from '../../../styles/formStyles.js';
 import { uiTokens } from '../../../styles/uiTokens.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
-const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : 'Sin fin');
+const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : 'Hasta que se desactive');
 export const importeDescuento = (precio, d) => (!d ? 0 : d.tipo === 'PORCENTAJE'
   ? Math.round(precio * Math.min(100, Math.max(0, Number(d.valor))) / 100 * 100) / 100
   : Math.min(precio, Math.max(0, Number(d.valor))));
@@ -21,9 +21,11 @@ const seCruzan = (a, b) => (a.fecha_inicio <= (b.fecha_fin || '9999-12-31')) && 
  * - sedes: [{ id, nombre, precio }] autorizadas; inicio/fin: rango de la membresía.
  * - otros: descuentos que no pueden cruzarse con este en la misma sede.
  * - inicioOriginal: si el descuento ya empezó, el cambio rige desde una fecha posterior a ella.
+ * - permiteSinFin: el contrato se renueva solo; el descuento puede seguir en las renovaciones
+ *   ("hasta que se desactive", por defecto) o terminar en una fecha posterior al período actual.
  */
 export function DialogDescuento({
-  abierto, inicial, sedes, inicio, fin, otros = [], inicioOriginal = null,
+  abierto, inicial, sedes, inicio, fin, otros = [], inicioOriginal = null, permiteSinFin = false,
   guardando = false, error = '', textoGuardar, onCerrar, onGuardar,
 }) {
   const [form, setForm] = useState(null);
@@ -31,7 +33,10 @@ export function DialogDescuento({
     if (abierto) setForm({
       sede_id: inicial?.sede_id ? String(inicial.sede_id) : '', tipo: inicial?.tipo || 'PORCENTAJE',
       valor: inicial?.valor != null && inicial.valor !== '' ? String(inicial.valor) : '', motivo: inicial?.motivo || '', motivo_auto: !inicial?.motivo,
-      fecha_inicio: inicial?.fecha_inicio || inicio || '', fecha_fin: inicial?.fecha_fin ?? (fin || ''),
+      fecha_inicio: inicial?.fecha_inicio || inicio || '',
+      // Nuevo descuento en un contrato que se renueva: sigue hasta que se desactive.
+      sin_fin: permiteSinFin && (inicial ? !inicial.fecha_fin : true),
+      fecha_fin: inicial?.fecha_fin ?? (fin || ''),
     });
   }, [abierto]);
   if (!abierto || !form) return null;
@@ -43,9 +48,9 @@ export function DialogDescuento({
   const valor = Number(form.valor);
   // Motivo sugerido con los datos del descuento; el administrador lo completa (beca, convenio…) o lo reescribe.
   const textoValor = (t, v) => (t === 'PORCENTAJE' ? `${Number(v)} %` : dinero(v));
-  const rango = `del ${fecha(form.fecha_inicio)} al ${fecha(form.fecha_fin)}`;
+  const rango = form.sin_fin ? `desde el ${fecha(form.fecha_inicio)}, hasta que se desactive` : `del ${fecha(form.fecha_inicio)} al ${fecha(form.fecha_fin)}`;
   const motivoSugerido = !(valor > 0) ? '' : inicial
-    ? `Cambio del descuento en ${nombreSede(form.sede_id)}: ${textoValor(inicial.tipo, inicial.valor)} → ${textoValor(form.tipo, valor)}, ${inicioOriginal ? `rige desde el ${fecha(form.fecha_inicio)} hasta el ${fecha(form.fecha_fin)}` : rango}.`
+    ? `Cambio del descuento en ${nombreSede(form.sede_id)}: ${textoValor(inicial.tipo, inicial.valor)} → ${textoValor(form.tipo, valor)}, ${inicioOriginal ? (form.sin_fin ? `rige desde el ${fecha(form.fecha_inicio)} hasta que se desactive` : `rige desde el ${fecha(form.fecha_inicio)} hasta el ${fecha(form.fecha_fin)}`) : rango}.`
     : `Descuento de ${textoValor(form.tipo, valor)} en ${nombreSede(form.sede_id)} ${rango}, autorizado por administración.`;
   const motivo = form.motivo_auto ? motivoSugerido : form.motivo;
   const desdeMinimo = inicioOriginal || inicio;
@@ -56,15 +61,17 @@ export function DialogDescuento({
     motivo: motivo.trim() && motivo.trim().length < 8 ? 'Escribe al menos 8 caracteres.' : '',
     fechas: !form.fecha_inicio ? 'Indica desde cuándo rige.'
       : inicioOriginal && form.fecha_inicio <= inicioOriginal ? `El cambio debe regir después del ${fecha(inicioOriginal)}.`
-        : (inicio && form.fecha_inicio < inicio) || (fin && (!form.fecha_fin || form.fecha_fin > fin))
-          ? 'Debe quedar dentro de la membresía.' : form.fecha_fin && form.fecha_fin < form.fecha_inicio ? 'La fecha fin no puede ser anterior.' : '',
-    cruce: otros.some((d) => String(d.sede_id || '') === String(form.sede_id || '') && seCruzan(d, form))
+        : (inicio && form.fecha_inicio < inicio) ? 'Debe empezar dentro de la membresía.'
+          : !form.sin_fin && fin && !form.fecha_fin ? 'Indica hasta cuándo rige.'
+            : !form.sin_fin && !permiteSinFin && fin && form.fecha_fin > fin ? 'Debe quedar dentro de la membresía.'
+              : !form.sin_fin && form.fecha_fin && form.fecha_fin < form.fecha_inicio ? 'La fecha fin no puede ser anterior.' : '',
+    cruce: otros.some((d) => String(d.sede_id || '') === String(form.sede_id || '') && seCruzan(d, { ...form, fecha_fin: form.sin_fin ? '' : form.fecha_fin }))
       ? `Ya hay un descuento para ${nombreSede(form.sede_id)} en esas fechas.` : '',
   };
   const valido = valor > 0 && motivo.trim().length >= 8 && !Object.values(errores).some(Boolean);
   const guardar = () => onGuardar({
     sede_id: form.sede_id ? Number(form.sede_id) : null, tipo: form.tipo, valor: Number(form.valor),
-    motivo: motivo.trim(), fecha_inicio: form.fecha_inicio, fecha_fin: form.fecha_fin || null,
+    motivo: motivo.trim(), fecha_inicio: form.fecha_inicio, fecha_fin: form.sin_fin ? null : (form.fecha_fin || null),
   });
 
   return <Dialog open onClose={guardando ? undefined : onCerrar} fullWidth maxWidth="sm" aria-labelledby="dialog-descuento-titulo"
@@ -114,9 +121,19 @@ export function DialogDescuento({
         slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: desdeMinimo || undefined, max: fin || undefined } }}
         helperText={inicioOriginal ? `Hasta el día anterior sigue el actual (desde ${fecha(inicioOriginal)}).`
           : form.fecha_inicio === inicio ? 'Igual al inicio de la membresía.' : ' '} />
-      <TextField size="small" type="date" label="Hasta" value={form.fecha_fin} onChange={(e) => cambiar('fecha_fin', e.target.value)}
-        slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.fecha_inicio || undefined, max: fin || undefined } }}
-        helperText={!fin ? 'Opcional.' : form.fecha_fin === fin ? 'Igual al fin de la membresía.' : 'Termina antes que la membresía.'} />
+      {permiteSinFin ? (
+        <TextField select size="small" label="Duración" value={form.sin_fin ? 'SIN_FIN' : 'HASTA'}
+          onChange={(e) => cambiar('sin_fin', e.target.value === 'SIN_FIN')}
+          helperText={form.sin_fin ? 'Sigue en cada renovación hasta que se desactive.' : 'Para promociones con fecha de fin.'}>
+          <MenuItem value="SIN_FIN">Hasta que se desactive</MenuItem>
+          <MenuItem value="HASTA">Hasta una fecha</MenuItem>
+        </TextField>
+      ) : null}
+      {!form.sin_fin ? (
+        <TextField size="small" type="date" label="Hasta" value={form.fecha_fin} onChange={(e) => cambiar('fecha_fin', e.target.value)}
+          slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.fecha_inicio || undefined, max: (!permiteSinFin && fin) || undefined } }}
+          helperText={!fin ? 'Opcional.' : form.fecha_fin === fin ? 'Igual al fin del período actual.' : form.fecha_fin > fin ? 'Sigue en las renovaciones hasta esa fecha.' : 'Termina antes que el período actual.'} />
+      ) : null}
       {(errores.fechas || errores.cruce) && <Alert severity="warning" sx={{ gridColumn: '1 / -1' }}>{errores.fechas || errores.cruce}</Alert>}
       {valor > 0 && !errores.valor && sedesDelDescuento.length > 0 && <Box sx={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 1 }}>
         {sedesDelDescuento.map((s) => <Box key={s.id} sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, px: 1.5, py: 1, bgcolor: '#f8fafc' }}>
