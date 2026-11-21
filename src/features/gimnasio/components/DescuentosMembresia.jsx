@@ -23,7 +23,7 @@ const textoRecalculo = (respuesta) => {
   const cobradas = (r.cobradas || []).map((f) => f.periodo);
   return `${partes.length ? ` Ventas pendientes ajustadas (${partes.join('; ')}).` : ''}${cobradas.length ? ` Período${cobradas.length > 1 ? 's' : ''} ${cobradas.join(', ')} ya cobrado${cobradas.length > 1 ? 's' : ''}: no se modifica${cobradas.length > 1 ? 'n' : ''}.` : ''}`;
 };
-const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : 'Sin fin');
+const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : 'Hasta que se desactive');
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const textoDescuento = (d) => (d.tipo === 'PORCENTAJE' ? `${Number(d.valor)} %` : dinero(d.valor));
 const ESTADOS = {
@@ -72,7 +72,9 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
   const tabla = useTablaLocal(filas, COLUMNAS, OPCIONES);
   const contrato = datos.contrato || {};
   const finContrato = String(contrato.fin || '').slice(0, 10);
-  const fueraDelContrato = filas.filter((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && finContrato
+  // En un contrato que se renueva solo, un descuento puede seguir después del período actual.
+  const permiteSinFin = Boolean(contrato.permite_sin_fin);
+  const fueraDelContrato = permiteSinFin ? [] : filas.filter((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && finContrato
     && (!d.fecha_fin || String(d.fecha_fin).slice(0, 10) > finContrato));
   // Sedes autorizadas con su tarifa: el modal solo ofrece estas.
   const autorizadas = (membresia.sedes_habilitadas || []).filter((s) => s.activo !== false).map((s) => String(s.sede_id));
@@ -148,6 +150,7 @@ export function DescuentosMembresia({ membresia, onActualizado }) {
       sedes={sedesModal}
       inicio={form?.inicioOriginal ? null : inicioContrato}
       fin={finContrato}
+      permiteSinFin={permiteSinFin}
       inicioOriginal={form?.inicioOriginal || null}
       otros={filas.filter((d) => ['VIGENTE', 'PROGRAMADO'].includes(d.estado) && d.id !== form?.id)
         .map((d) => ({ sede_id: d.sede_id, fecha_inicio: String(d.fecha_inicio).slice(0, 10), fecha_fin: d.fecha_fin ? String(d.fecha_fin).slice(0, 10) : null }))}

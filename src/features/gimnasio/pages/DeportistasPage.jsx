@@ -184,7 +184,8 @@ const getInitialMembresia = () => ({
   dia_pago: '',
   generar_venta_automatica: false,
   proxima_fecha_cobro: '',
-  renovacion_automatica: false,
+  // Por defecto se renueva sola; se apaga desde la configuración del contrato, con motivo.
+  renovacion_automatica: true,
   congelar_membresia: false,
   fecha_congelacion_inicio: '',
   fecha_congelacion_fin: '',
@@ -374,6 +375,7 @@ export function DeportistasPage() {
   const [quitandoTutor, setQuitandoTutor] = useState(false);
   const [mostrarMapaCliente, setMostrarMapaCliente] = useState(false);
   const [guardandoCliente, setGuardandoCliente] = useState(false);
+  const [posibleDuplicado, setPosibleDuplicado] = useState('');
   const [diagnosticoIdentidad, setDiagnosticoIdentidad] = useState(null);
   const [consultandoIdentidad, setConsultandoIdentidad] = useState(false);
   const [notificacion, setNotificacion] = useState({ mensaje: '', tipo: 'info' });
@@ -633,8 +635,9 @@ export function DeportistasPage() {
       : null,
   });
 
-  const handleGuardar = async () => {
+  const handleGuardar = async (confirmarDuplicado = false) => {
     if (guardandoCliente) return;
+    setPosibleDuplicado('');
     setGuardandoCliente(true);
     try {
       if (!String(formData.nombres || '').trim()) {
@@ -682,6 +685,7 @@ export function DeportistasPage() {
               responsable_pago: Boolean(formData.representante_legal?.responsable_pago),
             }
           : null,
+        ...(confirmarDuplicado === true ? { confirmar_duplicado: true } : {}),
       };
 
       if (formData.id) {
@@ -701,6 +705,11 @@ export function DeportistasPage() {
       }
     } catch (error) {
       const errores = error.response?.data?.errors || error.response?.data?.errores;
+      // Ya hay un cliente con ese nombre: se pide confirmar antes de registrar otro.
+      if (errores?.posible_duplicado) {
+        setPosibleDuplicado([errores.posible_duplicado].flat()[0]);
+        return;
+      }
       const detalle = errores ? Object.values(errores).flat().join(' ') : '';
       showNotificacion(detalle || error.response?.data?.mensaje || error.response?.data?.message || 'Error al guardar el cliente', 'error');
     } finally {
@@ -2960,6 +2969,15 @@ export function DeportistasPage() {
             {renderCamposDatos()}
           </Box>
           <AccionesFormulario onGuardar={handleGuardar} onCancelar={handleCancelar} guardando={guardandoCliente} />
+          <ModalConfirmacion
+            open={Boolean(posibleDuplicado)}
+            titulo="¿Es otra persona?"
+            descripcion={posibleDuplicado}
+            textoConfirmar="Sí, es otra persona"
+            cargando={guardandoCliente}
+            onClose={() => setPosibleDuplicado('')}
+            onConfirmar={() => handleGuardar(true)}
+          />
         </Paper>
         <NotificacionSnackbar mensaje={notificacion.mensaje} tipo={notificacion.tipo} onClose={() => setNotificacion({ ...notificacion, mensaje: "" })} />
       </Box>

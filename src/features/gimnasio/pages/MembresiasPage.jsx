@@ -62,7 +62,8 @@ const formInicial = () => ({
   fecha_fin: '',
   estado: 'PENDIENTE_PAGO',
   dias_gracia: 0,
-  renovacion_automatica: false,
+  // Por defecto se renueva sola; se apaga desde la configuración del contrato, con motivo.
+  renovacion_automatica: true,
   requiere_facturar: false,
   fecha_congelacion_inicio: '',
   fecha_congelacion_fin: '',
