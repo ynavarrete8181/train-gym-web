@@ -49,7 +49,7 @@ export function ConfiguracionContrato({ membresia, onActualizado }) {
   };
 
   return <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
-    <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Configuración administrativa</Typography>
+    <Typography variant="subtitle2" fontWeight={800} sx={{ mb: 1.5 }}>Renovación automática y días de gracia</Typography>
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
     {exito && <Alert severity="success" sx={{ mb: 1.5 }}>{exito}</Alert>}
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.5, alignItems: 'start' }}>

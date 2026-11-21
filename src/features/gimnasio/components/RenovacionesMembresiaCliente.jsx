@@ -11,6 +11,7 @@ import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { DialogRenovacionMembresia } from './DialogRenovacionMembresia.jsx';
+import { ComoSeRenueva } from './ComoSeRenueva.jsx';
 
 const fecha = value => value ? String(value).slice(0, 10).split('-').reverse().join('/') : '—';
 const importe = value => value == null ? '—' :
@@ -33,6 +34,7 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   const [vista, setVista] = useState('listado');
   const [seleccionada, setSeleccionada] = useState(null);
   const id = membresia?.id;
+  const esPaseDiario = String(membresia?.plan_tipo_producto || membresia?.tipo_producto || '').toUpperCase() === 'PASE_DIARIO';
   const estadoContrato = String(membresia?.estado || '').toUpperCase();
   const puedeRenovar = estadoContrato === 'ACTIVA' && membresia?.cantidad_periodos_contratados != null;
   const motivoBloqueo = estadoContrato !== 'ACTIVA'
@@ -67,14 +69,6 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   const tabla = useTablaLocal(filtradas, COLUMNAS_RENOVACIONES, OPCIONES_RENOVACIONES);
   const { visibles } = tabla;
 
-  if (vista === 'formulario') return <DialogRenovacionMembresia
-    abierto membresia={membresia} integrado
-    onCerrar={() => setVista('listado')}
-    onActualizado={async () => {
-      await onActualizado?.();
-      await cargar();
-    }} />;
-
   if (vista === 'detalle' && seleccionada) {
     const d = seleccionada.detalle || {};
     return <Box sx={{ minWidth: 0 }}>
@@ -104,6 +98,15 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   }
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
+    {!esPaseDiario && <ComoSeRenueva membresia={membresia} onActualizado={onActualizado} />}
+    {/* Renovar a mano: pocos datos, en un modal sobre el listado. */}
+    <DialogRenovacionMembresia
+      abierto={vista === 'formulario'} membresia={membresia}
+      onCerrar={() => setVista('listado')}
+      onActualizado={async () => {
+        await onActualizado?.();
+        await cargar();
+      }} />
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
     {cargando && <Stack direction="row" gap={1} sx={{ alignItems: 'center', mb: 1 }}>
       <CircularProgress size={18}/><Typography variant="body2">Consultando renovaciones…</Typography>

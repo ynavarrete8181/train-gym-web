@@ -11,7 +11,6 @@ import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined';
 import LocationCityOutlinedIcon from '@mui/icons-material/LocationCityOutlined';
 import DiscountOutlinedIcon from '@mui/icons-material/DiscountOutlined';
 import { SedesMembresia } from './SedesMembresia.jsx';
-import { ConfiguracionContrato } from './ConfiguracionContrato.jsx';
 import { DescuentosMembresia } from './DescuentosMembresia.jsx';
 import { GestionCicloVidaMembresia } from './GestionCicloVidaMembresia.jsx';
 import { esPaseDiario, presentarEstadoMembresia, textoVigenciaPase } from './estadoMembresia.js';
@@ -178,7 +177,6 @@ export function DetalleMembresiaCliente({
                 : <>
                   <DatoContrato titulo="Inicio de vigencia" valor={fecha(membresia.fecha_inicio)} />
                   <DatoContrato titulo="Fin de vigencia" valor={fecha(membresia.fecha_fin)} />
-                  {!esPaseDiario(membresia) && <ConfiguracionContrato membresia={membresia} onActualizado={onActualizado} />}
           </>}
               <DatoContrato titulo="Precio registrado" valor={importe(membresia.precio_aplicado)} />
             </Box>
