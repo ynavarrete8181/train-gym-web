@@ -1066,7 +1066,14 @@ export function DeportistasPage() {
     );
 
     if (nuevaFechaFin) {
-      setMembresiaForm((actual) => ({ ...actual, fecha_fin: nuevaFechaFin }));
+      // Un contrato nuevo nace con un período: la fecha fin y el día de pago se llenan solos
+      // (día de pago = día de inicio) hasta que Andrea los cambie a mano.
+      setMembresiaForm((actual) => ({
+        ...actual,
+        fecha_fin: nuevaFechaFin,
+        fecha_fin_solicitada: actual.fin_manual ? actual.fecha_fin_solicitada : nuevaFechaFin,
+        dia_pago: actual.dia_pago_manual ? actual.dia_pago : Number(String(actual.fecha_inicio).slice(8, 10)) || actual.dia_pago,
+      }));
     }
   }, [
     membresiaForm.fecha_inicio,
@@ -1112,13 +1119,21 @@ export function DeportistasPage() {
       if (name === 'cantidad_periodos_contratados') {
         return { ...actual, cantidad_periodos_contratados: nuevoValor };
       }
+      if (name === 'fecha_fin_solicitada') return { ...actual, fecha_fin_solicitada: nuevoValor, fin_manual: true };
+      if (name === 'dia_pago') return { ...actual, dia_pago: nuevoValor, dia_pago_manual: true };
       return { ...actual, [name]: nuevoValor };
     });
   };
 
   const handleNuevaMembresia = () => {
     setMembresiaDetalle(null);
-    setMembresiaForm(getInitialMembresia());
+    // Sedes del último contrato del cliente (o la única sede del gimnasio), ya marcadas.
+    const ultima = [...membresiasCliente].sort((a, b) => Number(b.id) - Number(a.id))[0];
+    const sedesPrevias = ultima ? Array.from(new Set([
+      Number(ultima.sede_id),
+      ...(ultima.sedes_habilitadas || []).map((item) => Number(item.sede_id || item)),
+    ].filter(Boolean))) : (sedes.length === 1 ? [Number(sedes[0].id_sede)] : []);
+    setMembresiaForm({ ...getInitialMembresia(), sede_id: sedesPrevias[0] || '', sedes_habilitadas: sedesPrevias });
     setDescuentoMembresia({ tipo: 'PORCENTAJE', valor: '', motivo: '', fecha_inicio: '', fecha_fin: '', sede_id: '' }); setDescuentosNuevos([]); setConDescuentos(false); setSeccionNueva('nueva');
     setRequiereDescuento(false);
     setVistaMembresia('formulario');
@@ -1229,8 +1244,26 @@ export function DeportistasPage() {
         showNotificacion('Indica la fecha de fin de la vigencia del pase.', 'warning');
         return;
       }
+      const conDescuentoNuevo = !membresiaForm.id && requiereDescuento && !paseEnFormulario && !descuentoYaAplica;
+      if (conDescuentoNuevo && (descuentoInvalido || descuentoVacio)) {
+        showNotificacion('Revisa el valor del descuento o apágalo.', 'warning'); return;
+      }
+      if (conDescuentoNuevo && String(descuentoMembresia.motivo || '').trim().length < 8) {
+        showNotificacion('Indica el motivo del descuento.', 'warning'); return;
+      }
       const payload = {
         ...membresiaForm,
+        fin_manual: undefined,
+        dia_pago_manual: undefined,
+        descuentos: conDescuentoNuevo ? [{
+          tipo: descuentoMembresia.tipo,
+          valor: Number(descuentoMembresia.valor),
+          motivo: descuentoMembresia.motivo.trim(),
+          fecha_inicio: membresiaForm.fecha_inicio,
+          // Contrato que se renueva solo: sin fin (sigue hasta que se desactive). Si no, hasta el fin del contrato.
+          fecha_fin: descuentoSigue ? null : (finMembresiaForm || null),
+          sede_id: descuentoMembresia.sede_id ? Number(descuentoMembresia.sede_id) : null,
+        }] : undefined,
         fecha_fin_solicitada: undefined,
         fecha_primer_pago: contratoNuevo ? undefined : membresiaForm.fecha_primer_pago,
         // Solo un contrato nuevo lleva calendario de cuotas; un pase diario no.
@@ -1953,6 +1986,18 @@ export function DeportistasPage() {
     : contratoNuevoVisible
       ? (calendarioContratoPreview[calendarioContratoPreview.length - 1]?.fin || membresiaForm.fecha_fin_solicitada || '')
       : (membresiaForm.fecha_fin || '');
+  // En un contrato que se renueva solo, el descuento sigue en las renovaciones hasta que se desactive.
+  const descuentoSigue = contratoNuevoVisible && booleanoBackend(planMembresiaSeleccionado?.renovable)
+    && Boolean(membresiaForm.renovacion_automatica);
+  // Descuento general vigente del cliente en otro contrato: se propone al contratar.
+  const descuentosCliente = [...membresiasCliente].sort((a, b) => Number(b.id) - Number(a.id))
+    .map((m) => m.descuento_vigente)
+    .filter((d) => d && !d.sede_id && (!d.fecha_fin || String(d.fecha_fin).slice(0, 10) >= (membresiaForm.fecha_inicio || '')));
+  // Los descuentos son del cliente por plan: si ya hay uno de este plan (y modalidad), se aplica solo.
+  const descuentoYaAplica = descuentosCliente.find((d) => String(d.plan_id) === String(membresiaForm.plan_id)
+    && (!d.modalidad_id || String(d.modalidad_id) === String(membresiaForm.modalidad_id || ''))) || null;
+  const descuentoAnteriorCliente = descuentoYaAplica ? null : (descuentosCliente[0] || null);
+  const textoDescuentoCorto = (d) => (d.tipo === 'PORCENTAJE' ? `${Number(d.valor)} %` : `$${Number(d.valor).toFixed(2)}`);
   const inicioDescuentoForm = descuentoMembresia.fecha_inicio || membresiaForm.fecha_inicio || '';
   const finDescuentoForm = descuentoMembresia.fecha_fin || finMembresiaForm;
   const sedesDescuento = planMembresiaSeleccionado ? sedes
@@ -2311,9 +2356,6 @@ export function DeportistasPage() {
               );
             })}
           </Stack>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Los descuentos se agregan al guardar, en Descuentos del menú.
-            </Typography>
           </Box>
         )}
         {mostrarSedes && seccionNueva !== 'sedes' && (
@@ -2330,10 +2372,22 @@ export function DeportistasPage() {
           </Typography>
           {!membresiaForm.id && membresiaForm.plan_id && String(planMembresiaSeleccionado?.tipo_producto || 'MEMBRESIA').toUpperCase() !== 'PASE_DIARIO' && (
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              {planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago
-                ? 'Venta inicial pendiente de cobro'
+              {contratoNuevoVisible || (planMembresiaSeleccionado?.generar_venta && planMembresiaSeleccionado?.requiere_pago)
+                ? 'Al guardar se emite la venta del primer período, pendiente de cobro en Ventas.'
                 : 'Sin venta inicial automática'}
             </Typography>
+          )}
+          {contratoNuevoVisible && booleanoBackend(planMembresiaSeleccionado?.renovable) && (
+            <Box sx={{ mb: 1 }}>
+              <FormControlLabel sx={{ m: 0 }} label="Renovación automática"
+                control={<Switch size="small" name="renovacion_automatica"
+                  checked={Boolean(membresiaForm.renovacion_automatica)} onChange={handleMembresiaChange} />} />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {membresiaForm.renovacion_automatica
+                  ? '7 días antes del fin se programa el siguiente período con su venta, hasta que se apague.'
+                  : 'El contrato vence al terminar sus períodos; se renueva a mano.'}
+              </Typography>
+            </Box>
           )}
           {permiteCobroProgramado && !membresiaForm.cantidad_periodos_contratados && (
             <Box sx={{ display: 'grid', gridTemplateColumns: columnasFormulario, gap: 1.5, mb: 1.5 }}>
@@ -2353,6 +2407,68 @@ export function DeportistasPage() {
         </Box>
         )}
 
+
+        {mostrarComercial && seccionNueva === 'sedes' && !paseEnFormulario && (
+          <Box sx={{ mt: 1.25, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5 }}>
+            <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+              <FormControlLabel sx={{ m: 0 }} label={<Typography variant="subtitle2" fontWeight={700}>Descuento</Typography>}
+                control={<Switch size="small" checked={requiereDescuento && !descuentoYaAplica} disabled={Boolean(descuentoYaAplica)} onChange={(e) => {
+                  setRequiereDescuento(e.target.checked);
+                  if (e.target.checked && !descuentoMembresia.motivo) {
+                    setDescuentoMembresia((d) => ({ ...d, motivo: `Descuento acordado al contratar ${planMembresiaSeleccionado?.nombre || 'la membresía'}.` }));
+                  }
+                }} />} />
+              {descuentoAnteriorCliente && !requiereDescuento && (
+                <Button size="small" sx={{ textTransform: 'none', fontWeight: 800 }} onClick={() => {
+                  setRequiereDescuento(true);
+                  setDescuentoMembresia({ tipo: descuentoAnteriorCliente.tipo, valor: String(Number(descuentoAnteriorCliente.valor)),
+                    motivo: `Continúa el descuento de ${textoDescuentoCorto(descuentoAnteriorCliente)} que ya tenía el cliente.`,
+                    fecha_inicio: '', fecha_fin: '', sede_id: '' });
+                }}>
+                  Usar su descuento actual ({textoDescuentoCorto(descuentoAnteriorCliente)})
+                </Button>
+              )}
+            </Stack>
+            {!(requiereDescuento && !descuentoYaAplica) && <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {descuentoYaAplica
+                ? `Ya tiene un descuento de ${textoDescuentoCorto(descuentoYaAplica)} para este plan${descuentoYaAplica.fecha_fin ? ` hasta el ${fechaMembresia(descuentoYaAplica.fecha_fin)}` : ' hasta que se desactive'}: se aplica solo en este contrato.`
+                : 'Sin descuento: paga la tarifa de la sede.'}
+            </Typography>}
+            {requiereDescuento && !descuentoYaAplica && <>
+              <Box sx={{ display: 'grid', gridTemplateColumns: columnasFormulario, gap: 1.5, mt: 1.25 }}>
+                <TextField select size="small" label="Tipo" value={descuentoMembresia.tipo}
+                  onChange={(e) => setDescuentoMembresia((d) => ({ ...d, tipo: e.target.value }))}>
+                  <MenuItem value="PORCENTAJE">Porcentaje (%)</MenuItem>
+                  <MenuItem value="FIJO">Valor fijo ($)</MenuItem>
+                </TextField>
+                <TextField size="small" type="number" required label={descuentoMembresia.tipo === 'PORCENTAJE' ? 'Porcentaje' : 'Valor'}
+                  value={descuentoMembresia.valor} onChange={(e) => setDescuentoMembresia((d) => ({ ...d, valor: e.target.value }))}
+                  error={mostrarErrorDescuento}
+                  helperText={mostrarErrorDescuento ? (descuentoMembresia.tipo === 'PORCENTAJE' ? 'Entre 0 y 100 %.' : 'Mayor que 0 y no más que la tarifa.') : ''}
+                  slotProps={{ htmlInput: { min: 0.01, step: 0.01 } }} />
+                <TextField select size="small" label="Aplica en" value={descuentoMembresia.sede_id || ''}
+                  slotProps={{ inputLabel: { shrink: true }, select: { displayEmpty: true } }}
+                  onChange={(e) => setDescuentoMembresia((d) => ({ ...d, sede_id: e.target.value }))}>
+                  <MenuItem value="">Todas sus sedes</MenuItem>
+                  {sedesDescuento.map((s) => <MenuItem key={s.id} value={String(s.id)}>Solo {s.nombre}</MenuItem>)}
+                </TextField>
+              </Box>
+              <TextField multiline minRows={2} size="small" fullWidth required label="Motivo" sx={{ mt: 1.5 }}
+                value={descuentoMembresia.motivo} onChange={(e) => setDescuentoMembresia((d) => ({ ...d, motivo: e.target.value }))}
+                helperText="Queda en el historial del contrato." />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                Desde el {fechaMembresia(membresiaForm.fecha_inicio)} · {descuentoSigue
+                  ? 'sigue en cada renovación hasta que se desactive.'
+                  : `hasta el ${fechaMembresia(finMembresiaForm)}, fin del contrato.`}
+              </Typography>
+              {!descuentoInvalido && pagaPorSede.length > 0 && <Stack spacing={0.5} sx={{ mt: 1, px: 1.25, py: 1, borderRadius: 1, bgcolor: '#f1f8f3', border: '1px solid #cfe4d6' }}>
+                {pagaPorSede.map((s) => <Typography key={s.id} variant="body2">
+                  {s.nombre}: <b>${s.paga.toFixed(2)}</b>{s.importe > 0 ? <Typography component="span" variant="caption" color="text.secondary"> (${s.precio.toFixed(2)} − ${s.importe.toFixed(2)})</Typography> : null}
+                </Typography>)}
+              </Stack>}
+            </>}
+          </Box>
+        )}
 
         {(membresiaForm.id || (mostrarComercial && seccionNueva === 'sedes')) && (
           <Stack direction="row" sx={{ mt: 2, justifyContent: 'flex-end' }}>
