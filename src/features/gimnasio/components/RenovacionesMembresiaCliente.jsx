@@ -7,11 +7,11 @@ import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
 import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { BotonVolver } from '../../../components/common/BotonVolver.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { gimnasioServicio } from '../services/gimnasioServicio.js';
 import { DialogRenovacionMembresia } from './DialogRenovacionMembresia.jsx';
 import { ComoSeRenueva } from './ComoSeRenueva.jsx';
+import { DialogDetalleRenovacion } from './DialogDetalleRenovacion.jsx';
 
 const fecha = value => value ? String(value).slice(0, 10).split('-').reverse().join('/') : '—';
 const importe = value => value == null ? '—' :
@@ -28,6 +28,7 @@ const OPCIONES_RENOVACIONES = { sinOrdenar: ['fecha', 'vigencia'] };
 
 export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   const [historial, setHistorial] = useState([]);
+  const [anulaciones, setAnulaciones] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -47,7 +48,9 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
     setError('');
     try {
       const respuesta = await gimnasioServicio.obtenerHistorialIntegralMembresia(id);
-      setHistorial((respuesta?.eventos || []).filter(item => ['RENOVACION_MANUAL', 'RENOVACION_AUTOMATICA'].includes(item.tipo)));
+      const eventos = respuesta?.eventos || [];
+      setHistorial(eventos.filter(item => ['RENOVACION_MANUAL', 'RENOVACION_AUTOMATICA'].includes(item.tipo)));
+      setAnulaciones(eventos.filter(item => item.tipo === 'RENOVACION_ANULADA' && item.categoria !== 'OPERATIVO'));
     } catch (e) {
       setError(e?.response?.data?.mensaje || 'No se pudo consultar el historial de renovaciones.');
     } finally {
@@ -69,33 +72,16 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
   const tabla = useTablaLocal(filtradas, COLUMNAS_RENOVACIONES, OPCIONES_RENOVACIONES);
   const { visibles } = tabla;
 
-  if (vista === 'detalle' && seleccionada) {
-    const d = seleccionada.detalle || {};
-    return <Box sx={{ minWidth: 0 }}>
-      <Stack direction="row" gap={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="subtitle1" fontWeight={800}>Detalle de renovación</Typography>
-        <BotonVolver onClick={() => { setSeleccionada(null); setVista('listado'); }}/>
-      </Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,minmax(0,1fr))' }, gap: 2 }}>
-        {[
-          ['Fecha del movimiento', fecha(seleccionada.fecha)],
-          ['Responsable', seleccionada.autor_nombre || 'Sistema (automático)'],
-          ['Período agregado', d.numero_periodo_nuevo ?? '—'],
-          ['Fecha de inicio', fecha(d.fecha_inicio)],
-          ['Fecha de finalización', fecha(d.fecha_fin)],
-          ['Importe registrado', importe(d.precio)],
-          ...(d.origen_precio ? [['Precio tomado de', d.origen_precio.charAt(0).toUpperCase() + d.origen_precio.slice(1)]] : []),
-          ...(d.precio_anterior && Number(d.precio_anterior) !== Number(d.precio) ? [['Precio del período anterior', importe(d.precio_anterior)]] : []),
-        ].map(([titulo, valor]) => <Box key={titulo}>
-          <Typography variant="caption" color="text.secondary">{titulo}</Typography>
-          <Typography variant="body2" fontWeight={800}>{valor}</Typography>
-        </Box>)}
-      </Box>
-      {seleccionada.motivo && <Typography variant="body2" sx={{ mt: 2 }}>
-        {seleccionada.motivo}
-      </Typography>}
-    </Box>;
-  }
+  const anulacionDe = (item) => anulaciones.find((a) => Number(a.detalle?.periodo_id) === Number(item?.detalle?.periodo_id));
+  // Solo la última renovación vigente, aún programada y sin venta, se puede anular.
+  const ultimaVigente = [...historial].filter((item) => !anulacionDe(item))
+    .sort((a, b) => Number(b.detalle?.numero_periodo_nuevo || 0) - Number(a.detalle?.numero_periodo_nuevo || 0))[0];
+  const periodoDe = (item) => (membresia?.periodos || []).find((p) => Number(p.id) === Number(item?.detalle?.periodo_id));
+  const puedeAnular = (item) => {
+    if (!item || anulacionDe(item) || item !== ultimaVigente) return false;
+    const p = periodoDe(item);
+    return !p || (String(p.estado || '').toUpperCase() === 'PROGRAMADO' && !p.venta_id);
+  };
 
   return <Box sx={{ width: '100%', minWidth: 0 }}>
     {!esPaseDiario && <ComoSeRenueva membresia={membresia} onActualizado={onActualizado} />}
@@ -107,6 +93,10 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
         await onActualizado?.();
         await cargar();
       }} />
+    <DialogDetalleRenovacion renovacion={vista === 'detalle' ? seleccionada : null}
+      anulacion={anulacionDe(seleccionada)} puedeAnular={puedeAnular(seleccionada)} membresia={membresia}
+      onCerrar={() => { setSeleccionada(null); setVista('listado'); }}
+      onAnulada={async () => { setSeleccionada(null); setVista('listado'); await onActualizado?.(); await cargar(); }} />
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
     {cargando && <Stack direction="row" gap={1} sx={{ alignItems: 'center', mb: 1 }}>
       <CircularProgress size={18}/><Typography variant="body2">Consultando renovaciones…</Typography>
@@ -132,7 +122,7 @@ export function RenovacionesMembresiaCliente({ membresia, onActualizado }) {
             <TableCell>{fecha(item.fecha)}</TableCell>
             <TableCell>{d.numero_periodo_nuevo ?? '—'}</TableCell>
             <TableCell>{fecha(d.fecha_inicio)} – {fecha(d.fecha_fin)}</TableCell>
-            <TableCell>{importe(d.precio)}</TableCell>
+            <TableCell>{importe(d.precio)}{anulacionDe(item) ? <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>· Anulada</Typography> : null}</TableCell>
             <TableCell align="center"><Tooltip title="Ver renovación">
               <IconButton aria-label="Ver renovación" size="small" sx={dbanuStyles.actionView}
                 onClick={() => { setSeleccionada(item); setVista('detalle'); }}>

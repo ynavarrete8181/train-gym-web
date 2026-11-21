@@ -338,6 +338,7 @@ export const gimnasioServicio = {
     const { data } = await api.get(`/base/gimnasio/membresias/${id}/renovacion-programada/preview`);
     return data.datos;
   },
+  anularRenovacion: async (id, periodoId, payload) => (await api.post(`/base/gimnasio/membresias/${id}/renovaciones/${periodoId}/anular`, payload)).data.datos,
   registrarRenovacionProgramada: async (id) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/renovacion-programada`);
     return data.datos;
