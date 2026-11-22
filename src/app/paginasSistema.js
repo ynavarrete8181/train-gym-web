@@ -66,7 +66,7 @@ const nombresPaginas = {
   CobrosMetodoPagoPage: 'Cobros por día y método',
   CobrosPeriodoPage: 'Cobros del período',
   VentasPeriodoPage: 'Ventas por período',
-  VentasResponsablePage: 'Ventas por responsable',
+  VentasResponsablePage: 'Ventas y cobros por usuario',
   MembresiasNuevasRenovacionesPage: 'Membresías nuevas y renovaciones',
   MembresiasPorVencerPage: 'Membresías por vencer',
   ConciliacionCajaPage: 'Conciliación de caja',
