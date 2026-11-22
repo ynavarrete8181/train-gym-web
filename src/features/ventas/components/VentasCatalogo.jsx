@@ -347,7 +347,17 @@ export function VentasCatalogo({ tipo }) {
       <PageHeader titulo={config.titulo} descripcion={config.descripcion} icono={config.icono} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar total={meta.total || items.length} busqueda={filtros.busqueda} onBusqueda={(valor) => buscar({ ...filtros, busqueda: valor })} acciones={config.crear ? <Button startIcon={<AddOutlinedIcon />} onClick={handleNuevo} sx={dbanuStyles.addButtonRevive}>Añadir</Button> : null} />
-        {tipo === 'pagos' && (
+        {tipo === 'pagos' && meta.alcance_cobros?.solo_turno && (
+          // El cajero ve solo lo que cobró en su turno de caja abierto (o hoy, si no tiene caja abierta).
+          <Box sx={{ px: { xs: 1.5, md: 2 }, pb: 1.5 }}>
+            <Typography variant="body2" color="text.secondary">
+              {meta.alcance_cobros.turno_abierto
+                ? `Tus cobros del turno de caja abierto el ${new Date(meta.alcance_cobros.desde).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' })}.`
+                : 'Tus cobros de hoy. Al abrir caja verás los de tu turno.'}
+            </Typography>
+          </Box>
+        )}
+        {tipo === 'pagos' && meta.alcance_cobros && !meta.alcance_cobros.solo_turno && (
           <Box sx={{ px: { xs: 1.5, md: 2 }, pb: 1.5, display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             <TextField size="small" label="Fecha del cobro" type="date"
               value={filtros.fecha_pago || ''}
