@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
-import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
+import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
 import { FiltroColumna } from '../components/FiltroColumna.jsx';
@@ -14,6 +14,8 @@ import { hoyEcuador } from '../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');
+const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : '—');
+const variacion = (valor) => (valor == null ? '—' : `${Number(valor) > 0 ? '+' : ''}${Number(valor).toFixed(1)} %`);
 
 export function ResumenComercialPage() {
   const hoy = new Date();
@@ -45,6 +47,7 @@ export function ResumenComercialPage() {
   };
 
   const indicadores = datos.indicadores || {};
+  const comparativo = datos.comparativo || {};
   const sedes = datos.catalogos?.sedes || [];
   const porSede = datos.por_sede || [];
   const tabla = useTablaLocal(porSede, {});
@@ -53,38 +56,58 @@ export function ResumenComercialPage() {
     <Box className="page-wrapper">
       <PageHeader
         titulo="Resumen comercial"
-        descripcion="Indicadores consolidados de ventas y cobros por período y sede."
+        descripcion="Ventas, cobros, saldo por cobrar y descuentos del período, por sede."
         icono={<InsightsOutlinedIcon />}
       />
       <Paper className="page-content-container" elevation={0}>
-        <Stack direction={{ xs: 'column', lg: 'row' }} spacing={1} sx={{ mb: 1.5, alignItems: { lg: 'center' }, justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
-            {[
-              ['Ventas', dinero(indicadores.total_ventas), uiTokens.colores.primario],
-              ['Transacciones', numero(indicadores.transacciones), uiTokens.colores.textoFuerte],
-              ['Cobrado', dinero(indicadores.total_cobrado), uiTokens.colores.exito],
-              ['Variación ventas', `${Number(indicadores.variacion_ventas || 0).toFixed(2)}%`, uiTokens.colores.info],
-              ['Variación cobros', `${Number(indicadores.variacion_cobros || 0).toFixed(2)}%`, uiTokens.colores.acentoOscuro],
-            ].map(([label, value, color]) => (
-              <Chip key={label} variant="outlined" label={`${label}: ${value}`} sx={{ height: 36, borderRadius: 0.5, fontWeight: 900, color, borderColor: color, '& .MuiChip-label': { px: 1.25, fontSize: 11.3 } }} />
-            ))}
-          </Box>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-            <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
-            <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
-            <ReporteExportaciones
-              titulo="Resumen comercial"
-              descripcion="Indicadores consolidados de ventas y cobros por período y sede."
-              filtros={filtros}
-              columnas={[
-                { label: 'Sede', value: 'sede', align: 'left' },
-                { label: 'Transacciones', value: (fila) => numero(fila.transacciones) },
-                { label: 'Ventas', value: (fila) => dinero(fila.total_ventas) },
-              ]}
-              obtenerFilas={() => resumenComercialServicio.consultarTodo(filtros)}
-              exportarExcel={() => resumenComercialServicio.exportarExcel(filtros)}
-            />
-          </Stack>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ mb: 1.5, justifyContent: 'flex-end' }}>
+          <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
+          <ReporteExportaciones
+            titulo="Resumen comercial"
+            descripcion="Ventas, cobros, saldo por cobrar y descuentos del período, por sede."
+            filtros={filtros}
+            columnas={[
+              { label: 'Sede', value: 'sede', align: 'left' },
+              { label: 'Transacciones', value: (fila) => numero(fila.transacciones) },
+              { label: 'Ventas', value: (fila) => dinero(fila.total_ventas) },
+              { label: 'Descuentos', value: (fila) => dinero(fila.descuentos) },
+              { label: 'Cobrado', value: (fila) => dinero(fila.total_cobrado) },
+              { label: 'Por cobrar', value: (fila) => dinero(fila.por_cobrar) },
+            ]}
+            obtenerFilas={() => resumenComercialServicio.consultarTodo(filtros)}
+            exportarExcel={() => resumenComercialServicio.exportarExcel(filtros)}
+          />
+        </Stack>
+
+        {/* Indicadores del período: qué se facturó, qué entró y qué falta cobrar. */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' }, gap: 1.25, mb: 1.5 }}>
+          {[
+            ['Ventas (facturado)', dinero(indicadores.total_ventas), `${numero(indicadores.transacciones)} ventas`, uiTokens.colores.primario],
+            ['Cobrado', dinero(indicadores.total_cobrado), 'Dinero que entró en el período', uiTokens.colores.exito],
+            ['Por cobrar', dinero(indicadores.por_cobrar), 'Saldo de las ventas del período', uiTokens.colores.acentoOscuro],
+            ['Descuentos otorgados', dinero(indicadores.descuentos), 'Dejado de cobrar por descuentos', uiTokens.colores.textoFuerte],
+          ].map(([titulo, valor, detalle, color]) => (
+            <Box key={titulo} sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, borderLeft: `4px solid ${color}` }}>
+              <Typography variant="caption" color="text.secondary">{titulo}</Typography>
+              <Typography variant="h6" fontWeight={900} sx={{ color }}>{valor}</Typography>
+              <Typography variant="caption" color="text.secondary">{detalle}</Typography>
+            </Box>
+          ))}
+        </Box>
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={1} sx={{ mb: 1.5 }}>
+          <Chip variant="outlined" label={`Membresías: ${dinero(indicadores.membresias)}`} sx={{ fontWeight: 800 }} />
+          <Chip variant="outlined" label={`Productos y servicios: ${dinero(indicadores.productos_servicios)}`} sx={{ fontWeight: 800 }} />
+          {comparativo.disponible ? (
+            <>
+              <Chip variant="outlined" label={`Ventas vs. ${fecha(comparativo.desde)}–${fecha(comparativo.hasta)}: ${variacion(indicadores.variacion_ventas)}`} sx={{ fontWeight: 800 }} />
+              <Chip variant="outlined" label={`Cobros vs. período anterior: ${variacion(indicadores.variacion_cobros)}`} sx={{ fontWeight: 800 }} />
+            </>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center' }}>
+              Sin comparación: el sistema aún no tenía ventas durante todo el período anterior ({fecha(comparativo.desde)}–{fecha(comparativo.hasta)}).
+            </Typography>
+          )}
         </Stack>
 
         <TablaGestion {...tabla.propsTabla} cargando={cargando}>
@@ -93,6 +116,9 @@ export function ResumenComercialPage() {
               <FilterHeaderCell value={filtros.sede_id} onChange={(valor) => aplicar({ sede_id: valor })} options={sedes.map((s) => ({ value: String(s.id), label: s.nombre }))} multiple>Sede</FilterHeaderCell>
               <FiltroColumna align="center" columna="transacciones" filtros={filtros} opciones={datos.opciones_filtro} aplicar={aplicar} formato={numero}>Transacciones</FiltroColumna>
               <FiltroColumna align="center" columna="total_ventas" filtros={filtros} opciones={datos.opciones_filtro} aplicar={aplicar} formato={dinero}>Ventas</FiltroColumna>
+              <FiltroColumna align="center" columna="descuentos" filtros={filtros} opciones={datos.opciones_filtro} aplicar={aplicar} formato={dinero}>Descuentos</FiltroColumna>
+              <TableCell align="center">Cobrado</TableCell>
+              <FiltroColumna align="center" columna="por_cobrar" filtros={filtros} opciones={datos.opciones_filtro} aplicar={aplicar} formato={dinero}>Por cobrar</FiltroColumna>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -101,9 +127,12 @@ export function ResumenComercialPage() {
                 <TableCell>{item.sede}</TableCell>
                 <TableCell align="center" sx={{ textAlign: 'center !important' }}>{numero(item.transacciones)}</TableCell>
                 <TableCell align="center" sx={{ textAlign: 'center !important' }}>{dinero(item.total_ventas)}</TableCell>
+                <TableCell align="center" sx={{ textAlign: 'center !important' }}>{dinero(item.descuentos)}</TableCell>
+                <TableCell align="center" sx={{ textAlign: 'center !important', color: 'success.dark', fontWeight: 800 }}>{dinero(item.total_cobrado)}</TableCell>
+                <TableCell align="center" sx={{ textAlign: 'center !important', fontWeight: 800 }}>{dinero(item.por_cobrar)}</TableCell>
               </TableRow>
             ))}
-            {!cargando && porSede.length === 0 ? <TablaEstadoFila colSpan={3} texto="No existen movimientos comerciales para los filtros seleccionados." /> : null}
+            {!cargando && porSede.length === 0 ? <TablaEstadoFila colSpan={6} texto="No existen movimientos comerciales para los filtros seleccionados." /> : null}
           </TableBody>
         </TablaGestion>
       </Paper>
