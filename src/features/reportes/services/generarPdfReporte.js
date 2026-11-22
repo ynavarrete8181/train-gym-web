@@ -200,11 +200,11 @@ export async function generarPdfReporte({
     command += 'q ' + logoW.toFixed(2) + ' 0 0 ' + logoH.toFixed(2) + ' ' + MARGIN_X.toFixed(2) + ' ' + logoY.toFixed(2) + ' cm /Im1 Do Q\n';
 
     const centerX = pageWidth / 2;
-    command += textCommand('Centro de Entrenamiento Físico Revive', centerX, pageHeight - TOP + 2, 10.5, true, 'center');
-    command += textCommand('Reporte de ' + titulo, centerX, pageHeight - TOP - 14, 14, true, 'center');
+    command += textCommand('Centro de Entrenamiento Físico Revive', centerX, pageHeight - TOP + 2, 12, true, 'center');
+    command += textCommand('Reporte de ' + titulo, centerX, pageHeight - TOP - 12, 10, true, 'center');
 
     const meta = 'Generado por: ' + (usuario?.name || 'Usuario') + '   ·   Rol: ' + (usuario?.rol_nombre || 'Sin rol') + '   ·   Período: ' + periodo + '   ·   Sedes: ' + sedes;
-    command += textCommand(meta, centerX, pageHeight - TOP - 28, 6.5, false, 'center');
+    command += textCommand(meta, centerX, pageHeight - TOP - 25, 8, false, 'center');
 
     command += '0.96 0.77 0 rg ' + MARGIN_X.toFixed(2) + ' ' + (pageHeight - TOP - 38).toFixed(2) + ' ' + availableWidth.toFixed(2) + ' 2 re f\n';
 
