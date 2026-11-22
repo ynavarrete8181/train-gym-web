@@ -203,7 +203,9 @@ export async function generarPdfReporte({
     command += textCommand('Centro de Entrenamiento Físico Revive', centerX, pageHeight - TOP + 2, 12, true, 'center');
     command += textCommand('Reporte de ' + titulo, centerX, pageHeight - TOP - 12, 10, true, 'center');
 
-    const meta = 'Generado por: ' + (usuario?.name || 'Usuario') + '   ·   Rol: ' + (usuario?.rol_nombre || 'Sin rol') + '   ·   Período: ' + periodo + '   ·   Sedes: ' + sedes;
+    // El rol se escribe como frase: «SUPERVISOR DE VENTAS» → «Supervisor de ventas».
+    const rol = String(usuario?.rol_nombre || 'Sin rol').toLocaleLowerCase('es');
+    const meta = 'Generado por: ' + (usuario?.name || 'Usuario') + '   ·   Rol: ' + rol.charAt(0).toLocaleUpperCase('es') + rol.slice(1) + '   ·   Período: ' + periodo + '   ·   Sedes: ' + sedes;
     command += textCommand(meta, centerX, pageHeight - TOP - 25, 8, false, 'center');
 
     command += '0.96 0.77 0 rg ' + MARGIN_X.toFixed(2) + ' ' + (pageHeight - TOP - 38).toFixed(2) + ' ' + availableWidth.toFixed(2) + ' 2 re f\n';
