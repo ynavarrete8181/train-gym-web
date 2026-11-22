@@ -54,7 +54,7 @@ export function CobrosMetodoPagoPage() {
 
   return (
     <Box className="page-wrapper">
-      <PageHeader titulo="Cobros por método de pago" descripcion="Consolida cobros confirmados por fecha, sede y método de pago." icono={<PaymentsOutlinedIcon />} />
+      <PageHeader titulo="Cobros por día y método" descripcion="Subtotal de cada día por método de pago, para cuadrar con la caja y el banco." icono={<PaymentsOutlinedIcon />} />
       <Paper className="page-content-container" elevation={0}>
         <GestionToolbar
           total={meta.total || 0}
@@ -72,8 +72,8 @@ export function CobrosMetodoPagoPage() {
               <TextField size="small" type="date" label="Desde" value={filtros.desde} onChange={(e) => aplicar({ desde: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <TextField size="small" type="date" label="Hasta" value={filtros.hasta} onChange={(e) => aplicar({ hasta: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
               <ReporteExportaciones
-                titulo="Cobros por método de pago"
-                descripcion="Cobros confirmados consolidados por fecha, sede y método."
+                titulo="Cobros por día y método"
+                descripcion="Subtotal de cada día por método de pago, para cuadrar con la caja y el banco."
                 filtros={filtros}
                 columnas={[
                   { label: 'Fecha', value: (fila) => fecha(fila.fecha) },
