@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
-import { Box, Chip, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
+import { Box, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
 import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
@@ -20,7 +20,20 @@ const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : '—');
 const METODOS = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', TARJETA: 'Tarjeta', DEPOSITO: 'Depósito' };
 const metodoTexto = (valor) => String(valor || '').split(', ').map((m) => METODOS[m] || m).join(', ');
-const chip = (color) => ({ height: 38, borderRadius: 0.5, fontWeight: 900, color, borderColor: color });
+
+function Tarjeta({ titulo, valor, detalle, color, activo = false, onClick }) {
+  return (
+    <Box onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
+      sx={{ p: 1.5, border: '1px solid', borderColor: activo ? color : 'divider', borderRadius: 1.5, borderLeft: `4px solid ${color}`,
+        bgcolor: activo ? 'action.selected' : 'background.paper', cursor: onClick ? 'pointer' : 'default', minWidth: 0,
+        '&:hover': onClick ? { borderColor: color } : undefined }}>
+      <Typography variant="caption" color="text.secondary">{titulo}</Typography>
+      <Typography variant="h6" fontWeight={900} sx={{ color, fontSize: { xs: 16, md: 19 } }} noWrap>{valor}</Typography>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{detalle}</Typography>
+    </Box>
+  );
+}
 
 /**
  * Cobros del período para administración: una fila por cobro (lo que un tutor paga junto es un
@@ -77,6 +90,7 @@ export function CobrosPeriodoPage() {
   };
 
   const resumen = meta.resumen || {};
+  const metodoActivo = (filtros.metodo_pago || []).length === 1 ? filtros.metodo_pago[0] : null;
   const catalogos = meta.catalogos || {};
   const columna = (nombre, titulo, props = {}) => (
     <FiltroColumna columna={nombre} filtros={filtros} opciones={meta.opciones_filtro} aplicar={aplicar} {...props}>{titulo}</FiltroColumna>
@@ -93,15 +107,6 @@ export function CobrosPeriodoPage() {
           busqueda=""
           mostrarBusqueda={false}
           mostrarTotal={false}
-          resumen={(
-            <>
-              <Chip variant="outlined" label={`Cobros: ${resumen.cobros || 0}`} sx={chip(uiTokens.colores.primario)} />
-              <Chip variant="outlined" label={`Total cobrado: ${dinero(resumen.total_cobrado)}`} sx={chip(uiTokens.colores.exito)} />
-              {(resumen.por_metodo || []).map((m) => (
-                <Chip key={m.metodo} variant="outlined" label={`${metodoTexto(m.metodo)}: ${dinero(m.total)}`} sx={chip(uiTokens.colores.textoFuerte)} />
-              ))}
-            </>
-          )}
           acciones={(
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
               <TextField size="small" type="date" label="Desde" value={filtros.desde}
@@ -130,6 +135,21 @@ export function CobrosPeriodoPage() {
           )}
         />
 
+        {/* Indicadores: al tocar un método o "Por completar" se filtra la tabla. */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: `repeat(${2 + (resumen.por_metodo || []).length}, minmax(0, 1fr))` }, gap: 1.25, mb: 1.5 }}>
+          <Tarjeta titulo="Total cobrado" valor={dinero(resumen.total_cobrado)} detalle={`${resumen.cobros || 0} cobros · ${resumen.cuentas || 0} cuentas`} color={uiTokens.colores.exito} />
+          {(resumen.por_metodo || []).map((m) => (
+            <Tarjeta key={m.metodo} titulo={metodoTexto(m.metodo)} valor={dinero(m.total)} color={uiTokens.colores.primario}
+              detalle={metodoActivo === m.metodo ? 'Filtrado · toca para quitar' : 'Toca para ver solo estos'}
+              activo={metodoActivo === m.metodo}
+              onClick={() => aplicar({ metodo_pago: metodoActivo === m.metodo ? [] : [m.metodo] })} />
+          ))}
+          <Tarjeta titulo="Por completar" valor={`${resumen.por_completar?.cobros || 0}`}
+            detalle={`Transferencias sin número o banco · ${dinero(resumen.por_completar?.total)}`}
+            color={uiTokens.colores.acentoOscuro} activo={Boolean(filtros.por_completar)}
+            onClick={() => aplicar({ por_completar: filtros.por_completar ? undefined : 1 })} />
+        </Box>
+
         <TablaGestion total={meta.total || 0} filtrados={meta.total || 0} page={meta.pagina_actual || 1}
           rowsPerPage={meta.por_pagina || 5} cargando={cargando}
           onPageChange={(page) => { const n = { ...filtros, page }; setFiltros(n); cargar(n); }}
@@ -140,14 +160,9 @@ export function CobrosPeriodoPage() {
               {columna('codigo_cobro', 'Cobro', { align: 'center' })}
               {columna('pagado_por', 'Pagado por')}
               {columna('cuentas', 'Cuentas pagadas')}
-              <FilterHeaderCell align="center" value={filtros.metodo_pago} multiple
-                onChange={(valor) => aplicar({ metodo_pago: valor })}
-                options={(catalogos.metodos_pago || []).map((m) => ({ value: m, label: metodoTexto(m) }))}>Método</FilterHeaderCell>
-              {columna('referencia', 'N.º comprobante', { align: 'center' })}
-              {columna('banco', 'Banco')}
-              {columna('cajero', 'Cajero')}
+              {columna('banco', 'Pago')}
               <FilterHeaderCell value={filtros.sede_id} multiple onChange={(valor) => aplicar({ sede_id: valor })}
-                options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))}>Sede</FilterHeaderCell>
+                options={(catalogos.sedes || []).map((s) => ({ value: String(s.id), label: s.nombre }))}>Cajero · sede</FilterHeaderCell>
               {columna('total', 'Total', { align: 'center', formato: dinero })}
               <TableCell align="center">Acciones</TableCell>
             </TableRow>
@@ -161,19 +176,28 @@ export function CobrosPeriodoPage() {
                 </TableCell>
                 <TableCell align="center" sx={{ whiteSpace: 'nowrap' }}>{item.codigo_cobro || '—'}</TableCell>
                 <TableCell>{item.pagado_por}</TableCell>
-                <TableCell sx={{ minWidth: 180 }}>
+                <TableCell sx={{ minWidth: 170 }}>
                   {String(item.cuentas || '').split(', ').map((c) => {
                     const [cliente, contrato] = c.split(' · ');
+                    // Si el cliente pagó su propia cuenta no se repite su nombre: basta el contrato.
+                    const mismo = cliente === item.pagado_por;
                     return <Box key={c} sx={{ fontSize: 'inherit', lineHeight: 1.35 }}>
-                      {cliente}{contrato ? <Typography component="span" variant="caption" color="text.secondary"> · {contrato}</Typography> : null}
+                      {mismo ? contrato : cliente}
+                      {!mismo && contrato ? <Typography component="span" variant="caption" color="text.secondary"> · {contrato}</Typography> : null}
                     </Box>;
                   })}
                 </TableCell>
-                <TableCell align="center">{metodoTexto(item.metodo_pago)}</TableCell>
-                <TableCell align="center" sx={{ color: item.referencia === 'Sin número' ? 'warning.dark' : undefined }}>{item.referencia || '—'}</TableCell>
-                <TableCell sx={{ color: item.banco === 'Sin banco' ? 'warning.dark' : undefined }}>{item.banco || '—'}</TableCell>
-                <TableCell>{item.cajero}</TableCell>
-                <TableCell>{item.sede}</TableCell>
+                <TableCell sx={{ minWidth: 150 }}>
+                  <Box sx={{ fontSize: 'inherit' }}>{metodoTexto(item.metodo_pago)}</Box>
+                  {(item.referencia || item.banco) && <Typography variant="caption" sx={{ display: 'block', lineHeight: 1.3,
+                    color: /Sin (número|banco)/.test(`${item.referencia} ${item.banco}`) ? 'warning.dark' : 'text.secondary' }}>
+                    {[item.referencia, item.banco].filter(Boolean).join(' · ')}
+                  </Typography>}
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ fontSize: 'inherit' }}>{item.cajero}</Box>
+                  <Typography variant="caption" color="text.secondary">{item.sede}</Typography>
+                </TableCell>
                 <TableCell align="center" sx={{ fontWeight: 800 }}>{dinero(item.total)}</TableCell>
                 <TableCell align="center">
                   {item.codigo_cobro ? (
@@ -186,7 +210,7 @@ export function CobrosPeriodoPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {!cargando && items.length === 0 ? <TablaEstadoFila colSpan={11} texto="No hay cobros para los filtros seleccionados." /> : null}
+            {!cargando && items.length === 0 ? <TablaEstadoFila colSpan={8} texto="No hay cobros para los filtros seleccionados." /> : null}
           </TableBody>
         </TablaGestion>
       </Paper>
