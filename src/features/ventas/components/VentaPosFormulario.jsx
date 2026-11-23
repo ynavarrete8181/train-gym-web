@@ -739,14 +739,14 @@ export function VentaPosFormulario({ onVolver, onGuardado, ventaInicial = null }
                   // Cuenta con abono: el total de la venta queda como referencia y lo grande es lo que falta.
                   <Box sx={{ mt: 1.3, pt: 1.25, borderTop: '1px solid #dfe4ea' }}>
                     <Stack spacing={.5}>
-                      <ResumenFila label="Total de la venta" valor={dinero(total)} />
+                      <ResumenFila label="Total" valor={dinero(total)} />
                       <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
-                        <Typography variant="body2" color="text.secondary">Ya pagado</Typography>
+                        <Typography variant="body2" color="text.secondary">Abonado</Typography>
                         <Typography variant="body2" fontWeight={850} color="success.dark">− {dinero(pagadoPrevio)}</Typography>
                       </Stack>
                     </Stack>
                     <Box sx={{ mt: 1, pt: 1, borderTop: '1px dashed #dfe4ea', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Typography variant="h6" fontWeight={900} sx={{ color: NEGRO_REVIVE }}>Saldo a cobrar</Typography>
+                      <Typography variant="h6" fontWeight={900} sx={{ color: NEGRO_REVIVE }}>Por cobrar</Typography>
                       <Typography variant="h4" fontWeight={900} sx={{ color: NEGRO_REVIVE }}>{dinero(saldoCobro)}</Typography>
                     </Box>
                   </Box>
