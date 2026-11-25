@@ -174,7 +174,7 @@ export function DialogCongelacionMembresia({
         <Indicador etiqueta="Desde" valor={fecha(inicio)}/>
         <Indicador etiqueta="Hasta (incluido)" valor={fecha(fin)}/>
         <Indicador etiqueta="Días previstos" valor={dias === '—' ? dias : `${dias} días`}/>
-        <Indicador etiqueta="Modalidad" valor={modalidad === 'TIEMPO' ? 'Tiempo' : 'Facturación'}/>
+        <Indicador etiqueta="Modalidad" valor={{ TIEMPO: 'Tiempo', FACTURACION: 'Facturación', SIN_USO: 'Sin uso · cuota anulada' }[modalidad] || modalidad}/>
       </Box>
       {!esPrevia && !esExito && (
         <Box sx={{ mb: 1.25 }}>
@@ -204,6 +204,8 @@ export function DialogCongelacionMembresia({
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.6, lineHeight: 1.3 }}>
         {cancelada ? 'La solicitud no modificó la vigencia ni los cobros.'
           : finalizada ? 'La vigencia efectiva quedó registrada al reactivar. Los pagos confirmados se conservan.'
+            : modalidad === 'SIN_USO'
+              ? 'La cuota del período quedó anulada. Al reactivar, el período empieza ese día y la cuota se vuelve a emitir.'
             : modalidad === 'TIEMPO'
               ? 'El calendario de cobros se conserva. La extensión definitiva se consolida al reactivar.'
               : 'La reprogramación de cuotas depende de las validaciones financieras de Laravel.'}
