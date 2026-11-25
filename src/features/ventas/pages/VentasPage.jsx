@@ -101,7 +101,7 @@ export function VentasPage() {
       setCuentasAbiertas(response.datos || []);
       setTurnoActual(turnoResponse?.datos || null);
     } catch (error) {
-      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudieron cargar las cuentas abiertas.', tipo: 'error' });
+      setNotificacion({ mensaje: error.mensajeUsuario || error.response?.data?.mensaje || 'No se pudieron cargar las cuentas abiertas.', tipo: 'error' });
     } finally {
       setCargandoCuentas(false);
     }
@@ -116,7 +116,7 @@ export function VentasPage() {
       setMotivoAnular('');
       await cargarCuentas();
     } catch (error) {
-      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo anular la venta.', tipo: 'error' });
+      setNotificacion({ mensaje: error.mensajeUsuario || error.response?.data?.mensaje || 'No se pudo anular la venta.', tipo: 'error' });
     } finally {
       setAnulando(false);
     }
@@ -136,7 +136,7 @@ export function VentasPage() {
       setCuentaInicial(response.datos || response);
       setVista('pos');
     } catch (error) {
-      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo abrir la cuenta.', tipo: 'error' });
+      setNotificacion({ mensaje: error.mensajeUsuario || error.response?.data?.mensaje || 'No se pudo abrir la cuenta.', tipo: 'error' });
     }
   };
 
@@ -159,7 +159,7 @@ export function VentasPage() {
       setDetallePdfNombre(nombre || 'Comprobante');
       setDetallePdfUrl(url);
     } catch (error) {
-      setNotificacion({ mensaje: error.response?.data?.mensaje || 'No se pudo cargar el comprobante PDF.', tipo: 'error' });
+      setNotificacion({ mensaje: error.mensajeUsuario || error.response?.data?.mensaje || 'No se pudo cargar el comprobante PDF.', tipo: 'error' });
     } finally {
       setCargandoDetalle(false);
     }

@@ -266,6 +266,10 @@ export const gimnasioServicio = {
     );
     return data.datos;
   },
+  congelarSinUso: async (id, payload) => {
+    const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion-sin-uso`, payload);
+    return data.datos;
+  },
   congelarMembresia: async (id, payload) => {
     const { data } = await api.post(`/base/gimnasio/membresias/${id}/congelacion`, payload);
     return data.datos;

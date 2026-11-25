@@ -29,6 +29,11 @@ const fechaLocal = () => {
 };
 const ETIQUETAS_SUSPENSION = { PROGRAMADA: 'Programada', VIGENTE: 'Vigente', FINALIZADA: 'Finalizada', NO_APLICADA: 'No aplicada', CANCELADA: 'Cancelada' };
 const OPCIONES_SUSPENSIONES = { sinOrdenar: ['desde', 'hasta'] };
+const MODALIDADES = { TIEMPO: 'Tiempo / vacaciones', FACTURACION: 'Facturación', SIN_USO: 'Sin uso · cuota anulada' };
+const manana = () => {
+  const [a, m, d] = fechaLocal().split('-').map(Number);
+  return new Date(Date.UTC(a, m - 1, d + 1)).toISOString().slice(0, 10);
+};
 const fechaLegible = (v) => {
   const a = String(v || '').slice(0, 10).split('-');
   return a.length === 3 ? [a[2], a[1], a[0]].join('/') : '—';
@@ -80,6 +85,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   const [procesando, setProcesando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
+  // Congelar sin uso: período sin asistencias ni cobros (lo decide Laravel).
+  const sinUso = ciclo?.congelacion_sin_uso?.disponible ? ciclo.congelacion_sin_uso : null;
 
   const cargar = useCallback(async () => {
     if (!membresia?.id) return;
@@ -121,7 +128,31 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     finally { setProcesando(false); }
   };
 
+  const guardarSinUso = async () => {
+    if (!motivoCodigo || !fin || fin <= fechaLocal() || motivo.trim().length < 8) {
+      setError('Selecciona el motivo, el regreso estimado (después de hoy) y una justificación de al menos 8 caracteres.');
+      return;
+    }
+    const confirmado = await confirmarAccion({
+      titulo: 'Congelar sin uso',
+      texto: `Se anulará la cuota ${sinUso?.venta_numero || ''} de ${dinero(sinUso?.monto)} y el contrato quedará congelado desde el ${fechaLegible(sinUso?.periodo_inicio)}. Al regresar, el período empieza ese día y la cuota se vuelve a emitir.`,
+      textoConfirmar: 'Sí, congelar', icono: 'question',
+    });
+    if (!confirmado) return;
+    setProcesando(true); setError(''); setExito('');
+    try {
+      const r = await gimnasioServicio.congelarSinUso(membresia.id, {
+        fecha_regreso: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo,
+      });
+      setExito(`Contrato congelado desde el ${fechaLegible(r.inicio)}. La cuota ${r.venta_numero} de ${dinero(r.monto)} quedó anulada y ya no aparece como deuda; se volverá a emitir el día que regrese.`);
+      setOperacion(''); setMotivo('');
+      await cargar(); await onActualizado?.();
+    } catch (e) { setError(mensajeError(e)); }
+    finally { setProcesando(false); }
+  };
+
   const guardarCongelacion = async () => {
+    if (tipo === 'SIN_USO') { await guardarSinUso(); return; }
     if (!motivoCodigo || !inicio || !fin || fin < inicio || motivo.trim().length < 8) {
       setError('Selecciona el motivo, ingresa fechas válidas y una justificación de al menos 8 caracteres.');
       return;
@@ -233,6 +264,13 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
         return;
       }
       const resultado = await gimnasioServicio.reactivarMembresia(membresia.id, motivo.trim(), motivoCodigo);
+      if (resultado.tipo === 'SIN_USO') {
+        setExito(`Reactivación registrada: el período empieza hoy y termina el ${fechaLegible(resultado.fecha_fin)}. `
+          + `Se emitió la cuota ${resultado.cuota_emitida || ''}; aparece en Ventas para cobrarla.`);
+        setOperacion(''); setPreviewReactivacion(null); setMotivo('');
+        await cargar(); await onActualizado?.();
+        return;
+      }
       setExito(`Reactivación registrada: ${resultado.dias_reconocidos} días reconocidos. `
         + `Vigencia anterior: ${fechaLegible(resultado.fecha_fin_original)}; `
         + `nueva vigencia: ${fechaLegible(resultado.fecha_fin)}. `
@@ -293,10 +331,11 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   // Motivos prellenados con los valores; el administrador puede ajustarlos.
   const motivoCambioPrecio = (precio, desde) => `Actualización del precio pactado de ${dinero(ciclo?.precio_contrato)} a ${dinero(precio)} desde el período ${desde || '—'} (tarifa vigente de la sede: ${dinero(ciclo?.tarifa_vigente)}).`;
   const nombreMotivoCatalogo = () => motivosCatalogo.find(m => m.codigo === motivoCodigo)?.nombre?.toLowerCase() || 'motivo por indicar';
-  const membresiaTexto = `la membresía ${membresia?.codigo || ''}${membresia?.plan_nombre ? ` (${membresia.plan_nombre})` : ''}`;
+  const membresiaTexto = `la membresía ${membresia?.codigo || membresia?.codigo_contrato || ''}${membresia?.plan_nombre ? ` (${membresia.plan_nombre})` : ''}`;
   const textoMotivoOperacion = () => {
     switch (operacion) {
-      case 'congelar': return `Congelación de ${membresiaTexto} ${tipo === 'TIEMPO' ? 'de tiempo' : 'financiera'} del ${fechaLegible(inicio)} al ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
+      case 'congelar': if (tipo === 'SIN_USO') return `Congelación sin uso de ${membresiaTexto} por ${nombreMotivoCatalogo()}: no ha asistido desde el ${fechaLegible(sinUso?.periodo_inicio)}. Se anula la cuota ${sinUso?.venta_numero || ''} de ${dinero(sinUso?.monto)} y se vuelve a emitir al regresar.`;
+        return `Congelación de ${membresiaTexto} ${tipo === 'TIEMPO' ? 'de tiempo' : 'financiera'} del ${fechaLegible(inicio)} al ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
       case 'editar': return `Cambio de fechas de la congelación programada de ${membresiaTexto}: ahora del ${fechaLegible(inicio)} al ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
       case 'prorrogar': return `Prórroga de la congelación de ${membresiaTexto} hasta el ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
       case 'reactivar': return `Reactivación de ${membresiaTexto} el ${fechaLegible(fechaLocal())} por ${nombreMotivoCatalogo()}.`;
@@ -404,7 +443,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   const tabla = useTablaLocal(filtradas, {
     desde: (s) => fechaLegible(s.fecha_inicio),
     hasta: (s) => fechaLegible(s.fecha_fin_prevista),
-    modalidad: (s) => (s.tipo === 'TIEMPO' ? 'Tiempo / vacaciones' : 'Facturación'),
+    modalidad: (s) => MODALIDADES[s.tipo] || s.tipo,
     dias: (s) => String(s.dias_previstos ?? leerDetalleMovimiento(movimientoDe(s)).dias_previstos ?? '—'),
     estado: (s) => ETIQUETAS_SUSPENSION[s.estado] || s.estado || '',
   }, OPCIONES_SUSPENSIONES);
@@ -484,12 +523,19 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           total={filtradas.length}
           busqueda={busqueda}
           onBusqueda={setBusqueda}
-          acciones={<Button startIcon={<AddOutlinedIcon />} disabled={estado !== 'ACTIVA' || tienePendiente || procesando}
+          acciones={<Button startIcon={<AddOutlinedIcon />} disabled={((estado !== 'ACTIVA' || tienePendiente) && !sinUso) || procesando}
             onClick={() => {
-              setTipo('TIEMPO'); setInicio(fechaLocal()); setFin(''); setMotivo(''); setMotivoCodigo('VACACIONES');
+              const soloSinUso = estado !== 'ACTIVA' || tienePendiente;
+              setTipo(soloSinUso ? 'SIN_USO' : 'TIEMPO');
+              setInicio(soloSinUso ? String(sinUso.periodo_inicio).slice(0, 10) : fechaLocal());
+              setFin(''); setMotivo(''); setMotivoCodigo(soloSinUso ? 'ENFERMEDAD' : 'VACACIONES');
               setDetalleSuspension(null); setEditandoSuspensionId(null); setPreview(null); setError(''); setOperacion('congelar');
             }}>Añadir</Button>}
         />
+        {sinUso && <Alert severity="info" sx={{ mb: 1.5 }}>
+          No ha asistido desde el {fechaLegible(sinUso.periodo_inicio)} y su cuota de {dinero(sinUso.monto)} no tiene cobros:
+          puedes <strong>congelarlo sin uso</strong> con "Añadir". La cuota se anula y se vuelve a emitir cuando regrese.
+        </Alert>}
         {estado === 'ACTIVA' && tienePendiente && <Alert severity="info" sx={{ mb: 1.5 }}>
           Existe una congelación programada. No es posible registrar otra hasta que finalice o se resuelva la actual.
         </Alert>}
@@ -506,7 +552,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
             {visibles.map(s => <TableRow key={s.id} hover>
               <TableCell>{fechaLegible(s.fecha_inicio)}</TableCell>
               <TableCell>{fechaLegible(s.fecha_fin_prevista)}</TableCell>
-              <TableCell>{s.tipo === 'TIEMPO' ? 'Tiempo / vacaciones' : 'Facturación'}</TableCell>
+              <TableCell>{MODALIDADES[s.tipo] || s.tipo}</TableCell>
               <TableCell align="center">
                 <Tooltip title={s.estado === 'FINALIZADA'
                   ? `Período autorizado: ${s.dias_previstos ?? '—'} días. Días efectivos: ${s.dias_reconocidos ?? '—'}.`
@@ -576,18 +622,35 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
             <MenuItem key={m.codigo} value={m.codigo}>{m.nombre}</MenuItem>)}
         </TextField>
         <TextField select size="small" fullWidth sx={{ mb: 2 }} label="Modalidad de congelación"
-          disabled={operacion === 'editar'} value={tipo} onChange={(e) => { setTipo(e.target.value); setPreview(null); }}>
-          <MenuItem value="TIEMPO">Congelación de tiempo · mantiene el calendario de pago</MenuItem>
-          <MenuItem value="FACTURACION">Congelación de facturación · reprograma cuotas sin emitir</MenuItem>
+          disabled={operacion === 'editar'} value={tipo} onChange={(e) => {
+            const nuevo = e.target.value;
+            setTipo(nuevo); setPreview(null); setFin('');
+            setInicio(nuevo === 'SIN_USO' ? String(sinUso?.periodo_inicio || '').slice(0, 10) : fechaLocal());
+          }}>
+          <MenuItem value="TIEMPO" disabled={estado !== 'ACTIVA'}>Congelación de tiempo · mantiene el calendario de pago</MenuItem>
+          <MenuItem value="FACTURACION" disabled={estado !== 'ACTIVA'}>Congelación de facturación · reprograma cuotas sin emitir</MenuItem>
+          {sinUso && <MenuItem value="SIN_USO">Congelación sin uso · anula la cuota de {dinero(sinUso.monto)} y congela desde el {fechaLegible(sinUso.periodo_inicio)}</MenuItem>}
         </TextField>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+        {tipo === 'SIN_USO' && sinUso && <Alert severity="info" sx={{ mb: 2 }}>
+          Período {sinUso.numero_periodo}: {fechaLegible(sinUso.periodo_inicio)} – {fechaLegible(sinUso.periodo_fin)}, sin asistencias ni cobros.
+          Se <strong>anula la cuota {sinUso.venta_numero} de {dinero(sinUso.monto)}</strong> (sale de Cuentas abiertas y Cartera) y el contrato
+          queda congelado desde el {fechaLegible(sinUso.periodo_inicio)}. Cuando regrese, al reactivar, el período empieza ese día con sus días
+          completos y la cuota se vuelve a emitir.
+        </Alert>}
+        {tipo === 'SIN_USO' ? <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
+          <TextField size="small" label="Congelado desde" type="date" disabled value={inicio}
+            slotProps={{ inputLabel: { shrink: true } }}/>
+          <TextField size="small" label="Regreso estimado" type="date" required value={fin}
+            onChange={e => setFin(e.target.value)} helperText="Referencial: se reactiva el día que realmente regrese."
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: manana() } }}/>
+        </Stack> : <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <TextField size="small" label="Desde" type="date" required value={inicio}
             onChange={e => { setInicio(e.target.value); setPreview(null); }}
             slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: fechaLocal() } }}/>
           <TextField size="small" label="Hasta (incluido)" type="date" required value={fin}
             onChange={e => { setFin(e.target.value); setPreview(null); }}
             slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: inicio || fechaLocal() } }}/>
-        </Stack>
+        </Stack>}
         <TextField multiline minRows={2} size="small" fullWidth
           label={operacion === 'editar' ? 'Justificación del cambio de fechas' : 'Motivo de congelación'} required
           sx={{ mt: 2 }} value={motivo}
@@ -596,8 +659,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center',
           '& > .MuiButton-root': { flex: '0 0 auto' } }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
-          <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
-            cargando={procesando && !preview} onClick={simular}/>
+          {tipo !== 'SIN_USO' && <BotonVistaPrevia disabled={!inicio || !fin || fin < inicio || procesando}
+            cargando={procesando && !preview} onClick={simular}/>}
           <BotonGuardar texto="Guardar" guardando={procesando}
             disabled={!motivoCodigo || !inicio || !fin || fin < inicio || motivo.trim().length < 8}
             onClick={guardarCongelacion}/>
@@ -614,6 +677,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           label="Justificación de reactivación" value={motivo} onChange={e => escribirMotivo(e.target.value)}/>
         {(() => {
           const vigente = suspensiones.find(item => item.estado === 'VIGENTE');
+          if (vigente?.tipo === 'SIN_USO') return <Alert severity="info" sx={{ mt: 1.5 }}>
+            Congelado sin uso desde el {fechaLegible(vigente.fecha_inicio)} (regreso estimado: {fechaLegible(vigente.fecha_fin_prevista)}).
+            Al reactivar, el período empieza hoy con sus días completos y se emite su cuota.
+          </Alert>;
           return vigente ? <Alert severity="info" sx={{ mt: 1.5 }}>
             Congelación autorizada hasta <strong>{fechaLegible(vigente.fecha_fin_prevista)}</strong>.
             Si el cliente regresa antes, la reactivación reconoce únicamente los días completos
@@ -640,6 +707,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
               </Typography>
             </Box>)}
           </Box>
+          {previewReactivacion.tipo === 'SIN_USO' && <Alert severity="info" sx={{ mb: 1 }}>
+            Período nuevo: {fechaLegible(previewReactivacion.periodo_inicio_nuevo)} – {fechaLegible(previewReactivacion.periodo_fin_nuevo)}.
+            Al guardar se emite hoy la cuota de {dinero(previewReactivacion.cuota_a_emitir)} (con el descuento vigente, si tiene) y aparece en Ventas para cobrarla.
+          </Alert>}
           <Typography variant="body2">Pagos confirmados: ${Number(previewReactivacion.impacto_financiero?.pagos_confirmados || 0).toFixed(2)}</Typography>
           <Typography variant="body2">Saldo emitido: ${Number(previewReactivacion.impacto_financiero?.deuda_emitida || 0).toFixed(2)}</Typography>
           <Typography variant="caption" color="text.secondary">
