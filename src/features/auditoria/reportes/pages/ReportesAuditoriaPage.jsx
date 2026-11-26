@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import { Box, Chip, Paper, Stack, Tab, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from '@mui/material';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { ReporteExportaciones } from '../../reportes/components/ReporteExportaciones.jsx';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { GestionToolbar } from '../../../../components/tables/GestionToolbar.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
 import { reportesAuditoriaServicio } from '../services/reportesAuditoriaServicio.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
 
 const reportes = [
   { value: 'USUARIO', label: 'Actividad por usuario' },

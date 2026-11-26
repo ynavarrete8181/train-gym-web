@@ -1,5 +1,5 @@
 import { apiClient as api } from '../../../../services/apiClient.js';
-import { consultarTodoPaginado, descargarExcelReporte } from '../exportacionReporte.js';
+import { consultarTodoPaginado, descargarExcelReporte } from '../../../reportes/services/exportacionReporte.js';
 
 const endpoint = '/base/ventas/reportes/membresias-nuevas-renovaciones';
 

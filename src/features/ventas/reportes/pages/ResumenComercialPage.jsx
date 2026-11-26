@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
-import { FiltroColumna } from '../components/FiltroColumna.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { useTablaLocal } from '../../../components/tables/useTablaLocal.js';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
-import { resumenComercialServicio } from '../services/ventas/resumenComercialServicio.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../../../reportes/components/FiltroColumna.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { useTablaLocal } from '../../../../components/tables/useTablaLocal.js';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
+import { resumenComercialServicio } from '../services/resumenComercialServicio.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const numero = (valor) => Number(valor || 0).toLocaleString('es-EC');

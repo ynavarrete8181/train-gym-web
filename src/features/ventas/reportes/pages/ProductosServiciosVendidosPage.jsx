@@ -1,29 +1,21 @@
 import { useEffect, useState } from 'react';
 import Inventory2OutlinedIcon from '@mui/icons-material/Inventory2Outlined';
 import { Box, Chip, LinearProgress, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
-import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
-import { FiltroColumna } from '../components/FiltroColumna.jsx';
-import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
-import { productosServiciosVendidosServicio } from '../services/ventas/productosServiciosVendidosServicio.js';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
+import { GestionToolbar } from '../../../../components/tables/GestionToolbar.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
+import { FiltroColumna } from '../../../reportes/components/FiltroColumna.jsx';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
+import { productosServiciosVendidosServicio } from '../services/productosServiciosVendidosServicio.js';
+import { TarjetaReporte as Tarjeta } from '../../../reportes/components/TarjetaReporte.jsx';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const TIPOS = { MEMBRESIA: ['Membresía', 'primary'], PRODUCTO: ['Producto', 'success'], SERVICIO: ['Servicio', 'info'] };
 
-function Tarjeta({ titulo, valor, detalle, color }) {
-  return (
-    <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, borderLeft: `4px solid ${color}`, minWidth: 0 }}>
-      <Typography variant="caption" color="text.secondary">{titulo}</Typography>
-      <Typography variant="h6" fontWeight={900} sx={{ color, fontSize: { xs: 16, md: 19 } }} noWrap>{valor}</Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }} noWrap>{detalle}</Typography>
-    </Box>
-  );
-}
 
 /** Productos y servicios vendidos: qué se vende más, con ventas, clientes, descuentos y total neto. */
 export function ProductosServiciosVendidosPage() {

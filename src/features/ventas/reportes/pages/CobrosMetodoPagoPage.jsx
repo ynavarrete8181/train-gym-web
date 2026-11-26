@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField } from '@mui/material';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
-import { FiltroColumna } from '../components/FiltroColumna.jsx';
-import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
-import { cobrosMetodoPagoServicio } from '../services/ventas/cobrosMetodoPagoServicio.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
+import { FiltroColumna } from '../../../reportes/components/FiltroColumna.jsx';
+import { GestionToolbar } from '../../../../components/tables/GestionToolbar.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
+import { cobrosMetodoPagoServicio } from '../services/cobrosMetodoPagoServicio.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => valor ? new Date(`${valor}T00:00:00`).toLocaleDateString('es-EC') : '—';

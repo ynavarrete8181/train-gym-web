@@ -3,34 +3,26 @@ import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { Alert, Box, Dialog, DialogActions, DialogContent, DialogTitle, Divider, IconButton, Paper, Stack, Table, TableBody,
   TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
-import { BotonCancelar } from '../../../components/common/BotonCancelar.jsx';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { formStyles } from '../../../styles/formStyles.js';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
-import { FiltroColumna } from '../components/FiltroColumna.jsx';
-import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
-import { cobrosPeriodoServicio } from '../services/ventas/cobrosPeriodoServicio.js';
-import { ventasResponsableServicio } from '../services/ventas/ventasResponsableServicio.js';
+import { BotonCancelar } from '../../../../components/common/BotonCancelar.jsx';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { GestionToolbar } from '../../../../components/tables/GestionToolbar.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { dbanuStyles } from '../../../../styles/dbanuStyles.js';
+import { formStyles } from '../../../../styles/formStyles.js';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
+import { FiltroColumna } from '../../../reportes/components/FiltroColumna.jsx';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
+import { cobrosPeriodoServicio } from '../services/cobrosPeriodoServicio.js';
+import { ventasResponsableServicio } from '../services/ventasResponsableServicio.js';
+import { TarjetaReporte as Tarjeta } from '../../../reportes/components/TarjetaReporte.jsx';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : '—');
 const METODOS = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', TARJETA: 'Tarjeta', DEPOSITO: 'Depósito' };
 const metodoTexto = (valor) => String(valor || '').split(', ').map((m) => METODOS[m] || m).join(', ');
 
-function Tarjeta({ titulo, valor, detalle, color }) {
-  return (
-    <Box sx={{ p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1.5, borderLeft: `4px solid ${color}`, minWidth: 0 }}>
-      <Typography variant="caption" color="text.secondary">{titulo}</Typography>
-      <Typography variant="h6" fontWeight={900} sx={{ color, fontSize: { xs: 16, md: 19 } }} noWrap>{valor}</Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{detalle}</Typography>
-    </Box>
-  );
-}
 
 /** Cobros de una persona en el período, para revisar en detalle lo que recibió. */
 function DialogCobrosUsuario({ fila, filtros, onCerrar }) {

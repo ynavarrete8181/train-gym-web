@@ -2,38 +2,26 @@ import { useEffect, useState } from 'react';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 import { Box, IconButton, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { VisorPdf } from '../../../components/common/VisorPdf.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
-import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { dbanuStyles } from '../../../styles/dbanuStyles.js';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
-import { ventaServicio } from '../../ventas/services/ventaServicio.js';
-import { FiltroColumna } from '../components/FiltroColumna.jsx';
-import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
-import { cobrosPeriodoServicio } from '../services/ventas/cobrosPeriodoServicio.js';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { VisorPdf } from '../../../../components/common/VisorPdf.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
+import { GestionToolbar } from '../../../../components/tables/GestionToolbar.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { dbanuStyles } from '../../../../styles/dbanuStyles.js';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
+import { ventaServicio } from '../../services/ventaServicio.js';
+import { FiltroColumna } from '../../../reportes/components/FiltroColumna.jsx';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
+import { cobrosPeriodoServicio } from '../services/cobrosPeriodoServicio.js';
+import { TarjetaReporte as Tarjeta } from '../../../reportes/components/TarjetaReporte.jsx';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : '—');
 const METODOS = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', TARJETA: 'Tarjeta', DEPOSITO: 'Depósito' };
 const metodoTexto = (valor) => String(valor || '').split(', ').map((m) => METODOS[m] || m).join(', ');
 
-function Tarjeta({ titulo, valor, detalle, color, activo = false, onClick }) {
-  return (
-    <Box onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
-      sx={{ p: 1.5, border: '1px solid', borderColor: activo ? color : 'divider', borderRadius: 1.5, borderLeft: `4px solid ${color}`,
-        bgcolor: activo ? 'action.selected' : 'background.paper', cursor: onClick ? 'pointer' : 'default', minWidth: 0,
-        '&:hover': onClick ? { borderColor: color } : undefined }}>
-      <Typography variant="caption" color="text.secondary">{titulo}</Typography>
-      <Typography variant="h6" fontWeight={900} sx={{ color, fontSize: { xs: 16, md: 19 } }} noWrap>{valor}</Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{detalle}</Typography>
-    </Box>
-  );
-}
 
 /**
  * Cobros del período para administración: una fila por cobro (lo que un tutor paga junto es un
