@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { Box, Chip, Paper, Stack, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
-import { PageHeader } from '../../../components/common/PageHeader.jsx';
-import { FilterHeaderCell } from '../../../components/tables/FilterHeaderCell.jsx';
-import { GestionToolbar } from '../../../components/tables/GestionToolbar.jsx';
-import { TablaEstadoFila } from '../../../components/tables/TablaEstadoFila.jsx';
-import { TablaGestion } from '../../../components/tables/TablaGestion.jsx';
-import { uiTokens } from '../../../styles/uiTokens.js';
-import { hoyEcuador } from '../../../utils/fechaLocal.js';
-import { FiltroColumna } from '../components/FiltroColumna.jsx';
-import { ReporteExportaciones } from '../components/ReporteExportaciones.jsx';
-import { ventasPeriodoServicio } from '../services/ventas/ventasPeriodoServicio.js';
+import { PageHeader } from '../../../../components/common/PageHeader.jsx';
+import { FilterHeaderCell } from '../../../../components/tables/FilterHeaderCell.jsx';
+import { GestionToolbar } from '../../../../components/tables/GestionToolbar.jsx';
+import { TablaEstadoFila } from '../../../../components/tables/TablaEstadoFila.jsx';
+import { TablaGestion } from '../../../../components/tables/TablaGestion.jsx';
+import { uiTokens } from '../../../../styles/uiTokens.js';
+import { hoyEcuador } from '../../../../utils/fechaLocal.js';
+import { FiltroColumna } from '../../../reportes/components/FiltroColumna.jsx';
+import { ReporteExportaciones } from '../../../reportes/components/ReporteExportaciones.jsx';
+import { ventasPeriodoServicio } from '../services/ventasPeriodoServicio.js';
+import { TarjetaReporte as Tarjeta } from '../../../reportes/components/TarjetaReporte.jsx';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
 const fecha = (valor) => (valor ? String(valor).slice(0, 10).split('-').reverse().join('/') : '—');
@@ -18,19 +19,6 @@ const ESTADOS = { PAGADA: ['Pagada', 'success'], PARCIAL: ['Parcial', 'warning']
 const TIPOS = { MEMBRESIA: 'Membresía', PRODUCTO: 'Producto', SERVICIO: 'Servicio' };
 const POR_COBRAR = ['PENDIENTE', 'PARCIAL'];
 
-function Tarjeta({ titulo, valor, detalle, color, activo = false, onClick }) {
-  return (
-    <Box onClick={onClick} role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
-      sx={{ p: 1.5, border: '1px solid', borderColor: activo ? color : 'divider', borderRadius: 1.5, borderLeft: `4px solid ${color}`,
-        bgcolor: activo ? 'action.selected' : 'background.paper', cursor: onClick ? 'pointer' : 'default', minWidth: 0,
-        '&:hover': onClick ? { borderColor: color } : undefined }}>
-      <Typography variant="caption" color="text.secondary">{titulo}</Typography>
-      <Typography variant="h6" fontWeight={900} sx={{ color, fontSize: { xs: 16, md: 19 } }} noWrap>{valor}</Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>{detalle}</Typography>
-    </Box>
-  );
-}
 
 /** Ventas por período: cada venta con qué se vendió, descuento, lo cobrado y lo que falta. */
 export function VentasPeriodoPage() {

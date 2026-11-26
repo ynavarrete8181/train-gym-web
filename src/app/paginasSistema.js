@@ -65,6 +65,7 @@ const nombresPaginas = {
   CarteraVencidaReportePage: 'Cartera vencida',
   CobrosMetodoPagoPage: 'Cobros por día y método',
   CobrosPeriodoPage: 'Cobros del período',
+  ClientesReportePage: 'Clientes (reporte)',
   VentasPeriodoPage: 'Ventas por período',
   VentasResponsablePage: 'Ventas y cobros por usuario',
   MembresiasNuevasRenovacionesPage: 'Membresías nuevas y renovaciones',
