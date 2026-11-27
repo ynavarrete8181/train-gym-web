@@ -21,7 +21,7 @@ import { ModalConfirmacion } from '../../../components/common/ModalConfirmacion.
 import { PageHeader } from '../../../components/common/PageHeader.jsx';
 import { dbanuStyles } from '../../../styles/dbanuStyles.js';
 import { VentaPosFormulario } from '../components/VentaPosFormulario.jsx';
-import { CobroTutorDialog, conceptoCuenta } from '../components/CobroTutorDialog.jsx';
+import { CobroTutorDialog, conceptoCuenta, textoCongelacion } from '../components/CobroTutorDialog.jsx';
 import { ventaServicio } from '../services/ventaServicio.js';
 
 const dinero = (valor) => `$${Number(valor || 0).toFixed(2)}`;
@@ -349,6 +349,9 @@ export function VentasPage() {
                               <Typography variant="caption" sx={{ color: '#666', display: 'block' }} noWrap title={`${cuenta.numero} · ${conceptoCuenta(cuenta)}`}>
                                 {conceptoCuenta(cuenta)}
                               </Typography>
+                              {textoCongelacion(cuenta) && <Typography variant="caption" sx={{ color: 'info.dark', fontWeight: 700, display: 'block' }}>
+                                {textoCongelacion(cuenta)}
+                              </Typography>}
                             </Box>
                             <Typography variant="body2" sx={{ color: '#171717', fontWeight: 900 }}>{dinero(cuenta.saldo_pendiente ?? cuenta.total)}</Typography>
                             <Tooltip title={`Ver ${cuenta.numero}`}>

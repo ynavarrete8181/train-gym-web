@@ -881,6 +881,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
       abierto={Boolean(detalleSuspension)} modo="detalle"
       membresia={membresia} suspension={detalleSuspension}
       movimiento={movimientoDe(detalleSuspension)}
+      movimientos={ciclo?.movimientos || []} motivos={motivosCatalogo}
       motivoCancelacion={motivoCancelacion}
       onMotivoCancelacion={setMotivoCancelacion}
       onCerrar={() => { setDetalleSuspension(null); setMotivoCancelacion(''); setError(''); }}

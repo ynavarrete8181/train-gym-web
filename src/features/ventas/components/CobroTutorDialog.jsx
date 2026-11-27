@@ -16,6 +16,15 @@ export const conceptoCuenta = (cuenta) => {
   return cuenta.plan_nombre ? `${cuenta.plan_nombre}${periodo}` : (cuenta.concepto || 'Venta');
 };
 
+/** Congelación dentro del mes cobrado: el monto no cambia, pero el mes termina después. */
+export const textoCongelacion = (cuenta) => {
+  let c = cuenta?.congelacion;
+  if (typeof c === 'string') { try { c = JSON.parse(c); } catch { c = null; } }
+  if (!c?.inicio) return '';
+  const estado = c.estado === 'FINALIZADA' ? 'estuvo congelada' : c.estado === 'PROGRAMADA' ? 'se congelará' : 'congelada';
+  return `❄ ${estado} ${fechaCorta(c.inicio)}–${fechaCorta(c.fin)}${c.vence ? ` · vence ${fechaCorta(c.vence)}` : ''}`;
+};
+
 /**
  * Cobro de un tutor: todas las cuentas que tiene a cargo (la suya y las de sus
  * representados) se pagan en una sola operación y un solo recibo.
@@ -94,6 +103,7 @@ export function CobroTutorDialog({ grupo, onClose, onCobrado, avisar }) {
                   {cuenta.cliente_nombre}{Number(cuenta.cliente_persona_id) === Number(grupo.responsable_persona_id) ? ' (tutor)' : ''}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" noWrap display="block">{cuenta.numero} · {conceptoCuenta(cuenta)}</Typography>
+                {textoCongelacion(cuenta) && <Typography variant="caption" color="info.dark" fontWeight={700} display="block">{textoCongelacion(cuenta)}</Typography>}
               </Box>
               <Typography variant="body2" sx={{ fontWeight: 900 }}>{dinero(saldoDe(cuenta))}</Typography>
             </Stack>
