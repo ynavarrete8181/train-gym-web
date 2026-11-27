@@ -84,8 +84,9 @@ function TablaCuotas({ cuotas, modalidad }) {
         <TableCell>{({
           PAGO_CONFIRMADO_CONSERVAR: 'Pago conservado',
           REPROGRAMACION_PROPUESTA: 'A reprogramar',
-          VENTA_EMITIDA_REVISAR_CARTERA: 'Revisar Cartera',
+          VENTA_EMITIDA_REVISAR_CARTERA: modalidad === 'FACTURACION' ? 'Revisar Cartera' : 'Por cobrar (el monto no cambia)',
           SIN_CAMBIOS: 'Sin cambios',
+          PROGRAMADA: 'Se emite en su fecha',
         })[c.accion] || c.accion || '—'}</TableCell>
       </TableRow>)}</TableBody>
     </TablaGestion>
@@ -93,7 +94,7 @@ function TablaCuotas({ cuotas, modalidad }) {
 }
 
 export function DialogCongelacionMembresia({
-  abierto, modo = 'detalle', membresia, preview, suspension, movimiento, motivo = '',
+  abierto, modo = 'detalle', membresia, preview, suspension, movimiento, movimientos = [], motivos = [], motivo = '',
   motivoCancelacion = '', onMotivoCancelacion, procesando = false,
   error = '', puedeGuardar = false, esEdicion = false,
   onCerrar, onGuardar, onCancelarProgramada, onEditarProgramada, onVerDetalle,
@@ -108,17 +109,50 @@ export function DialogCongelacionMembresia({
     ? preview?.programable ? 'PROGRAMADA' : preview?.confirmable ? 'CONFIRMABLE' : 'REVISAR'
     : esExito ? (datos.estado || 'PROGRAMADA') : suspension?.estado;
   const modalidad = datos.tipo || suspension?.tipo || 'TIEMPO';
-  const inicio = datos.inicio || datos.fecha_inicio || suspension?.fecha_inicio;
-  const fin = datos.fin_previsto || datos.fecha_fin_prevista || suspension?.fecha_fin_prevista;
+  const enDetalle = !esPrevia && !esExito;
+  const inicio = enDetalle ? (suspension?.fecha_inicio || datos.inicio) : (datos.inicio || datos.fecha_inicio);
+  const fin = enDetalle ? (suspension?.fecha_fin_prevista || datos.fin_previsto) : (datos.fin_previsto || datos.fecha_fin_prevista);
   const dias = esPrevia || esExito
     ? (datos.dias_previstos ?? '—')
     : (suspension?.dias_previstos ?? datosMovimiento.dias_previstos ?? '—');
+  // (dias_previstos viene del servidor con las fechas vigentes de la congelación)
   const finalizada = !esPrevia && !esExito && suspension?.estado === 'FINALIZADA';
   const cancelada = !esPrevia && !esExito && ['CANCELADA', 'NO_APLICADA'].includes(suspension?.estado);
   const diasReconocidos = finalizada ? (suspension?.dias_reconocidos ?? '—') : null;
   const fechaOriginal = datos.fecha_fin_original;
-  const fechaAjustada = datos.fecha_fin_ajustada || datos.fecha_fin_propuesta;
+  const fechaAjustada = (enDetalle ? suspension?.fecha_fin_ajustada : null) || datos.fecha_fin_ajustada || datos.fecha_fin_propuesta;
   const financiero = datos.impacto_financiero;
+  // Las cuotas anuladas no forman parte de lo que se cobra: no se listan.
+  const cuotasVisibles = (financiero?.cuotas || []).filter(c => String(c.estado || '').toUpperCase() !== 'ANULADA');
+  const nombreMotivo = (codigo) => motivos.find(m => m.codigo === codigo)?.nombre || null;
+  const motivoPrincipal = nombreMotivo(datosMovimiento.motivo_codigo);
+  const masUnDia = (iso) => {
+    const [a, m, d] = String(iso || '').slice(0, 10).split('-').map(Number);
+    return a ? new Date(Date.UTC(a, m - 1, d + 1)).toISOString().slice(0, 10) : null;
+  };
+  // Historial de esta congelación: registro, cambios de fecha y cierre.
+  const inicioId = Number(suspension?.movimiento_inicio_id || movimiento?.id || 0);
+  const historial = enDetalle && inicioId ? [...movimientos]
+    .filter(m => Number(m.id) === inicioId || Number(m.movimiento_origen_id) === inicioId)
+    .sort((a, b) => Number(a.id) - Number(b.id))
+    .map((m) => {
+      const d = leerDetalle(m);
+      const que = Number(m.id) === inicioId
+        ? `Se congeló del ${fecha(d.inicio || suspension?.fecha_inicio)} al ${fecha(d.fin_previsto)} (${d.dias_previstos ?? '—'} días)${d.retroactiva ? ', registrada con fecha anterior' : ''}`
+        : m.tipo === 'PRORROGAR_CONGELACION'
+          ? (Number(d.dias_adicionales) < 0
+            ? `Se acortó: termina el ${fecha(d.fecha_fin_propuesta)} en lugar del ${fecha(d.fecha_fin_anterior)} (${-d.dias_adicionales} días menos)`
+            : `Se alargó: termina el ${fecha(d.fecha_fin_propuesta)} en lugar del ${fecha(d.fecha_fin_anterior)} (${d.dias_adicionales} días más)`)
+          : m.tipo === 'REACTIVAR'
+            ? `Se reactivó el ${fecha(d.fecha_regreso || m.fecha_efectiva)}: ${d.dias_reconocidos ?? '—'} días reconocidos, vence el ${fecha(d.fecha_fin_nueva)}`
+            : m.tipo === 'CANCELAR_CONGELACION' ? 'Se canceló la congelación programada' : m.tipo;
+      return { id: m.id, cuando: m.created_at, quien: m.autor_nombre || 'Sistema (automático)', que, motivo: m.motivo };
+    }) : [];
+  const resumen = enDetalle && suspension && !cancelada ? (finalizada
+    ? `Estuvo congelada del ${fecha(suspension.fecha_inicio)} al ${fecha(suspension.fecha_fin_real)} (${suspension.dias_reconocidos ?? '—'} días)${motivoPrincipal ? ` por ${motivoPrincipal.toLowerCase()}` : ''}. Regresó el ${fecha(suspension.fecha_regreso)} y el contrato pasó a vencer el ${fecha(fechaAjustada)}; el próximo mes empieza y se cobra el ${fecha(masUnDia(fechaAjustada))}.`
+    : suspension.estado === 'VIGENTE'
+      ? `Congelada desde el ${fecha(inicio)} hasta el ${fecha(fin)} (${dias} días)${motivoPrincipal ? ` por ${motivoPrincipal.toLowerCase()}` : ''}. Se reactiva sola el ${fecha(masUnDia(fin))}, o antes con "Reactivar membresía" si regresa antes. El contrato pasará a vencer el ${fecha(fechaAjustada)} (antes ${fecha(fechaOriginal)}), y el próximo mes empezará y se cobrará el ${fecha(masUnDia(fechaAjustada))}.${Number(financiero?.deuda_emitida) > 0 ? ` La deuda de ${dinero(financiero.deuda_emitida)} se mantiene igual.` : ''}`
+      : `Programada del ${fecha(inicio)} al ${fecha(fin)} (${dias} días)${motivoPrincipal ? ` por ${motivoPrincipal.toLowerCase()}` : ''}. Empieza sola en su fecha.`) : null;
   const puedeCancelar = modo === 'detalle' && suspension?.estado === 'PROGRAMADA';
   const hoyPartes = new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/Guayaquil', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -167,6 +201,9 @@ export function DialogCongelacionMembresia({
     </DialogTitle>
     <Divider />
     <DialogContent sx={{ px: { xs: 1.5, sm: 2.5 }, py: { xs: 1.5, sm: 1.75 } }}>
+      {resumen && <Alert severity={finalizada ? 'success' : 'info'} icon={<AcUnitOutlinedIcon fontSize="small" />} sx={{ mb: 1.5 }}>
+        <Typography variant="body2" fontWeight={700}>{resumen}</Typography>
+      </Alert>}
       <TituloReporte>Período y modalidad</TituloReporte>
       <Box sx={{ display: 'grid',
         gridTemplateColumns: { xs: 'repeat(2, minmax(0,1fr))', sm: 'repeat(4, minmax(0,1fr))' },
@@ -212,11 +249,23 @@ export function DialogCongelacionMembresia({
       </Typography>
 
       {(motivo || movimiento?.motivo) && <Box sx={{ mt: 1.25 }}>
-        <TituloReporte>Motivo registrado</TituloReporte>
+        <TituloReporte>Motivo registrado{motivoPrincipal ? ` · ${motivoPrincipal}` : ''}</TituloReporte>
         <Box sx={{ px: 1.3, py: 0.9, border: `1px solid ${uiTokens.colores.borde}`,
           borderRadius: 0.5, bgcolor: uiTokens.colores.primarioSuave }}>
           <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>{motivo || movimiento?.motivo}</Typography>
         </Box>
+      </Box>}
+
+      {historial.length > 0 && <Box sx={{ mt: 1.25 }}>
+        <TituloReporte>Historial de esta congelación</TituloReporte>
+        <Stack spacing={0.75}>
+          {historial.map(h => <Box key={h.id} sx={{ border: `1px solid ${uiTokens.colores.borde}`, borderRadius: 0.5, px: 1.3, py: 0.8 }}>
+            <Typography variant="body2" fontWeight={800}>{h.que}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+              {fecha(h.cuando)} · {h.quien}{h.motivo ? ` · ${h.motivo}` : ''}
+            </Typography>
+          </Box>)}
+        </Stack>
       </Box>}
 
       {!esPrevia && !esExito && <Box sx={{ mt: 1.25 }}>
@@ -251,9 +300,9 @@ export function DialogCongelacionMembresia({
           <Indicador etiqueta="Saldo emitido" valor={dinero(financiero.deuda_emitida)}/>
           <Indicador etiqueta="Cuotas reprogramables" valor={financiero.cuotas_reprogramables ?? 0}/>
         </Box>
-        {(financiero.cuotas || []).length > 0 && <>
+        {cuotasVisibles.length > 0 && <>
           <Box sx={{ mt: 1.25 }}><TituloReporte>Detalle de cuotas</TituloReporte></Box>
-          <TablaCuotas cuotas={financiero.cuotas} modalidad={modalidad} />
+          <TablaCuotas cuotas={cuotasVisibles} modalidad={modalidad} />
         </>}
       </>}
 
