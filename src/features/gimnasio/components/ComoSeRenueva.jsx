@@ -54,6 +54,7 @@ export function ComoSeRenueva({ membresia, onActualizado }) {
   const fin = String(membresia?.fecha_fin || '').slice(0, 10);
   const inicioSiguiente = sumarDias(fin, 1);
   const seProgramaEl = sumarDias(fin, -7);
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Guayaquil' });
   const renueva = Boolean(membresia?.renovacion_automatica);
   const precio = montoPrecioRenovacion(ciclo);
   // Al renovar, sigue el descuento general vigente al terminar el período actual (llegue hasta
@@ -71,9 +72,14 @@ export function ComoSeRenueva({ membresia, onActualizado }) {
     </Alert>}
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2, mb: 1.75 }}>
       <Dato titulo="Próxima renovación">
-        {renueva
-          ? <>El {fecha(seProgramaEl)} se programa el período desde el {fecha(inicioSiguiente)}</>
-          : <>No se renueva sola: vence el {fecha(fin)}</>}
+        {!renueva
+          ? <>No se renueva sola: vence el {fecha(fin)}</>
+          : seProgramaEl >= hoy
+            ? <>El {fecha(seProgramaEl)} se programa el período desde el {fecha(inicioSiguiente)}</>
+            // La fecha de programación ya pasó: la renovación espera a que se pague lo pendiente.
+            : String(membresia?.estado || '').toUpperCase() === 'PENDIENTE_PAGO'
+              ? <>El período desde el {fecha(inicioSiguiente)} se programa cuando pague la cuota pendiente</>
+              : <>El período desde el {fecha(inicioSiguiente)} se programa en la próxima revisión</>}
       </Dato>
       <Dato titulo="Precio al renovar"
         accion={ciclo?.puede_cambiar_precio ? <Button size="small" sx={{ mt: 0.5, px: 0, minWidth: 0, textTransform: 'none', fontWeight: 800 }}
