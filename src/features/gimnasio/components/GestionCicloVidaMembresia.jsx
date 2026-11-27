@@ -290,7 +290,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     setEditandoSuspensionId(suspension.id);
     setInicio(String(suspension.fecha_inicio).slice(0, 10));
     setFin(String(suspension.fecha_fin_prevista).slice(0, 10));
-    setMotivoCodigo('VACACIONES'); setMotivo(''); setPreview(null);
+    // Conserva el motivo con que se congeló (enfermedad, vacaciones…).
+    setMotivoCodigo(leerDetalleMovimiento(movimientoDe(suspension)).motivo_codigo || 'VACACIONES'); setMotivo(''); setPreview(null);
     setError(''); setExito(''); setOperacion('prorrogar');
   };
 
@@ -314,7 +315,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
       const resultado = await gimnasioServicio.prorrogarCongelacion(membresia.id, editandoSuspensionId, {
         fecha_fin: fin, motivo: motivo.trim(), motivo_codigo: motivoCodigo,
       });
-      setExito(`Prórroga registrada: ${resultado.dias_adicionales} días adicionales; regreso previsto después del ${fechaLegible(resultado.fecha_fin_propuesta)}.`);
+      setExito(resultado.dias_adicionales < 0
+        ? `Congelación acortada en ${-resultado.dias_adicionales} días: termina el ${fechaLegible(resultado.fecha_fin_propuesta)} y se reactiva sola al día siguiente.`
+        : `Prórroga registrada: ${resultado.dias_adicionales} días adicionales; regreso previsto después del ${fechaLegible(resultado.fecha_fin_propuesta)}.`);
       setOperacion(''); setEditandoSuspensionId(null); setPreview(null); setMotivo('');
       await cargar(); await onActualizado?.();
     } catch (e) { setError(mensajeError(e)); }
@@ -341,7 +344,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
       case 'congelar': if (tipo === 'SIN_USO') return `Congelación sin uso de ${membresiaTexto} por ${nombreMotivoCatalogo()}: no ha asistido desde el ${fechaLegible(sinUso?.periodo_inicio)}. Se anula la cuota ${sinUso?.venta_numero || ''} de ${dinero(sinUso?.monto)} y se vuelve a emitir al regresar.`;
         return `Congelación de ${membresiaTexto} ${tipo === 'TIEMPO' ? 'de tiempo' : 'financiera'} del ${fechaLegible(inicio)} al ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
       case 'editar': return `Cambio de fechas de la congelación programada de ${membresiaTexto}: ahora del ${fechaLegible(inicio)} al ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
-      case 'prorrogar': return `Prórroga de la congelación de ${membresiaTexto} hasta el ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
+      case 'prorrogar': {
+        const actual = String((ciclo?.suspensiones || []).find(x => Number(x.id) === Number(editandoSuspensionId))?.fecha_fin_prevista || '').slice(0, 10);
+        return `${fin && actual && fin < actual ? 'Se acorta' : 'Prórroga de'} la congelación de ${membresiaTexto} hasta el ${fin ? fechaLegible(fin) : '—'} por ${nombreMotivoCatalogo()}.`;
+      }
       case 'reactivar': return `Reactivación de ${membresiaTexto} el ${fechaLegible(fechaLocal())} por ${nombreMotivoCatalogo()}.`;
       case 'reabrir': return `Reapertura de ${membresiaTexto} por ${nombreMotivoCatalogo()}; se conserva su historial de ventas y cobros.`;
       case 'vigencia': return `Ajuste de vigencia de ${membresiaTexto}: del ${fechaLegible(String(ciclo?.vigencia_inicio_sugerida || '').slice(0, 10))} – ${fechaLegible(String(ciclo?.vigencia_fin || '').slice(0, 10))} pasa a ${vigenciaInicio ? fechaLegible(vigenciaInicio) : '—'} – ${vigenciaFin ? fechaLegible(vigenciaFin) : '—'}.`;
@@ -465,7 +471,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
     {(!integrado || mostrarFormulario) && <Stack direction="row" gap={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5, width: '100%' }}>
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography variant="subtitle1" fontWeight={800}>
-          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Prorrogar congelación vigente' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : operacion === 'precio' ? 'Cambiar precio del contrato' : 'Gestión del ciclo de vida'}
+          {operacion === 'congelar' ? 'Registrar congelación' : operacion === 'editar' ? 'Editar fechas programadas' : operacion === 'reactivar' ? 'Reactivar membresía' : operacion === 'prorrogar' ? 'Cambiar fecha hasta de la congelación' : operacion === 'cancelar' ? 'Cancelar contrato' : operacion === 'reabrir' ? 'Reabrir contrato' : operacion === 'vigencia' ? 'Editar vigencia' : operacion === 'precio' ? 'Cambiar precio del contrato' : 'Gestión del ciclo de vida'}
         </Typography>
       </Box>
       {!integrado && <Box sx={{ ml: 'auto', flexShrink: 0 }}>
@@ -591,7 +597,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
                   </Tooltip>
                 )}
                 {s.estado === 'VIGENTE' && s.tipo === 'TIEMPO' && (
-                  <Tooltip title="Extender fecha autorizada">
+                  <Tooltip title="Cambiar fecha hasta (alargar o acortar)">
                     <span><IconButton size="small" aria-label="Prorrogar congelación"
                       sx={{ ...dbanuStyles.actionEdit, mr: 0 }} disabled={procesando}
                       onClick={() => prepararProrroga(s)}>
@@ -747,8 +753,8 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
       </Box>}
       {operacion === 'prorrogar' && <Box>
         <Alert severity="info" sx={{ mb: 2 }}>
-          Amplía la ausencia autorizada sin cambiar todavía el vencimiento del contrato ni sus pagos.
-          La compensación definitiva se aplicará al reactivar.
+          Alarga la congelación (prórroga) o acórtala si regresa antes, sin cambiar todavía el vencimiento del contrato
+          ni sus pagos. La fecha no puede ser anterior a hoy; si ya regresó, usa "Reactivar membresía".
         </Alert>
         <TextField select size="small" fullWidth label="Motivo principal" value={motivoCodigo}
           onChange={e => setMotivoCodigo(e.target.value)}>
@@ -758,16 +764,18 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
         <TextField size="small" label="Nueva fecha hasta (incluido)" type="date" required fullWidth sx={{ mt: 2 }}
           value={fin} onChange={e => { setFin(e.target.value); setPreview(null); }}
           slotProps={{ inputLabel: { shrink: true } }}/>
-        <TextField multiline minRows={2} size="small" fullWidth label="Justificación de la prórroga"
+        <TextField multiline minRows={2} size="small" fullWidth label="Justificación del cambio"
           required sx={{ mt: 2 }} value={motivo} onChange={e => escribirMotivo(e.target.value)}/>
         {preview && <Alert severity="warning" sx={{ mt: 2 }}>
-          Se añadirán <strong>{preview.dias_adicionales} días</strong>. Total autorizado: {preview.dias_totales} días.
+          {preview.dias_adicionales < 0
+            ? <>Se quitarán <strong>{-preview.dias_adicionales} días</strong>.</>
+            : <>Se añadirán <strong>{preview.dias_adicionales} días</strong>.</>} Total autorizado: {preview.dias_totales} días.
           Vencimiento proyectado al regresar: <strong>{fechaLegible(preview.fecha_fin_ajustada)}</strong>.
         </Alert>}
         <Box sx={{ ...dbanuStyles.formActions, px: 0, pb: 0, mt: 2 }}>
           <BotonCancelar disabled={procesando} onClick={() => { setOperacion(''); setPreview(null); }}/>
           <BotonVistaPrevia disabled={!fin || procesando} cargando={procesando && !preview} onClick={simularProrroga}/>
-          <BotonGuardar texto="Guardar prórroga" guardando={procesando}
+          <BotonGuardar texto="Guardar cambio" guardando={procesando}
             disabled={!motivoCodigo || !fin || motivo.trim().length < 8} onClick={guardarProrroga}/>
         </Box>
       </Box>}
