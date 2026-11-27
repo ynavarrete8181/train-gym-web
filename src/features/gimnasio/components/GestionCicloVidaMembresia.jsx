@@ -34,6 +34,10 @@ const manana = () => {
   const [a, m, d] = fechaLocal().split('-').map(Number);
   return new Date(Date.UTC(a, m - 1, d + 1)).toISOString().slice(0, 10);
 };
+const haceDias = (dias) => {
+  const [a, m, d] = fechaLocal().split('-').map(Number);
+  return new Date(Date.UTC(a, m - 1, d - dias)).toISOString().slice(0, 10);
+};
 const fechaLegible = (v) => {
   const a = String(v || '').slice(0, 10).split('-');
   return a.length === 3 ? [a[2], a[1], a[0]].join('/') : '—';
@@ -432,6 +436,10 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
   const estado = String(ciclo?.estado || membresia?.estado || '').toUpperCase();
   const suspensiones = ciclo?.suspensiones || [];
   const tienePendiente = suspensiones.some(s => ['PROGRAMADA', 'VIGENTE'].includes(s.estado));
+  // Administración: congelar por tiempo hasta N días atrás y con la cuota del mes por cobrar (lo valida Laravel).
+  const excepcion = ciclo?.congelacion_excepcional || null;
+  const puedeTiempo = estado === 'ACTIVA' || (estado === 'PENDIENTE_PAGO' && Boolean(excepcion?.permite_pendiente_pago));
+  const minimoDesde = excepcion ? haceDias(excepcion.dias_retroactivos || 0) : fechaLocal();
   const puedeReactivar = estado === 'CONGELADA' &&
     suspensiones.some(s => s.estado === 'VIGENTE');
   const movimientoDe = s => (ciclo?.movimientos || [])
@@ -523,9 +531,9 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
           total={filtradas.length}
           busqueda={busqueda}
           onBusqueda={setBusqueda}
-          acciones={<Button startIcon={<AddOutlinedIcon />} disabled={((estado !== 'ACTIVA' || tienePendiente) && !sinUso) || procesando}
+          acciones={<Button startIcon={<AddOutlinedIcon />} disabled={((!puedeTiempo || tienePendiente) && !sinUso) || procesando}
             onClick={() => {
-              const soloSinUso = estado !== 'ACTIVA' || tienePendiente;
+              const soloSinUso = !puedeTiempo || tienePendiente;
               setTipo(soloSinUso ? 'SIN_USO' : 'TIEMPO');
               setInicio(soloSinUso ? String(sinUso.periodo_inicio).slice(0, 10) : fechaLocal());
               setFin(''); setMotivo(''); setMotivoCodigo(soloSinUso ? 'ENFERMEDAD' : 'VACACIONES');
@@ -627,7 +635,7 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
             setTipo(nuevo); setPreview(null); setFin('');
             setInicio(nuevo === 'SIN_USO' ? String(sinUso?.periodo_inicio || '').slice(0, 10) : fechaLocal());
           }}>
-          <MenuItem value="TIEMPO" disabled={estado !== 'ACTIVA'}>Congelación de tiempo · mantiene el calendario de pago</MenuItem>
+          <MenuItem value="TIEMPO" disabled={!puedeTiempo}>Congelación de tiempo · mantiene el calendario de pago</MenuItem>
           <MenuItem value="FACTURACION" disabled={estado !== 'ACTIVA'}>Congelación de facturación · reprograma cuotas sin emitir</MenuItem>
           {sinUso && <MenuItem value="SIN_USO">Congelación sin uso · anula la cuota de {dinero(sinUso.monto)} y congela desde el {fechaLegible(sinUso.periodo_inicio)}</MenuItem>}
         </TextField>
@@ -646,11 +654,16 @@ export function GestionCicloVidaMembresia({ membresia, onVolver, onActualizado, 
         </Stack> : <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
           <TextField size="small" label="Desde" type="date" required value={inicio}
             onChange={e => { setInicio(e.target.value); setPreview(null); }}
-            slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: fechaLocal() } }}/>
+            helperText={excepcion?.dias_retroactivos && operacion === 'congelar' ? `Puede empezar hasta ${excepcion.dias_retroactivos} días antes de hoy (sin asistencias en esos días).` : undefined}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: operacion === 'congelar' ? minimoDesde : fechaLocal() } }}/>
           <TextField size="small" label="Hasta (incluido)" type="date" required value={fin}
             onChange={e => { setFin(e.target.value); setPreview(null); }}
             slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: inicio || fechaLocal() } }}/>
         </Stack>}
+        {tipo === 'TIEMPO' && estado === 'PENDIENTE_PAGO' && <Alert severity="info" sx={{ mt: 1.5 }}>
+          Tiene la cuota del mes por cobrar: <strong>la deuda se mantiene igual</strong>. Los días congelados se suman al vencimiento
+          del contrato y, al regresar, vuelve a "Pendiente de pago" hasta que pague.
+        </Alert>}
         <TextField multiline minRows={2} size="small" fullWidth
           label={operacion === 'editar' ? 'Justificación del cambio de fechas' : 'Motivo de congelación'} required
           sx={{ mt: 2 }} value={motivo}
